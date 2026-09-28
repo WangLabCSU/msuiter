@@ -10,7 +10,7 @@
 | 当前版本轨道 / 工作单元 / Non-goals | docs/ROADMAP.md（v3 双轨：v0.1/v0.2/v1.0；G0–G3 组织门） |
 | 历史裁决（评审采纳表） | docs/reviews/00-synthesis.md |
 | 五专家评审原文（Why 的证据） | docs/reviews/01–05 |
-| 开发日志（每工作单元一条） | docs/devlog/YYYY-MM-DD-<work-unit>.md |
+| 开发日志（每工作单元一条） | docs/devlog/YYYY-MM-DD-<work-unit>.md（按需创建：首个工作单元时建立该目录） |
 
 ## Rust 侧
 | 问题 | 位置 |
@@ -25,7 +25,7 @@
 |---|---|
 | SBS/DBS/ID 通道算法（file:line 级） | docs/research/04 §1（SPMG）、§19（复刻清单） |
 | CN48/SV32/RNA-SBS 标签与 per-build 可用性 | docs/research/05 §2（含 per-build 矩阵表） |
-| MNV/complex 路由契约 | docs/ARCHITECTURE.md §7.2 |
+| MNV/complex 路由契约 | docs/ARCHITECTURE.md §7 条目 2（目录完备性契约） |
 | ID89/476（Koh 2025，v1.x） | docs/research/07 §1.12 |
 
 ## R/S7 侧
@@ -56,17 +56,17 @@
 |---|---|
 | Top-10 工作流与 PMID | docs/research/03 |
 | HRD 范围安全契约（WGS-only 等） | docs/ARCHITECTURE.md §7/ROADMAP M6s；reviews/01 #2 |
-| RNA 工作流边界 | reviews/01 #8；ARCHITECTURE §11 |
+| RNA 工作流边界 | reviews/01 #8；docs/ARCHITECTURE.md §11 |
 
 ## 数据与许可
 | 问题 | 位置 |
 |---|---|
 | COSMIC 许可分析与捆绑策略 | docs/research/05 §1；ADR D3/D4 |
-| refdb 治理（precedence/schema/manifest） | docs/ARCHITECTURE.md §6.2 |
+| refdb 治理（precedence/schema/manifest） | docs/ARCHITECTURE.md §6 条目 2（参考库治理） |
 | CRAN Rust 政策引文 | docs/research/05 §6 |
 
 ## 工作记录
 | 问题 | 位置 |
 |---|---|
-| 开发日志（每工作单元一条） | docs/devlog/YYYY-MM-DD-<work-unit>.md |
-| FFI 导出面冻结清单 | docs/ffi-surface.md（M0 起建立） |
+| 开发日志（每工作单元一条） | docs/devlog/YYYY-MM-DD-<work-unit>.md（按需创建：首个工作单元时建立该目录） |
+| FFI 导出面冻结清单 | docs/ffi-surface.md（M0 起建立；按需创建，首个 FFI 导出 PR 时建立） |

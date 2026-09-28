@@ -32,15 +32,15 @@
 | A1 | 采纳 | **统计契约**：estimand 三层（presence=LRT χ²₁；magnitude=support-conditional 绝对 exposure；清零=决策规则单独测复合覆盖率）；多项与 NB 双生成模型校准；coverage 随 N×Shannon 曲线；Fisher 区间 interior-only；"boundary parameters get tests, not intervals" | ARCH §7 |
 | A2 | 采纳 | **Conformal 降维**：Mondrian by TMB bin + studentized score；声明改写为 per-stratum empirical coverage；quantile 表随包发布 | ARCH §5/§7 |
 | A3 | 采纳 | **方法命名收缩**：只保留 **MSU-Fit / MSU-LowCount / MSU-Infer** 三个命名方法（headline 簇）；提取流水线/相关性引擎/损伤节奏/张量/目录 IR 全部降为**框架组件**（去 MSU- 前缀） | ARCH §5 |
-| A4 | 采纳 | **相关性引擎降级**：预注册可证伪声明（r∈{0.8,0.9,0.95} 上同时击败 MvNMF+correlated refit 与原版 Cornet）；gauge-fixed 报告（禁解读嵌入向量）；m<K 经 held-out；体积正则与嵌入分离 ablation；五模态降为 SBS+DBS 演示 | ARCH §5/ROADMAP M5 |
+| A4 | 采纳 | **相关性引擎降级**：预注册可证伪声明（r∈{0.8,0.9,0.95} 上同时击败 MvNMF+correlated refit 与原版 Cornet）；gauge-fixed 报告（禁解读嵌入向量）；m<K 经 held-out；体积正则与嵌入分离 ablation；五模态降为 SBS+DBS 演示 | ARCH §5/ROADMAP v1.x（推迟项） |
 | A5 | 采纳 | **无状态 FFI**：删除句柄注册表与 `.state` 属性；S7 内嵌对象改为**快照摘要**（维度+通道表哈希+refdb 版本）；caugi 模式只留只读美学 | ARCH §2/§3 |
 | A6 | 采纳 | **自研 RNG**：PCG64 + SplitMix64 流布局（写进论文 Methods），不依赖 rand 的 RNG 面（跨版本不保证）；跨版本 golden 测试 | ARCH §2 |
 | A7 | 采纳 | **并发契约**：并行只在独立单元间；单元内固定归约顺序；线程数不变性 identical() 测试；per-call ThreadPool（弃全局池）；`msuiter.threads` option（检查期 2）；Makevars -j2；R_CheckUserInterrupt 主线程 chunk 边界 + worker AtomicBool | ARCH §2/§9 |
 | A8 | 采纳 | **双层验收术语**：**语义逐位**（通道算术/协议步骤/平局规则/默认参数——整数与标签 golden，硬验收）vs **数值协议等价**（浮点内核——固定种子+容差）；R NMF brunet 对拍 = 固定平台一次性实验，不进 CI 门 | ARCH §7/ROADMAP |
 | A9 | 采纳 | **基准升级**：加 purity/caller/类别专属计数区间（SV 10–10³、CN 10–10⁴）/超突变臂/联合对抗 cell/目录外签名 cell；校准-选择-评估三层场景隔离（不同生成器）；**主指标 = Hungarian 一对一**（贪心+阈扫为附录，分裂惩罚）；协议冻结随包发布 | ARCH §8 |
 | A10 | 采纳 | **K 仲裁规则**：层级决策（SUITOR argmin → 稳定性 veto → Wilcoxon 降诊断）；Hungarian unmatched 的 split/merge 语义；meta-rule 全网格评估 | ARCH §7 |
-| A11 | 采纳 | **目录完备性契约**：MNV 2–5/>5、complex/double indel 路由表 + skip ledger；拆分 VCF 的 DBS 重连算法；MNV golden fixtures；complex 事件显式路由 | ARCH §7/ROADMAP M1 |
-| A12 | 采纳 | **工作流范围安全**：HRDetect 系数模式 **WGS-only** + allele-specific CN caller 白名单 + WES 标 experimental；RNA 工作流最小 caller 要求 + 伪影面板 + matched-DNA 验证 estimand + research-use 标注 | ARCH §7/ROADMAP M6 |
+| A11 | 采纳 | **目录完备性契约**：MNV 2–5/>5、complex/double indel 路由表 + skip ledger；拆分 VCF 的 DBS 重连算法；MNV golden fixtures；complex 事件显式路由 | ARCH §7/ROADMAP M1s/M1c |
+| A12 | 采纳 | **工作流范围安全**：HRDetect 系数模式 **WGS-only** + allele-specific CN caller 白名单 + WES 标 experimental；RNA 工作流最小 caller 要求 + 伪影面板 + matched-DNA 验证 estimand + research-use 标注 | ARCH §7/ROADMAP M6s |
 | A13 | 采纳 | **refdb 治理**：precedence（默认 bundled 优先、provenance 钉版本）；schema_version 前向拒绝；更新钉 commit SHA + manifest 烧录 + fail-closed；更新测试 fixture 化；**v1 只捆绑人类 SBS/DBS/ID**；缺失 build = `build_independent: true` 声明（relabel 而非 derived）+ 查询时如实提示 | ARCH §6 |
 | A14 | 采纳 | **API 定型**：`method = ms_nmf(...)` S7 对象一等公民 + 字符串糖；自定义泛型一律 `ms_` 前缀（hardhat 命名仅文档概念）；新增 §3.5 Error & lifecycle（rlang class/i-j-c/禁裸 stop/lifecycle 政策/ffi-surface.md 冻结流程） | ARCH §3 |
 | A15 | 采纳 | **CI 补全**：矩阵加 R 4.3（至少 Linux）+ devel（允许失败）；valgrind/ASAN scheduled job；CI 基准门降为 sanity bound（<5s），加速比验收移入钉硬件 bench；dependabot + cargo audit；codecov（R≥85%，Rust 报告不设门）；fixture 刷新脚本 + PR 模板检查项；rhub/--as-cran 预提交 | ARCH §9 |
@@ -56,20 +56,20 @@
 |---|---|---|
 | 04#1 建议把 SUITOR CV 推迟到 v0.2 可选 | **部分采纳** | MSU-Fit headline 依赖校准叙事但 K 选择规则依赖 CV——v0.1 不含 CV，v0.2 作为开关加入（与 04 一致）；但 K 仲裁规则文档化在 v0.2 一次写全 |
 | 05"只命名 MSU-Fit/LowCount/Infer" | **采纳但保留组件名** | 组件仍需工程名（extraction pipeline 等），只是不再以"方法"身份出现在论文 abstract |
-| 01#3 把 MNV 修提出 M1 | **采纳** | MNV 路由是语义正确性问题（不修则 DBS/SBS 目录系统性失真），不属于可推迟功能 |
+| 01#3 把 MNV 修提出 M1 | **采纳** | MNV 路由是语义正确性问题（不修则 DBS/SBS 目录系统性失真），不属于可推迟功能；落点为 M1s（见 A11） |
 | 05"MSU-Tensor 砍出 abstract" | **采纳 + 保留探索位** | TensorSignatures 生物学动机真实；降为 exploratory（held-out likelihood 选 K + Kruskal 检查），v1.x 排期 |
-| 04#9 ADR 独立目录 | **采纳（轻量）** | 建立 docs/adr/，先把 D1–D14 迁入；研究文档加 archival 声明 |
+| 04#9 ADR 独立目录 | **采纳（轻量）** | 建立 docs/adr/，先把 D1–D16 迁入（裁决落地时已有 16 条，含 D15/D16）；研究文档加 archival 声明 |
 | 02#11 twobit 自研 ~300 行 reader | **部分采纳** | M0 spike 两条路都试（crate over Cursor\<Mmap\> vs 自研），以 byte-swap/大端验证结果定 ADR；默认倾向 crate |
 
 ## 5. 编辑建议的组织行动项（需要作者本人决策/推进，非文档可解决）
 
 1. **两周先导覆盖实验**（G0 门）：2 个竞品工具 × TMB 网格的名义 vs 实际覆盖率——验证"竞品 CI 失准"叙事地基，先于一切论文写作。
 2. **统计学 co-author**（conformal/CoDA 理论部分）+ **临床/队列合作者**（治疗记录 / RNA-only / FFPE panel 三选一）——M3 前锁定，否则案例注定装饰性（编辑 kill criterion #4）。
-3. **co-maintainer**：M1 前找到（bus factor + CRAN + 审稿三重需要）。
+3. **co-maintainer**：M1s 前找到（bus factor + CRAN + 审稿三重需要；即 G1 门）。
 4. 每季度复核竞争格局（Cornet/MuSiCal/SPA 的发表动态），触发 ROADMAP 的 kill criteria 重估。
 
 ## 6. 文档生效
 
-- ARCHITECTURE.md **v2.1**（本文档裁决的落地版）
+- ARCHITECTURE.md **v2.2**（本文档裁决的落地版）
 - ROADMAP.md **v3**（双轨 + G 门）
 - 评审原文 01–05 保留为证据与论文 rebuttal 素材

@@ -202,7 +202,7 @@ MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 
 分层动物园与实现策略见 [research/07-algorithm-zoo.md](research/07-algorithm-zoo.md) §2（状态表：Rust/R/Adapt/Skip）。v2.1 修订：
 - **Catalog IR 声明修正**："lossless coarse-graining (fine→coarse) + variant-level recomputation (coarse→fine requires variants)"；ID83↔89 提供显式映射表并标注不可映射通道。
-- 相关性引擎、损伤节奏、张量、目录 IR、**校准相似度库（`ms_compare()`）** 为**框架组件**（不再冠 MSU-）；张量降为 exploratory（held-out likelihood 定秩 + Kruskal 条件检查 + 一次只加一个模式）。
+- 相关性引擎、损伤节奏、张量、目录 IR、**校准相似度库（`ms_compare()`）** 为**框架组件**（不再冠 MSU-）；张量降为 exploratory（held-out likelihood 定秩 + Kruskal 条件检查 + 一次只加一个模式）。对应 API 名：`ms_correlated()`（相关性引擎）、`ms_tensor()`（NTF）、`ms_supervised()`（SuperSigs 系）、`ms_hdp()` / `ms_bayes()`（bench 对照位，自有实现推迟 v1.x）、`ms_damage_tempo()`（损伤节奏，v1.x）。提取引擎统一经工厂函数构造 S7 对象：`ms_nmf(engine=)` / `ms_ard()` / `ms_sparse()` / `ms_lda()`；输入侧另有 `ms_segments()`（allele-specific CN 段）与 `ms_sv()`（SV 调用）+ `ms_simulate()`（目录模拟器，benchmark 与测试共用）——**全部经注册表，与 `ms_extract()`/`ms_fit()` 同接口**。
 
 ## 5. 方法体系（v2.1 收缩为三命名方法 + 组件）
 
@@ -272,7 +272,7 @@ MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 - **Headline（Framing A）**："Calibrated inference of mutational signature exposures"——领域 exposure 区间从未被验证校准；MSU-Fit/LowCount/Infer 提供第一套完整推断层；Rust 性能使校准统计学在 cohort 规模分钟级可行（"fast *so that* statistical honesty is affordable"）。Target：Nature Methods（冲刺）/ Nat Commun（现实落点）。
 - **支撑（Framing B）**：五模态统一生态 + 语义逐位兼容 + 版本化参考库。Target：Genome Biology 保底。
 - **案例升级三路径**（需队列合作，G 门）：治疗记录 concordance / RNA-only 队列 / 低计数 panel 诊断级检出（MUTYH/MSI 模式）。
-- **Kill criteria**（触发即 pivot，见 reviews/05 §9）：先导实验证伪、Cornet 正式发表压制、M3 前无队列合作、竞品发布校准 CI、滑期 >100%、无 co-maintainer。
+- **Kill criteria**（触发即 pivot，见 reviews/05 §9）：先导实验证伪、Cornet 正式发表压制、M3b 前无队列合作、竞品发布校准 CI、滑期 >100%、无 co-maintainer。
 
 ## 11. 风险登记（v2.1 增补）
 
@@ -287,4 +287,4 @@ MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 | CRAN 2 线程/fork | per-call 池 + option 双读 + Makevars -j2 + BiocParallel 兼容文档 |
 | refdb 双源漂移 | precedence + schema_version + manifest + fixture 测试（A13） |
 | 时间线 fantasy | 双轨 v0.1/v0.2/v1.0 + Non-goals 硬性化（ROADMAP v3） |
-| bus factor | co-maintainer 前置到 M1（组织行动项） |
+| bus factor | co-maintainer 前置到 M1s（组织行动项） |

@@ -24,7 +24,7 @@
 
 ## 2. 环境/生活方式暴露流行病学
 
-- **烟草**：Alexandrov, Science 2016 (27811275, ~5,243 肿瘤；SBS4 + 剂量调制 SBS5)。Torrens, Nat Genet 2025 (40164736, HNSCC 烟草复杂性、场癌变)。从不吸烟者：Díaz-Gay/Landi, Nature 2025 (40604281, LCINS)。实验性烟草特异亚硝胺：Zavadil, Genome Med 2026 (42393796)。
+- **烟草**：Alexandrov, Science 2016 (27811275, ~5,243 肿瘤；SBS4 + 剂量调制 SBS5)。Torrens, Nat Genet 2025 (40164736, HNSCC 烟草复杂性、场癌变)。从不吸烟者：Díaz-Gay/Landi, Nature 2025 (40604281, LCINS)。实验性烟草特异亚硝胺：Korenjak/Zavadil, Genome Med 2026 (42393796)。
 - **UV/黑色素瘤**：Hayward, Nature 2017 (28467829；SBS7 vs 肢端 SBS38)。
 - **马兜铃酸**：Poon/Hoang, Sci Transl Med 2013 (23926199/23926200)；Jelaković, IJC 2015 (25403517)；Lu, Theranostics 2020 (32292497)——**AA 签名定义 UTUC 低风险亚型**（暴露签名即临床分层器）。
 - **colibactin**：Pleguezuelos-Manzano, Nature 2020 (32106218, 类器官→SBS88/ID18)；Dziubańska-Kusibab, Nat Med 2020 (32483361, IBD)；van Boxtel/Rosendahl Huber, Cancer Cell 2024 (38471458)；Cornish, Nature 2024 (39112709, 2,023 CRC，colibactin 与早发性 CRC)；Díaz-Gay, Nature 2025 (40267983, CRC 地理+年龄变异)。
@@ -97,14 +97,14 @@
 
 - **IMAPR**：Tang, Commun Biol 2024 (38783092, TCGA 级 RNA 体细胞突变发现)；OncoDB 2.0 NAR 2025 (40995640)。
 - 前驱：Davila 2021 (34158040, RNA 签名检出 POLE)；Jessen, BMC Med Genomics 2021 (33648520, tumor-only RNA TMB+签名)。
-- **RNA-SBS**（COSMIC v3.5 起）源自 TRACERx：Martínez-Ruiz, Nature 2023 (37046093)。
+- **RNA-SBS**（COSMIC **v3.4** 起已收录，非 v3.5）源自 TRACERx：Martínez-Ruiz, Nature 2023 (37046093)。
 - RNA-based HRD：Brown 2023 (38061006)。
 
 **隐含工作流**：RNA 突变调用 → RNA 伪迹感知（G>A/C>T 偏斜、RNA 编辑）拟合（DNA 派生 + RNA 特异参考集）→ DNA-vs-RNA 一致性报告。**数以千计的 RNA-seq-only 队列是巨大未满足需求。**
 
 ## 10. 非人类/跨物种与非癌
 
-- 小鼠：**Riva, Nat Genet 2020 (32989322, 已知人类致癌物的小鼠签名谱——COSMIC 小鼠集之基)**；Connor, J Hepatol 2018 (29958939)；Xu, Cell Rep 2025 (40638383)；Smith-Roe, EMM 2026 (42277565)；Ohno, Genes Environ 2025 (41131588)；Gurevich bioRxiv 2026 (41959104)。
+- 小鼠：**Riva, Nat Genet 2020 (32989322, 已知人类致癌物的小鼠签名谱——COSMIC 小鼠集之基)**；Connor, J Hepatol 2018 (29958939)；Xu, Cell Rep 2025 (40638383)；Zhang/Smith-Roe, EMM 2026 (42277565)；Ohno, Genes Environ 2025 (41131588)；Gurevich bioRxiv 2026 (41959104)。
 - 大鼠：乙醇多器官 (42321443)。酵母：Loeillet, PNAS 2020 (32968016)。犬：Hwang, Gene 2026 (42342053)。综述：Daino 2025 (41007286)。
 
 **隐含工作流 —— "临床前/毒理模式"**：非人类基因组上下文（mm10/rn6/canFam）、物种参考集、暴露筛选评分（超越 Ames 的遗传毒性排序）、跨物种签名匹配。
@@ -137,7 +137,7 @@
 5. **Panel/WES 修复缺陷诊断（MSI/MMR、POLE、MUTYH）** — ID 签名 MSI 分类、SBS10/POLE 检出 + 灵敏度界（33355208; 35668106; 25878334; 33571361）。FFPE panel 是最大临床样本池。
 6. **治疗史法证与纵向复发对模式** — 治疗参考集 + 克隆计时 + 纵向差分（31594944; 33495476; 31697823; 40371888; 40791422; 32024834）。近零竞争、高新颖度。
 7. **正常组织/癌前低计数模式** — 层级池化拟合（50–1,000 突变）、时钟 vs 超额分解、肿瘤-正常对比（40604182; 40108450; 41532847; 35948631; 35581206）。SMaHT/癌前浪潮加速中。
-8. **RNA-seq 签名模块** — RNA 感知调用 + RNA-SBS 参考（COSMIC v3.5）+ DNA-RNA 一致性（38783092; 37046093; 34158040; 33648520）。
+8. **RNA-seq 签名模块** — RNA 感知调用 + RNA-SBS 参考（COSMIC v3.4+）+ DNA-RNA 一致性（38783092; 37046093; 34158040; 33648520）。
 9. **ctDNA/低 VAF 液体活检模式** — 灵敏度界约束的签名存在性检验、低覆盖 WGS 支持、cfDNA CN 签名（35999207; 39543119; 42601918; 32269342）。
 10. **临床前/毒理与跨物种模式** — 任意基因组（小鼠/大鼠/犬/酵母）、物种参考集、体外暴露筛选、跨物种匹配（32989322; 30982602; 28739859; 42321443; 42277565）。
 

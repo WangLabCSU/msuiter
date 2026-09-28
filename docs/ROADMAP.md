@@ -17,8 +17,8 @@
 ## 组织行动门（G 门——非文档工作，需作者推进）
 
 - **G0（立即，2 周）**：先导覆盖实验——2 个竞品工具 × TMB 网格的名义 vs 实际覆盖率。**kill-criterion 门**：结果决定论文 headline 走 Framing A（校准统计）还是 Framing B（生态）。先于一切论文叙事写作。
-- **G1（M1 前）**：找到 co-maintainer（bus factor + CRAN + 审稿三重需要）。
-- **G2（M3 结束前）**：统计学 co-author（conformal/CoDA 理论）+ 临床/队列合作者（治疗记录 / RNA-only / FFPE panel 三选一）锁定；否则案例注定装饰性，主动接受 GB/NC 上限。
+- **G1（M1s 前）**：找到 co-maintainer（bus factor + CRAN + 审稿三重需要）。
+- **G2（M3b 期间/结束前）**：统计学 co-author（conformal/CoDA 理论）+ 临床/队列合作者（治疗记录 / RNA-only / FFPE panel 三选一）锁定；否则案例注定装饰性，主动接受 GB/NC 上限。
 - **G3（每季度）**：竞争格局复核（Cornet/MuSiCal/SPA 动态），重估 kill criteria。
 
 ---
@@ -39,12 +39,12 @@
 
 **验收**：check 全绿；S7 校验测试过；RNG golden 过；vendor 体积数字进 ADR。
 
-### M1s · v0.1 引擎与目录（4 周；完整 M1 在 v0.2 续）
+### M1s · v0.1 引擎与目录（4 周；完整「引擎与目录」拆为 M1s/M1c/M2，M1c/M2 在 v0.2 续）
 
 - [ ] engine：KL-MM MU、NNDSVDa（q≥3 + exact Gram-SVD 对照）、Lawson-Hanson NNLS（pivot LDLᵀ + KKT 断言）、多项重采样、**线程不变性 identical() 测试**
 - [ ] catalog：SBS96/192/384/1536 + DBS78 + **MNV/complex 路由模块**（skip ledger）+ 2bit 快路径
 - [ ] 金标准夹具（**语义逐位**）：SPMG SBS/DBS/MNV 对拍、sigminer/MP 玩具交叉验证
-- [ ] `ms_read_variants/ms_tally/ms_extract`（单方法）+ `print/format`
+- [ ] `ms_variants/ms_tally/ms_extract`（单方法）+ `print/format`
 - [ ] KL 数值协议等价对拍：vs R NMF brunet（固定平台一次性实验，容差 1e-10）
 
 **验收（v0.1 发布）**：目录生成 ≥50× SPMG（钉硬件 bench；CI 只 sanity bound <5s）；NMF ≥100× R NMF；夹具全绿；r-universe 可安装。

@@ -27,7 +27,7 @@ COSMIC signatures 站点声明：签名下载虽不需登录，但**"use of the 
 | deconstructSigs | **无 LICENSE 文件** | 是——signatures.cosmic.rda 等 |
 | sigminer | MIT（CRAN） | 是——v3.1 SBS/DBS/ID/TSB + PCAWG176/TCGA CNS/RS + Nik-lab + SIGNAL |
 | mSigPortal | GPL-3 | 以服务形式提供（JSON），不捆绑 |
-| mmsig/sigfit/signature.tools.lib | 各异 | 各自捆绑签名参考 |
+| mmsig/sigfit/signature.tools.lib | 各异（**signature.tools.lib = BSD-3 式 + 学术专用限制（禁临床、限非营利、修改版须共享）；非 OSI 标准，按 GPL 级对待（仅公式参考）**） | 各自捆绑签名参考 |
 
 ### 解读与结论
 

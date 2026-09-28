@@ -107,8 +107,8 @@ Li, Crawford & Gerstein, Nat Commun 11:3575 (2020)。生成式：L = Multinomial
 ## 4. 机会归一化、外显子↔全基因组、panel、低计数
 
 - **机会机制 [V]**：sigfit 似然内机会（支持逐样本）；SPA 发 COSMIC `*_exome` 目录文件（per build）；MuSiCal 无外显子转换（仅 TMB 重标定）；sigminer sig_convert = sigfit 移植。
-- **Panel/小计数**：现状薄弱。**SigMA**（Gulhan, Nat Genet 2019;51:912–919 [V 摘要]）是唯一经典 panel 方法：似然测度 + ML 分类器，靶向 panel 几十突变判 HRD/SBS3。bbaf042 丢 <100 SBS；mSigAct 默认丢 <100 SBS / <25 DBS-ID；MuSiCal 用 ≥100 IDs + 癌型阈值；常见门槛 ≥50（SigProfiler 文档）或 ≥200。**Medo 证明无普适阈值有意义**（难度签名特异——Shannon 平坦度；误差 ~1/√N）。"SigProfilerPanel" 未能证实存在 [U]。**第二块绿地：有原则的低计数通用拟合器（negbin/多项 LRT + panel 机会目录 + 校准 LRT）不存在。**
-- **TMB 依赖**：Medo Fig 1c [V]：N 下降时误差与假阳性权重陡增；平坦签名（SBS5/40、SBS1）在所有 N 系统性低估；>10,000 突变时多数工具避免假阳性；真实 PCAWG 50k+ 样本上顶级工具仍广泛分歧。
+- **Panel/小计数**：现状薄弱。**SigMA**（Gulhan, Nat Genet 2019;51:912–919 [V 摘要]）是唯一经典 panel 方法：似然测度 + ML 分类器，靶向 panel 几十突变判 HRD/SBS3。bbaf042 丢 <100 SBS；mSigAct 默认丢 <100 SBS / <25 DBS-ID；MuSiCal 用 ≥100 IDs + 癌型阈值；常见门槛 ≥50（SigProfiler 文档）或 ≥200。**Medo 证明无普适阈值有意义**（难度签名特异——Shannon 平坦度；误差 ~1/√N）。"SigProfilerPanel" 未能证实存在（GitHub/PyPI 注册表零命中，2026-09-28 实证检索；AlexandrovLab 组织无此仓库，PyPI 无此包）。**第二块绿地：有原则的低计数通用拟合器（negbin/多项 LRT + panel 机会目录 + 校准 LRT）不存在。**
+- **TMB 依赖**：Medo Fig 1c [V]：N 下降时误差与假阳性权重陡增；**平坦签名（SBS5、SBS40）在所有 N 系统性低估**（Medo 明确列的是 SBS5/40；SBS1 是"容易"签名，不在此列）；>10,000 突变时多数工具避免假阳性；真实 PCAWG 50k+ 样本上顶级工具仍广泛分歧。
 
 ## 5. 拟合后分析
 
@@ -120,8 +120,8 @@ Li, Crawford & Gerstein, Nat Commun 11:3575 (2020)。生成式：L = Multinomial
 
 ## 6. 目录、折叠、阈值
 
-- COSMIC 现行 v3.6（配 COSMIC v104, 2026-05）；SPA 已默认 3.6。
-- **折叠/连接处理分歧**：SPA 组 [SBS2+13, SBS7a-d, SBS10a+b, SBS17a+b] vs **MuSiCal [SBS2,13]、[SBS17a,17b]、[SBS10a,b,c,d,28]（无 SBS7 组）[V 源码]**——需设计决策（MuSiCal 清单 PMS2/POLE 驱动；SPA 加 UV 子型）。
+- COSMIC 现行 v3.6（SPA 已默认 3.6）。**release 号对应已核实（Sanger 官方 signatures 站点，2026-09-28）：v3.6 随 COSMIC v104（2026-05）发布，前版 v3.5 随 v103（2025-11）；v3 首见于 v89（2013-05）。**
+- **折叠/连接处理分歧**：SPA 组 [SBS2+13, SBS7a-d, **SBS10a+b**, SBS17a+b] vs **MuSiCal [SBS2,13]、[SBS17a,17b]、[SBS10a,b,c,d,28]（无 SBS7 组）[V 源码]**——注意 SPA 只把 **SBS10a/SBS10b** 归为一组，MuSiCal 把 **SBS10a–d 与 SBS28** 全归一组，两者在 POLE 亚型上的分组粒度不同；需设计决策（MuSiCal 清单 PMS2/POLE 驱动；SPA 加 UV 子型）。
 - SPA 病因排除清单含 artifact（SBS27,43,45–60,95; DBS14）——事实上的"curated catalog" API。
 - 相似度阈值：MuSiCal 匹配接受 cosine ≥ 0.99；SPA < 0.8 判新签名；FitMS 罕见候选 ≥ 0.8；**RSS/reconstruction 阈值无社区标准**——bbaf042 证明 cosine>0.969 仍容许数千归因，单报 RSS 无信息。
 - 清零惯例（均经 Medo [V]）：sigfit CI 下界<0.01；deconstructSigs <0.06；COSMIC 系 <10 突变；MuSiCal LTH；SPA add/remove 惩罚 + 强制 SBS1/5 背景。

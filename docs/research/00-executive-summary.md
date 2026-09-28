@@ -27,7 +27,7 @@
 **关键实证**：rust-NMF 证明"NNDSVD 初始化是魔法而非算法"（NNDSVD+25 次迭代 ≈ 随机初始化+数百次）；KL 乘法更新对计数数据是统计正确的 MLE（多项/Poisson 等价）。
 
 ### 拟合（fitting / attribution）
-- Medo 2024 Nat Commun（12 工具）：**SigProfilerAssignment 与 MuSiCal 高计数下最佳；剪裁参考目录有害；平坦签名（SBS1/5/40）系统性低估；拟合误差 ∝ 1/√N 且与签名 Shannon 熵相关**。
+- Medo 2024 Nat Commun（12 工具）：**SigProfilerAssignment 与 MuSiCal 高计数下最佳；剪裁参考目录有害；平坦签名（SBS5/40）系统性低估；拟合误差 ∝ 1/√N 且与签名 Shannon 熵相关**。
 - Jiang et al. Brief Bioinform 26(1):bbaf042（2025，epub 2024-11；13 工具）：**PASA**（前向搜索 + LRT）DBS/ID 第一，MuSiCal SBS 第一；核心洞见——**重建相似度指标无信息量**（99/100 胃癌样本存在比真值重建更好的错误归因），必须用 precision/recall 评估。
 - 似然损失理论：多项似然（KL）是计数数据的正确 MLE；cosine 只能做报告不能做推断；QP 与 NNLS 实质差异仅在 Σe=1 等式约束。
 - **三个论文级空白**（我们可占领）：

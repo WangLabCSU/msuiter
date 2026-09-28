@@ -8,7 +8,7 @@
 
 ## 1. Cornet / Sonata —— 最重要的单项发现（用户指定的 biorxiv 论文）
 
-**论文**: Jin H, Geiger B, Glodzik D, Gulhan DC, Park PJ. "Correlation-aware discovery of co-occurring mutational signatures in cancer." bioRxiv 2026.09.14.751548（2026-09-21 挂出，MuSiCal 原班团队）。**[V — Europe PMC 元数据]**
+**论文**: Jin H, Geiger B, Glodzik D, Gulhan DC, Park PJ. "Correlation-aware discovery of co-occurring mutational signatures in cancer." bioRxiv 2026.09.14.751548（2026-09-21 挂出，MuSiCal 原班团队）。**DOI `10.64898/2026.09.14.751548`**（bioRxiv 自 2026 起换用 `10.64898` 前缀；旧的 `10.1101/...` 不能解析）。CC-BY-NC，version 1。**[V — Europe PMC 元数据 + 全文（经 jina.ai 镜像绕过 bioRxiv 403）]**
 
 **软件**: `parklab/Sonata`，Python，**MIT 许可**，pip 名 `sonata-tools`，AnnData 原生。含三个模型：`so.models.NMF`（KL-NMF）、`so.models.MvNMF`（最小体积 NMF）、`so.models.Cornet`。集成于 MuSiCal 式 de novo 流水线（bootstrap → fit → filter → cluster → K 选择）。**[V — 源码]**
 
@@ -36,11 +36,11 @@
 
 默认：NNDSVD 初始化，min_iterations=500，max_iterations=10000，tol=1e-7，每 10 迭代检查收敛。**[V]**
 
-### 1.3 论文声明 [search 级——全文限时 429 未抓到；数字与代码一致但按未验证对待]
+### 1.3 论文声明 [V — 全文逐句核实]
 
-- 合成基准（1000 数据集；3 个签名、诱导 exposure 相关）：标准 NMF+NNLS 在 pairwise 相关 r ≳ 0.8 后急剧退化（交叉污染至 ~40%），Cornet 到 r ≈ 0.98 仍正确。
+- 合成基准（1000 数据集；3 个签名、诱导 exposure 相关）：标准 NMF+NNLS 在 pairwise 相关 r ≳ 0.8 后急剧退化（**中位 20–41% 的权重被归到交叉污染**），Cornet 到 r ≈ 0.98 仍正确。逐位数字：NMF **median cosine error 0.032–0.13（0.8 < r ≤ 0.98）**，交叉污染 median 20–41%；Cornet **median cosine error 0.0039–0.033**，交叉污染 2–11%。
 - 真实发现：PCAWG 结直肠癌中干净解析 SBS88（colibactin，NMF 会分裂模糊）；GEL 口咽癌 SBS88；BNHL 中无聚类约束下 SBS84/85；SBS93 被证明是复合体；**膀胱癌 SBS4/SBS92 分为 92a/92b，92a 追踪 ERCC2（顺铂）状态**。
-- 论文声明的预处理规则：**目录重标定使平均样本 TMB = 通道数 V 的 10–40 倍**（SBS96 → ~1000–4000 计数/样本）——设定对数正态 exposure 分布的"温度"，控制稀疏/聚类行为。**[search]**
+- 论文声明的预处理规则：**目录重标定使平均样本 TMB = 通道数 V 的 10–40 倍**（原文 "average tumor mutational burden across samples was between 10 V and 40 V"；SBS96 → ~1000–4000 计数/样本）——设定对数正态 exposure 分布的"温度"，控制稀疏/聚类行为。**[V]**
 
 ### 1.4 对 msuiter 的意义
 
@@ -122,7 +122,7 @@ Buscaroli E et al., Genome Biology 27:15 (2025), DOI 10.1186/s13059-025-03835-9�
 
 ## 9. 其他提取方法与基准格局
 
-- **Sonata MvNMF**（源码读）：`KL(V‖WH) + λ·log det(WᵀW + δI)`（Leplat, Gillis & Ang, IEEE TSP 68:3400–3410, 2020）；MM 乘法更新 + 回溯线搜索 + W 列归一。**相关/过完备签名可识别性的线性世界解药**。[V]
+- **Sonata `so.models.MvNMF`**（`parklab/Sonata` 源码读）：`KL(V‖WH) + λ·log det(WᵀW + δI)`（Leplat, Gillis & Ang, IEEE TSP 68:3400–3410, 2020）；MM 乘法更新 + 回溯线搜索 + W 列归一。**相关/过完备签名可识别性的线性世界解药**。[V]
 - **SparseSignatures**：L1 惩罚 Poisson NMF + bi-cross-validation（已知）；SUITOR 基准显示对突变检出错误脆弱。
 - **SigMoS**（Rosenberg 组；BayesPowerNMF 作为对照引用）：大队列过拟合。[search]
 - **mSigHdp**：HDP，罕见签名敏感性最佳、慢（已知）。
@@ -156,7 +156,7 @@ H ← H ⊙ [Wᵀ(V ⊘ WH)^{β̃}] ⊘ [Wᵀ(WH)^{β̃}]，β̃ = β−1（1≤
 
 **(g) Poisson NMF via EM/CCCP**：软 EM 潜在计数分配 `c_vkd = x_vd·w_kv h_kd/(WH)_vd` + 闭式 M 步——代数上与 KL-MU 等价（这正是 SUITOR ECM 论证的基础），但打开了随机/mini-batch/镜像下降变体和潜在计数先验（BASCULE/BayesPowerNMF 路线）。Cornet 的 aux 统计量即此潜在计数聚合。
 
-**rust-NMF 实测事实 [V — lib.rs + README]**：bit 等价 R NMF：brunet/lee/offset/nsNMF/snmf-r/snmf-l/hals/ehals/dnmf/lsnmf + NNDSVD；ndarray 0.16 + rayon（无 BLAS）；pbmc8k (3000×1500, rank 8, 16 线程)：lee+NNDSVD@25 iter = 0.19 s、brunet 0.41 s、hals 0.13 s；ARI 最优 = lee+NNDSVD 0.889 vs lee+random 0.568。**核心实证定律："NNDSVD 初始化是魔法，不是算法"**。对 R 加速 ~76×（Lee）至 ~218×（HALS+NNDSVD）。**许可 GPL≥2（承自 R NMF 移植）——只作参考，不得复制代码。**
+**rust-NMF 实测事实 [V — lib.rs + README]**：bit 等价 R NMF：brunet/lee/offset/nsNMF/snmf-r/snmf-l/hals/ehals/dnmf/lsnmf + NNDSVD；ndarray 0.16 + rayon（无 BLAS）；pbmc8k (3000×1500, rank 8, 16 线程)：lee+NNDSVD@25 iter = 0.19 s、brunet 0.41 s、hals 0.13 s；ARI 最优 = lee+NNDSVD 0.889 vs lee+random 0.568。**核心实证定律："NNDSVD 初始化是魔法，不是算法"**。对 R 加速 ~76×（Lee，bit 等价）至 ~215×（HALS+NNDSVD@25 iter）。**许可 GPL≥2（承自 R NMF 移植）——只作参考，不得复制代码。**
 
 ## 11. 初始化与 K 选择最佳实践
 
@@ -172,8 +172,8 @@ H ← H ⊙ [Wᵀ(V ⊘ WH)^{β̃}] ⊘ [Wᵀ(WH)^{β̃}]，β̃ = β−1（1≤
 
 ## 12. 提取前目录预处理
 
-- **超突变者**：SigProfiler 1-D GMM 定 cutoff 后重标定（rescale ∈ {none, 100, log2, quadratic}，参数名待复核 [unverified]）；固定文献阈值 >10 mut/Mb（hypermutated）、>100（ultra）。
-- **common-then-rare 两阶段**（Degasperi 2022 Science 376:eabl9283）：先排除超突变者提常见签名，再固定常见签名、面向残差提罕见签名；罕见阶段确切加权需查 Science 补充材料 [search 级]。
+- **超突变者**：SigProfiler 用 1-D GMM（`GaussianMixture(n_components=2, covariance_type="full")`）在每样本总突变数上定 cutoff，默认 manual_cutoff=**9600**（`subroutines.py:149` `get_normalization_cutoff`），然后按 `matrix_normalization` 重标定：默认 **`"gmm"`**，可选 `"100X"`、`"log2"`、`"none"`，或直接传正整数作为手工 cutoff（`sigpro.py` ~L318；`README.md:93`；`docs/3. Using the Tool - Input.md:64`）。**[V — SigProfilerSuite/SigProfilerExtractor 源码]**（注：仓库已从 AlexandrovLab 迁至 SigProfilerSuite 组织。）固定文献阈值 >10 mut/Mb（hypermutated）、>100（ultra）。
+- **common-then-rare 两阶段**（Degasperi 2022 Science 376:eabl9283）：FitMS = **Fit Multi-Step**（PMID 35949260, PMC7613262）。先固定常见签名（器官 RefSig T1–T4；`constrainedFit` 用 limSolve 约束 NNLS），再对残差搜罕见签名；两种策略 `constrainedFit` vs `errorReduction`，论文结论 **errorReduction 胜出**：*"A rare signature is considered present if the reduction in error is at least 15%"*；第二步假设存在 1 或 2 个罕见签名。实现于 `signature.tools.lib`（Zenodo Code S1/S2）。**[V]**
 - **机会归一化/外显子↔全基因组**：exposure 保留"活性占比"与"每 Mb 速率"两个概念，sig_convert 类转换保留。
 - **2023–2026 新思想**：①Cornet/Sonata 输入重标定（10–40× 通道数）；②MuSiCal 去噪与一致性循环；③BASCULE 残差感知先验；④BayesPowerNMF α 幂似然；⑤SUITOR entry-wise 掩码兼作 QC 评分。
 
@@ -192,7 +192,7 @@ H ← H ⊙ [Wᵀ(V ⊘ WH)^{β̃}] ⊘ [Wᵀ(WH)^{β̃}]，β̃ = β−1（1≤
 ## 14. 引用清单
 
 （关键条目，完整见正文内联引用）
-1. Jin et al. Cornet. bioRxiv 2026.09.14.751548；Sonata: github.com/parklab/Sonata (MIT)
+1. Jin et al. Cornet. bioRxiv 2026.09.14.751548, DOI 10.64898/2026.09.14.751548；Sonata: github.com/parklab/Sonata (MIT)
 2. Paisley, Blei & Jordan 2014（correlated NMF 谱系）
 3. Lee et al. SUITOR. PLoS Comput Biol 18(4):e1009309 (2022). PMC9009674
 4. Rosales et al. signeR. Bioinformatics 33(1):8–16 (2017)；Drummond 2023 PMC10664385
@@ -202,15 +202,19 @@ H ← H ⊙ [Wᵀ(V ⊘ WH)^{β̃}] ⊘ [Wᵀ(WH)^{β̃}]，β̃ = β−1（1≤
 8. Shiraishi et al. PLoS Genet 11(12):e1005657 (2015)；Yang et al. HiLDA PMC6717498；Matsutani Bioinformatics 35:4543 (2019)
 9. Pancotti et al. MUSE-XAE. Bioinformatics 40(5):btae320 (2024)；Serrano et al. SigNet bioRxiv 2023.12.06.570467
 10. Leplat, Gillis & Ang. IEEE TSP 68:3400–3410 (2020)；Boutsidis & Gallopoulos SIAM J Matrix Anal Appl 30:60 (2008)
-11. Lee & Seung NIPS 2000 / Nature 401:788 (1999) / Nature 2001（KL）；Févotte & Idier Neural Comput 23:2421 (2011)；Marmin 2023 Signal Processing
+11. Lee & Seung NIPS 2000 / Nature 401:788 (1999) / Nature 2001（KL）；Févotte & Idier Neural Comput 23:2421 (2011)；Marmin, Goulart & Févotte, Signal Processing 209:109048 (2023) doi:10.1016/j.sigpro.2023.109048
 12. Kim & Park 2007/2008；Brunet PNAS 101:4164 (2004)；Cichocki 2007–2009；Cemgil 2009
 13. Islam et al. Cell Genomics 2:100131 (2022)；Degasperi et al. Science 376:eabl9283 (2022)；Wu et al. Sci Rep 12:390 (2022)
 - 代码：parklab/Sonata (MIT)、binzhulab/SUITOR、TARPS-group/BayesPowerNMF (MIT)、friend1ws/pmsignature、USCbiostats/HiLDA、omicverse/rust-NMF (GPL≥2, 参考)、linxihui/NNLM (BSD-2)、zdebruine/RcppML (GPL≥3, 理念)、weghornlab/SigNet、compbiomed-unito/MUSE-XAE、sigminer R/bayesianNMF.R (Broad BSD-3, 可移植)
 
 ## 15. 明确未验证项
 
-- Cornet 论文的定量基准数字（全文 429 未抓全；数字来自检索摘要，与代码一致）
-- SigProfilerExtractor `gmm_cutoff`/`rescale` 参数名与默认值（凭既有记忆，未本轮复核）
-- Degasperi 两阶段罕见阶段的确切加权（需 Science 补充材料）
-- RcppML 许可（repo 未见 LICENSE）；SigMoS 引用细节；Sigmoid 详情；mmsig2/MATLAB-MSA/SP-Signatures/AutoSig（未找到，很可能不存在）；Marmin 2023 确切 DOI；rust-NMF "280×" 上界（README 支持 ~218×）
-- **许可地雷**：rust-NMF 奇偶校验实现为 GPL≥2；Sonata MIT 安全；sigminer bayesianNMF.R 是 Broad BSD-3（带归属可移植）；所有情形下算法本身已发表、可自由重实现
+- SigMoS 引用细节；Sigmoid 详情（Islam 2022 全文 grep "sigmoid" = 0 命中——该术语不存在）；mmsig2/MATLAB-MSA/SP-Signatures/AutoSig（未找到，很可能不存在）
+- **已结案（本轮核查，2026-09-28）**：
+  - Cornet 定量基准数字 → **已全文核实**（见 §1.3）；DOI 前缀纠正为 `10.64898`（见 §1）
+  - SigProfilerExtractor 超突变参数 → **原 `gmm_cutoff`/`rescale`/`quadratical` 说法被证伪**；真实参数 `matrix_normalization`（默认 `"gmm"`；见 §12）
+  - Degasperi 罕见阶段加权 → **已核实**：FitMS `errorReduction` 策略、误差降幅 ≥15% 阈值（见 §12）
+  - RcppML 许可 → **GPL (>= 3)**，v1.0.0（已确认）
+  - Marmin 2023 DOI → `10.1016/j.sigpro.2023.109048`（Signal Processing **209**, art. 109048, Aug 2023；作者 Marmin, Henrique de Morais Goulart, Févotte）
+  - rust-NMF 加速比 → 头版数字应为 **76×（bit 等价，lee）与 ~215×（hals+NNDSVD，25 iter）**；`280×` 是单行宽松配置（10 iter, 0.45 s）外推，不宜作标题
+- **许可地雷**：rust-NMF 奇偶校验实现为 GPL≥2；RcppML GPL≥3；Sonata MIT 安全；sigminer bayesianNMF.R 是 Broad BSD-3（带归属可移植）；所有情形下算法本身已发表、可自由重实现
