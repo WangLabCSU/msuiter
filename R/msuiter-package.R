@@ -6,4 +6,5 @@
 #' the engine registry and the tidy user interface.
 #'
 #' @keywords internal
+#' @useDynLib msuiter, .registration = TRUE
 "_PACKAGE"

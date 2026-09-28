@@ -94,7 +94,8 @@ src/rust/
 │   ├── correlated.rs # 相关性感知组件（对数空间低秩 exposure；gauge-fixed 输出协议）
 │   ├── tensor.rs     # NTF+NB（探索性；held-out likelihood 定秩 + Kruskal 条件检查）
 │   ├── rng.rs        # ★ 自研 PCG64 + SplitMix64 种子流布局（per-replicate/rank/fold
-│   │                 #   计数器流；布局写进论文 Methods）；自写 multinomial/Dirichlet 采样
+│   │                 #   计数器流；布局写进论文 Methods）。multinomial/Dirichlet
+│   │                 #   采样在 resample.rs（U-M1s-04），不在此模块
 │   ├── nndsvd.rs     # NNDSVDa/ar：随机化 SVD 固定 q≥3 power iterations + oversampling≥16
 │   │                 #   + "exact Gram-SVD 对照" property test；KL 分母 max(·,ε)/log(ε+·)
 │   ├── nnls.rs       # Lawson-Hanson on Gram：pivot 化 LDLᵀ + ε‖G‖ ridge + KKT 断言
@@ -130,6 +131,8 @@ src/rust/
 ## 3. R 包结构与 S7 类系统
 
 ### 3.1 目录布局（模块化、预留拆包线；每 section 一份三行 README 声明允许的依赖方向）
+
+> **实现注记（U-M0-03 实测）**：R 包机制（WRE §1.1.5）只安装 `R/` 顶层 `.R` 文件——上图 `R/<section>/` 子目录不可字面落地。约定改为**平铺前缀命名** `<section>-<topic>.R`（如 `classes-variants.R`、未来的 `io-variants.R`、`catalog-tally.R`），section 归属由文件名前缀表达、加载顺序由 DESCRIPTION `Collate` 控制；各 section 的依赖方向规则由静态架构测试强制（M2 契约测试套件承接，模式同 `tools/check-dep-direction.sh` 与 `tools/docs-sync.R`）。
 
 ```
 R/

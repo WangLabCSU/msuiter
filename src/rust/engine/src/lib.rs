@@ -6,6 +6,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod rng;
+
 /// Role marker used by the FFI shell's link test to assert the workspace
 /// dependency direction (ffi → catalog → engine) holds and both crates
 /// link cleanly. Keep in sync with `docs/ARCHITECTURE.md` §2.

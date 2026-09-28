@@ -8,3 +8,5 @@
 ^src/Makevars$
 ^src/Makevars\.win$
 ^tools/spike
+^data-raw$
+^docs$

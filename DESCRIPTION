@@ -10,6 +10,22 @@ Description: Tally, extract and fit mutational signatures across modalities
 License: Apache License (>= 2.0)
 Encoding: UTF-8
 Depends: R (>= 4.3)
+Imports: S7,
+    rlang
+Suggests: testthat (>= 3.0.0)
+Collate:
+    'classes-utils.R'
+    'classes-variants.R'
+    'classes-catalog.R'
+    'classes-signature.R'
+    'classes-fit.R'
+    'classes-refdb.R'
+    'classes-engines.R'
+    'classes-benchmark.R'
+    'msuiter-package.R'
+    'extendr-wrappers.R'
+    'zzz.R'
+Config/testthat/edition: 3
 SystemRequirements: cargo, rustc (>= 1.71)
 Config/rextendr/version: 0.5.0
 RoxygenNote: 7.3.3
