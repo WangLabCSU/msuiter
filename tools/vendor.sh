@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 # Regenerate the offline vendor tarball and report its byte budget.
-# Baseline: docs/adr/0002-vendor-budget.md §2 (22 crates, 970 files).
+# Baseline: docs/adr/0002-vendor-budget.md §2 (24 crates; effective baseline
+# = 2026-09-28 rayon increment row).
 #
 # The tarball is NOT committed: CRAN submission (U-M8-01) attaches a freshly
 # generated one to the source package. CI (U-M0-07) runs `--check` to catch
@@ -11,9 +12,9 @@
 # (~0.01% across versions), so --check allows a ±0.1% band there only.
 set -eu
 
-BASELINE_UNCOMPRESSED=10674351
-BASELINE_TAR=13832192
-BASELINE_XZ=1125136
+BASELINE_UNCOMPRESSED=12526058
+BASELINE_TAR=16516096
+BASELINE_XZ=1407588
 XZ_TOL_PCT=0.1
 
 filesize() { stat -f%z "$1" 2>/dev/null || stat -c%s "$1"; }

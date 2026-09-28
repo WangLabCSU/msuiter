@@ -142,7 +142,8 @@
 | `ms_variants()` `ms_tally()` `ms_extract()` `ms_fit()` `ms_compare()` `plot()` | L2/L3 | 统一工作流文法主干（六类变异同文法；换引擎不改管线） | M1s/M2/M3a/M4 |
 | `ms_select_k()` | L3 | K 选择仲裁规则（CV argmin → 稳定性 veto → Wilcoxon 诊断） | M2（部分诊断 ⏳） |
 | `ms_fit_bootstrap()` `ms_test_presence()` | L3 | bootstrap CI（支撑条件）与 presence LRT（NB χ²₁ + BH） | M3a |
-| `ms_engine()` `fit_engine()` `required_pkgs()` `ms_extract_signatures()` `ms_extract_exposures()` `ms_extract_fit_time()` | L3 | 引擎注册表 S7 泛型（`register_ms_engine()` 为扩展入口；`ms_extract_*` 为泛型访问器，仅后两者进 FFI 表面） | M0/M2 |
+| `register_ms_engine()` `match_ms_engine()` `ms_engines()` | L3 | 引擎注册表扩展入口 + 字符串糖解析（A14，失败列全部可用引擎名）+ 已注册引擎目录；certified 三态治理（A17），non-certified 解析一次性告警 | M0 |
+| `ms_engine()` `fit_engine()` `required_pkgs()` `ms_extract_signatures()` `ms_extract_exposures()` `ms_extract_fit_time()` | L3 | 引擎注册表 S7 泛型（`ms_extract_*` 为泛型访问器，仅后两者进 FFI 表面） | M0/M2 |
 | `ms_benchmark()` | L3 | mlr3 式基准网格；non-certified 引擎显式 warning | M0 骨架/M7 完备 |
 | `ms_sitrep()` | L3 | 环境/依赖/refdb/线程诊断 | M0 |
 | `ms_qc_report()` `ms_downsample()` `ms_convert()` `ms_update_refdb()` | L2 | QC 报告、深度下采样、机会转换、参考库更新 | M0 骨架起（`ms_update_refdb()`）/M4 |

@@ -6,7 +6,10 @@
 
 #![forbid(unsafe_code)]
 
+pub mod error;
 pub mod rng;
+
+pub use error::MsError;
 
 /// Role marker used by the FFI shell's link test to assert the workspace
 /// dependency direction (ffi → catalog → engine) holds and both crates

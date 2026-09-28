@@ -12,7 +12,8 @@ Encoding: UTF-8
 Depends: R (>= 4.3)
 Imports: S7,
     rlang
-Suggests: testthat (>= 3.0.0)
+Suggests: testthat (>= 3.0.0),
+    withr
 Collate:
     'classes-utils.R'
     'classes-variants.R'
@@ -21,9 +22,12 @@ Collate:
     'classes-fit.R'
     'classes-refdb.R'
     'classes-engines.R'
+    'engines-registry.R'
     'classes-benchmark.R'
     'msuiter-package.R'
     'extendr-wrappers.R'
+    'ffi-probes.R'
+    'sitrep.R'
     'zzz.R'
 Config/testthat/edition: 3
 SystemRequirements: cargo, rustc (>= 1.71)

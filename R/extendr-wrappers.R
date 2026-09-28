@@ -5,4 +5,16 @@
 #' @useDynLib msuiter, .registration = TRUE
 NULL
 
+msffi_column_major_probe <- function(x) .Call(wrap__msffi_column_major_probe, x)
+
+msffi_na_probe <- function(x) .Call(wrap__msffi_na_probe, x)
+
+msffi_error_probe <- function(i, j) .Call(wrap__msffi_error_probe, i, j)
+
+msffi_interrupt_probe <- function(n_chunks, n_threads) .Call(wrap__msffi_interrupt_probe, n_chunks, n_threads)
+
+msffi_thread_probe <- function(n_items, seed, n_threads) .Call(wrap__msffi_thread_probe, n_items, seed, n_threads)
+
+msffi_build_info <- function() .Call(wrap__msffi_build_info)
+
 # nolint end

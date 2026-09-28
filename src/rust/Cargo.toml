@@ -18,6 +18,9 @@ path = "document.rs"
 extendr-api = { workspace = true, features = ["ndarray"] }
 msuiter-catalog = { path = "catalog", version = "0.0.0" }
 msuiter-engine = { path = "engine", version = "0.0.0" }
+# Per-call thread pools only (FFI contract 6): the global rayon pool is
+# never used; every top-level call builds and drops its own ThreadPool.
+rayon = { workspace = true }
 
 [profile.release]
 lto = true
@@ -34,6 +37,9 @@ members = ["engine", "catalog"]
 [workspace.dependencies]
 extendr-api = { version = "0.9", default-features = false }
 ndarray = "0.16"
+# MSRV 1.71 pin (ADR 0002 §4 convention): rayon >= 1.11 declares
+# rust-version = 1.80. Cargo.lock pins rayon 1.10.0 / rayon-core 1.12.1;
+# keep both pins until the declared MSRV moves past 1.80.
 rayon = "1"
 memmap2 = "0.9"
 twobit = "0.2.2"
