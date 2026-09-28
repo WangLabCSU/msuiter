@@ -26,6 +26,7 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 | [docs/reviews/01–05](docs/reviews/01-computational-biologist.md) | Independent adversarial reviews: computational biologist / Rust-R engineer / ML statistician / software engineer / Nature editor |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Modular architecture: Rust workspace + S7 package, ADRs, unified method framework, MSU-* methods |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Dual-track paper-oriented roadmap (v0.1 / v0.2 / v1.0) with organizational gates |
+| [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md) | Executable decomposition of the roadmap — work units (deliverables / acceptance / dependencies / estimates), week-by-week v0.1 schedule, G-gate author actions, kickoff checklist |
 
 ## Design pillars
 
