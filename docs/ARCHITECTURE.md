@@ -288,7 +288,7 @@ MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 | 线程数改变数值结果 | 单元间并行 + 固定归约 + identical() CI 测试（A7） |
 | "逐位"验收与 clean-room 对撞 | 双层术语（D11）；R NMF 对拍为一次性平台实验 |
 | 统计声明被统计学评审击穿 | D13 四件套前置 + G0 先导实验 + 统计学 co-author（组织行动项） |
-| Cornet 正式发表压制相关性组件 | 预注册可证伪声明 + 组件化降级（A4）+ 季度竞争复核 |
+| Cornet 正式发表压制相关性组件 | 预注册可证伪声明 + 组件化降级（A4）+ 季度竞争复核（**2026-09-28 事件已发生**：bioRxiv 2026.09.14.751548；复核结论 = 策略维持、kill 未触发，见 devlog G3 复核；威胁面升级：Park 组 + MuSiCal，G0 升为 Framing A 关键路径） |
 | vendor 体积超限 | M0 spike 定数 + 依赖收缩（去 rand）+ faer 默认关 |
 | CRAN 2 线程/fork | per-call 池 + option 双读 + Makevars -j2 + BiocParallel 兼容文档 |
 | refdb 双源漂移 | precedence + schema_version + manifest + fixture 测试（A13） |
