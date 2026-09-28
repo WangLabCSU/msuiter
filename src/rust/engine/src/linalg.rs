@@ -180,6 +180,12 @@ impl Ldlt {
                 k += 1;
             } else if a[r * n + r].abs() >= BK_ALPHA * amax {
                 // 1×1 pivot after swapping r into position k.
+                // NOTE (documented divergence from LAPACK dsytf2): this second
+                // α-test uses `amax` of the ORIGINAL pivot column j, while
+                // dsytf2 re-reads ROWMAX of the candidate row AFTER the swap.
+                // Pivot choices may therefore differ from LAPACK on
+                // ties/near-ties; correctness is unaffected (the PAPᵀ = LDLᵀ
+                // reconstruction identity is tested on random matrices).
                 symmetric_swap(&mut a, &mut perm, n, k, r);
                 pivot_1x1(&mut a, n, k);
                 blocks.push((k, DBlock::D1(a[k * n + k])));
@@ -388,9 +394,11 @@ impl Ldlt {
     }
 }
 
-/// The natural scale of a symmetric PSD matrix: `max_k G_kk` (for PSD input
-/// this equals ‖G‖₂). Caller must guarantee `g.len() == n * n`; returns 0.0
-/// for an empty or all-zero diagonal.
+/// The natural scale of a symmetric PSD matrix: `max_k G_kk`. This is a
+/// computable LOWER bound on ‖G‖₂ (equality only for diagonal-dominant
+/// matrices); it is used purely as a scale proxy for relative tolerances,
+/// never as a norm bound. Caller must guarantee `g.len() == n * n`; returns
+/// 0.0 for an empty or all-zero diagonal.
 pub fn gram_scale(g: &[f64], n: usize) -> f64 {
     let mut scale = 0.0f64;
     for i in 0..n {

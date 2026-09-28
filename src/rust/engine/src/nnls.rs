@@ -579,12 +579,15 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Golden vector (hand-derived): correlated 2-var problem whose
-    // unconstrained solution has a negative component, forcing a passive
-    // set of only the second variable. Hand check: w = (10, 9) → after
-    // the first single-variable step x = (10, 0); the free gradient of
-    // column 1 goes negative (9 − 0.9·10 = −0.8 raw / −5 normalized), so
-    // the loop stops with x = (0, 30), objective −135.
+    // Golden vector (hand-derived): correlated 2-var problem, G PD with
+    // unconstrained solution x∞ = (−30, 80) — infeasible, forcing NNLS
+    // work. Trace: column 0 enters first (largest gradient b₀ = 10), the
+    // 1-var solve gives x = (10, 0); the free gradient of column 1 is then
+    // +4 > 0 (9 − 0.5·10), so column 1 JOINS; the joint unconstrained
+    // solve is the infeasible (−30, 80), the feasible-direction step
+    // truncates at α = 1/4 to (0, 20), column 0 leaves at its boundary,
+    // and the passive re-solve gives x = (0, 30), objective −135. The
+    // stopping check is the free gradient of column 0: 10 − 0.5·30 = −5.
     // ------------------------------------------------------------------
 
     #[test]

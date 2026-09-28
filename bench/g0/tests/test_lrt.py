@@ -101,7 +101,7 @@ def test_nb_semantics_power_floor_frozen_shares():
     - easy 层逐签名（SBS1/SBS2/SBS13，各 15% 份额）power ≥ 0.5；
     - 5 个在场签名合并 power ≥ 0.5。
     诚实注记：平坦近重复对（SBS5/40）逐签名 power 低（本种子实测
-    ≈0.05/0.01——3% 谱差被 NB 过散方差淹没，可辨识性极限而非回归）；
+    ≈0.085/0.015（当前种子实测）——3% 谱差被 NB 过散方差淹没，可辨识性极限而非回归）；
     G0 对平坦签名的被测量是区间覆盖率（协议 §5），不是 presence power，
     故底线只卡 easy 层与合并值。
     """

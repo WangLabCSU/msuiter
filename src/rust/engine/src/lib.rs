@@ -8,6 +8,7 @@
 
 pub mod error;
 pub mod linalg;
+pub mod nmf;
 pub mod nnls;
 pub mod rng;
 
