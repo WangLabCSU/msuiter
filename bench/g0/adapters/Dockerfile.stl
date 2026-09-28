@@ -1,0 +1,22 @@
+# G0 Tier-1 竞品环境：signature.tools.lib v2.5.2（bootstrap 派）
+# 冻结版本（F2）：Nik-Zainal-Group/signature.tools.lib tag v2.5.2。
+# 较轻（无 rstan）；W1 兼容性检查（RefSig 目录）不属镜像职责，见协议 §3。
+FROM rocker/r-ver:4.3.3
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates git make g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN Rscript -e 'options(warn=1); install.packages( \
+      c("remotes", "jsonlite", "ggplot2", "gridExtra", "dplyr", "tidyr", \
+        "RColorBrewer", "gridBase"), \
+      repos = "https://cloud.r-project.org")'
+
+# signature.tools.lib v2.5.2（tag 锁定）
+RUN Rscript -e 'remotes::install_github( \
+      "Nik-Zainal-Group/signature.tools.lib@v2.5.2", \
+      build_vignettes = FALSE, dependencies = TRUE)'
+
+WORKDIR /work
+COPY run_stl.R /work/
+CMD ["Rscript", "/work/run_stl.R"]

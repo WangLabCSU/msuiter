@@ -1,0 +1,269 @@
+# msuiter CI (U-M0-07) — docs/ARCHITECTURE.md §9 CI contract.
+#
+# Jobs:
+#   R-CMD-check : 3 OS x {release, oldrel-1} + {4.3 (Linux), devel (allowed to fail)},
+#                 rcmdcheck --as-cran --no-manual, _R_CHECK_LIMIT_CORES_ (FFI contract 6).
+#                 Rust toolchain installed at the DESCRIPTION MSRV (rustc >= 1.71)
+#                 in every R job: src/rust cannot compile without cargo/rustc.
+#   rust        : cargo test --workspace, clippy -D warnings, cargo deny check
+#                 (all four sections: bans / licenses / advisories / sources).
+#   guards      : repo-root guard scripts (U-M0-01/02/05/06 handoff, see
+#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07) + repo-mode testthat
+#                 (drift-guard tests skip under R CMD check; they must run from
+#                 the checkout via devtools::test()) + Cargo.lock pin assertion
+#                 (ADR 0002 §4.4) as the belt-and-braces check beside dependabot.
+#   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows —
+#                 formal closure of ADR 0002 §5 residual "三平台构建证明"
+#                 (macOS arm64 already proven locally in ADR 0002 §4).
+#   coverage    : R coverage via covr -> codecov upload. Wiring only, no gate
+#                 (R >= 85% is a later milestone target, ARCHITECTURE §9).
+#
+# This repository currently has remote origin (WangLabCSU/msuiter); these
+# workflows activate on the next push.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# FFI contract 6: CRAN-mode thread discipline is exercised in CI, not just on CRAN.
+env:
+  _R_CHECK_LIMIT_CORES_: 'true'
+  R_KEEP_PKG_SOURCE: 'yes'
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  R-CMD-check:
+    needs: guards
+    runs-on: ${{ matrix.config.os }}
+    name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    # R devel is informative only (r-lib convention)
+    continue-on-error: ${{ matrix.config.r == 'devel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: macos-latest,   r: 'release'}
+          - {os: windows-latest, r: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: macos-latest,   r: 'oldrel-1'}
+          - {os: windows-latest, r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
+          - {os: ubuntu-latest,  r: '4.3'}    # package floor (DESCRIPTION: R >= 4.3)
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # CRAN-mode offline build: the vendored tarball generated once by the
+      # guards job is dropped where Makevars expects it, so R CMD INSTALL
+      # never touches the network (a --as-cran WARNING otherwise, and no
+      # vendor.tar.xz is ever committed — ADR 0002 §3.3).
+      - name: Fetch vendored offline tarball (built by guards job)
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      # src/rust builds during R CMD INSTALL/check; the MSRV from DESCRIPTION
+      # SystemRequirements (rustc >= 1.71) is used so every R job also
+      # exercises the 1.71 toolchain on all three OSes.
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          extra-packages: any::rcmdcheck
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          # error-level gate only: --as-cran strictness depends on optional
+          # external tools not uniformly available across runner OSes
+          # (checkbashisms is in devscripts, absent on macos/windows runners)
+          # and flags every fresh submission ("New submission" NOTE). The hard
+          # gates live in the guards job and the scheduled valgrind workflow.
+          error_on: 'error'
+          upload-snapshots: true
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/rust
+
+      - name: cargo test --workspace
+        working-directory: src/rust
+        run: cargo test --workspace
+
+      - name: cargo clippy (deny warnings)
+        working-directory: src/rust
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      # All four sections: bans (rand family), licenses, advisories, sources
+      # (src/rust/deny.toml; U-M0-09 handoff "deny 全量四节").
+      - name: cargo deny check (all sections)
+        working-directory: src/rust
+        run: cargo deny check
+
+  guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
+      # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
+      - name: Assert ADR 0002 pinned versions in Cargo.lock
+        run: |
+          awk '/^version = /{print; exit}' src/rust/Cargo.lock | grep -qx 'version = 3'
+          grep -A1 '^name = "matrixmultiply"$' src/rust/Cargo.lock | grep -qx 'version = "0.3.9"'
+          grep -A1 '^name = "rayon"$' src/rust/Cargo.lock | grep -qE '^version = "1\.10\.[0-9]+"$'
+          echo "Cargo.lock: v3, matrixmultiply 0.3.9, rayon 1.10.x — ADR 0002 §4.4 holds"
+
+      - name: Dependency-direction guard (ffi->catalog->engine)
+        run: sh tools/check-dep-direction.sh
+
+      - name: RNG known-answer test (pure-stdlib Python vs Rust goldens)
+        run: python3 tools/rng-kat.py
+
+      - name: CI selfcheck (workflow YAML + referenced paths + pins)
+        run: python3 tools/ci-selfcheck.py
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: docs-sync guard (API surface drift)
+        run: Rscript tools/docs-sync.R
+
+      # vendor.sh regenerates the tarball into /tmp and asserts the exact
+      # byte budget frozen in ADR 0002 §2 (needs cargo + xz; both on runner).
+      - name: Vendor budget check (ADR 0002 §2 drift guard)
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+          sh tools/vendor.sh --check
+          # vendor.sh keeps the tarball in /tmp; stage it for the R jobs
+          # (single generation point; works on every runner OS).
+          cp /tmp/msuiter-vendor.tar.xz vendor.tar.xz
+
+      - name: Upload vendor tarball (consumed by R-CMD-check jobs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-tarball
+          path: vendor.tar.xz
+          retention-days: 1
+          if-no-files-found: error
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: soft # Suggests (testthat, withr) for repo-mode devtools::test()
+          extra-packages: any::devtools
+
+      # Repo-mode full suite: drift-guard tests (test-channels-sync,
+      # test-channels-reference, ffi-surface-drift) skip under R CMD check's
+      # installed-package context; they must run against the checkout.
+      - name: Repo-mode testthat (full suite incl. drift guards)
+        shell: Rscript {0}
+        run: |
+          devtools::test(stop_on_failure = TRUE)
+
+  msrv:
+    # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
+    # Linux and Windows (macOS arm64 already proven locally, ADR §4).
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rustc 1.71.0 (rustup)
+        run: rustup toolchain install 1.71.0 --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/rust
+          key: msrv-1.71.0
+
+      - name: cargo +1.71.0 build --workspace
+        working-directory: src/rust
+        run: cargo +1.71.0 build --workspace
+
+      - name: cargo +1.71.0 test --workspace
+        working-directory: src/rust
+        run: cargo +1.71.0 test --workspace
+
+  coverage:
+    # R-side coverage upload only; no gate here (R >= 85% is a later target,
+    # ARCHITECTURE §9). Rust coverage is not gated (also ARCHITECTURE §9).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain at MSRV
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: coverage
+          extra-packages: any::covr
+
+      - name: Generate R coverage (covr)
+        shell: Rscript {0}
+        run: |
+          cov <- covr::package_coverage(
+            type = "all",
+            quiet = FALSE,
+            clean = FALSE
+          )
+          print(cov)
+          covr::to_cobertura(cov, filename = "cobertura.xml")
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: cobertura.xml
+          flags: r
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

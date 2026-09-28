@@ -7,6 +7,8 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
+pub mod linalg;
+pub mod nnls;
 pub mod rng;
 
 pub use error::MsError;

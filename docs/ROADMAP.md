@@ -34,8 +34,8 @@
 - [x] 引擎注册表（含 certified/engine_version/contract_version 字段）+ 契约测试套件
 - [x] `data-raw/build_channels.R` 通道注册表单一事实来源 + docs-sync CI（drift 即红）（docs-sync 脚本已绿，CI 接线移交 U-M0-07）
 - [x] **自研 RNG 模块**：PCG64 + SplitMix64 流布局 + 跨版本 golden 测试（canonical post-step pcg64；tools/rng-kat.py 独立 KAT）
-- [ ] `.github/`：3 OS × {release, oldrel, R-4.3(Linux), devel} 矩阵、rcmdcheck --as-cran、cargo test/clippy/deny(ban)/audit、valgrind+ASAN scheduled、dependabot、codecov
-- [ ] 治理文件：CONTRIBUTING（含第三方引擎接入清单）、CoC、issue/PR 模板（含 FFI-surface 变化与 fixture 刷新检查项）、README 骨架、NEWS.md、`_pkgdown.yml`
+- [x] `.github/`：3 OS × {release, oldrel, R-4.3(Linux), devel} 矩阵、rcmdcheck --as-cran、cargo test/clippy/deny(ban)/audit、valgrind+ASAN scheduled、dependabot、codecov（U-M0-07 完成；`tools/ci-selfcheck.py` 全部接线断言 PASS）
+- [x] 治理文件：CONTRIBUTING（含第三方引擎接入清单）、CoC、issue/PR 模板（含 FFI-surface 变化与 fixture 刷新检查项）、README 骨架、NEWS.md、`_pkgdown.yml`（U-M0-08 完成）
 - [x] `ms_sitrep()`；FFI 硬契约落地（column-major/NA/Result 错误/中断/per-call 线程池）（docs/ffi-surface.md 冻结工件 + 漂移守卫已建）
 
 **验收**：check 全绿；S7 校验测试过；RNG golden 过；vendor 体积数字进 ADR。

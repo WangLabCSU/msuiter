@@ -7,14 +7,17 @@
 # generated one to the source package. CI (U-M0-07) runs `--check` to catch
 # vendor drift (dependency budget discipline, ARCHITECTURE.md §2 / D4).
 #
-# Determinism note: the uncompressed and tar byte counts are exact-reproducible
-# for a given Cargo.lock; the xz count varies slightly with the xz build
-# (~0.01% across versions), so --check allows a ±0.1% band there only.
+# Determinism note: the uncompressed byte count is an exact invariant of the
+# Cargo.lock dependency set (file contents are OS-independent) and is checked
+# exactly. The tar count varies a few hundred bytes between bsdtar (macOS)
+# and GNU tar (Linux) archive formats — ±0.5% band. The xz count varies with
+# the xz build (~0.01% across versions) — ±0.1% band.
 set -eu
 
 BASELINE_UNCOMPRESSED=12526058
 BASELINE_TAR=16516096
 BASELINE_XZ=1407588
+TAR_TOL_PCT=0.5
 XZ_TOL_PCT=0.1
 
 filesize() { stat -f%z "$1" 2>/dev/null || stat -c%s "$1"; }
@@ -42,7 +45,7 @@ echo "vendor tar.xz:       ${XZ} B (baseline ${BASELINE_XZ} B, ±${XZ_TOL_PCT}%)
 if [ "${1:-}" = "--check" ]; then
   fail() { echo "vendor.sh: DRIFT DETECTED: $1" >&2; exit 1; }
   [ "$UNCOMPRESSED" -eq "$BASELINE_UNCOMPRESSED" ] || fail "uncompressed size drifted (dependency set changed? update ADR 0002)"
-  [ "$TAR" -eq "$BASELINE_TAR" ] || fail "tar size drifted (update ADR 0002)"
+  within_tol "$TAR" "$BASELINE_TAR" "$TAR_TOL_PCT" || fail "tar size outside ±${TAR_TOL_PCT}% band (archive-format variance or drift; update ADR 0002)"
   within_tol "$XZ" "$BASELINE_XZ" "$XZ_TOL_PCT" || fail "xz size outside ±${XZ_TOL_PCT}% band (update ADR 0002)"
   echo "vendor.sh: --check OK (no drift vs ADR 0002)"
 fi

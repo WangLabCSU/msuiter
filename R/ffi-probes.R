@@ -53,6 +53,7 @@
 # ---------------------------------------------------------------------------
 
 #' Re-signal an `msuiter_error_rust` condition surfaced by the Rust core.
+#' @noRd
 .msffi_check <- function(res) {
   if (inherits(res, "msuiter_error_rust")) {
     stop(res)
@@ -65,6 +66,7 @@
 #' Coerces integer input to double (R kernels receive REALSXP matrices) and
 #' rejects everything else, plus any NA/NaN, before a single byte crosses
 #' the boundary.
+#' @noRd
 .ms_validate_matrix <- function(x, arg = "x") {
   if (!is.matrix(x)) {
     rlang::abort(
@@ -106,6 +108,7 @@
 #'
 #' Zero is allowed everywhere: `i`/`j` below 1 must reach the Rust bounds
 #' probe so the contract-4 error path stays reachable from R.
+#' @noRd
 .ms_validate_count <- function(x, arg) {
   if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) ||
       x != floor(x) || x < 0L) {

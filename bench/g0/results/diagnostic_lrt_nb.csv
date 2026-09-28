@@ -1,0 +1,3 @@
+arm,n,lrt_semantics,empirical_size_absent,power_present,n_tests_per_rate
+nb,1000,nb(size=8),0.015,0.613,1000
+nb,1000,poisson(misspec),0.065,0.645,1000

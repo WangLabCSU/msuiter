@@ -7,7 +7,7 @@ Description: Tally, extract and fit mutational signatures across modalities
     (SBS, DBS, indel and beyond). Numerical kernels live in a Rust workspace
     exposed through a stateless FFI, while the R side provides the object
     model, the engine registry and the tidy user interface.
-License: Apache License (>= 2.0)
+License: Apache License (>= 2.0) + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.3)
 Imports: S7,

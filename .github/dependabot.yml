@@ -1,0 +1,31 @@
+# Dependabot config (U-M0-07).
+#
+# Weekly updates for the Rust workspace (/src/rust) and GitHub Actions.
+#
+# Pin protection (docs/adr/0002-vendor-budget.md §4.4): the Cargo.lock pins
+# exist ONLY to hold MSRV 1.71 (matrixmultiply >= 0.3.10 and rayon >= 1.11
+# both declare rustc >= 1.75/1.80). Dependabot must not lift them; the pins
+# are additionally asserted in CI by the guards job and by
+# tools/ci-selfcheck.py (belt and braces). Lifting a pin requires a deliberate
+# ADR revision, not an automated PR.
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /src/rust
+    schedule:
+      interval: weekly
+    ignore:
+      # MSRV 1.71 pin (ADR 0002 §4.2/§4.4): 0.3.10+ requires rustc 1.75
+      - dependency-name: matrixmultiply
+        versions:
+          - ">=0.3.10"
+      # MSRV 1.71 pin (ADR 0002 §2 increment note): 1.11+ requires rustc 1.80
+      - dependency-name: rayon
+        versions:
+          - ">=1.11"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

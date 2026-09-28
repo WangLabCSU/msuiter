@@ -10,3 +10,8 @@
 ^tools/spike
 ^data-raw$
 ^docs$
+^_pkgdown\.yml$
+^\.github$
+^CONTRIBUTING\.md$
+^CODE_OF_CONDUCT\.md$
+^bench$

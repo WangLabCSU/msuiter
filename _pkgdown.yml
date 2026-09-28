@@ -1,0 +1,52 @@
+# pkgdown 最小骨架（M0 治理文件，U-M0-08）。
+# 全站（MSU↔函数映射表、性能锚定文档等）按 docs/ROADMAP.md M7 交付时扩展。
+url: https://github.com/WangLabCSU/msuiter
+
+template:
+  bootstrap: 5
+
+development:
+  mode: devel
+
+navbar:
+  structure:
+    left: [intro, reference, news]
+    right: [github]
+  components:
+    news:
+      text: News
+      href: news/index.html
+
+reference:
+- title: 对象模型（S7）
+  desc: 中心对象与构造入口（developer preview，API 标 experimental）。
+  contents:
+  - ms_variants
+  - ms_catalog
+  - ms_signature
+  - ms_refdb
+  - MsVariants
+  - MsCatalog
+  - MsSignature
+  - MsFit
+  - MsRefDb
+  - MsBenchmark
+- title: 拟合与基准
+  contents:
+  - ms_fit
+  - ms_benchmark
+  - fit_engine
+- title: 引擎注册表（扩展接口）
+  desc: 第三方包经 .onLoad() 注册引擎；信任边界与接入清单见 CONTRIBUTING.md。
+  contents:
+  - register_ms_engine
+  - match_ms_engine
+  - required_pkgs
+  - ms_engines
+  - MsEngine
+- title: 诊断
+  contents:
+  - ms_sitrep
+
+# articles 尚无：vignettes 随 M2（extending.Rmd 与配套 harness）落地后再启用，
+# 当前不引用不存在的文章。

@@ -6,7 +6,7 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 
 **Positioning: the Seurat of mutational signatures** — a central object model, one workflow grammar (`ms_variants() |> ms_tally() |> ms_extract() |> ms_fit() |> ms_compare()`), interface-parity engines for all mainstream and advanced methods (swap engines in one line for methodological comparison), with our own calibrated statistical methods (MSU-Fit / MSU-LowCount / MSU-Infer) as the default path. Full functional coverage (identification, quantification, visualization, application workflows & visual mining) is tracked in the [capability matrix](docs/CAPABILITY-MATRIX.md).
 
-> **Status: research & design phase.** Implementation has not started; this repository currently hosts the comprehensive research and architecture design that will drive a paper-grade development effort.
+> **Status: implementation in progress.** The M0 engineering foundation is complete — all ten M0 work units done (U-M0-01 rextendr scaffold, U-M0-02 spike/ADRs, U-M0-03 S7 object model, U-M0-04 engine registry, U-M0-05 channel registry, U-M0-06 in-house RNG, U-M0-07 CI matrix, U-M0-08 governance files, U-M0-09 FFI surface + `ms_sitrep()`, U-M0-10 ADR directory; see the ticked M0 checklist in [docs/ROADMAP.md](docs/ROADMAP.md)) — and development is advancing on the v0.1 track; see [NEWS.md](NEWS.md).
 
 ## Documentation
 
@@ -35,6 +35,12 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 - **Methodological frontier** — SigProfiler-compatible extraction + SUITOR-style CV K-selection + correlation-aware extraction (Cornet-lineage model, own optimized implementation) + mSigAct-style likelihood-ratio presence testing + calibrated bootstrap CIs (unvalidated in the field) + compositional-data analyses.
 - **Tidy & orthogonal** — `ms_*` S7 API, label-validated channel registry, versioned reference databases (COSMIC v3.6 bundled with provenance), zero magic strings.
 - **Paper-driven** — all code, tests, docs feed three paper sections: architecture & implementation; performance & benchmark; application case studies.
+
+## Development
+
+**Dev install**: [rustup](https://rustup.rs) (MSRV 1.71) + R ≥ 4.3 with [rextendr](https://extendr.github.io/rextendr/) — then `devtools::load_all()` is all you need; the Rust workspace under `src/rust/` compiles automatically. This is a **developer preview**: there is no CRAN installation yet (distribution targets r-universe + GitHub Releases first, CRAN at v1.0).
+
+Governance and history: architecture decisions live in [docs/adr/](docs/adr/) (ADRs, including the vendor-budget and twobit-reader choices), unit-level engineering records in [docs/devlog/](docs/devlog/). Before opening a PR, run the local acceptance battery in [CONTRIBUTING.md](CONTRIBUTING.md) and fill the PR checklist (FFI-surface declaration, fixture/golden rationale, MSRV pins, dependency discipline).
 
 ## License
 

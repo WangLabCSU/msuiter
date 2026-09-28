@@ -1,0 +1,22 @@
+# G0 Tier-1 竞品环境：sigfit v2.2.0（后验派）
+# 冻结版本（F2）：kgori/sigfit tag v2.2.0；tag + commit SHA 记入结果 manifest。
+# 构建重（rstan + Stan model 编译，30–60 分钟量级）；Day-3 止损路径见协议 §7-R1。
+FROM rocker/r-ver:4.3.3
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates git make g++ gfortran \
+    && rm -rf /var/lib/apt/lists/*
+
+# rstan 与 sigfit 的 R 依赖（版本锁进镜像；renv.lock 化是正式 G0 前的加固项）
+RUN Rscript -e 'options(warn=1); install.packages( \
+      c("remotes", "Rcpp", "RcppEigen", "BH", "StanHeaders", "rstan", \
+        "jsonlite", "ggplot2", "reshape2", "cowplot", "tidyr"), \
+      repos = "https://cloud.r-project.org")'
+
+# sigfit v2.2.0（tag 锁定）
+RUN Rscript -e 'remotes::install_github("kgori/sigfit@v2.2.0", \
+      build_vignettes = FALSE, dependencies = TRUE)'
+
+WORKDIR /work
+COPY run_sigfit.R /work/
+CMD ["Rscript", "/work/run_sigfit.R"]

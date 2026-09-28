@@ -1,0 +1,97 @@
+# msuiter scheduled deep checks (U-M0-07) — docs/ARCHITECTURE.md §9:
+# "valgrind + ASAN/UBSAN scheduled job". Weekly, allowed to fail: these are
+# diagnostic tripwires, not merge gates.
+#
+#   valgrind  : full R CMD check --as-cran --use-valgrind on Linux.
+#   sanitizer : RUSTFLAGS -Zsanitizer={address,undefined} over the pure numeric
+#               crates (msuiter-engine + msuiter-catalog, both
+#               #![forbid(unsafe_code)]). The FFI shell links libR, which is
+#               not instrumented, so full-workspace sanitizer runs only
+#               produce libR false positives; the numeric core is the
+#               memory-safety surface we own.
+#
+# Sanitizers need -Z flags => nightly toolchain (engine/catalog compile on
+# nightly: no unsafe, budget deps only).
+
+name: Scheduled deep checks
+
+on:
+  schedule:
+    - cron: '23 4 * * 1' # weekly, Monday 04:23 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  _R_CHECK_LIMIT_CORES_: 'true'
+
+jobs:
+  valgrind:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends valgrind
+
+      # src/rust compiles during R CMD INSTALL inside the check run
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check
+          extra-packages: any::rcmdcheck
+
+      - name: R CMD check under valgrind (heavy, report-only)
+        shell: Rscript {0}
+        run: |
+          res <- rcmdcheck::rcmdcheck(
+            args = c("--no-manual", "--as-cran", "--use-valgrind"),
+            error_on = "never",
+            check_dir = "check-valgrind"
+          )
+          print(res)
+
+      - name: Upload valgrind check log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: valgrind-check-log
+          path: check-valgrind
+          retention-days: 14
+
+  sanitizer:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nightly Rust (for -Z sanitizer flags)
+        run: rustup toolchain install nightly --profile minimal
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/rust
+          key: sanitizer-${{ matrix.sanitizer }}
+
+      - name: cargo +nightly test under ${{ matrix.sanitizer }} sanitizer
+        working-directory: src/rust
+        env:
+          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+        run: cargo +nightly test -p msuiter-engine -p msuiter-catalog

@@ -39,3 +39,7 @@ docs/site/
 # benchmark outputs
 /bench/cache/
 /bench/results/*.csv
+
+# G0 harness: heavy intermediates stay out of git (results/ is tracked)
+/bench/g0/cache/
+/bench/g0/**/__pycache__/
