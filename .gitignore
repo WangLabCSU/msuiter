@@ -1,0 +1,32 @@
+# R package development
+/.Rhistory
+/.RData
+/.Rproj.user
+*.Rproj
+.Renviron
+
+# R build artifacts
+/src/*.o
+/src/*.so
+/src/*.dll
+/src/symbols.rds
+
+# Rust
+/src/rust/target/
+/src/rust/vendor/
+target/
+
+# docs build
+docs/site/
+/pkgdown/_site/
+
+# data scratch
+*.RData
+*.rds.tmp
+
+# OS
+.DS_Store
+
+# benchmark outputs
+/bench/cache/
+/bench/results/*.csv
