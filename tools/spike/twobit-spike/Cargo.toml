@@ -1,0 +1,12 @@
+[package]
+name = "twobit-spike"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.71"
+
+[dependencies]
+memmap2 = "0.9"
+twobit = "0.2.2"
+
+# twobit spike ADR-0001 evidence crate; standalone, not a workspace member
+[workspace]

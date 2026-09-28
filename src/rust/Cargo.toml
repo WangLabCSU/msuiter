@@ -1,0 +1,39 @@
+[package]
+name = "msuiter"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.71"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+name = "msuiter"
+
+[[bin]]
+name = "document"
+path = "document.rs"
+
+[dependencies]
+extendr-api = { workspace = true, features = ["ndarray"] }
+msuiter-catalog = { path = "catalog", version = "0.0.0" }
+msuiter-engine = { path = "engine", version = "0.0.0" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[workspace]
+members = ["engine", "catalog"]
+
+# Frozen dependency budget (docs/ARCHITECTURE.md §2, D2/D4).
+# extendr-api is consumed by the FFI shell only; engine/catalog stay
+# FFI-free. Randomness is in-house (PCG64 + SplitMix64): no `rand`.
+# `twobit` is unlocked by docs/adr/0001-twobit-reader-choice.md
+# (U-M0-02 spike: MIT, zero runtime deps, 1.71-compatible).
+[workspace.dependencies]
+extendr-api = { version = "0.9", default-features = false }
+ndarray = "0.16"
+rayon = "1"
+memmap2 = "0.9"
+twobit = "0.2.2"

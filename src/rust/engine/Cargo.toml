@@ -1,0 +1,11 @@
+[package]
+name = "msuiter-engine"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.71"
+license = "Apache-2.0"
+publish = false
+
+# Pure numeric kernels (L1). Zero FFI, zero `unsafe`, zero extendr.
+# Kernels land from U-M1s-01 onwards; this unit ships scaffolding only.
+[dependencies]

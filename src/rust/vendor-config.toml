@@ -1,0 +1,11 @@
+# Cargo source replacement for offline (vendored) builds.
+# Copied into the build-time CARGO_HOME by src/Makevars(.win).in whenever
+# vendored dependencies are present (src/rust/vendor.tar.xz, produced by
+# the U-M0-02 spike). Ignored entirely in developer builds without a
+# vendor tarball, which build against crates.io as usual.
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

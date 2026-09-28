@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# msuiter build contract record (moved here from configure.ac — keep this a
+# hand-written POSIX script: NEVER run autoconf/autoreconf, which would
+# overwrite `configure` with an empty script and silently break the build).
+#
+# Pattern: string2path / rextendr — `configure` delegates to tools/config.R,
+# which fills the @VARIABLES@ in src/Makevars.in (and src/Makevars.win.in).
+#
+# Build contract (docs/ARCHITECTURE.md §2, FFI contract 8 "build"):
+#  1. Toolchain: cargo/rustc resolved on PATH with a $HOME/.cargo/bin
+#     fallback; the MSRV comes from DESCRIPTION `SystemRequirements:
+#     cargo, rustc (>= 1.71)`; the 1.71 build proof lives in
+#     docs/adr/0002-vendor-budget.md §4 (matrixmultiply pinned to 0.3.9).
+#  2. Offline discipline: if src/rust/vendor.tar.xz exists (or an already
+#     extracted src/vendor directory), it is unpacked/used as a cargo
+#     source replacement via src/rust/vendor-config.toml and the build
+#     runs with `--offline`; `xz` becomes a requirement then. Without a
+#     vendor tarball the developer build resolves crates.io normally.
+#  3. CRAN parallelism cap: CARGO_BUILD_JOBS=2 (plus `-j 2` whenever the
+#     vendored offline build is active, via @CRAN_FLAGS@).
+#  4. Profile: release for CRAN; DEBUG/NOT_CRAN env vars switch to a
+#     developer debug build via @PROFILE@.
+#  5. Hygiene: the `cleanup` script removes the generated src/Makevars
+#     after installation, and `rust_clean` drops the vendored directory,
+#     CARGO_HOME scratch and target directory from the built tree.
+: "${R_HOME=`R RHOME`}"
+"${R_HOME}/bin/Rscript" tools/config.R

@@ -1,0 +1,60 @@
+# cargo-deny configuration for the msuiter Rust workspace.
+# Run from src/rust/ with: cargo deny check   (U-M0-07 CI runs all sections;
+# locally `cargo deny check bans` is the fast gate, full check must stay green).
+#
+# Frozen dependency budget (docs/ARCHITECTURE.md §2, D2/D4):
+#   extendr-api (default-features = false, features = ["ndarray"]) — FFI shell only
+#   ndarray, rayon, memmap2 — numeric / IO budget
+#   twobit 0.2.2 — unlocked by docs/adr/0001-twobit-reader-choice.md (U-M0-02 spike)
+#   NO `rand` anywhere: randomness is in-house PCG64 + SplitMix64 (engine/rng.rs).
+#
+# Direction contract: ffi (workspace root) → catalog → engine, never back,
+# and `extendr-api` must never seep into engine/catalog.
+# cargo-deny has no per-edge bans (crate X must not depend on crate Y), so
+# the direction contract is enforced structurally, on top of the global
+# deny entries below:
+#   * `extendr-api` is declared ONLY in the FFI shell manifest
+#     (src/rust/Cargo.toml); engine/catalog cannot resolve it without
+#     editing their manifests, which this file's comment contract forbids.
+#   * the only inter-member edge is catalog → engine (path dependency);
+#     both crates are `#![forbid(unsafe_code)]` and extendr-free.
+#   * the FFI shell's cargo test asserts engine/catalog link via CRATE_ROLE.
+#   * a reverse dependency on the FFI shell would surface as the `msuiter`
+#     crate appearing as a dependency of a member — caught by
+#     tools/check-dep-direction.sh (U-M0-07 CI) in addition to review.
+
+[graph]
+all-features = false
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+
+deny = [
+  # RNG face is banned everywhere: in-house PCG64 + SplitMix64 only
+  # (ARCH §2; cross-version golden stability is a paper Methods item).
+  { crate = "rand", reason = "no rand: randomness is the in-house PCG64 + SplitMix64 RNG (engine/rng.rs)" },
+  { crate = "rand_core", reason = "no rand ecosystem: in-house RNG only" },
+  { crate = "rand_chacha", reason = "no rand ecosystem: in-house RNG only" },
+  { crate = "rand_distr", reason = "no rand ecosystem: sampling lives in engine/resample.rs" },
+]
+
+[licenses]
+version = 2
+allow = [
+  "Apache-2.0",
+  "MIT",
+  # unicode-ident is "(MIT OR Apache-2.0) AND Unicode-3.0" — the Unicode
+  # data files license; data-only, no copyleft implications for us.
+  "Unicode-3.0",
+]
+
+[advisories]
+version = 2
+# Transitive unmaintained crates (currently paste 1.0.15 via extendr-api 0.9,
+# RUSTSEC-2024-0421) do NOT fail the build: `unmaintained = "workspace"` scopes
+# the check to our own crates. The upgrade-review hook is procedural: re-run a
+# full `cargo deny check` and re-read this section on every extendr-api upgrade
+# (checklist item goes into CONTRIBUTING at U-M0-08).
+unmaintained = "workspace"
+yanked = "warn"

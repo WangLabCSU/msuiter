@@ -1,0 +1,16 @@
+[package]
+name = "msuiter-catalog"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.71"
+license = "Apache-2.0"
+publish = false
+
+# Channel semantics (SBS/DBS/ID/MNV/...), FFI-agnostic. Depends on the
+# engine crate only; never on the FFI shell, never on extendr-api.
+[dependencies]
+msuiter-engine = { path = "../engine", version = "0.0.0" }
+# 2bit genome reader, reserved by D7 and unlocked by
+# docs/adr/0001-twobit-reader-choice.md; consumed by catalog/genome.rs
+# in U-M1s-08 (kept as a declared dep until then).
+twobit = { workspace = true }

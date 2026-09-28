@@ -87,7 +87,8 @@ src/rust/
 │                     #   仅 ndarray feature)、ndarray、rayon、memmap2、twobit(待spike)。
 │                     #   ★ 无 rand——随机性自研（见下）。MSRV 目标 1.71（extendr 0.9 官方）。
 │                     #   engine/catalog 两 crate: #![forbid(unsafe_code)]；
-│                     #   依赖方向 ffi→catalog→engine，cargo deny ban 反向/extendr 渗入。
+│                     #   依赖方向 ffi→catalog→engine：deny 全局禁 rand 族，反向/extendr
+│                     #   渗入由 tools/check-dep-direction.sh 断言 + manifest 结构强制。
 ├── engine/           # 纯数值，零 FFI，独立 cargo test
 │   ├── nmf.rs        # KL(β=1,默认)/EU MM-MU + HALS + ARD + 体积正则组件
 │   ├── correlated.rs # 相关性感知组件（对数空间低秩 exposure；gauge-fixed 输出协议）
@@ -109,9 +110,11 @@ src/rust/
 │   ├── dbs.rs        # DBS78（Q-链规则；仅接受重连后的距离恰 1 doublet）
 │   ├── indel83.rs    # ID83（SPMG 语义逐位复刻）
 │   ├── pcf.rs        # exactPcf（SV clustered）
-│   └── genome.rs     # 2bit 快路径（M0 spike 裁决：twobit crate over Cursor<Mmap>
-│                     #   分批按染色体 / 或自研 ~300 行 reader；byte-swap/大端先验证）
-└── msuiter/          # extendr FFI 壳（无状态，~25 导出；docs/ffi-surface.md 冻结管理）
+│   └── genome.rs     # 2bit 快路径（已裁决：twobit 0.2.2 over Cursor<Mmap>，见
+│                     #   docs/adr/0001；自研回退原型 244 行已验证，入库 tools/spike/）
+└── (根 crate = FFI 壳 msuiter)   # extendr FFI 壳（无状态，~25 导出；docs/ffi-surface.md 冻结管理）。
+                                  # 实现注记：rextendr 硬约定 FFI crate manifest 位于 src/rust/Cargo.toml，
+                                  # 故为 root-package + members 形态（U-M0-01 实测定案），上图 msuiter/ 子目录意图并入根 crate。
 ```
 
 **FFI 硬契约（v2.1 全部成文）**：
