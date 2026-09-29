@@ -14,3 +14,11 @@ msuiter-engine = { path = "../engine", version = "0.0.0" }
 # docs/adr/0001-twobit-reader-choice.md; consumed by catalog/genome.rs
 # in U-M1s-08 (kept as a declared dep until then).
 twobit = { workspace = true }
+
+# Real-mmap test path only (tests/genome). The library itself takes a byte
+# slice (ADR 0001 §6: `AsRef<[u8]>` input) and stays unsafe-free — building
+# the mapping is the caller's job, because `Mmap::map` is `unsafe` and this
+# crate is `#![forbid(unsafe_code)]`. memmap2 is part of the frozen budget
+# (deny.toml: "ndarray, rayon, memmap2 — numeric / IO budget").
+[dev-dependencies]
+memmap2 = { workspace = true }
