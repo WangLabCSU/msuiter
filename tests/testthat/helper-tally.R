@@ -1,9 +1,9 @@
-# Shared tally fixtures (U-M1s-11): the hand-derived 22-record golden batch
-# and the little-endian 2bit writer, originally written for the FFI-layer
-# test (test-ffi-tally.R, U-M1s-09). That file keeps its private copy (it is
-# outside the U-M1s-11 edit scope); this helper is the version the catalog
-# assembly tests build on. The two copies must stay byte-compatible until a
-# later dedupe pass folds test-ffi-tally.R onto this helper.
+# Shared tally fixtures (U-M1s-11, folded onto test-ffi-tally.R by
+# U-M1s-13): the hand-derived 22-record golden batch and the little-endian
+# 2bit writer. Originally written for the FFI-layer test (test-ffi-tally.R,
+# U-M1s-09); the catalog assembly tests (test-catalog-tally.R) and the FFI
+# tests now both consume THESE definitions -- the FFI file's private copies
+# are gone (single source, byte-identical content preserved).
 #
 # Fixture genome (identical content to the Rust golden, src/rust/src/tally.rs):
 #   chr1: ACAC... (64 bp), N block at 0-based 50..52

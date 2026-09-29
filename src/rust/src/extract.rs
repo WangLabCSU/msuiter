@@ -16,7 +16,7 @@
 //! samples). R stores matrices column-major, so the FFI adapter (`lib.rs`)
 //! receives `t(counts)` — an `n×m` R double matrix whose column-major flat
 //! buffer is exactly the row-major `m×n` `V`:
-//! `data[j*m + i] == counts[i, j]`. No marshalling loop remains on the Rust
+//! `data[i*n + j] == counts[i, j]`. No marshalling loop remains on the Rust
 //! side, which is why the acceptance smoke on BOTH sides asserts recovery
 //! on an ASYMMETRIC catalog (m ≠ n, here 96×12): a transposed handoff
 //! cannot pass the reconstruction-cosine gate (the same discipline as the

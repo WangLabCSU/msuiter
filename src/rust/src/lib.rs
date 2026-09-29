@@ -516,7 +516,7 @@ fn ms_extract_rust(
         // Layout contract (module docs of `extract.rs`, the transposition
         // trap): R passes `t(counts)` — an n_samples x m_channels double
         // matrix whose column-major flat buffer IS the kernel's row-major
-        // m×n V: V[i*n + j] == data[j*m + i] == counts[i, j]. No
+        // m×n V: V[i*n + j] == data[i*n + j] == counts[i, j]. No
         // marshalling loop on this side; the asymmetric-golden recovery
         // smoke on both sides guards the orientation.
         let (n, m, v) = with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;

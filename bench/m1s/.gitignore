@@ -1,0 +1,6 @@
+# 依赖与产物：不入库（bench/m1s 一次性平台实验，参照 tools/kl-crosscheck 先例；
+# 脚本与 result.md 入库，重数据与虚拟环境本地再生）
+.venv/
+__pycache__/
+cache/
+*/cache/

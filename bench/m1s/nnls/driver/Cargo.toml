@@ -1,0 +1,17 @@
+[package]
+name = "nnls-bench-driver"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.71"
+publish = false
+
+# M1s bench (ARCHITECTURE §8: batch NNLS 101x1000, k=10 vs scipy nnls
+# per-sample, >=10x). Reads W.csv (m x k) / V.csv (m x n) written by
+# ../run_bench.py, computes the shared Gram G = W^T W once, then one
+# `msuiter_engine::nnls::nnls_gram` solve per sample column. Timing: 1
+# warmup + 3 timed full-batch runs, median reported. Standalone workspace
+# (engine path dep only; package tree untouched). NOT part of CI.
+[dependencies]
+msuiter-engine = { path = "../../../../src/rust/engine" }
+
+[workspace]

@@ -1,0 +1,17 @@
+[package]
+name = "nmf-bench-driver"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.71"
+publish = false
+
+# M1s acceptance-gate bench (ARCHITECTURE §8: NMF KL 96x1000, k=10, 100 iter,
+# >=100x R NMF). Reads V/W0/H0 CSVs written by ../run_bench.R, runs the
+# UNMODIFIED engine kernel `msuiter_engine::nmf::fit_kl_with_init`, and times
+# it: 1 warmup + 3 timed runs, median reported. Zero-dependency except the
+# engine path dependency; standalone workspace (never a member of src/rust;
+# the package tree is untouched). NOT part of CI.
+[dependencies]
+msuiter-engine = { path = "../../../../src/rust/engine" }
+
+[workspace]
