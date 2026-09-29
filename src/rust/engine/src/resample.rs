@@ -193,7 +193,6 @@ pub fn multinomial_from_stream(
     p: &[f64],
     n: u64,
 ) -> Result<Vec<u64>, MsError> {
-    let _ = (master_seed, stream);
     validate_weights(p, n)?;
     let mut rng = MsRng::from_stream(master_seed, stream);
     Ok(multinomial(&mut rng, p, n))
@@ -222,7 +221,6 @@ pub fn multinomial_bootstrap(
     n: u64,
     replicates: u64,
 ) -> Result<Vec<u64>, MsError> {
-    let _ = master_seed;
     validate_weights(p, n)?;
     if replicates == 0 {
         return Err(MsError::new("argument", "replicates must be positive"));

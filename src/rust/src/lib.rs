@@ -10,14 +10,14 @@
 //! contains NO algorithm kernel: NMF/NNLS & co. are M1s work.
 //!
 //! Contract map (see `probes.rs` for the pure cores, `condition.rs` for
-//! the error mapping):
+//! the error mapping, `replicates.rs` for the first real-kernel driver):
 //! 1. stateless   — every `msffi_*` is one call in/out, no globals;
 //! 2. column-major — `msffi_column_major_probe`;
 //! 3. NA/NaN      — R validator (primary) + `msffi_na_probe`;
 //! 4. indexes     — explicit bounds checks, errors not panics (`msffi_error_probe`);
 //! 5. errors      — `Result<_, MsError>` at the boundary only;
-//! 6. threads     — per-call pool via `msffi_thread_probe` (thread-count invariance);
-//! 7. interrupt   — `msffi_interrupt_probe` (boundary polling + worker `AtomicBool`);
+//! 6. threads     — per-call pool, unit-internal serial (A7 invariance): `msffi_thread_probe` + `msffi_nmf_replicates_probe`;
+//! 7. interrupt   — boundary polling + worker `AtomicBool`: `msffi_interrupt_probe` + the real-kernel driver;
 //! 8. build       — Makevars/vendor discipline unchanged; `msffi_build_info` feeds `ms_sitrep()`.
 
 use extendr_api::prelude::*;
@@ -26,6 +26,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 mod condition;
 mod probes;
+mod replicates;
 
 // Contract 7: polled ONLY on the main thread, ONLY at chunk boundaries.
 // `R_CheckUserInterrupt` longjmps back into R on user interrupt, skipping
@@ -158,6 +159,76 @@ fn msffi_thread_probe(n_items: i32, seed: i32, n_threads: i32) -> Robj {
 }
 
 #[extendr]
+fn msffi_nmf_replicates_probe(
+    counts: Robj,
+    k: i32,
+    replicates: i32,
+    max_iter: i32,
+    seed: i32,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Vec<f64>, MsError> {
+        // Argument guards (contract 4): explicit, error-not-panic. The
+        // engine's own validate_* re-checks the matrix content per unit.
+        if k < 1 {
+            return Err(MsError::new("argument", format!("k must be >= 1, got {k}")).with_i(k as i64));
+        }
+        if replicates < 1 {
+            return Err(
+                MsError::new("argument", format!("replicates must be >= 1, got {replicates}"))
+                    .with_i(replicates as i64),
+            );
+        }
+        if max_iter < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 0, got {max_iter}"),
+            ));
+        }
+        if seed < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("seed must be >= 0, got {seed}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        // Contract 2: the R matrix crosses the boundary column-major; the
+        // engine kernel is row-major. Sequential marshalling before any
+        // unit runs (setup, not a unit — no parallelism needed here).
+        let (m, n, v) = with_matrix_f64(&counts, |m, n, data| {
+            let mut v = vec![0.0f64; m * n];
+            for j in 0..n {
+                for i in 0..m {
+                    v[i * n + j] = data[j * m + i];
+                }
+            }
+            Ok((m, n, v))
+        })?;
+        let cancelled = AtomicBool::new(false);
+        // Contract 7: main-thread boundary poll only; workers see the
+        // AtomicBool inside `replicates::nmf_replicates_objectives`.
+        let mut boundary = || unsafe { R_CheckUserInterrupt() };
+        replicates::nmf_replicates_objectives(
+            &v,
+            m,
+            n,
+            k as usize,
+            max_iter as usize,
+            seed as u64,
+            replicates as usize,
+            n_threads as usize,
+            &cancelled,
+            &mut boundary,
+        )
+    })())
+}
+
+#[extendr]
 fn msffi_build_info() -> Robj {
     let info = probes::build_info();
     let pairs: Vec<(&str, Robj)> = info
@@ -177,6 +248,7 @@ extendr_module! {
     fn msffi_error_probe;
     fn msffi_interrupt_probe;
     fn msffi_thread_probe;
+    fn msffi_nmf_replicates_probe;
     fn msffi_build_info;
 }
 

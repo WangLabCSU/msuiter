@@ -152,7 +152,28 @@ pub fn fit_kl(
     max_iter: usize,
     seed: u64,
 ) -> Result<NmfFit, MsError> {
-    let (w0, h0) = seeded_init(v, m, n, k, seed)?;
+    fit_kl_on_stream(v, m, n, k, max_iter, seed, StreamId::ZERO)
+}
+
+/// KL-NMF with the seeded initializer drawn from an **explicit canonical
+/// stream** (U-M1s-05): identical to [`fit_kl`] except that the initializer
+/// comes from `MsRng::from_stream(seed, stream)` instead of
+/// `StreamId::ZERO`. This is the face parallel replicate drivers call:
+/// replicate `r` addresses `StreamId { replicate: r, rank: 0, fold: 0 }`, so
+/// every replicate of one master seed draws from a frozen, disjoint stream
+/// of the canonical layout v1 and no unit ever shares generator state
+/// (ARCH §2.6 thread-invariance contract). The kernel loop is untouched —
+/// still single-threaded, fixed reduction order.
+pub fn fit_kl_on_stream(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    max_iter: usize,
+    seed: u64,
+    stream: StreamId,
+) -> Result<NmfFit, MsError> {
+    let (w0, h0) = seeded_init(v, m, n, k, seed, stream)?;
     fit_kl_with_init(v, m, n, k, &w0, &h0, max_iter)
 }
 
@@ -166,7 +187,7 @@ pub fn fit_eu(
     max_iter: usize,
     seed: u64,
 ) -> Result<NmfFit, MsError> {
-    let (w0, h0) = seeded_init(v, m, n, k, seed)?;
+    let (w0, h0) = seeded_init(v, m, n, k, seed, StreamId::ZERO)?;
     fit_eu_with_init(v, m, n, k, &w0, &h0, max_iter)
 }
 
@@ -405,18 +426,20 @@ fn sse_objective(v: &[f64], w: &[f64], h: &[f64], m: usize, n: usize, k: usize) 
 }
 
 /// Seeded deterministic initializer (module docs "Initialization"):
-/// open-interval uniforms in (0, 1] from `MsRng` (W row-major first, then H
-/// row-major, single `StreamId::ZERO` stream), both factors scaled by
-/// `(mean(V)/k).sqrt()` (scale 1.0 for all-zero input).
+/// open-interval uniforms in (0, 1] from `MsRng` on the given canonical
+/// stream (W row-major first, then H row-major), both factors scaled by
+/// `(mean(V)/k).sqrt()` (scale 1.0 for all-zero input). [`fit_kl`] passes
+/// `StreamId::ZERO`; [`fit_kl_on_stream`] forwards the caller's stream.
 fn seeded_init(
     v: &[f64],
     m: usize,
     n: usize,
     k: usize,
     seed: u64,
+    stream: StreamId,
 ) -> Result<(Vec<f64>, Vec<f64>), MsError> {
     validate_shape(v, m, n, k)?;
-    let mut rng = MsRng::from_stream(seed, StreamId::ZERO);
+    let mut rng = MsRng::from_stream(seed, stream);
     let scale = {
         let mut mean = 0.0f64;
         for &x in v {
@@ -956,6 +979,67 @@ mod tests {
             "flat-case EU reconstruction cosine {recon_eu}"
         );
     }
+    // ------------------------------------------------------------------
+    // Stream-addressed init face (U-M1s-05): `fit_kl_on_stream` must agree
+    // bit-for-bit with `fit_kl` on the zero stream (the refactor is pure
+    // plumbing, the kernel loop is untouched), and distinct canonical
+    // streams must break symmetry differently (disjoint generator state).
+    // ------------------------------------------------------------------
+
+    #[test]
+    fn fit_kl_on_zero_stream_equals_fit_kl() {
+        let mut rng = MsRng::from_stream(5, StreamId { replicate: 8, rank: 8, fold: 8 });
+        let v = random_counts(&mut rng, 20, 14);
+        for seed in [0u64, 42, 0xDEAD_BEEF] {
+            let a = fit_kl(&v, 20, 14, 3, 30, seed).unwrap();
+            let b = fit_kl_on_stream(&v, 20, 14, 3, 30, seed, StreamId::ZERO).unwrap();
+            assert_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn fit_kl_replicate_streams_are_isolated() {
+        let mut rng = MsRng::from_stream(5, StreamId { replicate: 8, rank: 8, fold: 8 });
+        let v = random_counts(&mut rng, 20, 14);
+        let master = 42u64;
+        // Replicate r runs on StreamId { replicate: r, rank: 0, fold: 0 }:
+        // the frozen per-replicate layout of the parallel drivers.
+        let fits: Vec<NmfFit> = (0..4u64)
+            .map(|r| {
+                fit_kl_on_stream(
+                    &v,
+                    20,
+                    14,
+                    3,
+                    30,
+                    master,
+                    StreamId { replicate: r, rank: 0, fold: 0 },
+                )
+                .unwrap()
+            })
+            .collect();
+        // Same stream → identical fit; different replicate streams →
+        // different symmetry-broken fits (initializers are disjoint).
+        for (r, fit) in fits.iter().enumerate() {
+            let again = fit_kl_on_stream(
+                &v,
+                20,
+                14,
+                3,
+                30,
+                master,
+                StreamId { replicate: r as u64, rank: 0, fold: 0 },
+            )
+            .unwrap();
+            assert_eq!(fit, &again);
+        }
+        for i in 0..fits.len() {
+            for j in (i + 1)..fits.len() {
+                assert_ne!(fits[i], fits[j], "replicates {i} and {j} collide");
+            }
+        }
+    }
+
     // ------------------------------------------------------------------
     // Structural properties and validation
     // ------------------------------------------------------------------

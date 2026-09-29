@@ -12,6 +12,7 @@ msffi_na_probe
 msffi_error_probe
 msffi_interrupt_probe
 msffi_thread_probe
+msffi_nmf_replicates_probe
 msffi_build_info
 ```
 
@@ -24,6 +25,7 @@ msffi_build_info
 | `msffi_error_probe` | `(i: i32, j: i32) -> f64` | `.msffi_error_probe(i, j)` | 索引越界 → `Err(MsError)` → R condition（class `msuiter_error_rust`，载荷 `message/topic/i/j/c`）的端到端映射；1-based 虚拟 4x3 矩阵 | 4, 5 | diagnostic | 0.0.0.9000 |
 | `msffi_interrupt_probe` | `(n_chunks: i32, n_threads: i32) -> i32` | `.msffi_interrupt_probe(n_chunks, threads)` | 中断机制探测器：主线程 chunk 边界轮询 `R_CheckUserInterrupt` + worker 只见 `AtomicBool` + per-call 线程池（`n_threads` 经 `.ms_resolve_threads()` 解析，0 = rayon 默认）；返回完成 chunk 数 | 6, 7 | diagnostic | 0.0.0.9000 |
 | `msffi_thread_probe` | `(n_items: i32, seed: i32, n_threads: i32) -> Vec<f64>` | `.msffi_thread_probe(n_items, seed, threads)` | 线程不变性探测器：per-call ThreadPool，每 item 独立 PCG64 流（canonical layout v1），按 chunk 索引定序拼接；threads∈{1,N} 输出 identical | 6 | diagnostic | 0.0.0.9000 |
+| `msffi_nmf_replicates_probe` | `(counts: R 双精度矩阵, k: i32, replicates: i32, max_iter: i32, seed: i32, n_threads: i32) -> Vec<f64>` | `.msffi_nmf_replicates_probe(counts, k, replicates, max_iter, seed, threads)` | 真实内核并行驱动（U-M1s-05）：per-call ThreadPool 上并行跑 `replicates` 个独立 KL-NMF 拟合（`engine::nmf::fit_kl_on_stream`），replicate r 的 seeded init 取自 `StreamId{replicate: r, rank: 0, fold: 0}`（canonical layout v1）；单元内单线程（内核循环序不动，A7），按 replicate 索引定序返回每 replicate 最终 KL 目标值——threads∈{1,N} 输出 identical；中断 = 主线程 chunk 边界轮询 `R_CheckUserInterrupt` + worker 只见 `AtomicBool`，任一触发整调用报错无部分结果 | 6, 7 | diagnostic | 0.0.0.9000 |
 | `msffi_build_info` | `() -> List` | `.msffi_build_info()` | 编译期工具链信息（rustc 版本/目标平台/包版本；由 `build.rs` 记录），供 `ms_sitrep()` 报告 | 8（构建） | diagnostic | 0.0.0.9000 |
 
 约定：

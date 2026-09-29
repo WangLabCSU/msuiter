@@ -175,6 +175,98 @@ test_that("thread probe validates its arguments", {
 })
 
 # ---------------------------------------------------------------------------
+# Contracts 6/7 on the real kernel: parallel KL-NMF replicate driver
+# ---------------------------------------------------------------------------
+
+# Synthetic m x n count catalog (deterministic, integer-valued, contains
+# structural zeros — every 40th channel count vanishes).
+.msffi_synthetic_counts <- function(m = 12L, n = 9L) {
+  matrix(as.numeric((seq_len(m * n) * 7L) %% 40L), nrow = m)
+}
+
+test_that("real-kernel replicate objectives are identical across thread counts (A7)", {
+  counts <- .msffi_synthetic_counts()
+  a <- .msffi_nmf_replicates_probe(counts, k = 2L, replicates = 5L,
+                                   max_iter = 10L, seed = 42L, threads = 1L)
+  b <- .msffi_nmf_replicates_probe(counts, k = 2L, replicates = 5L,
+                                   max_iter = 10L, seed = 42L, threads = 4L)
+  c <- .msffi_nmf_replicates_probe(counts, k = 2L, replicates = 5L,
+                                   max_iter = 10L, seed = 42L, threads = NULL)
+  expect_identical(a, b)
+  expect_identical(a, c)
+  expect_type(a, "double")
+  expect_length(a, 5L)
+  expect_true(all(is.finite(a)))
+})
+
+test_that("replicate driver is reproducible and seed-sensitive", {
+  counts <- .msffi_synthetic_counts()
+  one <- .msffi_nmf_replicates_probe(counts, 2L, 4L, 8L, 7L, threads = 2L)
+  expect_identical(
+    one,
+    .msffi_nmf_replicates_probe(counts, 2L, 4L, 8L, 7L, threads = 3L)
+  )
+  expect_false(identical(
+    one,
+    .msffi_nmf_replicates_probe(counts, 2L, 4L, 8L, 8L, threads = 2L)
+  ))
+})
+
+test_that("replicate driver validates arguments and NA (R side first)", {
+  counts <- .msffi_synthetic_counts()
+  err <- tryCatch(
+    .msffi_nmf_replicates_probe(counts, 2L, 4L, 8L, 42L, threads = "many"),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_option")
+  err_k <- tryCatch(
+    .msffi_nmf_replicates_probe(counts, 0L, 4L, 8L, 42L, threads = 1L),
+    error = identity
+  )
+  expect_s3_class(err_k, "msuiter_error_input")
+  err_rep <- tryCatch(
+    .msffi_nmf_replicates_probe(counts, 2L, 0L, 8L, 42L, threads = 1L),
+    error = identity
+  )
+  expect_s3_class(err_rep, "msuiter_error_input")
+  err_seed <- tryCatch(
+    .msffi_nmf_replicates_probe(counts, 2L, 4L, 8L, -1L, threads = 1L),
+    error = identity
+  )
+  expect_s3_class(err_seed, "msuiter_error_input")
+  bad <- counts
+  bad[2, 3] <- NA_real_
+  err_na <- tryCatch(
+    .msffi_nmf_replicates_probe(bad, 2L, 4L, 8L, 42L, threads = 1L),
+    error = identity
+  )
+  expect_s3_class(err_na, "msuiter_error_na")
+})
+
+test_that("replicate driver Rust guards stay reachable through the passthrough", {
+  counts <- .msffi_synthetic_counts()
+  err <- tryCatch(
+    msffi_nmf_replicates_probe(counts, 0L, 4L, 8L, 42L, 1L),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_identical(err$topic, "argument")
+  # Negative counts are rejected by the engine kernel's own validation,
+  # surfacing as a whole-call error with 1-based i/j payload (contract 5:
+  # no partial results).
+  neg <- counts
+  neg[3, 1] <- -5
+  err_neg <- tryCatch(
+    msffi_nmf_replicates_probe(neg, 2L, 4L, 8L, 42L, 1L),
+    error = identity
+  )
+  expect_s3_class(err_neg, "msuiter_error_rust")
+  expect_identical(err_neg$topic, "argument")
+  expect_identical(err_neg$i, 3L)
+  expect_identical(err_neg$j, 1L)
+})
+
+# ---------------------------------------------------------------------------
 # Validators (shared)
 # ---------------------------------------------------------------------------
 

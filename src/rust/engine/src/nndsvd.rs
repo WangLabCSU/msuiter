@@ -691,12 +691,6 @@ mod tests {
         a.iter().map(|x| x * x).sum::<f64>().sqrt()
     }
 
-    /// Deterministic orthogonal d×d matrix (orthonormalized Gaussian).
-    fn orthogonal_matrix(rng: &mut MsRng, d: usize) -> Vec<f64> {
-        let g = gauss_matrix(rng, d, d);
-        orthonormalize(&g, d, d)
-    }
-
     /// Random matrix with prescribed singular values `s`:
     /// `A = U · diag(s) · Vᵀ` for seeded random orthogonal U, V.
     fn spectral_matrix(rng: &mut MsRng, m: usize, n: usize, s: &[f64]) -> Vec<f64> {
@@ -750,10 +744,6 @@ mod tests {
         }
         let d = sv(&g, k, k);
         d.s[k - 1]
-    }
-
-    fn column(mat: &[f64], rows: usize, cols: usize, c: usize) -> Vec<f64> {
-        (0..rows).map(|r| mat[r * cols + c]).collect()
     }
 
     /// Assert the structural SVD contract: singular values non-negative and
@@ -971,10 +961,11 @@ mod tests {
     /// are the hard regime for subspace iteration. Threshold derivation
     /// (fixed seed, corrected-stride cross-Gram): measured subspace error
     /// 1 − cos = 1.39e-5 and σ rel err 1.2e-5; the suite's own mixing-ratio
-    /// model gives (σ₂₇/σ₁₀)^{2q+1} = (0.418)⁷ ≈ 2.2e-3 as the worst case
+    /// model gives (σ₂₇/σ₁₀)^{2q+1} = (0.408)⁷ ≈ 1.9e-3 as the worst case
     /// for this seed, so the cosine threshold 1e-3 sits ≈ 72× above the
-    /// measured error while staying inside the model bound (any real
-    /// regression — e.g. losing the power iterations — lands ≥ 1e-1).
+    /// measured error while staying inside the model bound (losing the
+    /// power iterations entirely — q = 0 — lands ≈ 4e-1; even q = 1 lands
+    /// 2.4e-2, still 24× the threshold).
     #[test]
     fn randomized_matches_exact_gram_svd_generic_gaussian() {
         let (m, n, k) = (48usize, 36usize, 10usize);
@@ -1294,9 +1285,9 @@ mod tests {
         let v = separable_truth(0xBEEF);
         // 50 EU-MU iterations are not enough for the NNDSVDa basin advantage
         // to overtake the random init's faster early descent on this fixture
-        // (a-variant/random final ratio 1.10–1.25 at every exposure scale
-        // measured); by 200 iterations the SVD-structured init dominates
-        // with a >2× margin (measured ratio 0.45–0.48).
+        // (a-variant/random final ratio 1.05–1.38 across exposure scales);
+        // by 200 iterations the SVD-structured init dominates with a ~1.5×
+        // margin (measured ratio 0.60–0.69).
         let iters = 200;
         let (w0, h0) = nndsvda_init(&v, m, n, k, 7).unwrap();
         let nnd = crate::nmf::fit_eu_with_init(&v, m, n, k, &w0, &h0, iters).unwrap();

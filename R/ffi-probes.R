@@ -199,6 +199,53 @@
   .msffi_check(msffi_thread_probe(n_items, as.integer(seed), n_threads))
 }
 
+#' Real-kernel parallel replicate driver (contracts 6/7, U-M1s-05).
+#'
+#' Runs `replicates` independent KL-NMF fits of `counts` (m channels x n
+#' samples) on the per-call thread pool. Replicate `r` draws its seeded
+#' initializer from its own PCG64 stream
+#' `StreamId{replicate: r, rank: 0, fold: 0}` (canonical layout v1) and the
+#' kernel stays single-threaded inside each unit; results are returned
+#' ordered by replicate index. The output depends only on
+#' `(counts, k, max_iter, seed, replicates)` — never on the thread count:
+#' threads 1 and N give `identical()` vectors. `threads` follows
+#' `.ms_resolve_threads()` when NULL.
+#' @keywords internal
+#' @noRd
+.msffi_nmf_replicates_probe <- function(counts, k, replicates, max_iter,
+                                        seed, threads = NULL) {
+  counts <- .ms_validate_matrix(counts, "counts")
+  k <- .ms_validate_count(k, "k")
+  replicates <- .ms_validate_count(replicates, "replicates")
+  max_iter <- .ms_validate_count(max_iter, "max_iter")
+  if (k < 1L) {
+    rlang::abort(
+      "`k` must be a positive integer.",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (rank k >= 1)"
+    )
+  }
+  if (replicates < 1L) {
+    rlang::abort(
+      "`replicates` must be a positive integer.",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (replicates >= 1)"
+    )
+  }
+  if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
+      !is.finite(seed) || seed < 0 || seed != floor(seed) || seed > 2^31 - 1) {
+    rlang::abort(
+      "`seed` must be a single integer in [0, 2^31 - 1].",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (RNG seed)"
+    )
+  }
+  n_threads <- .ms_resolve_threads(threads)
+  .msffi_check(msffi_nmf_replicates_probe(
+    counts, k, replicates, max_iter, as.integer(seed), n_threads
+  ))
+}
+
 #' Build info probe (feeds [ms_sitrep()]).
 #'
 #' Named list with `package_version`, `rustc_version`, `target_os` and

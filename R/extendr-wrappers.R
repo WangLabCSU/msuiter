@@ -15,6 +15,8 @@ msffi_interrupt_probe <- function(n_chunks, n_threads) .Call(wrap__msffi_interru
 
 msffi_thread_probe <- function(n_items, seed, n_threads) .Call(wrap__msffi_thread_probe, n_items, seed, n_threads)
 
+msffi_nmf_replicates_probe <- function(counts, k, replicates, max_iter, seed, n_threads) .Call(wrap__msffi_nmf_replicates_probe, counts, k, replicates, max_iter, seed, n_threads)
+
 msffi_build_info <- function() .Call(wrap__msffi_build_info)
 
 # nolint end
