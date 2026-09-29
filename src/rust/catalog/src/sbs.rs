@@ -7,7 +7,7 @@
 //!     (`MutationMatrixGenerator.py:778-808`);
 //!   * pyrimidine orientation: REF in {A,G} => `revbias` on the strand bias
 //!     (T<->U, B/N unchanged), complement REF/ALT, reverse-complement the
-//!     window (`:815-824`, helpers `:420-445`);
+//!     window (`:833-837`, helpers `:420-445`);
 //!   * channel key `bias:XY[R>M]ZW` (`:907-917`);
 //!   * strand encoding `tsb_ref` (0-3 non-genic ACGT => bias "N", 4-7 "T",
 //!     8-11 "U", 12-15 "B", 16-19 literal N) and `bias_sort`
@@ -45,9 +45,10 @@
 //! * **N or any non-ACGT byte in the window**: structured
 //!   [`MsError`](msuiter_engine::MsError) with topic `"argument"` and the
 //!   1-based window position in `i`. Rationale: SPMG's 6144 index contains
-//!   no N-context key, so such a mutation raises a key error there and is
-//!   skipped from *every* SBS matrix (per-mutation skip log); the assembly
-//!   layer routes our error to the same skip ledger. Note the window this
+//!   no N-context key, so such a mutation hits an uncaught KeyError there
+//!   (a hard crash, *not* a logged skip — only the DBS path has an N-guard);
+//!   msuiter's structured error is a deliberate hardening, and the assembly
+//!   layer routes it to the same skip ledger. Note the window this
 //!   module sees: for exact SPMG parity of the 96-family the caller must
 //!   consult the +/-2 window (an N at +/-2 is invisible to a trinucleotide
 //!   input yet still drops the mutation from every SPMG SBS matrix).

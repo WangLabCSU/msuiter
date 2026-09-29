@@ -20,6 +20,7 @@
 //! | >5 bp equal-length block substitution                 | `LongMnv`          |
 //! | both alleles >1 base, unequal lengths                 | `ComplexIndel`     |
 //! | one-side-single-base indel                            | `Skipped(simple_indel)` |
+//! | two adjacent one-side-single-base indels               | `Skipped(simple_indel)` each (no event; ARCH §7.2's "double indel → 各自去向" row is the ID83 destination, lands in U-M1c — this table records the skip until then) |
 //! | non-ACGT byte / zero-length allele                    | `Skipped(invalid_base / empty_allele)` |
 //! | `ref == alt` (no change)                              | `Skipped(ref_equals_alt)` |
 //!

@@ -1,21 +1,119 @@
 # G0 Tier-1 竞品环境：signature.tools.lib v2.5.2（bootstrap 派）
 # 冻结版本（F2）：Nik-Zainal-Group/signature.tools.lib tag v2.5.2。
-# 较轻（无 rstan）；W1 兼容性检查（RefSig 目录）不属镜像职责，见协议 §3。
+#
+# 上轮教训：STL 从未真正装上却产出了"可用"镜像——本文件每一步 RUN 都带
+# 失败即停守卫（`|| { echo ...; exit 1; }`），且安装后立即 library()/版本断言，
+# 任何一步静默失败都会让构建当场爆掉，绝不允许坏镜像重演。
+#
+# 依赖全景（源码 DESCRIPTION 核对）：
+#   STL Imports 含 Bioc 包（VariantAnnotation/BSgenome.Hsapiens.UCSC.hg38/
+#   BSgenome.Hsapiens.1000genomes.hs37d5/SummarizedExperiment/...）——必须先装
+#   BiocManager；library() 会加载全部 Imports，故两个 BSgenome 基因组都是硬依赖。
+#   STL Imports 还含 indelsig.tools.lib（其 Imports 又要 BSgenome.Hsapiens.UCSC.hg19
+#   + factoextra + GenomicFeatures + Rcpp + gmp）⇒ 三个基因组全要装。
+#   Remotes 字段：linxihui/NNLM 与 Nik-Zainal-Group/indelsig.tools.lib——
+#   走 git clone + R CMD INSTALL（remotes::install_github 有 API 限流风险），
+#   indelsig.tools.lib 锁 tag `Release`，clone 的 commit SHA 固化进 build_info.json。
 FROM rocker/r-ver:4.3.3
 
+# 系统库：curl/ssl（RCurl、httr、download）、xml2（biomaRt/rtracklayer/XML）、
+# icu（stringi）、png（NMF/gplots 绘图链）、z/bz2/lzma（Rhtslib/Rsamtools）、
+# gmp（gmp 包）、cmake+pkg-config（Rhtslib 构建 htslib）
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates git make g++ \
-    && rm -rf /var/lib/apt/lists/*
+        ca-certificates git make g++ gfortran cmake pkg-config \
+        libcurl4-openssl-dev libssl-dev libxml2-dev libicu-dev \
+        libpng-dev libz-dev libbz2-dev liblzma-dev libgmp3-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    || { echo "BUILD FAILED: apt-get system libraries"; exit 1; }
 
-RUN Rscript -e 'options(warn=1); install.packages( \
-      c("remotes", "jsonlite", "ggplot2", "gridExtra", "dplyr", "tidyr", \
-        "RColorBrewer", "gridBase"), \
-      repos = "https://cloud.r-project.org")'
+# CRAN 依赖·第一批（rocker r-ver 默认 PPM jammy 源）。
+# 注意：NMF 的 Imports 含 Biobase（Bioc 包），必须等 Bioc 腿装完后再装 NMF。
+RUN Rscript -e 'options(warn=1, Ncpus=4); \
+      pkgs <- c("BiocManager", "jsonlite", "foreach", "doParallel", "doRNG", \
+                "nnls", "lpSolve", "limSolve", "gmp", "plyr", "RCircos", "scales", \
+                "readr", "getopt", "combinat", "circlize", "gridExtra", \
+                "gridBase", "ggplot2", "reshape2", "Rcpp", "rlang", "stringr", \
+                "RcppArmadillo", "RcppProgress", \
+                "factoextra"); \
+      install.packages(pkgs); \
+      missing <- pkgs[!vapply(pkgs, function(p) requireNamespace(p, quietly=TRUE), logical(1))]; \
+      if (length(missing)) stop("CRAN deps missing: ", paste(missing, collapse=", ")); \
+      cat("CRAN_DEPS_OK\n")' \
+    || { echo "BUILD FAILED: CRAN dependency install/assert"; exit 1; }
 
-# signature.tools.lib v2.5.2（tag 锁定）
-RUN Rscript -e 'remotes::install_github( \
-      "Nik-Zainal-Group/signature.tools.lib@v2.5.2", \
-      build_vignettes = FALSE, dependencies = TRUE)'
+# Bioconductor 依赖（BiocManager 自动匹配 R 4.3.3 → Bioc 3.18；含两个 BSgenome 基因组）
+RUN Rscript -e 'options(warn=1, Ncpus=4); \
+      pkgs <- c("Biobase", \
+                "VariantAnnotation", "GenomicFeatures", "SummarizedExperiment", \
+                "BiocGenerics", "GenomeInfoDb", "GenomicRanges", "IRanges", \
+                "BSgenome", "Biostrings", \
+                "BSgenome.Hsapiens.UCSC.hg38", \
+                "BSgenome.Hsapiens.1000genomes.hs37d5"); \
+      BiocManager::install(pkgs, ask=FALSE, update=FALSE); \
+      missing <- pkgs[!vapply(pkgs, function(p) requireNamespace(p, quietly=TRUE), logical(1))]; \
+      if (length(missing)) stop("Bioc deps missing: ", paste(missing, collapse=", ")); \
+      cat("BIOC_DEPS_OK\n")' \
+    || { echo "BUILD FAILED: Bioconductor dependency install/assert"; exit 1; }
+
+# NMF（Imports 含 Biobase ⇒ 须在 Bioc 腿之后）
+RUN Rscript -e 'options(warn=1, Ncpus=4); \
+      install.packages("NMF"); \
+      if (!requireNamespace("NMF", quietly=TRUE)) stop("NMF missing"); \
+      cat("NMF_OK\n")' \
+    || { echo "BUILD FAILED: NMF install/assert"; exit 1; }
+
+# indelsig.tools.lib 的 Imports 还要求 hg19（STL 的硬依赖链，绕不开）
+RUN Rscript -e 'options(warn=1); \
+      BiocManager::install("BSgenome.Hsapiens.UCSC.hg19", ask=FALSE, update=FALSE); \
+      if (!requireNamespace("BSgenome.Hsapiens.UCSC.hg19", quietly=TRUE)) stop("hg19 missing"); \
+      cat("BSGENOME_HG19_OK\n")' \
+    || { echo "BUILD FAILED: BSgenome.Hsapiens.UCSC.hg19"; exit 1; }
+
+# GitHub 依赖 1/2：linxihui/NNLM（STL Remotes 字段；git clone 绕开 API 限流）
+RUN git clone --depth 1 https://github.com/linxihui/NNLM.git /tmp/NNLM \
+    && R CMD INSTALL --no-multiarch /tmp/NNLM \
+    && Rscript -e 'if (!requireNamespace("NNLM", quietly=TRUE)) stop("NNLM missing"); cat("NNLM_OK\n")' \
+    && rm -rf /tmp/NNLM \
+    || { echo "BUILD FAILED: NNLM (git clone + R CMD INSTALL)"; exit 1; }
+
+# GitHub 依赖 2/2：indelsig.tools.lib——**不用 tag `Release`**（该 tag 的 Imports
+# 含 signature.tools.lib，与 STL 本体循环依赖，R CMD INSTALL 无解）；按 STL
+# v2.5.2 Remotes 字段语义装默认分支，用 SHA 钉死并断言未漂移。
+RUN git clone --depth 1 \
+        https://github.com/Nik-Zainal-Group/indelsig.tools.lib.git /tmp/indelsig \
+    && echo "d0bdb9b554dd3b63bcfecd75f58486bd54b3142d" > /tmp/indelsig_expected \
+    && git -C /tmp/indelsig rev-parse HEAD > /tmp/indelsig_sha \
+    && diff -q /tmp/indelsig_expected /tmp/indelsig_sha \
+    && rm -f /tmp/indelsig/src/*.o /tmp/indelsig/src/*.so \
+    && R CMD INSTALL --no-multiarch /tmp/indelsig \
+    && Rscript -e 'if (!requireNamespace("indelsig.tools.lib", quietly=TRUE)) stop("indelsig.tools.lib missing"); cat("INDELSIG_OK\n")' \
+    || { echo "BUILD FAILED: indelsig.tools.lib (clone/SHA-drift/R CMD INSTALL)"; exit 1; }
+
+# signature.tools.lib v2.5.2（tag 锁定）+ 装后 library()/版本断言
+RUN git clone --depth 1 --branch v2.5.2 \
+        https://github.com/Nik-Zainal-Group/signature.tools.lib.git /tmp/stl \
+    && git -C /tmp/stl rev-parse HEAD > /tmp/stl_sha \
+    && R CMD INSTALL --no-multiarch /tmp/stl \
+    && Rscript -e 'suppressPackageStartupMessages(library(signature.tools.lib)); \
+       v <- as.character(packageVersion("signature.tools.lib")); \
+       if (v != "2.5.2") stop("STL version mismatch: ", v); \
+       if (!"FitMS" %in% getNamespaceExports("signature.tools.lib")) stop("FitMS not exported"); \
+       cat("STL_INSTALL_OK", v, "\n")' \
+    || { echo "BUILD FAILED: signature.tools.lib v2.5.2 install/assert"; exit 1; }
+
+# build_info.json：tag + commit SHA（runner 的 manifest 从这里取版本溯源）
+RUN mkdir -p /usr/local/share/g0 \
+    && printf '{"package":"signature.tools.lib","tag":"v2.5.2","commit":"%s"}\n' "$(cat /tmp/stl_sha)" \
+        > /usr/local/share/g0/build_info.json \
+    && printf '{"package":"indelsig.tools.lib","tag":"master@SHA-pinned","commit":"%s"}\n' "$(cat /tmp/indelsig_sha)" \
+        >> /usr/local/share/g0/build_info_deps.json \
+    && rm -rf /tmp/stl /tmp/indelsig /tmp/stl_sha /tmp/indelsig_sha
+
+# 验收门：完整加载 + FitMS 可用（对账 g0-sigfit 镜像的验证方式）
+RUN Rscript -e 'suppressPackageStartupMessages(library(signature.tools.lib)); \
+       res <- signature.tools.lib::FitMS; \
+       cat("STL_LIBRARY_ASSERT_OK\n")' \
+    || { echo "BUILD FAILED: final library(signature.tools.lib) assertion"; exit 1; }
 
 WORKDIR /work
 COPY run_stl.R /work/
