@@ -105,9 +105,11 @@ msuiter_variants_provenance <- function(genome, caller, matched_normal,
 #' fields expand to one record per allele; symbolic (`<NON_REF>`),
 #' breakend, missing (`.`) and spanning (`*`) alleles are skipped into the
 #' provenance skip ledger. Sample genotype columns are not parsed in this
-#' unit. MAF rows whose `Variant_Classification` is not SBS-eligible
-#' (frame-shift/in-frame indels and structural variation) are counted into
-#' the skip ledger, not routed -- routing arrives with the catalog layer.
+#' unit. MAF rows whose `Variant_Classification` is not SBS-eligible are
+#' counted into the skip ledger, not routed -- routing arrives with the
+#' catalog layer. The excluded set aligns with the SPMG default MAF filter:
+#' frame-shift/in-frame indels, structural variation, `Silent` and
+#' `Splice_Site`.
 #'
 #' The returned `provenance` carries the somaticness signal fields plus
 #' `source` (path), `format`, the `##fileformat` note (VCF) and `parse`
@@ -513,12 +515,15 @@ msuiter_read_vcf <- function(path, compressed) {
 # ---------------------------------------------------------------------------
 
 # MAF Variant_Classification values that are NOT single-base-substitution
-# events. In this unit they are only counted into the skip ledger (no
-# routing to DBS/ID pipelines yet -- that lands with the catalog layer).
+# events. Aligned with the SPMG default MAF filter: the indel/structural
+# classes plus the non-mutational Silent and Splice_Site labels never enter
+# a substitution matrix. In this unit they are only counted into the skip
+# ledger (no routing to DBS/ID pipelines yet -- that lands with the
+# catalog layer).
 msuiter_maf_non_sbs_classes <- c(
   "Frame_Shift_Del", "Frame_Shift_Ins", "In_Frame_Del", "In_Frame_Ins",
   "De_novo_Start_InFrame", "De_novo_Start_OutOfFrame",
-  "Structural_Variation"
+  "Structural_Variation", "Silent", "Splice_Site"
 )
 
 msuiter_read_tabular <- function(path, compressed, format, cols) {
@@ -537,10 +542,32 @@ msuiter_read_tabular <- function(path, compressed, format, cols) {
       c = "check that the file is the intended input"
     )
   }
-  tab <- utils::read.table(
-    text = paste(lines, collapse = "\n"),
-    sep = "\t", header = TRUE, quote = "", comment.char = "",
-    check.names = FALSE, colClasses = "character", stringsAsFactors = FALSE
+  # read.table() fails with a bare error on a ragged table (a data line
+  # whose tab-separated field count differs from the header). The error
+  # protocol (ARCHITECTURE section 3.5) bans bare errors on user input, so
+  # the call is captured and re-raised as msuiter_error_parse, carrying the
+  # offending data-line number when read.table reports one.
+  tab <- tryCatch(
+    utils::read.table(
+      text = paste(lines, collapse = "\n"),
+      sep = "\t", header = TRUE, quote = "", comment.char = "",
+      check.names = FALSE, colClasses = "character", stringsAsFactors = FALSE
+    ),
+    error = function(e) {
+      msg <- conditionMessage(e)
+      line <- regmatches(msg, regexec("line ([0-9]+)", msg))[[1L]]
+      msuiter_abort(
+        "parse",
+        "the variant file could not be parsed as a tabular table",
+        i = if (length(line) == 2L) {
+          paste0("offending data line: ", line[2L])
+        } else {
+          "a data line does not match the header's tab-separated field count"
+        },
+        j = paste0(basename(path), ": ", msg),
+        c = "repair the ragged data line(s), or re-export the file"
+      )
+    }
   )
 
   defaults <- if (format == "maf") {

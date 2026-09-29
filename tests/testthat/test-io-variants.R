@@ -280,6 +280,52 @@ test_that("TSV uppercase repair happens at the io layer, bad alleles fail in the
 })
 
 # ---------------------------------------------------------------------
+# Ragged tables: msuiter_error_parse, never a bare simpleError
+# ---------------------------------------------------------------------
+
+test_that("a ragged TSV row is a structured msuiter_error_parse with the line number", {
+  # A data line wider than the header: read.table fails before any ledger
+  # logic runs; the error protocol (ARCH 3.5) requires msuiter_error_parse
+  # instead of the bare simpleError read.table throws. The exact scan
+  # message varies with the ragged shape (and across R versions), so only
+  # the class, the payload and the file location are pinned here.
+  wide <- .write_io_fixture(c(
+    "chrom\tpos\tref\talt",
+    "chr2\t200\tC\tG\textra",
+    "chr1\t100\tA\tT"
+  ), ".tsv")
+  on.exit(unlink(wide), add = TRUE)
+  err <- expect_ms_error(
+    ms_variants(wide, "GRCh38", caller = "c", matched_normal = "none"),
+    "parse"
+  )
+  expect_match(err$msuiter_error$j, basename(wide), fixed = TRUE)
+
+  # A narrower data line: read.table reports a line number, which the
+  # condition must surface in `i` ("offending data line: N").
+  narrow <- .write_io_fixture(c(
+    "chrom\tpos\tref\talt",
+    "chr1\t100\tA"
+  ), ".tsv")
+  err2 <- expect_ms_error(
+    ms_variants(narrow, "GRCh38", caller = "c", matched_normal = "none"),
+    "parse", regexp = "offending data line"
+  )
+  expect_match(err2$msuiter_error$i, "[0-9]")
+
+  # The same guard covers MAF tabular input.
+  maf <- .write_io_fixture(c(
+    "Chromosome\tStart_Position\tReference_Allele\tTumor_Seq_Allele2",
+    "chr1\t100\tA\tT",
+    "chr2\t200\tC\tG\tT\tExtra_Cols"
+  ), ".maf")
+  expect_ms_error(
+    ms_variants(maf, "GRCh38", caller = "c", matched_normal = "none"),
+    "parse"
+  )
+})
+
+# ---------------------------------------------------------------------
 # MAF
 # ---------------------------------------------------------------------
 
@@ -293,7 +339,8 @@ test_that("MAF column mapping works and the skip ledger counts non-SBS rows", {
     "chr7\t55191822\t55191822\tC\tT\tMissense_Mutation",
     "chr13\t32316405\t32316406\tGA\tG\tFrame_Shift_Del",
     "chr17\t7676594\t7676594\t.\tA\tSilent",
-    "chr1\t100\t100\tA\tT\tMissense_Mutation"
+    "chr1\t100\t100\tA\tT\tSplice_Site",
+    "chr1\t200\t200\tC\tG\tMissense_Mutation"
   ), ".maf")
   on.exit(unlink(path))
 
@@ -301,18 +348,22 @@ test_that("MAF column mapping works and the skip ledger counts non-SBS rows", {
   expect_is_ms(v, "MsVariants")
   expect_identical(nrow(v@table), 2L)
   expect_identical(v@table$chrom, c("chr7", "chr1"))
-  expect_identical(v@table$ref, c("C", "A"))
-  expect_identical(v@table$alt, c("T", "T"))
-  expect_identical(v@table$end, c(55191822, 100)) # End_Position honored
+  expect_identical(v@table$ref, c("C", "C"))
+  expect_identical(v@table$alt, c("T", "G"))
+  expect_identical(v@table$end, c(55191822, 200)) # End_Position honored
 
   p <- v@provenance$parse
-  expect_identical(p$n_lines, 4L)
+  expect_identical(p$n_lines, 5L)
   expect_identical(p$n_records, 2L)
-  expect_identical(p$n_skipped, 2L)
-  expect_identical(p$skip_reasons[["classification"]], 1L)
-  expect_identical(p$skip_reasons[["allele"]], 1L)
+  expect_identical(p$n_skipped, 3L)
+  # SPMG-aligned default filter: Silent and Splice_Site are classification
+  # skips even when their allele fields would be usable (the chr17 row's
+  # "." reference makes the point double: classification wins first).
+  expect_identical(p$skip_reasons[["classification"]], 3L)
+  expect_false("allele" %in% names(p$skip_reasons))
   expect_identical(p$skip_classifications[["Frame_Shift_Del"]], 1L)
   expect_identical(p$skip_classifications[["Silent"]], 1L)
+  expect_identical(p$skip_classifications[["Splice_Site"]], 1L)
   expect_identical(v@provenance$format, "maf")
   expect_null(v@provenance$fileformat)
 })

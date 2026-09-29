@@ -19,6 +19,7 @@ Collate:
     'classes-variants.R'
     'io-variants.R'
     'classes-catalog.R'
+    'catalog-tally.R'
     'classes-signature.R'
     'classes-fit.R'
     'classes-refdb.R'

@@ -387,6 +387,18 @@ fn ms_tally_rust(
         // mapping are built here and dropped with this scope. SAFETY: the
         // mapping is read-only over a file opened read-only and is never
         // mutated or truncated while borrowed.
+        //
+        // Interrupt caveat (frozen U-M0-09 limitation, accepted for the
+        // M1s tally): `R_CheckUserInterrupt` inside `tally` longjmps back
+        // into R, skipping the Rust destructors — this Mmap's address
+        // space therefore stays reserved until process exit (contract 7
+        // notes in this file). For a whole-human-genome 2bit this is a
+        // large but read-only, page-cache-backed reservation; correctness
+        // and statelessness (D12) are unaffected. The C-trampoline
+        // hardening (run the kernel under an unwind/longjmp-safe trampoline
+        // so the mapping is released on interrupt) is deferred to M8/CI —
+        // out of scope for this unit; see docs/ffi-surface.md, the
+        // ms_tally_rust row.
         let file = File::open(&genome_path).map_err(|e| {
             MsError::new("io", format!("cannot open genome file \"{genome_path}\": {e}"))
         })?;

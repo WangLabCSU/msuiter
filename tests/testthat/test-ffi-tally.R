@@ -183,6 +183,38 @@ test_that("ms_tally_rust replays the hand-derived golden batch", {
   expect_identical(res$n_variants, 22L)
 })
 
+test_that("cross-sample adjacent SNVs never pair into a DBS (U-M1s-09 audit P1)", {
+  path <- .ms_tally_write_2bit(file.path(tempdir(), "tally-xs.2bit"))
+  on.exit(unlink(path), add = TRUE)
+  # chr1 1-based 12 C>A (S1) and 13 A>T (S2): coordinate-adjacent on the
+  # chromosome, different samples. SPMG's dinuc_sub == 1 detection is a
+  # SINGLE-SAMPLE criterion, so both records stay SBS and no DBS78 count
+  # may appear (the pre-fix router paired them into one DBS and dropped
+  # both from the SBS matrices).
+  res <- .ms_tally_rust(path,
+    chrom = c("chr1", "chr1"), pos = c(12, 13),
+    ref_ = c("C", "A"), alt = c("A", "T"),
+    sample = c("S1", "S2"), strand = c("N", "N"),
+    want_sbs96 = TRUE, want_dbs78 = TRUE
+  )
+  expect_identical(res$ledger, "1\tsbs\n2\tsbs\n")
+  expect_identical(res$n_skipped, 0L)
+  expect_identical(sum(res$dbs78), 0L)
+  expect_identical(sum(res$sbs96), 2L)
+  expect_identical(res$sbs96["A[C>A]A", "S1"], 1L)
+  expect_identical(res$sbs96["G[T>A]G", "S2"], 1L) # A>T purine mirror
+
+  # Mirrored input order does not change the routing decision.
+  res2 <- .ms_tally_rust(path,
+    chrom = c("chr1", "chr1"), pos = c(13, 12),
+    ref_ = c("A", "C"), alt = c("T", "A"),
+    sample = c("S2", "S1"), strand = c("N", "N"),
+    want_sbs96 = TRUE, want_dbs78 = TRUE
+  )
+  expect_identical(res2$ledger, "1\tsbs\n2\tsbs\n")
+  expect_identical(sum(res2$dbs78), 0L)
+})
+
 test_that("disabled tables come back as table x 0 matrices, ledger unchanged", {
   path <- .ms_tally_write_2bit(file.path(tempdir(), "tally-off.2bit"))
   on.exit(unlink(path), add = TRUE)

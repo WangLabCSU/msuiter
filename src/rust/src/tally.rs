@@ -10,12 +10,16 @@
 //!
 //! # Pipeline (per call)
 //!
-//! 1. **Sort** records stably by `(chrom_idx, pos0)` — routing adjacency
-//!    (`mnv::route_variants`) is defined per chromosome over
-//!    coordinate-sorted records, so the caller's input order is free.
-//! 2. **Partition** into per-chromosome runs and route each with
-//!    `msuiter_catalog::mnv::route_variants` (split-VCF reconnection, DBS
-//!    candidacy, skip ledger — ARCHITECTURE §7 entry 2).
+//! 1. **Sort** records stably by `(chrom_idx, sample_idx, pos0)` — routing
+//!    adjacency (`mnv::route_variants`) is defined over coordinate-sorted
+//!    records, so the caller's input order is free.
+//! 2. **Partition** into per-`(chrom_idx, sample_idx)` segments and route
+//!    each with `msuiter_catalog::mnv::route_variants` (split-VCF
+//!    reconnection, DBS candidacy, skip ledger — ARCHITECTURE §7 entry 2).
+//!    The sample dimension is load-bearing: SPMG's `dinuc_sub == 1` DBS
+//!    detection is a WITHIN-SAMPLE criterion, so two records that are
+//!    adjacent on a chromosome but belong to different samples must never
+//!    pair into a DBS (each stays an SBS).
 //! 3. **Fetch contexts** from the genome for SBS events (+/-2 pentanucleotide
 //!    window) and DBS candidates (2x2 dinucleotide) and validate:
 //!    * a non-ACGT byte anywhere in the +/-2 window (SPMG parity, `sbs.rs`
@@ -68,8 +72,8 @@
 //! (U-M1s-11) profiles real variant densities (same reasoning as the
 //! deferred batched-context API in `genome.rs`). Contract 7 is honored in
 //! the single-thread shape: the caller-injected `check_user_interrupt`
-//! hook runs once per chromosome run and at fixed event chunks on the
-//! calling (main) thread; there are no workers and no cancellation flag.
+//! hook runs once per (chromosome, sample) run and at fixed event chunks on
+//! the calling (main) thread; there are no workers and no cancellation flag.
 
 use std::collections::HashMap;
 
@@ -86,8 +90,9 @@ use msuiter_engine::error::MsError;
 /// `skipped:unknown_chrom` (never an error, never routed).
 pub const UNKNOWN_CHROM: usize = usize::MAX;
 
-/// Interrupt-poll granularity within one chromosome run (contract 7: the
-/// main-thread hook runs at run boundaries and every this-many events).
+/// Interrupt-poll granularity within one (chromosome, sample) routing run
+/// (contract 7: the main-thread hook runs at run boundaries and every
+/// this-many events).
 const POLL_EVERY_EVENTS: usize = 4096;
 
 /// One input variant record (owned alleles; the FFI shell builds these
@@ -289,8 +294,8 @@ fn position_usize(pos0: u64, chrom: &str) -> Result<usize, MsError> {
 ///
 /// See the module docs for the pipeline, the ledger semantics and the
 /// single-thread scope. `check_user_interrupt` is called on the calling
-/// thread at chromosome-run boundaries and every [`POLL_EVERY_EVENTS`]
-/// events (under R: `R_CheckUserInterrupt`, contract 7).
+/// thread at (chromosome, sample)-run boundaries and every
+/// [`POLL_EVERY_EVENTS`] events (under R: `R_CheckUserInterrupt`, contract 7).
 pub fn tally(
     genome: &mut TwoBitGenome<'_>,
     variants: &[TallyVariant],
@@ -326,9 +331,15 @@ pub fn tally(
     let n_samples = sample_col.len();
     let mut counters = Counters::new(tables, n_samples);
 
-    // Stable sort by (chrom, position); ties keep caller order.
+    // Stable sort by (chrom, sample, position); ties keep caller order.
     let mut order: Vec<usize> = (0..variants.len()).collect();
-    order.sort_by_key(|&k| (variants[k].chrom_idx, variants[k].pos0));
+    order.sort_by_key(|&k| {
+        (
+            variants[k].chrom_idx,
+            variants[k].sample_idx,
+            variants[k].pos0,
+        )
+    });
 
     // One outcome per input record, reported in caller order.
     let mut outcomes: Vec<Option<TallyOutcome>> = vec![None; variants.len()];
@@ -338,14 +349,19 @@ pub fn tally(
         check_user_interrupt();
     };
 
-    // Partition the sorted order into per-chromosome runs.
+    // Partition the sorted order into per-(chrom, sample) runs: the
+    // router's adjacency is a within-sample criterion (module docs).
     let mut start = 0usize;
     while start < order.len() {
         poll(&mut polls);
         let mut events_since_poll = 0usize;
         let chrom_idx = variants[order[start]].chrom_idx;
+        let sample_idx = variants[order[start]].sample_idx;
         let mut end = start + 1;
-        while end < order.len() && variants[order[end]].chrom_idx == chrom_idx {
+        while end < order.len()
+            && variants[order[end]].chrom_idx == chrom_idx
+            && variants[order[end]].sample_idx == sample_idx
+        {
             end += 1;
         }
         let run = &order[start..end];
@@ -788,9 +804,11 @@ mod tests {
         assert_eq!(res.ledger_tsv, golden_ledger());
         assert_eq!(res.n_skipped, 9);
 
-        // Contract 7 on the single-thread path: one poll per chromosome
-        // run (chr1, chr2, chrZ); 17 events < POLL_EVERY_EVENTS.
-        assert_eq!(polls, 3);
+        // Contract 7 on the single-thread path: one poll per (chrom,
+        // sample) run — chr1 splits into sample-0 and sample-1 segments,
+        // chr2 is one sample-1 segment, chrZ one unknown-chrom segment;
+        // 17 events < POLL_EVERY_EVENTS.
+        assert_eq!(polls, 4);
 
         // Cross-pin the derived rows against the canonical tables.
         use msuiter_catalog::dbs::dbs78_label;
@@ -828,6 +846,45 @@ mod tests {
         assert_eq!(res.ledger_tsv, "");
         assert_eq!(res.n_skipped, 0);
         assert_eq!(polls, 0); // no runs: no boundary polls
+    }
+
+    /// U-M1s-09 audit regression (P1): routing adjacency is a
+    /// WITHIN-SAMPLE criterion (SPMG `dinuc_sub == 1`). Two records
+    /// adjacent on a chromosome but attributed to different samples must
+    /// each stay an Sbs — never pair into a Dbs (which would also evict
+    /// both from the SBS matrices).
+    #[test]
+    fn cross_sample_adjacent_snvs_are_never_a_dbs_pair() {
+        let bytes = fixture_bytes();
+        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
+        // chr1 is ACAC...: 0-based 11 is C, 12 is A — the pair is
+        // coordinate-adjacent, the samples differ.
+        let variants = vec![
+            v(0, 11, "C", "A", 0, Strand::None),
+            v(0, 12, "A", "T", 1, Strand::None),
+        ];
+        let res = tally(&mut genome, &variants, all_tables(), &mut || {}).unwrap();
+
+        assert_eq!(res.ledger_tsv, "1\tsbs\n2\tsbs\n");
+        assert_eq!(res.n_skipped, 0);
+        // No DBS78 count anywhere; each sample column holds one SBS96 cell.
+        // (The A>T purine center mirrors to the pyrimidine label G[T>A]G.)
+        assert!(res.dbs78.iter().all(|&c| c == 0));
+        assert_eq!(res.sbs96.iter().sum::<u32>(), 2);
+        let row_of = |label: &str| {
+            (0..96)
+                .find(|&r| msuiter_catalog::sbs::sbs96_label(r) == Ok(label))
+                .unwrap()
+        };
+        assert_eq!(cell(&res.sbs96, row_of("A[C>A]A"), 0, 96), 1); // sample 0
+        assert_eq!(cell(&res.sbs96, row_of("G[T>A]G"), 1, 96), 1); // sample 1
+
+        // Mirrored input order (the later-position record first) must not
+        // change the outcome: sorting keeps the pairing within-sample.
+        let reversed = variants.iter().rev().cloned().collect::<Vec<_>>();
+        let res = tally(&mut genome, &reversed, all_tables(), &mut || {}).unwrap();
+        assert_eq!(res.ledger_tsv, "1\tsbs\n2\tsbs\n");
+        assert!(res.dbs78.iter().all(|&c| c == 0));
     }
 
     /// Contract 4: a chromosome index that is neither a real index nor the

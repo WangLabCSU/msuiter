@@ -50,6 +50,13 @@ msuiter_validate_catalog <- function(self) {
 
   row_lab <- rownames(counts)
   col_lab <- colnames(counts)
+  # Base R normalizes character(0) dimnames to NULL: a zero-column matrix
+  # can never carry colnames, so there NULL is EXACTLY character(0), not a
+  # missing label (the legal empty tally queue: channels x 0, samples
+  # character(0) -- U-M1s-11 audit P3, unlocked by PI).
+  if (is.null(col_lab) && ncol(counts) == 0L) {
+    col_lab <- character(0L)
+  }
   if (is.null(row_lab) || is.null(col_lab)) {
     msuiter_abort(
       "catalog",
