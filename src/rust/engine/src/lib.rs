@@ -9,7 +9,9 @@
 pub mod error;
 pub mod linalg;
 pub mod nmf;
+pub mod nndsvd;
 pub mod nnls;
+pub mod resample;
 pub mod rng;
 
 pub use error::MsError;

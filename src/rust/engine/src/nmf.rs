@@ -43,7 +43,12 @@
 //! aggregated in the E step, and the M step renormalizes. **This is why β=1
 //! is the default engine (D6): fitting KL-NMF is maximum-likelihood
 //! estimation of a multinomial generative model for mutation counts**, not
-//! merely "a divergence that happens to work".
+//! merely "a divergence that happens to work". Precision note (audited): the
+//! updates as implemented are exactly the Poisson MLE; the multinomial
+//! reading is the Poisson result conditioned on column-normalized W (the
+//! multinomial likelihood factors as Poisson × independent multinomials over
+//! the column totals), and that normalization lives in the pipeline layer
+//! after the fit — the kernel deliberately does not renormalize.
 //!
 //! # ε policy (numerical hygiene only — NOT a pseudocount)
 //!
@@ -65,8 +70,9 @@
 //! zero-pseudocount policy is untouched. Magnitude: mutational catalogs
 //! carry integer counts ≥ 1, so an absolute floor of 1e-12 sits ≥ 12 orders
 //! of magnitude below any meaningful model mean while staying far above f64
-//! underflow; entries below ε (impossible for real counts) would see a
-//! perturbed objective and are out of scope.
+//! underflow; entries below ε would see an objective perturbation of order
+//! O(ε/wh) per log term — negligible precisely when wh ≫ ε, which is the
+//! only regime real counts occupy.
 //!
 //! # Initialization (this unit: fixed deterministic only)
 //!
@@ -74,7 +80,9 @@
 //! the in-house [`crate::rng::MsRng`] (master seed = `seed`, stream
 //! `StreamId::ZERO`): open-interval uniforms in (0, 1] (an exact-zero init
 //! entry would be absorbing under MU), then both factors are scaled by
-//! `(mean(V)/k).sqrt()` so that `E[(WH)[i,j]]` starts on the data scale.
+//! `(mean(V)/k).sqrt()` so that `E[(WH)[i,j]]` starts on the same order of
+//! magnitude as the data (uniforms have mean 1/2, so `E[(WH)] = mean(V)/4`
+//! exactly — a deliberate half-scale headroom, not a match).
 //!
 //! Rationale for random over a constant fill: a constant matrix (e.g. all
 //! `1/k`) initializes all k W columns identically, and MU updates are
@@ -132,8 +140,10 @@ pub struct NmfFit {
     pub iterations: usize,
 }
 
-/// KL-NMF (β = 1, default engine, multinomial MLE — D6) with the seeded
-/// deterministic initialization documented in this module.
+/// KL-NMF (β = 1, default engine — D6). As written, these multiplicative
+/// updates are the Poisson MLE; the D6 "multinomial MLE" reading holds once
+/// W columns are normalized onto the simplex, which happens in the pipeline
+/// layer after the fit, not inside this kernel.
 pub fn fit_kl(
     v: &[f64],
     m: usize,
@@ -297,11 +307,16 @@ fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) 
             gww[s * k + t] = gww[t * k + s];
         }
     }
+    // The audited equation's right-hand side uses the PRE-step H; snapshot so
+    // the denominator never sees rows already rewritten this step (audited
+    // P1: in-place accumulation is a "half new, half old" hybrid that breaks
+    // the MM guarantee for k >= 2).
+    let h_pre = h.to_vec();
     for s in 0..k {
         for j in 0..n {
             let mut den = 0.0f64;
             for t in 0..k {
-                den += gww[s * k + t] * h[t * n + j];
+                den += gww[s * k + t] * h_pre[t * n + j];
             }
             h[s * n + j] *= num[s * n + j] / den.max(KL_EPS);
         }
@@ -329,6 +344,10 @@ fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) 
             ghh[s * k + t] = ghh[t * k + s];
         }
     }
+    // Snapshot for the same pre-step semantics as `eu_h_step` (see note
+    // there): the denominator must read the W that the numerator equation
+    // was written against, not partially rewritten entries.
+    let w_pre = w.to_vec();
     for i in 0..m {
         for s in 0..k {
             let mut num = 0.0f64;
@@ -337,7 +356,7 @@ fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) 
             }
             let mut den = 0.0f64;
             for t in 0..k {
-                den += w[i * k + t] * ghh[t * k + s];
+                den += w_pre[i * k + t] * ghh[t * k + s];
             }
             w[i * k + s] *= num / den.max(KL_EPS);
         }
@@ -512,6 +531,41 @@ mod tests {
     /// Random integer-valued counts in {0, …, 39} (some structural zeros).
     fn random_counts(rng: &mut MsRng, m: usize, n: usize) -> Vec<f64> {
         (0..m * n).map(|_| (uniform(rng) * 40.0).floor()).collect()
+    }
+
+    // ------------------------------------------------------------------
+    // Golden (hand-derived, k = 2): an exact-value case that separates the
+    // audited pre-step (Jacobi) semantics from an in-place-aliased variant.
+    // V = [[3,0],[0,3],[0,0]], unit init. The H step gives
+    // num = WᵀV = [[3,3],[3,3]], den = (WᵀW)·H0 = [[6,6],[6,6]], so
+    // H1 = [[1/2,1/2],[1/2,1/2]] (the aliased variant provably differs: its
+    // row-1 denominator reads the just-updated row 0, 3·(1/2)+3 = 9/2 ≠ 6,
+    // giving H1[1][j] = 2/3). The W step gives W1 = [[3/2,3/2],[3/2,3/2],[0,0]]
+    // and SSE = 9. Unit init keeps both components identical (the documented
+    // symmetry property of MU), so iteration 2 is an exact fixed point:
+    // H2 = H1, W2 = W1, SSE2 = 9.
+    // ------------------------------------------------------------------
+    #[test]
+    fn golden_eu_k2_pre_step_semantics() {
+        let v = [3.0, 0.0, 0.0, 3.0, 0.0, 0.0];
+        let w0 = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0];
+        let h0 = [1.0, 1.0, 1.0, 1.0];
+        let expect_h = [0.5, 0.5, 0.5, 0.5];
+        let expect_w = [1.5, 1.5, 1.5, 1.5, 0.0, 0.0];
+
+        let one = fit_eu_with_init(&v, 3, 2, 2, &w0, &h0, 1).unwrap();
+        for (got, want) in one.h.iter().zip(expect_h) {
+            assert!((got - want).abs() < 1e-12, "h1 = {:?}", one.h);
+        }
+        for (got, want) in one.w.iter().zip(expect_w) {
+            assert!((got - want).abs() < 1e-12, "w1 = {:?}", one.w);
+        }
+        assert!((one.objective[1] - 9.0).abs() < 1e-9, "sse1 = {}", one.objective[1]);
+
+        let two = fit_eu_with_init(&v, 3, 2, 2, &w0, &h0, 2).unwrap();
+        assert_eq!(two.h, one.h, "iteration 2 is a fixed point");
+        assert_eq!(two.w, one.w);
+        assert!((two.objective[2] - 9.0).abs() < 1e-9);
     }
 
     fn cosine(a: &[f64], b: &[f64]) -> f64 {
