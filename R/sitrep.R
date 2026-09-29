@@ -49,7 +49,7 @@ ms_sitrep <- function() {
   not_yet_available <- c(
     "reference signature database (refdb; planned for M1s)",
     "COSMIC on-demand update (tools::R_user_dir cache; planned for M1s)",
-    "algorithm kernels (NMF/NNLS & co. land with M1s)"
+    "NNLS/likelihood kernels (NMF extraction available now via ms_extract(); NNLS planned next)"
   )
 
   msuiter_opts <- options()[grepl("^msuiter\\.", names(options()))]

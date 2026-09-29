@@ -75,9 +75,11 @@ the columns, fixed columns `CHROM/POS/REF/ALT` are required and
 fields expand to one record per allele; symbolic (`<NON_REF>`),
 breakend, missing (`.`) and spanning (`*`) alleles are skipped into the
 provenance skip ledger. Sample genotype columns are not parsed in this
-unit. MAF rows whose `Variant_Classification` is not SBS-eligible
-(frame-shift/in-frame indels and structural variation) are counted into
-the skip ledger, not routed -- routing arrives with the catalog layer.
+unit. MAF rows whose `Variant_Classification` is not SBS-eligible are
+counted into the skip ledger, not routed -- routing arrives with the
+catalog layer. The excluded set aligns with the SPMG default MAF filter:
+frame-shift/in-frame indels, structural variation, `Silent` and
+`Splice_Site`.
 
 The returned `provenance` carries the somaticness signal fields plus
 `source` (path), `format`, the `##fileformat` note (VCF) and `parse`

@@ -10,7 +10,9 @@
 //! contains NO algorithm kernel: NMF/NNLS & co. are M1s work.
 //!
 //! Contract map (see `probes.rs` for the pure cores, `condition.rs` for
-//! the error mapping, `replicates.rs` for the first real-kernel driver):
+//! the error mapping, `replicates.rs` for the first real-kernel driver,
+//! `tally.rs` for the catalog tally core, `extract.rs` for the
+//! single-method extraction core):
 //! 1. stateless   — every `msffi_*` is one call in/out, no globals;
 //! 2. column-major — `msffi_column_major_probe`;
 //! 3. NA/NaN      — R validator (primary) + `msffi_na_probe`;
@@ -27,6 +29,7 @@ use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 mod condition;
+mod extract;
 mod probes;
 mod replicates;
 mod tally;
@@ -468,6 +471,93 @@ fn ms_tally_rust(
     })())
 }
 
+// ---------------------------------------------------------------------------
+// U-M1s-12: single-method extraction kernel (`ms_extract_rust`, FFI-internal
+// name — the user-facing `ms_extract()` generic lands in the same unit,
+// R/extract.R). The pure assembly core lives in `extract.rs`; this adapter
+// owns the R-matrix handoff (the t(counts) layout contract).
+// ---------------------------------------------------------------------------
+
+#[extendr]
+fn ms_extract_rust(
+    counts: Robj,
+    k: i32,
+    max_iter: i32,
+    seed: i32,
+    engine: String,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Argument guards (contract 4): explicit, error-not-panic. The
+        // engine's own validate_* re-checks the matrix content per cell.
+        if k < 1 {
+            return Err(MsError::new("argument", format!("k must be >= 1, got {k}")).with_i(k as i64));
+        }
+        if max_iter < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 0, got {max_iter}"),
+            ));
+        }
+        if seed < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("seed must be >= 0, got {seed}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        // Kernel variant switch: KL (beta = 1, D6 default) or EU (beta = 2).
+        let variant = extract::NmfVariant::parse(&engine)?;
+        // Layout contract (module docs of `extract.rs`, the transposition
+        // trap): R passes `t(counts)` — an n_samples x m_channels double
+        // matrix whose column-major flat buffer IS the kernel's row-major
+        // m×n V: V[i*n + j] == data[j*m + i] == counts[i, j]. No
+        // marshalling loop on this side; the asymmetric-golden recovery
+        // smoke on both sides guards the orientation.
+        let (n, m, v) = with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        // Single seeded fit on the canonical zero stream (U-M1s-12).
+        // Contract 7, declared decision: bounded-duration call, no boundary
+        // polls (single fit has no chunk structure; see extract.rs docs).
+        // `n_threads` is validated above and otherwise unused: one fit has
+        // nothing to parallelize (A7: sequential kernel, thread-invariant).
+        let fit = extract::extract(
+            &v,
+            m,
+            n,
+            k as usize,
+            max_iter as usize,
+            seed as u64,
+            variant,
+        )?;
+
+        // Raw (unnormalized) factors as R matrices (contract 2, column
+        // major): signatures channels x signatures (m×k), exposures
+        // signatures x samples (k×n). Column-normalizing W is the R
+        // assembly layer's display convention, not the kernel's.
+        let kk = k as usize;
+        let signatures = extendr_api::wrapper::RMatrix::new_matrix(m, kk, |r, c| {
+            fit.w[r * kk + c]
+        });
+        let exposures =
+            extendr_api::wrapper::RMatrix::new_matrix(kk, n, |r, c| fit.h[r * n + c]);
+        let pairs = vec![
+            ("signatures", Robj::from(signatures)),
+            ("exposures", Robj::from(exposures)),
+            ("objective", Robj::from(fit.objective)),
+            (
+                "iterations",
+                Robj::from(fit.iterations.min(i32::MAX as usize) as i32),
+            ),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -481,6 +571,7 @@ extendr_module! {
     fn msffi_nmf_replicates_probe;
     fn msffi_build_info;
     fn ms_tally_rust;
+    fn ms_extract_rust;
 }
 
 #[cfg(test)]

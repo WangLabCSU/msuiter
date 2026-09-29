@@ -25,6 +25,8 @@ Collate:
     'classes-refdb.R'
     'classes-engines.R'
     'engines-registry.R'
+    'engines-nmf.R'
+    'extract.R'
     'classes-benchmark.R'
     'msuiter-package.R'
     'extendr-wrappers.R'

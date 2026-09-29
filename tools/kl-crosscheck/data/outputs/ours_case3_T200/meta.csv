@@ -1,0 +1,7 @@
+max_iter,200
+iterations,200
+trace_len,201
+obj_init,1.67552817906893142e4
+obj_final,4.84586684013477225e2
+eps,0.000000000001
+engine_crate,engine: pure numeric kernels, FFI-free

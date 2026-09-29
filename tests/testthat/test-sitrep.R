@@ -17,7 +17,7 @@ test_that("ms_sitrep prints a report and returns the sections invisibly", {
   expect_identical(out$threads$effective, .ms_resolve_threads())
   # Data that does not ship yet is reported honestly, not guessed.
   expect_match(out$refdb, "not yet available")
-  expect_true(all(grepl("not yet available|M1s", out$not_yet_available)))
+  expect_true(all(grepl("not yet available|M1s|planned", out$not_yet_available)))
 })
 
 test_that("ms_sitrep output mentions the core facts", {

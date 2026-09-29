@@ -1,0 +1,16 @@
+[package]
+name = "kl-crosscheck-driver"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.71"
+publish = false
+
+# U-M1s-14 scratch driver: reads V/W0/H0 CSVs written by run_experiment.R,
+# runs the unmodified engine kernel `fit_kl_with_init`, and writes W/H plus
+# the objective trace and periodic state checkpoints back as CSVs.
+# Zero-dependency except the engine path dependency; standalone workspace
+# (never a member of src/rust; the package tree is untouched).
+[dependencies]
+msuiter-engine = { path = "../../../src/rust/engine" }
+
+[workspace]
