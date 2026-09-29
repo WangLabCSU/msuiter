@@ -238,24 +238,15 @@ msuiter_validate_somaticness <- function(provenance) {
   NULL
 }
 
-#' Construct an MsVariants object
-#'
-#' Validates a canonical variant table plus somaticness provenance and
-#' returns an [MsVariants] object. All violations raise errors of class
-#' `msuiter_error_variants`.
-#'
-#' @inheritParams MsVariants
-#' @return An [MsVariants] object.
-#' @examples
-#' tab <- data.frame(
-#'   chrom = "chr7", start = 55191822, end = 55191822,
-#'   ref = "C", alt = "T"
-#' )
-#' v <- ms_variants(tab, "GRCh38",
-#'   provenance = list(caller = "synthetic", matched_normal = "none"))
-#' v
-#' @export
-ms_variants <- function(table, genome, provenance) {
+# Internal constructor: the single validation sink shared by the
+# `ms_variants()` methods (R/io-variants.R, U-M1s-10). The user-facing
+# entry point `ms_variants()` is an S7 generic dispatching on `x`
+# (character file path or canonical data.frame); both paths funnel their
+# table plus somaticness provenance through this constructor, so the
+# MsVariants validator (required columns, coordinate legality, anyNA
+# rejection, somaticness signal) runs on every entry. All violations
+# raise errors of class `msuiter_error_variants`.
+ms_variants_from_table <- function(table, genome, provenance) {
   out <- MsVariants(table = table, genome = genome, provenance = provenance)
   out
 }

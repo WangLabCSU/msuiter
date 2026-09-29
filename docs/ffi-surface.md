@@ -14,6 +14,7 @@ msffi_interrupt_probe
 msffi_thread_probe
 msffi_nmf_replicates_probe
 msffi_build_info
+ms_tally_rust
 ```
 
 ## 导出明细表
@@ -27,6 +28,7 @@ msffi_build_info
 | `msffi_thread_probe` | `(n_items: i32, seed: i32, n_threads: i32) -> Vec<f64>` | `.msffi_thread_probe(n_items, seed, threads)` | 线程不变性探测器：per-call ThreadPool，每 item 独立 PCG64 流（canonical layout v1），按 chunk 索引定序拼接；threads∈{1,N} 输出 identical | 6 | diagnostic | 0.0.0.9000 |
 | `msffi_nmf_replicates_probe` | `(counts: R 双精度矩阵, k: i32, replicates: i32, max_iter: i32, seed: i32, n_threads: i32) -> Vec<f64>` | `.msffi_nmf_replicates_probe(counts, k, replicates, max_iter, seed, threads)` | 真实内核并行驱动（U-M1s-05）：per-call ThreadPool 上并行跑 `replicates` 个独立 KL-NMF 拟合（`engine::nmf::fit_kl_on_stream`），replicate r 的 seeded init 取自 `StreamId{replicate: r, rank: 0, fold: 0}`（canonical layout v1）；单元内单线程（内核循环序不动，A7），按 replicate 索引定序返回每 replicate 最终 KL 目标值——threads∈{1,N} 输出 identical；中断 = 主线程 chunk 边界轮询 `R_CheckUserInterrupt` + worker 只见 `AtomicBool`，任一触发整调用报错无部分结果 | 6, 7 | diagnostic | 0.0.0.9000 |
 | `msffi_build_info` | `() -> List` | `.msffi_build_info()` | 编译期工具链信息（rustc 版本/目标平台/包版本；由 `build.rs` 记录），供 `ms_sitrep()` 报告 | 8（构建） | diagnostic | 0.0.0.9000 |
+| `ms_tally_rust` | `(genome_path: String, chrom: Vec<String>, pos: Vec<f64>, ref_: Vec<String>, alt: Vec<String>, sample: Vec<String>, strand: Vec<String>, want_sbs96: bool, want_sbs192: bool, want_sbs384: bool, want_sbs1536: bool, want_dbs78: bool) -> List` | `.ms_tally_rust(genome_path, chrom, pos, ref_, alt, sample, strand, want_sbs96, …)` | 目录 tally 内核（U-M1s-09，首个 kernel 导出）：一次进出——`File::open` + 只读 mmap 2bit 参考基因组（D12 即用即释，`Mmap::map` 为 ffi 壳的 `unsafe` 位）；记录稳定排序 (chrom,pos) → 逐染色体 `mnv::route_variants` 路由（拆分-VCF 重连/DBS 候选/skip ledger）→ `genome.rs` context 取 ±2 窗/2×2 dinuc → REF-vs-genome 与 N 检查（SPMG parity：±2 含 N 从所有 SBS 矩阵剔除；dinuc 含 N → n_dinuc；mismatch → ref_mismatch；窗越界 → context_bounds；全匹配失败 → unknown_chrom）→ 计数 SBS96/192/384/1536 + DBS78（channels×samples 列主序扁平缓冲，行序=channels.rs 规范序，列序=样本首现序；禁用表=空；DBS 对从所有 SBS 矩阵剔除；SBS192 无 B/N 通道仅从该表剔除）；ledger 沿 mnv.rs SkipLedger 渲染（输入顺序，开关无关）；M1s 单线程（并行化留 U-M1s-11 后按剖析决定），中断=主线程逐染色体 run 边界轮询 `R_CheckUserInterrupt`；chrom 完全匹配、无 chr 前缀归一化（M1s 从简，本行即文档声明）；返回 `List{ sbs96…dbs78 矩阵, ledger, n_skipped, n_variants }`。FFI 内部名：用户 API 为 `ms_tally()` 泛型（U-M1s-11 装配） | 1, 2, 3, 4, 5, 7 | kernel | 0.0.0.9000 |
 
 约定：
 

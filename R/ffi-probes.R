@@ -255,3 +255,142 @@
 .msffi_build_info <- function() {
   .msffi_check(msffi_build_info())
 }
+
+# ---------------------------------------------------------------------------
+# Catalog tally kernel (U-M1s-09): ms_tally_rust
+# ---------------------------------------------------------------------------
+
+#' Validate one tally table switch (single non-NA logical).
+#' @noRd
+.ms_validate_switch <- function(x, arg) {
+  if (!is.logical(x) || length(x) != 1L || is.na(x)) {
+    rlang::abort(
+      sprintf("`%s` must be a single TRUE or FALSE.", arg),
+      class = "msuiter_error_input",
+      context = "FFI argument validation (tally table switch)"
+    )
+  }
+  x
+}
+
+#' Catalog tally over a 2bit reference genome (U-M1s-09).
+#'
+#' Internal FFI wrapper over the Rust assembly core: routes records
+#' (SNV / adjacent DBS / reconnected block substitution / explicit indel
+#' skips, `catalog::mnv`), fetches reference contexts from a memory-mapped
+#' 2bit genome (mapped and released within the call, D12) and counts the
+#' enabled channel tables. `ms_tally_rust` is an FFI-internal name: the
+#' user-facing API is the `ms_tally()` generic (U-M1s-11).
+#'
+#' Policy (M1s, documented in `docs/ffi-surface.md` and the Rust module):
+#' * chromosome matching is EXACT against the 2bit index names — no `chr`
+#'   prefix normalization; unmatched names come back as
+#'   `skipped:unknown_chrom` ledger rows, never an error;
+#' * `pos` is 1-based and integer-valued, converted to 0-based internally;
+#' * `ref_`/`alt` must be uppercase ACGT: anything else is ledgered per
+#'   record (`skipped:invalid_base`), never silently coerced;
+#' * `strand` carries the transcription annotation for SBS192/SBS384
+#'   (`T`/`U`/`B`/`N`; B/N records have no SBS192 channel and are dropped
+#'   from that matrix only);
+#' * a non-ACGT byte in the SBS +/-2 window or the DBS dinucleotide, a
+#'   REF-vs-genome mismatch and a context window crossing a chromosome
+#'   edge each skip the record into the ledger (SPMG parity);
+#' * the ledger is switch-independent: context checks run even when the
+#'   corresponding tables are disabled;
+#' * DBS pairs are excluded from all SBS matrices (SPMG `dinuc_sub == 1`).
+#'
+#' @param genome_path Path to an (uncompressed) UCSC 2bit reference genome.
+#' @param chrom,pos,ref_,alt,sample,strand Equal-length per-record columns.
+#' @param want_sbs96,want_sbs192,want_sbs384,want_sbs1536,want_dbs78
+#'   Table switches; disabled tables come back as `table x 0` matrices.
+#'
+#' @return Named list: `sbs96`, `sbs192`, `sbs384`, `sbs1536`, `dbs78`
+#'   integer matrices (channels x samples; rows in canonical `channels.rs`
+#'   order labelled from the R channel registry, columns in
+#'   first-appearance order of `sample`); `ledger`, one
+#'   `record TAB destination` line per input record in input order;
+#'   `n_skipped`; `n_variants`.
+#' @keywords internal
+#' @noRd
+.ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand,
+                           want_sbs96 = TRUE, want_sbs192 = FALSE,
+                           want_sbs384 = FALSE, want_sbs1536 = FALSE,
+                           want_dbs78 = FALSE) {
+  if (!is.character(genome_path) || length(genome_path) != 1L || is.na(genome_path)) {
+    rlang::abort(
+      "`genome_path` must be a single string.",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (genome path)"
+    )
+  }
+  n <- length(chrom)
+  for (nm in c("chrom", "ref_", "alt", "sample", "strand")) {
+    x <- get(nm)
+    if (!is.character(x) || anyNA(x)) {
+      rlang::abort(
+        sprintf("`%s` must be a character vector without NA.", nm),
+        class = "msuiter_error_input",
+        context = "FFI argument validation (tally record columns)"
+      )
+    }
+    if (length(x) != n) {
+      rlang::abort(
+        sprintf("`%s` has length %d, expected %d (columns must agree).", nm, length(x), n),
+        class = "msuiter_error_input",
+        context = "FFI argument validation (tally record columns)"
+      )
+    }
+  }
+  # Contract 3, first layer: pos crosses as double; NA/NaN rejected here.
+  if (!is.numeric(pos) || anyNA(pos) || !all(is.finite(pos))) {
+    rlang::abort(
+      "`pos` must be a finite numeric vector without NA/NaN.",
+      class = "msuiter_error_na",
+      context = "anyNA() validation on the R side of the FFI boundary (contract 3, first layer)"
+    )
+  }
+  if (any(pos < 1) || any(pos != floor(pos))) {
+    rlang::abort(
+      "`pos` must be integer-valued and 1-based.",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (1-based variant positions)"
+    )
+  }
+  if (!all(strand %in% c("T", "U", "B", "N"))) {
+    rlang::abort(
+      "`strand` must only contain T, U, B or N.",
+      class = "msuiter_error_input",
+      context = "FFI argument validation (transcription strand codes)"
+    )
+  }
+  want_sbs96 <- .ms_validate_switch(want_sbs96, "want_sbs96")
+  want_sbs192 <- .ms_validate_switch(want_sbs192, "want_sbs192")
+  want_sbs384 <- .ms_validate_switch(want_sbs384, "want_sbs384")
+  want_sbs1536 <- .ms_validate_switch(want_sbs1536, "want_sbs1536")
+  want_dbs78 <- .ms_validate_switch(want_dbs78, "want_dbs78")
+
+  res <- .msffi_check(ms_tally_rust(
+    genome_path, chrom, as.numeric(pos), ref_, alt, sample, strand,
+    want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78
+  ))
+
+  # Canonical row labels come from the R channel registry (sysdata.rda,
+  # lazily loaded into the namespace) via the get(asNamespace) pattern of
+  # test-channels-sync.R — the Rust side ships raw canonical-ordered
+  # buffers, the labels stay R-side (single source of truth, D5).
+  tables <- get("channel_tables", envir = asNamespace("msuiter"))
+  tbl_of <- list(
+    sbs96 = "SBS96", sbs192 = "SBS192", sbs384 = "SBS384",
+    sbs1536 = "SBS1536", dbs78 = "DBS78"
+  )
+  samples <- unique(sample)
+  for (nm in names(tbl_of)) {
+    m <- res[[nm]]
+    # Disabled tables are table x 0: R requires dimnames lengths to match
+    # the (zero) dimensions, so columns get character(0) there.
+    cols <- if (ncol(m) > 0L) samples else character(0)
+    dimnames(m) <- list(tables[[tbl_of[[nm]]]]$labels, cols)
+    res[[nm]] <- m
+  }
+  res
+}

@@ -5,7 +5,7 @@
 .test_objects <- function() {
   refdb <- .make_refdb()
   list(
-    variants = ms_variants(.make_variants_table(), "GRCh38",
+    variants = ms_variants_from_table(.make_variants_table(), "GRCh38",
       .make_variants_provenance()),
     catalog = .make_catalog(),
     signature = .make_signature(),

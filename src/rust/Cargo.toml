@@ -21,6 +21,10 @@ msuiter-engine = { path = "engine", version = "0.0.0" }
 # Per-call thread pools only (FFI contract 6): the global rayon pool is
 # never used; every top-level call builds and drops its own ThreadPool.
 rayon = { workspace = true }
+# Read-only reference-genome mappings (U-M1s-09, D12): built per top-level
+# call and dropped with it. This is the one extra `unsafe` site of the FFI
+# shell (the other being the contract-7 interrupt hook).
+memmap2 = { workspace = true }
 
 [profile.release]
 lto = true

@@ -22,11 +22,14 @@
 
 use extendr_api::prelude::*;
 use msuiter_engine::error::MsError;
+use std::collections::HashMap;
+use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 mod condition;
 mod probes;
 mod replicates;
+mod tally;
 
 // Contract 7: polled ONLY on the main thread, ONLY at chunk boundaries.
 // `R_CheckUserInterrupt` longjmps back into R on user interrupt, skipping
@@ -238,6 +241,221 @@ fn msffi_build_info() -> Robj {
     Robj::from(List::from_pairs(pairs))
 }
 
+// ---------------------------------------------------------------------------
+// U-M1s-09: catalog tally kernel (`ms_tally_rust`, FFI-internal name — the
+// user-facing `ms_tally()` generic lands in U-M1s-11). The pure assembly
+// core lives in `tally.rs`; this adapter owns the mmap lifetime (D12).
+// ---------------------------------------------------------------------------
+
+/// Canonical table lengths, for empty (disabled) matrices.
+const SBS96_LEN: usize = 96;
+const SBS192_LEN: usize = 192;
+const SBS384_LEN: usize = 384;
+const SBS1536_LEN: usize = 1536;
+const DBS78_LEN: usize = 78;
+
+/// Names of the per-record columns, for length-mismatch errors (1-based
+/// column number in `j`).
+const TALLY_COLUMNS: [(&str, usize); 6] = [
+    ("chrom", 1),
+    ("pos", 2),
+    ("ref_", 3),
+    ("alt", 4),
+    ("sample", 5),
+    ("strand", 6),
+];
+
+/// Convert one count buffer into an R integer matrix (column-major,
+/// `nrow = table length`: contract 2). Disabled tables keep their row
+/// count with zero columns; enabled-but-empty input likewise degenerates
+/// to zero columns.
+fn counts_matrix(buf: &[u32], nrow: usize, n_samples: usize) -> Result<Robj, MsError> {
+    let ncol = if buf.is_empty() { 0 } else { n_samples };
+    debug_assert_eq!(buf.len(), nrow * ncol, "count buffer layout drifted");
+    let data: Vec<i32> = buf
+        .iter()
+        .map(|&c| {
+            i32::try_from(c)
+                .map_err(|_| MsError::new("bounds", "a per-channel count exceeds the R integer range"))
+        })
+        .collect::<Result<_, _>>()?;
+    let m = extendr_api::wrapper::RMatrix::new_matrix(nrow, ncol, |r, c| {
+        data[c * nrow + r]
+    });
+    Ok(m.into())
+}
+
+/// One record of the R columns -> a `tally::TallyVariant` (contract 4:
+/// explicit validation of every scalar, errors not panics).
+#[allow(clippy::too_many_arguments)]
+fn tally_variant_at(
+    k: usize,
+    chrom: &str,
+    pos: f64,
+    ref_: &str,
+    alt: &str,
+    sample_col: usize,
+    strand: &str,
+    chrom_idx: &HashMap<&str, usize>,
+) -> Result<tally::TallyVariant, MsError> {
+    let rec = k + 1;
+    // Contract 3, second layer: NA reaches Rust as NaN.
+    if !pos.is_finite() {
+        return Err(MsError::new(
+            "na",
+            format!("pos[{rec}] is NA/NaN (R-side anyNA validation was bypassed)"),
+        )
+        .with_i(rec as i64)
+        .with_j(2));
+    }
+    // pos is already NaN-rejected above, so `<` is total here.
+    if pos < 1.0 || pos.floor() != pos {
+        return Err(MsError::new(
+            "argument",
+            format!("pos[{rec}] = {pos} must be an integer-valued 1-based position"),
+        )
+        .with_i(rec as i64)
+        .with_j(2));
+    }
+    let strand_val = match strand {
+        "T" => msuiter_catalog::sbs::Strand::Transcribed,
+        "U" => msuiter_catalog::sbs::Strand::Untranscribed,
+        "B" => msuiter_catalog::sbs::Strand::Bidirectional,
+        "N" => msuiter_catalog::sbs::Strand::None,
+        other => {
+            return Err(MsError::new(
+                "argument",
+                format!(
+                    "strand[{rec}] = \"{other}\" is not one of T, U, B, N (transcribed, untranscribed, bidirectional, unannotated)"
+                ),
+            )
+            .with_i(rec as i64)
+            .with_j(6))
+        }
+    };
+    let pos0 = (pos as u64).saturating_sub(1); // 1-based POS -> 0-based
+    Ok(tally::TallyVariant {
+        chrom_idx: chrom_idx.get(chrom).copied().unwrap_or(tally::UNKNOWN_CHROM),
+        pos0,
+        ref_: ref_.as_bytes().to_vec(),
+        alt: alt.as_bytes().to_vec(),
+        sample_idx: sample_col,
+        strand: strand_val,
+    })
+}
+
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn ms_tally_rust(
+    genome_path: String,
+    chrom: Vec<String>,
+    pos: Vec<f64>,
+    ref_: Vec<String>,
+    alt: Vec<String>,
+    sample: Vec<String>,
+    strand: Vec<String>,
+    want_sbs96: bool,
+    want_sbs192: bool,
+    want_sbs384: bool,
+    want_sbs1536: bool,
+    want_dbs78: bool,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Column agreement (contract 4): all six per-record columns must
+        // have the same length; `j` names the offending column.
+        let n = chrom.len();
+        for ((name, col), observed) in [
+            (TALLY_COLUMNS[1], pos.len()),
+            (TALLY_COLUMNS[2], ref_.len()),
+            (TALLY_COLUMNS[3], alt.len()),
+            (TALLY_COLUMNS[4], sample.len()),
+            (TALLY_COLUMNS[5], strand.len()),
+        ] {
+            if observed != n {
+                return Err(MsError::new(
+                    "argument",
+                    format!(
+                        "column \"{name}\" has length {observed}, expected {n} (all per-record columns must agree)"
+                    ),
+                )
+                .with_i(observed as i64)
+                .with_j(col as i64));
+            }
+        }
+
+        // D12 (contract 1): one call in/out — the file handle and the
+        // mapping are built here and dropped with this scope. SAFETY: the
+        // mapping is read-only over a file opened read-only and is never
+        // mutated or truncated while borrowed.
+        let file = File::open(&genome_path).map_err(|e| {
+            MsError::new("io", format!("cannot open genome file \"{genome_path}\": {e}"))
+        })?;
+        let mmap = unsafe { memmap2::Mmap::map(&file) }
+            .map_err(|e| MsError::new("io", format!("cannot map genome file \"{genome_path}\": {e}")))?;
+        let mut genome = msuiter_catalog::genome::TwoBitGenome::from_bytes(&mmap[..])?;
+
+        // Chromosome resolution is EXACT string matching (M1s policy, no
+        // chr-prefix normalization); unmatched names ledger as
+        // skipped:unknown_chrom inside the core.
+        let names = genome.chrom_names();
+        let chrom_idx: HashMap<&str, usize> = names
+            .iter()
+            .enumerate()
+            .map(|(i, name)| (name.as_str(), i))
+            .collect();
+        // Sample columns in first-appearance order of the input rows.
+        let mut sample_idx: HashMap<&str, usize> = HashMap::new();
+        for s in &sample {
+            let next = sample_idx.len();
+            sample_idx.entry(s.as_str()).or_insert(next);
+        }
+
+        let variants = chrom
+            .iter()
+            .zip(pos.iter())
+            .zip(ref_.iter())
+            .zip(alt.iter())
+            .zip(sample.iter())
+            .zip(strand.iter())
+            .enumerate()
+            .map(
+                |(k, (((((c, &p), r), a), s), st))| {
+                    let col = sample_idx[s.as_str()];
+                    tally_variant_at(k, c, p, r, a, col, st, &chrom_idx)
+                },
+            )
+            .collect::<Result<Vec<_>, MsError>>()?;
+
+        let tables = tally::TallyTables {
+            sbs96: want_sbs96,
+            sbs192: want_sbs192,
+            sbs384: want_sbs384,
+            sbs1536: want_sbs1536,
+            dbs78: want_dbs78,
+        };
+        // Contract 7: single-threaded (M1s scope), so the boundary hook is
+        // the whole interrupt story.
+        let mut boundary = || unsafe { R_CheckUserInterrupt() };
+        let result = tally::tally(&mut genome, &variants, tables, &mut boundary)?;
+
+        let n_samples = sample_idx.len();
+        let pairs = vec![
+            ("sbs96", counts_matrix(&result.sbs96, SBS96_LEN, n_samples)?),
+            ("sbs192", counts_matrix(&result.sbs192, SBS192_LEN, n_samples)?),
+            ("sbs384", counts_matrix(&result.sbs384, SBS384_LEN, n_samples)?),
+            ("sbs1536", counts_matrix(&result.sbs1536, SBS1536_LEN, n_samples)?),
+            ("dbs78", counts_matrix(&result.dbs78, DBS78_LEN, n_samples)?),
+            ("ledger", Robj::from(result.ledger_tsv)),
+            (
+                "n_skipped",
+                Robj::from(result.n_skipped.min(i32::MAX as u32) as i32),
+            ),
+            ("n_variants", Robj::from(variants.len().min(i32::MAX as usize) as i32)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -250,6 +468,7 @@ extendr_module! {
     fn msffi_thread_probe;
     fn msffi_nmf_replicates_probe;
     fn msffi_build_info;
+    fn ms_tally_rust;
 }
 
 #[cfg(test)]

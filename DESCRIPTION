@@ -17,6 +17,7 @@ Suggests: testthat (>= 3.0.0),
 Collate:
     'classes-utils.R'
     'classes-variants.R'
+    'io-variants.R'
     'classes-catalog.R'
     'classes-signature.R'
     'classes-fit.R'
