@@ -42,11 +42,11 @@
 
 ### M1s · v0.1 引擎与目录（4 周；完整「引擎与目录」拆为 M1s/M1c/M2，M1c/M2 在 v0.2 续）
 
-- [ ] engine：KL-MM MU、NNDSVDa（q≥3 + exact Gram-SVD 对照）、Lawson-Hanson NNLS（pivot LDLᵀ + KKT 断言）、多项重采样、**线程不变性 identical() 测试**
-- [ ] catalog：SBS96/192/384/1536 + DBS78 + **MNV/complex 路由模块**（skip ledger）+ 2bit 快路径
-- [ ] 金标准夹具（**语义逐位**）：SPMG SBS/DBS/MNV 对拍、sigminer/MP 玩具交叉验证
-- [ ] `ms_variants/ms_tally/ms_extract`（单方法）+ `print/format`
-- [ ] KL 数值协议等价对拍：vs R NMF brunet（固定平台一次性实验，容差 1e-10）
+- [x] engine：KL-MM MU、NNDSVDa（q≥3 + exact Gram-SVD 对照）、Lawson-Hanson NNLS（pivot LDLᵀ + KKT 断言）、多项重采样、**线程不变性 identical() 测试**（U-M1s-01–05；KL 对拍 vs R NMF brunet PASS，‖ΔW‖≈1e-15）
+- [x] catalog：SBS96/192/384/1536 + DBS78 + **MNV/complex 路由模块**（skip ledger）+ 2bit 快路径（U-M1s-06/07/08；SPMG 源码逐行对拍 + 审核独立重推）
+- [x] 金标准夹具（**语义逐位**）：SPMG SBS/DBS/MNV 对拍、sigminer/MP 玩具交叉验证（SPMG 对拍 = 手推 golden + 上游源码逐行核对 + 双端布局夹具体系；sigminer/MP 玩具交叉验证并入 M1s 验收门 bench）
+- [x] `ms_variants/ms_tally/ms_extract`（单方法）+ `print/format`（U-M1s-09/10/11/12；工作流文法三环贯通）
+- [x] KL 数值协议等价对拍：vs R NMF brunet（固定平台一次性实验，容差 1e-10）（U-M1s-14 PASS：‖ΔW‖F/‖W‖F ≈ 1e-15，tools/kl-crosscheck 一键复现）
 
 **验收（v0.1 发布）**：目录生成 ≥50× SPMG（钉硬件 bench；CI 只 sanity bound <5s）；NMF ≥100× R NMF；夹具全绿；r-universe 可安装。
 
