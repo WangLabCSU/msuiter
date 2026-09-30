@@ -108,8 +108,12 @@ test_that("SBS96 catalog is cell-identical to sigminer (label-aligned xval)", {
       seq1[3:L] == f3) + 1L
     cand <- cand[cand >= 3L & cand <= L - 2L]
     cand <- cand[!vapply(cand, function(p) any(abs(used - p) < 3L), logical(1))]
-    skip_if_not(length(cand) > 0L,
-      message = sprintf("context %s not found in window", ch))
+    # Hard failure, not a skip: the window and the pinned BSgenome version are
+    # deterministic — a missing context here is a regression (genome/label
+    # drift), and skipping would silently disarm the acceptance-gate xval.
+    if (length(cand) == 0L) {
+      stop(sprintf("context %s not found in the pinned hg19 window (BSgenome drift?)", ch))
+    }
     used <- c(used, cand[1L])
     pos <- c(pos, cand[1L])
     ref <- c(ref, r)

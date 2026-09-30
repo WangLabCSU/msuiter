@@ -505,8 +505,13 @@ pub fn tally(
         // at 16 to bound the boundary-poll interval; the main thread merges
         // in partition order between waves.
         let pool = build_call_pool(n_threads)?;
+        // Size the wave grid by the REAL pool width for the 0 sentinel too:
+        // `workers = jobs.len()` collapsed waves to 1 and degraded the
+        // effective interrupt granularity to one poll per whole call
+        // (audited P1) — worst-case Ctrl-C latency must stay bounded by the
+        // longest single partition, not the whole call.
         let workers = match n_threads {
-            0 => jobs.len(), // rayon default (all cores): one whole wave
+            0 => pool.current_num_threads().max(1),
             t => t.clamp(2, 16),
         };
         let waves = ((jobs.len() + workers - 1) / workers).clamp(1, 16);
@@ -1340,6 +1345,35 @@ mod tests {
         let waves = ((jobs + 4 - 1) / 4).clamp(1, 16);
         let chunk_len = ((jobs + waves - 1) / waves).max(1);
         assert_eq!(p4, (jobs + chunk_len - 1) / chunk_len);
+    }
+
+    /// Audited P1 regression guard: the 0 sentinel (rayon default) must size
+    /// the wave grid by the REAL pool width, so the wave count stays > 1 on
+    /// multi-partition batches and boundary polling keeps the worst-case
+    /// Ctrl-C latency bounded by the longest partition (not the whole call).
+    #[test]
+    fn default_threads_poll_between_waves_on_multi_partition_batch() {
+        let bytes = big_fixture_bytes();
+        let variants = big_batch();
+        let jobs = partition_count(&variants);
+        let pool = crate::probes::build_call_pool(0).unwrap();
+        let workers = pool.current_num_threads().max(1);
+        let waves = ((jobs + workers - 1) / workers).clamp(1, 16);
+        let chunk_len = ((jobs + waves - 1) / waves).max(1);
+        let expected_polls = (jobs + chunk_len - 1) / chunk_len;
+
+        let mut polls = 0usize;
+        let res = tally(&bytes, &variants, all_tables(), 0, &no_cancel(), &mut || {
+            polls += 1
+        })
+        .unwrap();
+        assert_eq!(polls, expected_polls, "0-sentinel waves must track the real pool width");
+        if jobs > workers {
+            assert!(polls > 1, "multi-partition batch beyond one wave must poll between waves");
+        }
+        // Same result as the sequential path.
+        let seq = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || {}).unwrap();
+        assert_eq!(res, seq);
     }
 
     /// A single (chrom, sample) partition has nothing to parallelize: the
