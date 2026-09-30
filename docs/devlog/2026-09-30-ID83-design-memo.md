@@ -269,3 +269,29 @@ G23 文字版（修正表内占位）：基因组 `T T C C A G C A G A T`（pos1
 ## 8. 实现落点（裁决后备查）
 
 `src/rust/catalog/src/indel83.rs`（ARCHITECTURE §5 树位 :112）+ `channels.rs` 增 `ID83_CHANNELS`（build_channels.R 生成）+ mnv.rs 事件改接（§4）+ genome.rs `range`（§3.8）+ tests（golden 36 条 + 表结构契约 + 锚不变式/对称性 property + 端点三态）+ bench：10⁶ 合成变异 SPMG vs ms_tally ID83 逐格差=0（生成器需按 P0-2 裁决处理重复记录；SPMG 侧 CHECKSUMS 绕过与 input 缓存清除沿 M1s-13 先例）。
+
+---
+
+## 9. 实现与审核更正记录（2026-09-30）
+
+> 本节由独立审核 U-M1c-01 修复轮补记（修复与记录强耦合，授权实现轮代笔）。只增不改：§1-§8 保持审阅时点原貌，以下如实登记与正文/既有声明不一致之处。
+
+### 9.1 「R 冻结 golden 稳定」表述更正（27bfbb5 commit message）
+
+实现 commit 27bfbb5 说明中的「tally.rs 编译垫片保持 R 冻结 golden 稳定」不准确，更正如下：
+
+- **记录 9/10 被强制改写**（`tests/testthat/helper-tally.R`、`test-catalog-tally.R`、`test-ffi-tally.R`）：ledger 行由 `9\tmnv`/`10\tmnv`（等长 del+ins 相邻对拼成的 3 bp 块替换）改为 `9\tskipped:simple_indel`/`10\tskipped:simple_indel`，`n_skipped` 9→11。该改写是路由修复（§4.2：SPMG 配对只作用于 SNV 记录流，indel 永不合并）的**必然后果**，语义正确；不实的是「golden 稳定/未动」的声称——冻结 golden 在强制处被打开并改写。commit message 无法重写，以本节为准。
+- **记录 15 确实逐字未动**（`15\tskipped:simple_indel` 前后一致），但机制是 tally.rs 的过渡映射 `LedgerEntry::Id83 -> SkippedSimpleIndel`（编译垫片）使路由层 Id83 更名对 R 侧不可见；接线单元翻转垫片时 R 侧需同步评估。
+
+### 9.2 独立审核 P0 修复与 golden 补充（本轮）
+
+- **P0-1（key4 R 类缺封顶）**：§3.6 正文写对（`min(len(sequence)/L - 1, 5)`，:1653-1659/:1699-1705），实现漏译 `.min(5)`：≥7 拷贝串联（key4=6 起）debug 触发构造哨兵 panic、release 静默错桶（(AC)⁹ 缺失被计为 3:Del:R:2）。已修；补 4 条 golden——Del R 与 Ins R 各「恰好 7 拷贝边界 + 9 拷贝远界」，逐条与独立 oracle（/tmp/audit-id83/oracle.py，master edccbea6 誊写）对拍一致。
+- **P0-2（release profile 编译失败）**：`label_of` 原挂 `#[cfg(debug_assertions)]`，而 `debug_assert_eq!` 函数体在 release 仍参与类型检查 → `cargo build --release -p msuiter-catalog` E0425（CRAN 模式 R CMD INSTALL 必挂）。修复：去 cfg 常驻（构造正确性哨兵，两种 profile 下均无死代码）。**release profile（build + test）自本轮加入验收门。**
+- **P2（同轮顺带备案）**：DuplicateRecord 去重按上游作用域扩展到 INDEL 流全部行（转换器 :94 判据：一切非纯 SNV 记录，含 complex 与块替换；流内 `prev_line` 跨 SNV 连续，golden G37b-G37e）；右窗循环体内无守卫复读（:1477/:1566）补结构化 bounds golden（G33b，oracle 同位 IndexError 对拍）。
+
+### 9.3 正文 golden 坐标勘误备案（§5 表，正文不改）
+
+- **G7**：正文写 POS 2/TC/T；锚不变式意图要求锚为 T@1（2 号位落在被删碱基上），实现按 POS 1/TC/T 修正，期望通道 1:Del:C:0 不变。
+- **G17**：正文写 3/ACAG/A；在 `(CAG)^4` 上该四元组的锚字节 ≠ 参考碱基（:1408-1421 会判 mismatch），实现按锚规则取 3/GCAG/G——同一物理事件，期望 3:Del:R:3 不变。
+
+两处均为备忘笔误而非语义分歧；测试注释已就地说明，本节登记备案。

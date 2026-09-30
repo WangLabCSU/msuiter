@@ -21,7 +21,7 @@
 //! | both alleles >1 base, unequal lengths                 | `ComplexIndel`     |
 //! | one-side-single-base indel                            | `Indel` event -> `Id83` (U-M1c-01; classify with `crate::indel83::assign_indel83` after the assembly layer's anchor-vs-genome check) |
 //! | two adjacent one-side-single-base indels              | `Indel` events each — indels are NEVER merged (SPMG pairing only touches SNV streams, memo §4) |
-//! | identical adjacent indel quadruple (SPMG `line == prev_line`, :1376-1386) | second record `Skipped(duplicate_record)` (SNV-stream dedup awaits the M1s-13 P0-2 adjudication) |
+//! | identical adjacent INDEL-stream record, any class (SPMG `line == prev_line`, :1376-1386; the stream is every non-SNV record, converter :94) | second record `Skipped(duplicate_record)` (SNV-stream dedup awaits the M1s-13 P0-2 adjudication) |
 //! | non-ACGT byte / zero-length allele                    | `Skipped(invalid_base / empty_allele)` |
 //! | `ref == alt` (no change)                              | `Skipped(ref_equals_alt)` |
 //!
@@ -173,10 +173,12 @@ pub enum SkipReason {
     /// this router) so downstream vocabularies that predate the ID83
     /// layer keep compiling until the tally wiring unit retires them.
     SimpleIndel,
-    /// An identical adjacent record (same pos/ref/alt; SPMG
+    /// An identical adjacent INDEL-stream record (same pos/ref/alt; SPMG
     /// `line == prev_line`, :1376-1386) — the repeat occurrence is
-    /// dropped. Implemented here for the indel path; the SNV-stream
-    /// policy is the pending M1s-13 P0-2 adjudication.
+    /// dropped. Scope (audit U-M1c-01 P2-1): the whole INDEL stream, i.e.
+    /// every non-SNV record (simple indel, complex, block substitution —
+    /// SPMG's converter puts all of them in the indel file, :94); the
+    /// SNV-stream policy is the pending M1s-13 P0-2 adjudication.
     DuplicateRecord,
 }
 
@@ -362,8 +364,8 @@ fn classify_single<'a>(rec: &VarRecord<'a>, record: usize) -> (Option<RoutedEven
 
 /// SPMG's identical-adjacent-record dedup (:1376-1386): full
 /// quadruple equality (same chromosome is implicit — routing is
-/// per-chromosome). Applied on the indel path; the SNV-stream policy is
-/// the pending M1s-13 P0-2 adjudication.
+/// per-chromosome). Applied on the whole INDEL stream (audit U-M1c-01
+/// P2-1); the SNV-stream policy is the pending M1s-13 P0-2 adjudication.
 fn duplicate_of_previous(prev: Option<&VarRecord<'_>>, rec: &VarRecord<'_>) -> bool {
     match prev {
         Some(p) => p.pos == rec.pos && p.ref_ == rec.ref_ && p.alt == rec.alt,
@@ -385,25 +387,37 @@ fn is_simple_indel(rec: &VarRecord<'_>) -> bool {
 pub fn route_variants<'a>(records: &[VarRecord<'a>]) -> Routing<'a> {
     let mut events = Vec::new();
     let mut entries = Vec::with_capacity(records.len());
+    // SPMG's INDEL stream and its dedup state (audit U-M1c-01 P2-1): the
+    // converter files every NON-SNV record into the indel stream
+    // (convert_input_to_simple_files.py:94) and dedups raw consecutive
+    // lines there (MMG:1376-1386) — any class, and `prev_line` updates on
+    // every stream line, skipped or routed. SNVs stream separately; their
+    // dedup policy is the pending M1s-13 P0-2 adjudication.
+    let mut prev_indel_line: Option<&VarRecord<'a>> = None;
     let mut i = 0;
     while i < records.len() {
         let rec = &records[i];
+        let is_snv = rec.ref_.len() == 1 && rec.alt.len() == 1;
         if let Some(reason) = validate(rec) {
+            if !is_snv {
+                prev_indel_line = Some(rec);
+            }
             entries.push(LedgerEntry::Skipped(reason));
             i += 1;
             continue;
         }
-        // Indel-path dedup (SPMG :1376-1386): a simple indel identical to
-        // the raw previous record is dropped with an explicit reason. The
-        // comparison uses the previous RECORD whether or not it was
-        // routed/skipped (SPMG compares raw consecutive lines).
-        if is_simple_indel(rec)
-            && i > 0
-            && duplicate_of_previous(Some(&records[i - 1]), rec)
-        {
-            entries.push(LedgerEntry::Skipped(SkipReason::DuplicateRecord));
-            i += 1;
-            continue;
+        // Indel-stream dedup (SPMG :1376-1386): a record identical to the
+        // previous raw stream line is dropped with an explicit reason,
+        // whether it is a simple indel, a complex indel or a block
+        // substitution (the stream membership, not the class, decides).
+        if !is_snv {
+            let duplicate = duplicate_of_previous(prev_indel_line, rec);
+            prev_indel_line = Some(rec);
+            if duplicate {
+                entries.push(LedgerEntry::Skipped(SkipReason::DuplicateRecord));
+                i += 1;
+                continue;
+            }
         }
         // Lookahead: the immediate successor is a reconnection/pairing
         // candidate only if it is itself valid.
@@ -459,6 +473,12 @@ pub fn route_variants<'a>(records: &[VarRecord<'a>]) -> Routing<'a> {
             }
         }
         if consumed_two {
+            // Raw-line bookkeeping through a reconnection: upstream the
+            // merge does not exist (msuiter extension), so `prev_line`
+            // there is the LAST raw line consumed — the second piece.
+            if !is_snv {
+                prev_indel_line = Some(&records[i + 1]);
+            }
             i += 2;
             continue;
         }

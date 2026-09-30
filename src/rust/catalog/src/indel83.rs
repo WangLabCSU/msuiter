@@ -364,10 +364,15 @@ where
         (sequence.len() - 1).min(5)
     } else if !is_mh {
         // Repeat class (:1653-1659 / :1699-1705): copies - 1 on the raw
-        // L, floored, cap 5. Del R:0 = "no tandem context"; Ins R:0 is
-        // additionally the DEFAULT for non-repetitive insertions (F1
-        // asymmetry note, memo §3.6d).
-        sequence.len() / l - 1
+        // L, floored, cap 5 — `indel_key_4 = key_4 if key_4 < 5 else 5`
+        // (:1654-1655 Del / :1700-1701 Ins). Del R:0 = "no tandem
+        // context"; Ins R:0 is additionally the DEFAULT for
+        // non-repetitive insertions (F1 asymmetry note, memo §3.6d).
+        // Audit U-M1c-01 P0-1: the cap was missing, so a run of >= 7
+        // copies (key4 = 6) both mislabelled the sentinel and, with
+        // key4 >= 12, indexed past the table (debug panic, release
+        // silently off-bucket).
+        (sequence.len() / l - 1).min(5)
     } else {
         // Microhomology class (:1662-1670 / :1707-1716): MH bases, cap 5.
         // >= 1 by branch entry (no M:0 row exists).
@@ -411,7 +416,13 @@ where
 
 /// Rebuild the canonical label for a classified event (debug cross-check
 /// of the index arithmetic against the static table).
-#[cfg(debug_assertions)]
+///
+/// Deliberately NOT `#[cfg(debug_assertions)]`: `debug_assert_eq!`
+/// type-checks its body in release profiles too, so gating this helper
+/// broke `cargo build --release` with E0425 (audit U-M1c-01 P0-2). It
+/// stays resident as the construction-correctness sentinel; in release
+/// the assert's `cfg!` branch is runtime-false and LLVM discards it, so
+/// there is no dead code either way.
 fn label_of(key1: usize, is_del: bool, key3: u8, key4: usize) -> String {
     format!(
         "{key1}:{}:{}:{key4}",

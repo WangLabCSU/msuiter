@@ -546,6 +546,28 @@ fn g33_tail_initial_window_is_structured_bounds_error() {
     assert_eq!(err.topic, "bounds");
 }
 
+/// G33b (audit U-M1c-01 P2-2) | the unguarded LOOP-BODY re-read
+/// (:1477, Del; :1566, Ins): the extension guard `pos + L < len`
+/// (:1474-1476) admits one more step whose in-loop re-read window then
+/// crosses the chromosome end. SPMG IndexErrors there too (oracle:
+/// `classify("TAACACT", 2, "AAC", "A")` raises IndexError at the
+/// :1477-transcribed line); the initial-read variant above is G33. One
+/// extra trailing base lets the same event complete (oracle: 2:Del:R:1)
+/// — the crash is specific to a run flush against the contig edge. Our
+/// structured `bounds` error (i = 1-based window start, j = the
+/// requested 1-based last base) pins the hardened twin.
+#[test]
+fn g33b_tail_loop_body_reread_is_structured_bounds_error() {
+    // anchor A@1, deleted "AC"@2-3, matching copy "AC"@4-5, final T@6
+    // (chrom len 7): initial right window [4, 6) matches, the guard
+    // 4 + 2 < 7 admits the step, the re-read fetch(6, 2) crosses the end.
+    let chrom = b"TAACACT";
+    let err = assign_indel83_slice(chrom, 1, b"AAC", b"A").unwrap_err();
+    assert_eq!(err.topic, "bounds");
+    assert_eq!(err.i, Some(7));
+    assert_eq!(err.j, Some(8));
+}
+
 // ---------------------------------------------------------------------------
 // Goldens G34-G36: N handling and EXACT rotation semantics.
 // ---------------------------------------------------------------------------
@@ -584,9 +606,9 @@ fn g36_rotation_does_not_extend() {
 
 /// G37 | the same indel quadruple twice in a row | the second record is a
 /// ledger skip (`duplicate_record`), no second event. Scope note: SPMG
-/// applies `line == prev_line` to the whole stream; this unit implements
-/// it on the indel path (the ID side the memo mandates) and the
-/// SNV-stream policy stays with the pending M1s-13 P0-2 adjudication.
+/// applies `line == prev_line` to the whole INDEL stream — every non-SNV
+/// record (converter :94), any class; the SNV-stream policy stays with
+/// the pending M1s-13 P0-2 adjudication.
 #[test]
 fn g37_identical_adjacent_indel_dedup() {
     let records = [rec(9, b"AT", b"A"), rec(9, b"AT", b"A")];
@@ -601,6 +623,104 @@ fn g37_identical_adjacent_indel_dedup() {
         &[LedgerEntry::Id83, LedgerEntry::Skipped(SkipReason::DuplicateRecord)]
     );
     assert!(out.ledger.render().contains("2\tskipped:duplicate_record"));
+}
+
+/// G37b (audit U-M1c-01 P2-1) | identical adjacent COMPLEX pair | the
+/// second record is `skipped:duplicate_record`, not a second
+/// complex_indel provenance count — SPMG's `line == prev_line` runs on
+/// the raw lines of the whole INDEL stream (:1376-1386), which the
+/// converter fills with every non-SNV record (:94), complex included.
+#[test]
+fn g37b_identical_adjacent_complex_dedup() {
+    let records = [rec(60, b"ACGT", b"AG"), rec(60, b"ACGT", b"AG")];
+    let out = route_variants(&records);
+    assert_eq!(out.events.len(), 1);
+    assert_eq!(
+        out.events[0],
+        RoutedEvent::ComplexIndel { record: 0, pos: 60, ref_len: 4, alt_len: 2 }
+    );
+    assert_eq!(
+        out.ledger.entries(),
+        &[
+            LedgerEntry::ComplexIndel,
+            LedgerEntry::Skipped(SkipReason::DuplicateRecord)
+        ]
+    );
+}
+
+/// G37c (audit U-M1c-01 P2-1) | identical adjacent >5 bp block pair | the
+/// block substitutions are INDEL-stream rows upstream (converter :94), so
+/// the repeat is a `duplicate_record` skip, likewise for the 2..=5 bp
+/// block class (pinned by the mnv-suite LongMnv/Mnv golden pairs).
+#[test]
+fn g37c_identical_adjacent_long_mnv_dedup() {
+    let records = [rec(50, b"ACGTAC", b"TGCATG"), rec(50, b"ACGTAC", b"TGCATG")];
+    let out = route_variants(&records);
+    assert_eq!(out.events.len(), 1);
+    assert_eq!(
+        out.events[0],
+        RoutedEvent::LongMnv { record: 0, merged: 1, pos: 50, len: 6 }
+    );
+    assert_eq!(
+        out.ledger.entries(),
+        &[
+            LedgerEntry::LongMnv,
+            LedgerEntry::Skipped(SkipReason::DuplicateRecord)
+        ]
+    );
+}
+
+/// G37d (audit U-M1c-01 P2-1) | an SNV between two identical indels does
+/// NOT shield the repeat: SPMG splits the streams BEFORE dedup (the
+/// substitution file never contains the indel lines), so the indel
+/// stream's `prev_line` skips over the SNV and the third record is a
+/// duplicate. Ledger: id83, sbs, skipped:duplicate_record.
+#[test]
+fn g37d_dedup_stream_skips_over_intervening_snv() {
+    let records = [rec(9, b"AT", b"A"), rec(10, b"C", b"G"), rec(9, b"AT", b"A")];
+    let out = route_variants(&records);
+    assert_eq!(
+        out.events,
+        vec![
+            RoutedEvent::Indel { record: 0, pos: 9, ref_: b"AT", alt: b"A" },
+            RoutedEvent::Sbs { record: 1, pos: 10, ref_: b'C', alt: b'G' },
+        ]
+    );
+    assert_eq!(
+        out.ledger.entries(),
+        &[
+            LedgerEntry::Id83,
+            LedgerEntry::Sbs,
+            LedgerEntry::Skipped(SkipReason::DuplicateRecord)
+        ]
+    );
+}
+
+/// G37e (audit U-M1c-01 P2-1) | raw-line bookkeeping through a
+/// reconnection: the first two records merge into one 4 bp block (msuiter
+/// extension — upstream has no merge), and the third record equals the
+/// LAST raw line consumed, so it is a duplicate. `prev_line` follows raw
+/// stream lines, never the merged event.
+#[test]
+fn g37e_dedup_tracks_last_raw_line_through_a_merge() {
+    let records = [
+        rec(70, b"AC", b"TG"),
+        rec(72, b"GT", b"CA"),
+        rec(72, b"GT", b"CA"),
+    ];
+    let out = route_variants(&records);
+    assert_eq!(
+        out.events,
+        vec![RoutedEvent::Mnv { record: 0, merged: 2, pos: 70, len: 4 }]
+    );
+    assert_eq!(
+        out.ledger.entries(),
+        &[
+            LedgerEntry::Mnv,
+            LedgerEntry::Mnv,
+            LedgerEntry::Skipped(SkipReason::DuplicateRecord)
+        ]
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +742,52 @@ fn g38_q_predicate_direction() {
     // single-base sequences are trivially homogeneous.
     assert!(!q_predicate(b"C", Strand::None));
     assert!(!q_predicate(b"ACGTACGT", Strand::None));
+}
+
+// ---------------------------------------------------------------------------
+// Audit U-M1c-01 P0-1: the R-class key4 CAP (:1653-1659 / :1699-1705,
+// `indel_key_4 = key_4 if key_4 < 5 else 5`). The implementation shipped
+// without `.min(5)`, so every run of >= 7 unit copies (key4 = 6) built a
+// label outside the table — debug panic at the sentinel, and in release a
+// silent wrong bucket (e.g. (AC)^9 deletion counted as 3:Del:R:2). All
+// four goldens below are cross-checked against the independent SPMG
+// transcription /tmp/audit-id83/oracle.py (master edccbea6), which
+// returns exactly these keys.
+// ---------------------------------------------------------------------------
+
+/// Exactly 7 copies (the first overflowing key4 = 6) | `T (AC)^7 T` |
+/// 1/TAC/T | 2:Del:R:5 — key4 = int(14/2 - 1) = 6, capped 5. Pre-fix this
+/// indexed 24 + 6 = 30 ("3:Del:R:0", wrong bucket) and panicked in debug.
+#[test]
+fn p0_1_del_r_seven_copies_capped() {
+    let (i, l) = chan_label("TACACACACACACACT", 1, b"TAC", b"T");
+    assert_eq!((i, l), (29, "2:Del:R:5"));
+}
+
+/// Far beyond the boundary, 9 copies | `T (AC)^9 T` | 1/TAC/T |
+/// 2:Del:R:5 — key4 = int(18/2 - 1) = 8, capped 5 (pre-fix index 32 =
+/// "3:Del:R:2").
+#[test]
+fn p0_1_del_r_nine_copies_capped() {
+    let (i, l) = chan_label("TACACACACACACACACACT", 1, b"TAC", b"T");
+    assert_eq!((i, l), (29, "2:Del:R:5"));
+}
+
+/// Ins R, exactly 7 accumulated copies (6 flanking + 1 inserted) |
+/// `T (AC)^6 T` | 1/T/TAC | 2:Ins:R:5 — key4 = int(14/2 - 1) = 6, capped
+/// 5 (pre-fix index 48 + 6 = 54 = "3:Ins:R:0").
+#[test]
+fn p0_1_ins_r_seven_copies_capped() {
+    let (i, l) = chan_label("TACACACACACACT", 1, b"T", b"TAC");
+    assert_eq!((i, l), (53, "2:Ins:R:5"));
+}
+
+/// Ins R, 9 accumulated copies | `T (AC)^8 T` | 1/T/TAC | 2:Ins:R:5 —
+/// key4 = int(18/2 - 1) = 8, capped 5 (pre-fix index 56 = "3:Ins:R:2").
+#[test]
+fn p0_1_ins_r_nine_copies_capped() {
+    let (i, l) = chan_label("TACACACACACACACACT", 1, b"T", b"TAC");
+    assert_eq!((i, l), (53, "2:Ins:R:5"));
 }
 
 // ---------------------------------------------------------------------------

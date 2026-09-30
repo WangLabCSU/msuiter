@@ -13,8 +13,11 @@
 //!   * one-side-single-base indels -> `Indel` events on the `Id83`
 //!     destination (U-M1c-01; classify with
 //!     `indel83::assign_indel83`), never merged with neighbours;
-//!   * an indel identical to its raw predecessor -> `Skipped(duplicate_record)`
-//!     (SPMG :1376-1386; SNV-stream dedup awaits M1s-13 P0-2);
+//!   * an INDEL-stream record identical to its raw stream predecessor ->
+//!     `Skipped(duplicate_record)` (SPMG :1376-1386; the stream is every
+//!     non-SNV record, converter :94, so simple indels, complex indels
+//!     and block substitutions all dedup; SNV-stream dedup awaits
+//!     M1s-13 P0-2);
 //!   * a non-ACGT byte or a zero-length allele -> `Skipped(invalid_base /
 //!     empty_allele)`; identical alleles -> `Skipped(ref_equals_alt)`;
 //!   * split-VCF reconnection (pairwise only): two consecutive valid
@@ -319,6 +322,26 @@ fn golden_ref_equals_alt() {
     assert_eq!(
         ledger_codes(&ledger_of(&records)),
         ["skipped:ref_equals_alt"]
+    );
+}
+
+/// Identical adjacent 2..=5 bp block pair: block substitutions are
+/// INDEL-stream rows upstream (converter :94), so SPMG's
+/// `line == prev_line` dedup (:1376-1386) drops the repeat (audit
+/// U-M1c-01 P2-1); the LongMnv/complex twins live in the indel83 suite
+/// (G37c/G37b).
+#[test]
+fn golden_duplicate_mnv_block_dedup() {
+    let records = [rec(30, b"CT", b"AG"), rec(30, b"CT", b"AG")];
+    let out = route_variants(&records);
+    assert_eq!(event_codes(&out.events), ["mnv"]);
+    assert_eq!(
+        out.events[0],
+        RoutedEvent::Mnv { record: 0, merged: 1, pos: 30, len: 2 }
+    );
+    assert_eq!(
+        ledger_codes(out.ledger.entries()),
+        ["mnv", "skipped:duplicate_record"]
     );
 }
 
