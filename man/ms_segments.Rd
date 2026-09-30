@@ -72,9 +72,10 @@ rejected. PURPLE reads `minorAlleleCopyNumber`/`majorAlleleCopyNumber`
 (:167-183, :282-295). Battenberg rows expand to one record per
 present clone block (`nMaj1_A`/`nMin1_A` clonal, `nMaj2_A`/`nMin2_A`
 subclonal), exactly as upstream tallies both blocks as separate
-events (:401-425); a block whose values are all missing is counted
-into the provenance skip ledger instead of silently dropped
-(upstream `dropna`, :404-405).
+events (:401-425); a block with any missing value is counted into the
+provenance skip ledger instead of silently dropped (upstream `dropna`
+:404-405 drops the same rows, but also silently drops rows with missing
+coordinates/samples where msuiter hard-rejects -- stricter by design).
 
 PCAWG files carry no allele split -- upstream consumes only
 `copy_number` and `mutation_type` (:130-141, :243-258). The mapping

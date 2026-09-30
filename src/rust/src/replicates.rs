@@ -1,4 +1,5 @@
-//! Parallel replicate driver over the real KL-NMF kernel (U-M1s-05).
+//! Parallel replicate driver over the real KL-NMF kernel (U-M1s-05;
+//! extended in U-M2-03 with the factor-pair ensemble).
 //!
 //! This is the first **real-kernel** application of the FFI concurrency
 //! contract (`docs/ARCHITECTURE.md` §2, contracts 6 + 7): `replicates`
@@ -9,6 +10,17 @@
 //! `StreamId { replicate: r, rank: 0, fold: 0 }` (canonical layout v1), so
 //! the output is a pure function of `(counts, k, max_iter, master_seed,
 //! replicates)` — never of the thread count (A7 thread-count invariance).
+//!
+//! Two faces share one scheduling skeleton ([`run_units_in_chunks`]):
+//!
+//! * [`nmf_replicates_objectives`] — the U-M1s-05 face: one scalar per
+//!   replicate (the final KL objective). Semantics frozen since U-M1s-05.
+//! * [`nmf_ensemble`] — the U-M2-03 face: one `(W, H)` factor pair per
+//!   replicate, the multi-initialization axis of the consensus pipeline
+//!   (design memo `docs/devlog/2026-09-30-M2-pipeline-design-memo.md`
+//!   §1.1, PI ruling: ensemble = initialization seeds only, no bootstrap).
+//!   Same streams, same scheduling, same interrupt protocol — the ONLY
+//!   delta is what each unit returns.
 //!
 //! # What is parallel, what never is
 //!
@@ -48,6 +60,82 @@ use msuiter_engine::nmf;
 use msuiter_engine::rng::StreamId;
 
 use super::probes::build_call_pool;
+
+/// Generic chunked parallel driver over independent units (contract 6/7):
+/// the scheduling skeleton shared by the objective replicates
+/// ([`nmf_replicates_objectives`]) and the factor-pair ensemble
+/// ([`nmf_ensemble`]). Units are scheduled in chunks (≈4 per worker,
+/// capped); the main thread polls the interrupt hook between chunks, each
+/// chunk runs its units in parallel on the per-call pool, and workers see
+/// ONLY the `cancelled` flag. Chunks are gathered in chunk-index order and
+/// every element is computed by exactly one unit from that unit's own
+/// stream — no order-sensitive floating-point reduction anywhere, so
+/// `threads ∈ {1, N}` give bit-identical output.
+fn run_units_in_chunks<T, F>(
+    units: usize,
+    n_threads: usize,
+    cancelled: &AtomicBool,
+    check_user_interrupt: &mut dyn FnMut(),
+    unit: F,
+) -> Result<Vec<T>, MsError>
+where
+    T: Send,
+    F: Fn(usize) -> Result<T, MsError> + Sync,
+{
+    let pool = build_call_pool(n_threads)?;
+    let target_chunks = n_threads.clamp(1, 16) * 4;
+    let chunk_len = ((units + target_chunks - 1) / target_chunks).max(1);
+    let n_chunks = (units + chunk_len - 1) / chunk_len;
+
+    let mut per_chunk: Vec<(usize, Vec<T>)> = Vec::with_capacity(n_chunks);
+    for c in 0..n_chunks {
+        // Worker-side view (contract 7): the flag is the ONLY cross-thread
+        // signal; a tripped flag fails the whole call with no partial
+        // results (contract 5).
+        if cancelled.load(Ordering::Relaxed) {
+            return Err(MsError::new(
+                "interrupted",
+                format!(
+                    "call interrupted before chunk {}; no partial results are returned",
+                    c + 1
+                ),
+            )
+            .with_i((c + 1) as i64));
+        }
+        // Main-thread boundary poll (under R: R_CheckUserInterrupt).
+        check_user_interrupt();
+        let start = c * chunk_len;
+        let end = (start + chunk_len).min(units);
+        // Each element is one whole unit: kernel-sequential inside, parallel
+        // only across elements (contract 6).
+        let chunk: Vec<T> = pool.install(|| {
+            (start..end)
+                .into_par_iter()
+                .map(|r| {
+                    if cancelled.load(Ordering::Relaxed) {
+                        return Err(MsError::new(
+                            "interrupted",
+                            format!("worker observed cancellation at replicate {}", r + 1),
+                        )
+                        .with_i((r + 1) as i64));
+                    }
+                    unit(r)
+                })
+                .collect::<Result<Vec<T>, MsError>>()
+        })?;
+        per_chunk.push((c, chunk));
+    }
+
+    // Fixed reduction: index-ordered concatenation — never an
+    // order-sensitive floating-point accumulation (module docs).
+    per_chunk.sort_unstable_by_key(|(c, _)| *c);
+    let mut out = Vec::with_capacity(units);
+    for (_, mut vals) in per_chunk {
+        out.append(&mut vals);
+    }
+    debug_assert_eq!(out.len(), units);
+    Ok(out)
+}
 
 /// Final KL objective of one replicate: an independent `fit_kl_on_stream`
 /// run whose initializer is drawn from the replicate's own canonical
@@ -105,59 +193,68 @@ pub fn nmf_replicates_objectives(
     if replicates == 0 {
         return Err(MsError::new("argument", "replicates must be positive"));
     }
-    let pool = build_call_pool(n_threads)?;
-    let target_chunks = n_threads.clamp(1, 16) * 4;
-    let chunk_len = ((replicates + target_chunks - 1) / target_chunks).max(1);
-    let n_chunks = (replicates + chunk_len - 1) / chunk_len;
+    run_units_in_chunks(
+        replicates,
+        n_threads,
+        cancelled,
+        check_user_interrupt,
+        |r| kl_replicate_objective(v, m, n, k, max_iter, master_seed, r as u64),
+    )
+}
 
-    let mut per_chunk: Vec<(usize, Vec<f64>)> = Vec::with_capacity(n_chunks);
-    for c in 0..n_chunks {
-        // Worker-side view (contract 7): the flag is the ONLY cross-thread
-        // signal; a tripped flag fails the whole call with no partial
-        // results (contract 5).
-        if cancelled.load(Ordering::Relaxed) {
-            return Err(MsError::new(
-                "interrupted",
-                format!(
-                    "call interrupted before chunk {}; no partial results are returned",
-                    c + 1
-                ),
-            )
-            .with_i((c + 1) as i64));
-        }
-        // Main-thread boundary poll (under R: R_CheckUserInterrupt).
-        check_user_interrupt();
-        let start = c * chunk_len;
-        let end = (start + chunk_len).min(replicates);
-        // Each element is one whole replicate: kernel-sequential inside,
-        // parallel only across elements (contract 6).
-        let chunk: Vec<f64> = pool.install(|| {
-            (start..end)
-                .into_par_iter()
-                .map(|r| {
-                    if cancelled.load(Ordering::Relaxed) {
-                        return Err(MsError::new(
-                            "interrupted",
-                            format!("worker observed cancellation at replicate {}", r + 1),
-                        )
-                        .with_i((r + 1) as i64));
-                    }
-                    kl_replicate_objective(v, m, n, k, max_iter, master_seed, r as u64)
-                })
-                .collect::<Result<Vec<f64>, MsError>>()
-        })?;
-        per_chunk.push((c, chunk));
+/// Run `replicates` independent KL-NMF fits of `v` (row-major `m×n`) on a
+/// per-call thread pool and return each replicate's **factor pair**
+/// `(W, H)` (W row-major `m×k`, H row-major `k×n`), ordered by replicate
+/// index (U-M2-03 ensemble: the multi-initialization axis of the consensus
+/// pipeline; design memo §1.1).
+///
+/// The parallel semantics are EXACTLY the objective driver's — same frozen
+/// streams (`StreamId { replicate: r, rank: 0, fold: 0 }`, canonical
+/// layout v1), same chunked scheduling, same interrupt protocol, same
+/// index-ordered gather — extended only by returning each replicate's
+/// factors instead of its final objective. The kernel face is
+/// [`nmf::fit_kl_on_stream`], untouched: each replicate's W/H is
+/// bit-identical to a sequential `fit_kl_on_stream` call on its stream
+/// (A7 thread-count invariance is inherited, pinned by tests).
+///
+/// `n_threads == 0` means "rayon default" (all cores) — the R side resolves
+/// the `msuiter.threads` option and the `_R_CHECK_LIMIT_CORES_` cap and
+/// passes the effective value (see `probes::build_call_pool`).
+#[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
+pub fn nmf_ensemble(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    max_iter: usize,
+    master_seed: u64,
+    replicates: usize,
+    n_threads: usize,
+    cancelled: &AtomicBool,
+    check_user_interrupt: &mut dyn FnMut(),
+) -> Result<Vec<(Vec<f64>, Vec<f64>)>, MsError> {
+    if replicates == 0 {
+        return Err(MsError::new("argument", "replicates must be positive"));
     }
-
-    // Fixed reduction: index-ordered concatenation — never an
-    // order-sensitive floating-point accumulation (module docs).
-    per_chunk.sort_unstable_by_key(|(c, _)| *c);
-    let mut out = Vec::with_capacity(replicates);
-    for (_, mut vals) in per_chunk {
-        out.append(&mut vals);
-    }
-    debug_assert_eq!(out.len(), replicates);
-    Ok(out)
+    run_units_in_chunks(
+        replicates,
+        n_threads,
+        cancelled,
+        check_user_interrupt,
+        |r| {
+            let fit = nmf::fit_kl_on_stream(
+                v,
+                m,
+                n,
+                k,
+                max_iter,
+                master_seed,
+                StreamId { replicate: r as u64, rank: 0, fold: 0 },
+            )?;
+            Ok((fit.w, fit.h))
+        },
+    )
 }
 
 #[cfg(test)]
@@ -331,5 +428,78 @@ mod tests {
         assert_eq!(err.topic, "argument");
         assert_eq!(err.i, Some(1));
         assert_eq!(err.j, Some(4));
+    }
+
+    // ------------------------------------------------------------------
+    // U-M2-03 ensemble (factor pairs): same scheduling contract, the unit
+    // returns (W, H) instead of the objective.
+    // ------------------------------------------------------------------
+
+    fn ensemble_run(n_threads: usize) -> Vec<(Vec<f64>, Vec<f64>)> {
+        let v = synthetic_counts(7, M, N);
+        let cancelled = AtomicBool::new(false);
+        nmf_ensemble(&v, M, N, K, MAX_ITER, MASTER, REPLICATES, n_threads, &cancelled, &mut no_poll)
+            .unwrap()
+    }
+
+    #[test]
+    fn ensemble_returns_one_factor_pair_per_replicate_on_frozen_streams() {
+        let v = synthetic_counts(7, M, N);
+        let got = ensemble_run(2);
+        assert_eq!(got.len(), REPLICATES);
+        for (r, (w, h)) in got.iter().enumerate() {
+            // Shapes: W row-major m×k, H row-major k×n.
+            assert_eq!(w.len(), M * K);
+            assert_eq!(h.len(), K * N);
+            // Bit-identical to the sequential kernel fit on the replicate's
+            // own canonical stream (the ONLY semantic: same stream, same
+            // kernel, raw factors returned untouched).
+            let fit = nmf::fit_kl_on_stream(
+                &v, M, N, K, MAX_ITER, MASTER,
+                StreamId { replicate: r as u64, rank: 0, fold: 0 },
+            )
+            .unwrap();
+            assert_eq!(*w, fit.w, "replicate {r} W drifted from its stream");
+            assert_eq!(*h, fit.h, "replicate {r} H drifted from its stream");
+        }
+    }
+
+    /// A7 / contract 6 on the ensemble face: threads ∈ {1, 4, 16} produce
+    /// bit-identical factor pairs (`assert_eq!`, not tolerance).
+    #[test]
+    fn ensemble_is_invariant_to_thread_count() {
+        let one = ensemble_run(1);
+        let four = ensemble_run(4);
+        let sixteen = ensemble_run(16);
+        assert_eq!(one, four);
+        assert_eq!(one, sixteen);
+    }
+
+    #[test]
+    fn ensemble_replicates_differ_across_streams() {
+        let got = ensemble_run(2);
+        for (i, (wa, _)) in got.iter().enumerate() {
+            for (wb, _) in got[i + 1..].iter() {
+                assert_ne!(wa, wb, "replicates {i} collided (W)");
+            }
+        }
+    }
+
+    #[test]
+    fn ensemble_argument_and_interrupt_paths_mirror_the_objective_driver() {
+        let v = synthetic_counts(7, M, N);
+        let cancelled = AtomicBool::new(true);
+        let err = nmf_ensemble(
+            &v, M, N, K, MAX_ITER, MASTER, REPLICATES, 2, &cancelled, &mut no_poll,
+        )
+        .unwrap_err();
+        assert_eq!(err.topic, "interrupted");
+        assert_eq!(err.i, Some(1));
+        let cancelled = AtomicBool::new(false);
+        let err = nmf_ensemble(
+            &v, M, N, K, MAX_ITER, MASTER, 0, 2, &cancelled, &mut no_poll,
+        )
+        .unwrap_err();
+        assert_eq!(err.topic, "argument");
     }
 }

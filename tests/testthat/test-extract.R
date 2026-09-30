@@ -86,7 +86,8 @@ test_that("ms_extract() recovers a separable truth (cosine >= 0.99)", {
 
 test_that("MsSignature fields, labels and the catalog snapshot are complete", {
   cat1 <- .ms_extract_fixture()
-  sig <- ms_extract(cat1, 3)
+  # Single-method path: the M1s shape (empty M2 evidence slots).
+  sig <- ms_extract(cat1, 3, ms_nmf())
 
   expect_identical(dim(sig@signatures), c(96L, 3L))
   expect_identical(dim(sig@exposures), c(3L, 12L))
@@ -118,18 +119,24 @@ test_that("MsSignature fields, labels and the catalog snapshot are complete", {
 
 test_that("extraction is deterministic across calls (same spec, same bits)", {
   cat1 <- .ms_extract_fixture()
-  a <- ms_extract(cat1, 3)
-  b <- ms_extract(cat1, 3)
+  a <- ms_extract(cat1, 3, ms_nmf())
+  b <- ms_extract(cat1, 3, ms_nmf())
   expect_identical(a, b)
 })
 
-test_that("string sugar, spec object and NULL default agree exactly", {
+test_that("string sugar and spec object agree; NULL is the D16 pipeline default", {
   cat1 <- .ms_extract_fixture()
-  by_default <- ms_extract(cat1, 3)
   by_string <- ms_extract(cat1, 3, "nmf")
   by_object <- ms_extract(cat1, 3, ms_nmf())
-  expect_identical(by_default, by_string)
-  expect_identical(by_default, by_object)
+  expect_identical(by_string, by_object)
+  # method = NULL is the U-M2-03 consensus-CV pipeline (a different path,
+  # a different engine label -- never silently re-resolved to the single
+  # method).
+  by_default <- suppressWarnings(ms_extract(cat1, 3))
+  expect_false(identical(by_default, by_string))
+  expect_identical(by_default@engine, "nmf-pipeline")
+  expect_true(length(by_default@stability) > 0L)
+  expect_identical(nrow(by_default@k_evidence), 1L)
 })
 
 test_that("the eu variant runs on the same face and differs from kl", {
@@ -218,7 +225,7 @@ test_that("dots are rejected as argument-spelling errors", {
   expect_ms_error(ms_extract(cat1, 3, foo = 1), "input", regexp = "unknown argument")
 })
 
-test_that("a degenerate all-zero catalog fails with a signature error", {
+test_that("a degenerate all-zero catalog fails the single fit with a signature error", {
   .ms_ensure_nmf()
   labels <- sprintf("CH%03d", seq_len(96L))
   samples <- sprintf("T%02d", seq_len(12L))
@@ -229,6 +236,11 @@ test_that("a degenerate all-zero catalog fails with a signature error", {
     samples = samples,
     provenance = list(genome = "SYN-true")
   )
+  expect_ms_error(ms_extract(zero, 3, ms_nmf(max_iter = 20)), "signature", regexp = "degenerated")
+  # The default pipeline path fails the same display-normalization gate on
+  # the same degenerate input (the min.value floor imputation lets the kernel
+  # finish, but every consensus column has zero mass) -- the structured
+  # signature error, never a panic and never partial output.
   expect_ms_error(ms_extract(zero, 3), "signature", regexp = "degenerated")
 })
 

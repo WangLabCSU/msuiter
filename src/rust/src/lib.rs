@@ -31,6 +31,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 mod condition;
 mod extract;
+mod pipeline;
 mod probes;
 mod replicates;
 mod stratify;
@@ -666,6 +667,135 @@ fn ms_stratify_rust(counts: Robj, manual_cutoff: f64, seed: f64, n_threads: i32)
     })())
 }
 
+// ---------------------------------------------------------------------------
+// U-M2-03: default consensus-CV extraction pipeline (`ms_pipeline_rust`,
+// FFI-internal name — the user faces are `ms_extract(method = NULL)` (D16
+// default path) and `ms_select_k()` in R/extract.R + R/kselect-select.R).
+// The pure orchestration core lives in `pipeline.rs`; this adapter owns the
+// R-matrix handoff (the same t(counts) layout contract as ms_extract_rust)
+// and the scalar domain guards.
+// ---------------------------------------------------------------------------
+
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn ms_pipeline_rust(
+    counts: Robj,
+    k: i32,
+    replicates: i32,
+    max_iter: i32,
+    seed: i32,
+    k_folds: i32,
+    n_seeds: i32,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Argument guards (contract 4): explicit, error-not-panic. The
+        // pipeline core re-checks the rank bounds against the matrix.
+        if k < 1 {
+            return Err(MsError::new("argument", format!("k must be >= 1, got {k}")).with_i(k as i64));
+        }
+        if replicates < 2 {
+            return Err(MsError::new(
+                "argument",
+                format!("replicates must be >= 2 (the consensus silhouette needs two members per cluster), got {replicates}"),
+            )
+            .with_i(replicates as i64));
+        }
+        if max_iter < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 1, got {max_iter}"),
+            ));
+        }
+        if seed < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("seed must be >= 0, got {seed}"),
+            ));
+        }
+        if k_folds < 2 {
+            return Err(MsError::new(
+                "argument",
+                format!("k_folds must be >= 2, got {k_folds}"),
+            ));
+        }
+        if n_seeds < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_seeds must be >= 1, got {n_seeds}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        // Layout contract (extract.rs module docs, the transposition trap):
+        // R passes t(counts) — an n x m double matrix whose column-major
+        // flat buffer IS the row-major m×n V; zero marshalling here.
+        let (n, m, v) = with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        // Contract 7: the parallel ensemble phase polls chunk boundaries on
+        // the main thread; the sequential consensus/refit/CV phases are
+        // bounded (declared decision, pipeline.rs module docs). Workers see
+        // only the AtomicBool.
+        let cancelled = AtomicBool::new(false);
+        let mut boundary = || unsafe { R_CheckUserInterrupt() };
+        let fit = pipeline::run_pipeline(
+            &v,
+            m,
+            n,
+            k as usize,
+            replicates as usize,
+            max_iter as usize,
+            seed as u64,
+            k_folds as usize,
+            n_seeds as usize,
+            n_threads as usize,
+            &cancelled,
+            &mut boundary,
+        )?;
+
+        // Wire shape (contract 2, column-major matrices). Optional CV
+        // entries cross as NaN (R maps NaN -> NA_real_); a 0 argmin_rank
+        // means "no finite rank total".
+        let kk = k as usize;
+        let consensus_w = extendr_api::wrapper::RMatrix::new_matrix(m, kk, |r, c| {
+            fit.consensus_w[r * kk + c]
+        });
+        let nnls_exposures =
+            extendr_api::wrapper::RMatrix::new_matrix(kk, n, |r, c| fit.nnls_h[r * n + c]);
+        let nanify = |xs: &[Option<f64>]| {
+            xs.iter()
+                .map(|x| x.unwrap_or(f64::NAN))
+                .collect::<Vec<f64>>()
+        };
+        let pairs = vec![
+            ("consensus_W", Robj::from(consensus_w)),
+            (
+                "stability_per_cluster",
+                Robj::from(fit.cluster_stability.clone()),
+            ),
+            ("avg_stability", Robj::from(fit.avg_stability)),
+            ("nnls_exposures", Robj::from(nnls_exposures)),
+            ("cv_per_rank", Robj::from(nanify(&fit.cv_per_rank))),
+            (
+                "cv_per_rank_train",
+                Robj::from(nanify(&fit.cv_per_rank_train)),
+            ),
+            ("fold_test_deviance", Robj::from(nanify(&fit.fold_test))),
+            (
+                "argmin_rank",
+                Robj::from(fit.argmin_rank.map_or(0i32, |r| r.min(i32::MAX as usize) as i32)),
+            ),
+            ("consensus_best_restart", Robj::from(fit.best_restart.min(i32::MAX as usize) as i32)),
+            ("consensus_n_rounds", Robj::from(fit.n_rounds.min(i32::MAX as usize) as i32)),
+            ("consensus_converged", Robj::from(fit.converged)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -680,6 +810,7 @@ extendr_module! {
     fn msffi_build_info;
     fn ms_tally_rust;
     fn ms_extract_rust;
+    fn ms_pipeline_rust;
     fn ms_stratify_rust;
 }
 

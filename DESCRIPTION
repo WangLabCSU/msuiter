@@ -32,6 +32,7 @@ Collate:
     'engines-registry.R'
     'engines-nmf.R'
     'extract.R'
+    'kselect-select.R'
     'classes-benchmark.R'
     'msuiter-package.R'
     'extendr-wrappers.R'
