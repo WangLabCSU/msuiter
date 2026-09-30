@@ -192,3 +192,12 @@ R 参考实现 `source/R/source.R:148-158`；C 默认路径 `source/src/source.c
 2. **ensemble 默认仅多初始化**（resample/bootstrap 留可选开关）；**CV 默认 folds=10、seeds=10**（上游 30 seeds 为显式 divergence，写入文档）。
 3. **填补语义措辞**照 §2 精确化（行中位数初填 + ECM 内 WH 条件均值）；**Wilcoxon 仅诊断**维持 deliberate divergence；**零向量余弦统一取 0**。
 4. **实现切分照 §4 批次 A/B/C**：批次 A = consensus.rs 与 CV 内核并行起步；golden 23 条直译 TDD；线程不变性继承 U-M1s-05 已证模式。
+
+---
+
+## 批次 A/C 实现记录（2026-10-01）
+
+- **批次 A**（U-M2-01/02）：consensus.rs（迭代 Hungarian 重指派 + split/merge 分类器 + 自实现 min-cost augmenting path Hungarian，1440 例对抗库对拍 max err 5.6e-17）+ cv.rs（fold 按序取模 + 两阶段填补 + Poisson deviance + (rank×fold×seed) 网格）。审核 REVISE→修复：4 处 golden 全部"数学上被迫"（非驯化）；**green pass 的"监控量勘误"声称被证伪**（SUITOR 监控的就是训练格 deviance，备忘 §2.2 原本正确）——勘误的勘误已记录。
+- **批次 B**（U-M2-03）：pipeline.rs 五相位 + FFI ms_pipeline_rust + ms_select_k 三层仲裁 + D16 默认路径生效。审核 REVISE→修复：fold 证据矩阵转置（P1-1，byrow）、基线不自含过程违规（P1-2）、replicates=8 divergence 补记录等。
+- **批次 C**（U-M2-04/05/06/07）：ms_ard_rust / ms_sparse_rust（volume/l1 变体开关）/ ms_match_solutions_rust（M4 数据面）三 FFI + MsArd/MsSparse 工厂注册 + Islam 2022 协议复现固化（相关参考系 matched/split/merge/novel 四类全验证 + greedy 交叉核对）+ M2 端到端 cosine>0.95。
+- 电池：Rust 388 / testthat 2004 / 双工具链 / clippy -D warnings / deny / docs-sync / check 1NOTE。**M2 里程碑 7/7 关闭**（待批次 A/C 审核终轮与 M2 验收门 sigminer/MP 玩具对拍确认后正式勾选 ROADMAP）。
