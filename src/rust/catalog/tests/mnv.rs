@@ -10,8 +10,11 @@
 //!   * 2..=5 bp equal-length block substitution -> `Mnv`; >5 bp -> `LongMnv`;
 //!   * unequal-length alleles with both sides >1 base -> `ComplexIndel`
 //!     (SPMG complex-indel class);
-//!   * one-side-single-base indels -> `Skipped(simple_indel)` (ID83 layer,
-//!     U-M1c, explicitly out of scope here — nothing is dropped silently);
+//!   * one-side-single-base indels -> `Indel` events on the `Id83`
+//!     destination (U-M1c-01; classify with
+//!     `indel83::assign_indel83`), never merged with neighbours;
+//!   * an indel identical to its raw predecessor -> `Skipped(duplicate_record)`
+//!     (SPMG :1376-1386; SNV-stream dedup awaits M1s-13 P0-2);
 //!   * a non-ACGT byte or a zero-length allele -> `Skipped(invalid_base /
 //!     empty_allele)`; identical alleles -> `Skipped(ref_equals_alt)`;
 //!   * split-VCF reconnection (pairwise only): two consecutive valid
@@ -37,7 +40,7 @@ fn rec<'a>(pos: u64, ref_: &'a [u8], alt: &'a [u8]) -> VarRecord<'a> {
 }
 
 /// Class code of every routed event, for whole-sequence assertions.
-fn event_codes(events: &[RoutedEvent]) -> Vec<&'static str> {
+fn event_codes(events: &[RoutedEvent<'_>]) -> Vec<&'static str> {
     events
         .iter()
         .map(|e| match e {
@@ -46,6 +49,7 @@ fn event_codes(events: &[RoutedEvent]) -> Vec<&'static str> {
             RoutedEvent::Mnv { .. } => "mnv",
             RoutedEvent::LongMnv { .. } => "long_mnv",
             RoutedEvent::ComplexIndel { .. } => "complex_indel",
+            RoutedEvent::Indel { .. } => "indel",
         })
         .collect()
 }
@@ -60,12 +64,13 @@ fn ledger_codes(ledger: &[LedgerEntry]) -> Vec<String> {
             LedgerEntry::Mnv => "mnv".to_string(),
             LedgerEntry::LongMnv => "long_mnv".to_string(),
             LedgerEntry::ComplexIndel => "complex_indel".to_string(),
+            LedgerEntry::Id83 => "id83".to_string(),
             LedgerEntry::Skipped(r) => format!("skipped:{}", r.code()),
         })
         .collect()
 }
 
-fn ledger_of<'a>(records: &[VarRecord<'a>]) -> Vec<LedgerEntry> {
+fn ledger_of(records: &[VarRecord<'_>]) -> Vec<LedgerEntry> {
     route_variants(records).ledger.entries().to_vec()
 }
 
@@ -237,33 +242,35 @@ fn golden_non_reconnectable_gap() {
 
 /// Not reconnectable (contiguous but unequal-length concatenation would
 /// manufacture an indel): explicit independent classification; the simple
-/// deletion is ledgered as pending the ID layer.
+/// deletion is an Indel event on the Id83 destination.
 #[test]
 fn golden_non_reconnectable_unequal_concat() {
     let records = [rec(100, b"ACG", b"TGC"), rec(103, b"TA", b"G")];
     let out = route_variants(&records);
-    assert_eq!(event_codes(&out.events), ["mnv"]);
+    assert_eq!(event_codes(&out.events), ["mnv", "indel"]);
     assert_eq!(
         out.events[0],
         RoutedEvent::Mnv { record: 0, merged: 1, pos: 100, len: 3 }
     );
     assert_eq!(
-        ledger_codes(out.ledger.entries()),
-        ["mnv", "skipped:simple_indel"]
+        out.events[1],
+        RoutedEvent::Indel { record: 1, pos: 103, ref_: b"TA", alt: b"G" }
     );
+    assert_eq!(ledger_codes(out.ledger.entries()), ["mnv", "id83"]);
 }
 
-/// A SNV next to a 1 bp insertion: no reconnection (unequal concatenation),
-/// explicit skip of the insertion.
+/// A SNV next to a 1 bp insertion: no reconnection (unequal concatenation);
+/// the insertion routes to the Id83 destination.
 #[test]
 fn golden_snv_plus_insertion_not_reconnected() {
     let records = [rec(110, b"A", b"C"), rec(111, b"A", b"AG")];
     let out = route_variants(&records);
-    assert_eq!(event_codes(&out.events), ["sbs"]);
+    assert_eq!(event_codes(&out.events), ["sbs", "indel"]);
     assert_eq!(
-        ledger_codes(out.ledger.entries()),
-        ["sbs", "skipped:simple_indel"]
+        out.events[1],
+        RoutedEvent::Indel { record: 1, pos: 111, ref_: b"A", alt: b"AG" }
     );
+    assert_eq!(ledger_codes(out.ledger.entries()), ["sbs", "id83"]);
 }
 
 /// Overlapping records are never reconnected: independent classification.
@@ -349,12 +356,12 @@ fn golden_mixed_pipeline() {
         rec(31, b"C", b"T"),        // SNV but unequal concat -> no merge
         rec(40, b"N", b"A"),        // invalid base
         rec(50, b"TT", b"TT"),      // no change
-        rec(60, b"AT", b"A"),       // simple deletion (ID layer, U-M1c)
+        rec(60, b"AT", b"A"),       // simple deletion -> Id83 event
     ];
     let out = route_variants(&records);
     assert_eq!(
         event_codes(&out.events),
-        ["dbs", "sbs", "mnv", "long_mnv", "complex_indel", "sbs"]
+        ["dbs", "sbs", "mnv", "long_mnv", "complex_indel", "sbs", "indel"]
     );
     assert_eq!(
         out.events[0],
@@ -383,6 +390,10 @@ fn golden_mixed_pipeline() {
         RoutedEvent::Sbs { record: 6, pos: 31, ref_: b'C', alt: b'T' }
     );
     assert_eq!(
+        out.events[6],
+        RoutedEvent::Indel { record: 9, pos: 60, ref_: b"AT", alt: b"A" }
+    );
+    assert_eq!(
         ledger_codes(out.ledger.entries()),
         [
             "dbs",
@@ -394,7 +405,7 @@ fn golden_mixed_pipeline() {
             "sbs",
             "skipped:invalid_base",
             "skipped:ref_equals_alt",
-            "skipped:simple_indel",
+            "id83",
         ]
     );
 }
@@ -442,17 +453,19 @@ fn ledger_render_golden() {
          7\tsbs\n\
          8\tskipped:invalid_base\n\
          9\tskipped:ref_equals_alt\n\
-         10\tskipped:simple_indel\n"
+         10\tid83\n"
     );
 }
 
-/// Reason codes are stable machine-readable strings.
+/// Reason codes are stable machine-readable strings. `SimpleIndel` is
+/// retired (never emitted since U-M1c-01) but its code stays reserved.
 #[test]
 fn skip_reason_codes() {
     assert_eq!(SkipReason::InvalidBase.code(), "invalid_base");
     assert_eq!(SkipReason::EmptyAllele.code(), "empty_allele");
     assert_eq!(SkipReason::RefEqualsAlt.code(), "ref_equals_alt");
     assert_eq!(SkipReason::SimpleIndel.code(), "simple_indel");
+    assert_eq!(SkipReason::DuplicateRecord.code(), "duplicate_record");
 }
 
 /// A skipped record does not disturb greedy pairing of its neighbours:

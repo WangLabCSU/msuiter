@@ -75,7 +75,7 @@ test_that("ms_tally_rust replays the hand-derived golden batch", {
 
   # Ledger, byte-exact; every record lands in exactly one destination.
   expect_identical(res$ledger, .tally_golden_ledger())
-  expect_identical(res$n_skipped, 9L)
+  expect_identical(res$n_skipped, 11L)
   expect_identical(res$n_variants, 22L)
 })
 
@@ -126,7 +126,7 @@ test_that("disabled tables come back as table x 0 matrices, ledger unchanged", {
   expect_identical(rownames(res$sbs96), .tally_channel_tables()$SBS96$labels)
   # Switch-independent ledger (context checks always run).
   expect_identical(res$ledger, .tally_golden_ledger())
-  expect_identical(res$n_skipped, 9L)
+  expect_identical(res$n_skipped, 11L)
 })
 
 test_that("empty input yields empty matrices and an empty ledger", {

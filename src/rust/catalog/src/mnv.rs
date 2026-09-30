@@ -19,18 +19,20 @@
 //! | 2..=5 bp equal-length block substitution              | `Mnv`              |
 //! | >5 bp equal-length block substitution                 | `LongMnv`          |
 //! | both alleles >1 base, unequal lengths                 | `ComplexIndel`     |
-//! | one-side-single-base indel                            | `Skipped(simple_indel)` |
-//! | two adjacent one-side-single-base indels               | `Skipped(simple_indel)` each (no event; ARCH §7.2's "double indel → 各自去向" row is the ID83 destination, lands in U-M1c — this table records the skip until then) |
+//! | one-side-single-base indel                            | `Indel` event -> `Id83` (U-M1c-01; classify with `crate::indel83::assign_indel83` after the assembly layer's anchor-vs-genome check) |
+//! | two adjacent one-side-single-base indels              | `Indel` events each — indels are NEVER merged (SPMG pairing only touches SNV streams, memo §4) |
+//! | identical adjacent indel quadruple (SPMG `line == prev_line`, :1376-1386) | second record `Skipped(duplicate_record)` (SNV-stream dedup awaits the M1s-13 P0-2 adjudication) |
 //! | non-ACGT byte / zero-length allele                    | `Skipped(invalid_base / empty_allele)` |
 //! | `ref == alt` (no change)                              | `Skipped(ref_equals_alt)` |
 //!
 //! SPMG detects DBS events as SNVs at distance exactly 1 (`dinuc_sub ==
 //! 1`) and separates further-clustered mutations from the substitution
-//! matrices; simple indels belong to the ID83 layer (U-M1c, out of scope
-//! here) and are ledgered so nothing disappears. The DBS destination is a
-//! CANDIDATE: REF-vs-reference-genome validation is the assembly layer's
-//! job; the event carries the concatenated dinucleotides for
-//! `crate::dbs::assign_dbs78`.
+//! matrices. The DBS destination is a CANDIDATE: REF-vs-reference-genome
+//! validation is the assembly layer's job; the event carries the
+//! concatenated dinucleotides for `crate::dbs::assign_dbs78`. The Indel
+//! event carries `pos/ref/alt` for `crate::indel83::assign_indel83`; its
+//! per-event outcomes (channel / Ins:M-no-channel / anchor mismatch /
+//! bounds skip) are the tally wiring unit's ledgering job.
 //!
 //! # Split-VCF reconnection (pairwise, "adjacent + concatenation")
 //!
@@ -44,10 +46,13 @@
 //! (SPMG priority over the 2 bp MNV reading). An unequal-length
 //! concatenation (e.g. a SNV next to a 1 bp insertion) is NEVER merged —
 //! that would manufacture an indel event SPMG does not create; the records
-//! are classified independently. Gapped or overlapping records likewise
-//! stand alone. Reconnection is pairwise: chains of >2 pieces are not
-//! extended (documented msuiter extension of SPMG's seqinfo MNV handling,
-//! kept minimal per ARCHITECTURE §7 entry 2). Pairing is greedy
+//! are classified independently. The same holds for ANY simple-indel
+//! participant, including the equal-length del+ins case (an insertion
+//! adjacent to a deletion): SPMG's pairing only touches SNV record streams
+//! (memo §4), so indels always stand alone. Gapped or overlapping records
+//! likewise stand alone. Reconnection is pairwise: chains of >2 pieces are
+//! not extended (documented msuiter extension of SPMG's seqinfo MNV
+//! handling, kept minimal per ARCHITECTURE §7 entry 2). Pairing is greedy
 //! left-to-right and non-overlapping (SPMG convention): the first record
 //! of a run pairs with its immediate successor, which is then consumed.
 //! An invalid record is never a reconnection partner; its neighbours are
@@ -89,8 +94,12 @@ pub enum LedgerEntry {
     Mnv,
     /// Part of a >5 bp block substitution (possibly reconnected).
     LongMnv,
-    /// Complex indel: both alleles >1 base, unequal lengths.
+    /// Complex indel: both alleles >1 base, unequal lengths (SPMG complex
+    /// class; no ID83 channel — counted in provenance only).
     ComplexIndel,
+    /// Simple indel routed to the ID83 layer (U-M1c-01): classify with
+    /// `crate::indel83::assign_indel83`.
+    Id83,
     /// Explicit skip with a machine-readable reason.
     Skipped(SkipReason),
 }
@@ -105,6 +114,7 @@ impl LedgerEntry {
             LedgerEntry::Mnv => Destination::Mnv,
             LedgerEntry::LongMnv => Destination::LongMnv,
             LedgerEntry::ComplexIndel => Destination::ComplexIndel,
+            LedgerEntry::Id83 => Destination::Id83,
             LedgerEntry::Skipped(_) => Destination::Skipped,
         }
     }
@@ -124,8 +134,27 @@ pub enum Destination {
     LongMnv,
     /// Complex indel (both alleles >1 base, unequal lengths).
     ComplexIndel,
+    /// Simple indel bound for the ID83 channel layer.
+    Id83,
     /// Explicit skip (see the qualifying reason in the ledger entry).
     Skipped,
+}
+
+impl Destination {
+    /// Stable snake_case bucket code (ledger rendering vocabulary).
+    #[inline]
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Destination::Sbs => "sbs",
+            Destination::Dbs => "dbs",
+            Destination::Mnv => "mnv",
+            Destination::LongMnv => "long_mnv",
+            Destination::ComplexIndel => "complex_indel",
+            Destination::Id83 => "id83",
+            Destination::Skipped => "skipped",
+        }
+    }
 }
 
 /// Machine-readable reason codes for skipped records (stable strings; the
@@ -139,9 +168,16 @@ pub enum SkipReason {
     EmptyAllele,
     /// `ref == alt`: no substitution.
     RefEqualsAlt,
-    /// One-side-single-base indel: ID83 territory (U-M1c), explicitly out
-    /// of scope for this router; ledgered so the record is not lost.
+    /// RETIRED at U-M1c-01: simple indels route to
+    /// [`LedgerEntry::Id83`] instead. The variant stays (never emitted by
+    /// this router) so downstream vocabularies that predate the ID83
+    /// layer keep compiling until the tally wiring unit retires them.
     SimpleIndel,
+    /// An identical adjacent record (same pos/ref/alt; SPMG
+    /// `line == prev_line`, :1376-1386) — the repeat occurrence is
+    /// dropped. Implemented here for the indel path; the SNV-stream
+    /// policy is the pending M1s-13 P0-2 adjudication.
+    DuplicateRecord,
 }
 
 impl SkipReason {
@@ -153,6 +189,7 @@ impl SkipReason {
             SkipReason::EmptyAllele => "empty_allele",
             SkipReason::RefEqualsAlt => "ref_equals_alt",
             SkipReason::SimpleIndel => "simple_indel",
+            SkipReason::DuplicateRecord => "duplicate_record",
         }
     }
 }
@@ -162,7 +199,7 @@ impl SkipReason {
 /// `merged == 2` (the second record index is then `record + 1`); DBS
 /// events name both records explicitly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RoutedEvent {
+pub enum RoutedEvent<'a> {
     /// Single-base substitution at `records[record]`.
     Sbs {
         record: usize,
@@ -196,21 +233,30 @@ pub enum RoutedEvent {
         len: usize,
     },
     /// Complex indel: both alleles >1 base, unequal lengths (SPMG complex
-    /// class; exact ID routing lands with U-M1c).
+    /// class; provenance-only destination, no ID83 channel).
     ComplexIndel {
         record: usize,
         pos: u64,
         ref_len: usize,
         alt_len: usize,
     },
+    /// Simple (one-side-single-base) indel: the fields
+    /// `crate::indel83::assign_indel83` consumes, after the assembly
+    /// layer's anchor-vs-genome check.
+    Indel {
+        record: usize,
+        pos: u64,
+        ref_: &'a [u8],
+        alt: &'a [u8],
+    },
 }
 
 /// Routing result: the events and the per-record skip ledger (one entry
 /// per input record, same order).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Routing {
+pub struct Routing<'a> {
     /// Routed events in input order.
-    pub events: Vec<RoutedEvent>,
+    pub events: Vec<RoutedEvent<'a>>,
     /// Per-record ledger (provenance carrier).
     pub ledger: SkipLedger,
 }
@@ -244,6 +290,7 @@ impl SkipLedger {
                 LedgerEntry::Mnv => "mnv",
                 LedgerEntry::LongMnv => "long_mnv",
                 LedgerEntry::ComplexIndel => "complex_indel",
+                LedgerEntry::Id83 => "id83",
                 LedgerEntry::Skipped(reason) => {
                     out.push_str(&format!("{}\tskipped:{}\n", k + 1, reason.code()));
                     continue;
@@ -272,8 +319,7 @@ fn validate(rec: &VarRecord<'_>) -> Option<SkipReason> {
 }
 
 /// Classify one standalone (not reconnected, not paired) record.
-/// `None` marks a simple indel: an explicit ledger skip with no event.
-fn classify_single(rec: &VarRecord<'_>, record: usize) -> (Option<RoutedEvent>, LedgerEntry) {
+fn classify_single<'a>(rec: &VarRecord<'a>, record: usize) -> (Option<RoutedEvent<'a>>, LedgerEntry) {
     let (r, a) = (rec.ref_.len(), rec.alt.len());
     if r == 1 && a == 1 {
         (
@@ -304,9 +350,31 @@ fn classify_single(rec: &VarRecord<'_>, record: usize) -> (Option<RoutedEvent>, 
             LedgerEntry::ComplexIndel,
         )
     } else {
-        // One side is a single anchor base: simple indel (ID layer, U-M1c).
-        (None, LedgerEntry::Skipped(SkipReason::SimpleIndel))
+        // One side is a single anchor base: simple indel -> ID83 layer
+        // (U-M1c-01). Indels are never merged or paired; each lands as
+        // its own Indel event.
+        (
+            Some(RoutedEvent::Indel { record, pos: rec.pos, ref_: rec.ref_, alt: rec.alt }),
+            LedgerEntry::Id83,
+        )
     }
+}
+
+/// SPMG's identical-adjacent-record dedup (:1376-1386): full
+/// quadruple equality (same chromosome is implicit — routing is
+/// per-chromosome). Applied on the indel path; the SNV-stream policy is
+/// the pending M1s-13 P0-2 adjudication.
+fn duplicate_of_previous(prev: Option<&VarRecord<'_>>, rec: &VarRecord<'_>) -> bool {
+    match prev {
+        Some(p) => p.pos == rec.pos && p.ref_ == rec.ref_ && p.alt == rec.alt,
+        None => false,
+    }
+}
+
+/// Is this record a simple (one-side-single-base) indel?
+fn is_simple_indel(rec: &VarRecord<'_>) -> bool {
+    let (r, a) = (rec.ref_.len(), rec.alt.len());
+    (r == 1) != (a == 1)
 }
 
 /// Route a coordinate-sorted batch of variant records.
@@ -314,7 +382,7 @@ fn classify_single(rec: &VarRecord<'_>, record: usize) -> (Option<RoutedEvent>, 
 /// Greedy left-to-right single pass (SPMG convention); see the module
 /// docs for the routing table, the reconnection criteria and the explicit
 /// failure modes. Never fails: per-record failures are ledger entries.
-pub fn route_variants(records: &[VarRecord<'_>]) -> Routing {
+pub fn route_variants<'a>(records: &[VarRecord<'a>]) -> Routing<'a> {
     let mut events = Vec::new();
     let mut entries = Vec::with_capacity(records.len());
     let mut i = 0;
@@ -322,6 +390,18 @@ pub fn route_variants(records: &[VarRecord<'_>]) -> Routing {
         let rec = &records[i];
         if let Some(reason) = validate(rec) {
             entries.push(LedgerEntry::Skipped(reason));
+            i += 1;
+            continue;
+        }
+        // Indel-path dedup (SPMG :1376-1386): a simple indel identical to
+        // the raw previous record is dropped with an explicit reason. The
+        // comparison uses the previous RECORD whether or not it was
+        // routed/skipped (SPMG compares raw consecutive lines).
+        if is_simple_indel(rec)
+            && i > 0
+            && duplicate_of_previous(Some(&records[i - 1]), rec)
+        {
+            entries.push(LedgerEntry::Skipped(SkipReason::DuplicateRecord));
             i += 1;
             continue;
         }
@@ -354,11 +434,17 @@ pub fn route_variants(records: &[VarRecord<'_>]) -> Routing {
                 entries.push(LedgerEntry::Dbs);
                 entries.push(LedgerEntry::Dbs);
                 consumed_two = true;
-            } else if next.pos == rec.pos + rec.ref_.len() as u64
+            } else if !is_simple_indel(rec)
+                && !is_simple_indel(next)
+                && next.pos == rec.pos + rec.ref_.len() as u64
                 && rec.ref_.len() + next.ref_.len() == rec.alt.len() + next.alt.len()
             {
                 // Split-VCF reconnection: contiguous + equal-length
-                // concatenation -> one block substitution.
+                // concatenation -> one block substitution. Indels are
+                // NEVER merged (SPMG pairs SNV records only, memo §4):
+                // an equal-length del+ins concatenation would manufacture
+                // a block substitution SPMG does not create, so any
+                // simple-indel participant stands alone.
                 let len = rec.ref_.len() + next.ref_.len();
                 let event = if len <= 5 {
                     RoutedEvent::Mnv { record: i, merged: 2, pos: rec.pos, len }

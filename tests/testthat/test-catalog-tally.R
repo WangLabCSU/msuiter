@@ -105,7 +105,7 @@ test_that("SBS384 without a strand column defaults to N (documented)", {
   )
   expect_identical(cat1@counts, ref$sbs384)
   expect_identical(cat1@provenance$ledger, ref$ledger)
-  expect_identical(cat1@provenance$n_skipped, 9L)
+  expect_identical(cat1@provenance$n_skipped, 11L)
   expect_identical(sum(cat1@counts), 5L)
 })
 
@@ -215,14 +215,14 @@ test_that("provenance carries tally context and the variants' somaticness fields
   expect_identical(cat1@provenance$matched_normal, "NORMAL1") # passthrough
   expect_identical(cat1@provenance$vaf_floor, 0.05) # passthrough
   expect_identical(cat1@provenance$n_variants, 22L)
-  expect_identical(cat1@provenance$n_skipped, 9L)
+  expect_identical(cat1@provenance$n_skipped, 11L)
 
   # Ledger is the byte-exact per-record TSV (one line per input record,
   # switch-independent); its `skipped:` destinations account for n_skipped.
   expect_identical(cat1@provenance$ledger, .tally_golden_ledger())
   ledger_lines <- strsplit(cat1@provenance$ledger, "\n", fixed = TRUE)[[1L]]
   expect_identical(length(ledger_lines), cat1@provenance$n_variants)
-  expect_identical(sum(grepl("\tskipped:", ledger_lines, fixed = TRUE)), 9L)
+  expect_identical(sum(grepl("\tskipped:", ledger_lines, fixed = TRUE)), 11L)
 })
 
 test_that("two tallies of the same input agree on the derived channel hash", {

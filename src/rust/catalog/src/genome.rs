@@ -35,7 +35,9 @@
 //! same-chromosome sweep would only save index lookups (a linear scan over
 //! ~dozens of names) and per-call branch setup — measurable only once the
 //! tally wiring (U-M1s-09+) profiles real variant densities. The single
-//! `context` call is the contract the channel layer codes against.
+//! `context` call is the contract the SBS/DBS channel layer codes against;
+//! the ID83 layer (U-M1c-01) uses the general `range` window primitive,
+//! whose unbounded length serves the repeat walker (memo §3.8).
 
 use std::io::Cursor;
 
@@ -99,6 +101,13 @@ impl<'a> TwoBitGenome<'a> {
     /// `[pos0 - flank5, pos0 + flank3]` (both ends inclusive, so the
     /// substitution site sits at index `flank5`) — uppercase `ACGT` or
     /// `N`, soft-mask disabled (module docs).
+    ///
+    /// The sequence read itself is delegated to [`TwoBitGenome::range`]
+    /// (single-sourced window I/O); this method keeps its own flank
+    /// validation because its error payloads report the CENTER position
+    /// (`i`), which a bare `(start, len)` window cannot know. Behaviour —
+    /// including the 1-based `i`/`j` conventions pinned by the U-M1s-08
+    /// tests — is unchanged by the delegation.
     ///
     /// # Errors
     ///
@@ -164,14 +173,72 @@ impl<'a> TwoBitGenome<'a> {
                 ),
             ));
         }
+        // All checks passed; the window is fully interior, so the ranged
+        // read is exactly `flank5 + flank3 + 1` bases (its own validation
+        // re-run is redundant but harmless).
+        self.range(chrom, start, flank5 + flank3 + 1)
+    }
+
+    /// Arbitrary-length window `[start0, start0 + len)` of one chromosome
+    /// (0-based, `len >= 1`) — uppercase `ACGT` or `N`, soft-mask disabled
+    /// (module docs). No upper bound on `len` short of the chromosome
+    /// itself: the ID83 repeat walker requests unbounded windows (memo
+    /// §3.8), so unlike `context` this is the general primitive.
+    ///
+    /// # Errors
+    ///
+    /// * topic `"argument"`: `chrom` not in the file, or `len == 0`;
+    /// * topic `"bounds"` with 1-based `i`/`j` (R convention): `i` is the
+    ///   1-based requested start (`start0 + 1`); `j` is `chrom_size` when
+    ///   the start itself is out of range, otherwise the requested 1-based
+    ///   last base `start0 + len` when it exceeds the chromosome length.
+    ///   Windows are never clamped (same rationale as `context`).
+    pub fn range(&mut self, chrom: &str, start0: usize, len: usize) -> Result<Vec<u8>, MsError> {
+        if len == 0 {
+            return Err(MsError::new(
+                "argument",
+                "window length must be at least 1, got 0",
+            )
+            .with_i(0));
+        }
+        let size = self.chrom_size(chrom)?;
+        let start1 = coord1(start0).saturating_add(1);
+        if start0 >= size {
+            return Err(bounds_error(
+                start1,
+                coord1(size),
+                format!("position {start1} outside chromosome \"{chrom}\" of length {size}"),
+            ));
+        }
+        // `start0 < size` here; `start0 + len` may still overflow.
+        let Some(end0) = start0.checked_add(len) else {
+            return Err(bounds_error(
+                start1,
+                i64::MAX,
+                format!(
+                    "window end overflows for chromosome \"{chrom}\" (start {start1}, length {len})"
+                ),
+            ));
+        };
+        if end0 > size {
+            // Requested 1-based last base = `end0` (0-based exclusive end).
+            let last1 = coord1(end0);
+            return Err(bounds_error(
+                start1,
+                last1,
+                format!(
+                    "window ends at {last1}, past chromosome \"{chrom}\" of length {size} (start {start1}, length {len})"
+                ),
+            ));
+        }
         // `twobit::read_sequence` clamps out-of-range bounds silently; the
         // checks above guarantee the window is fully interior, so the read
-        // is exactly `flank5 + flank3 + 1` bases.
+        // is exactly `len` bases.
         let seq = self
             .file
-            .read_sequence(chrom, start..end0 + 1)
+            .read_sequence(chrom, start0..end0)
             .map_err(map_twobit_error)?;
-        debug_assert_eq!(seq.len(), flank5 + flank3 + 1);
+        debug_assert_eq!(seq.len(), len);
         Ok(seq.into_bytes())
     }
 }

@@ -12,6 +12,7 @@ pub mod sbs;
 pub mod genome;
 pub mod dbs;
 pub mod mnv;
+pub mod indel83;
 
 /// Role marker used by the FFI shell's link test to assert the workspace
 /// dependency direction (ffi → catalog → engine) holds and both crates

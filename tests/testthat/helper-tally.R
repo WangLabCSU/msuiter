@@ -60,12 +60,13 @@
 
 # The hand-derived golden batch (0-based positions of the Rust golden + 1):
 # plain SNVs in two samples, adjacent DBS pairs on both chromosomes (one
-# with reversed input order), strand T/U/B/N records, a split 3 bp block
-# substitution reconnected from two pieces, a 6 bp long MNV, +/-2-window N
-# skips, an N-dinucleotide DBS candidate, a REF-vs-genome mismatch, head
-# and tail context-bounds skips, a simple indel, a complex indel and an
-# unknown chromosome. Sample columns: "S2" first appears at record 1, "S1"
-# at record 3 -> tally columns c("S2", "S1").
+# with reversed input order), strand T/U/B/N records, an adjacent
+# insertion+deletion pair that SPMG keeps independent (indels are never
+# merged into a block substitution; SPMG pairs SNV records only), a 6 bp
+# long MNV, +/-2-window N skips, an N-dinucleotide DBS candidate, a
+# REF-vs-genome mismatch, head and tail context-bounds skips, a simple
+# indel, a complex indel and an unknown chromosome. Sample columns: "S2"
+# first appears at record 1, "S1" at record 3 -> tally columns c("S2", "S1").
 .tally_golden_records <- function() {
   data.frame(
     chrom = c(
@@ -120,7 +121,8 @@
   lines <- paste0(
     c(
       "1\tdbs", "2\tdbs", "3\tsbs", "4\tsbs", "5\tdbs", "6\tdbs",
-      "7\tsbs", "8\tsbs", "9\tmnv", "10\tmnv", "11\tskipped:ref_mismatch",
+      "7\tsbs", "8\tsbs", "9\tskipped:simple_indel",
+      "10\tskipped:simple_indel", "11\tskipped:ref_mismatch",
       "12\tlong_mnv", "13\tskipped:n_context", "14\tskipped:n_context",
       "15\tskipped:simple_indel", "16\tcomplex_indel",
       "17\tskipped:context_bounds", "18\tskipped:context_bounds",

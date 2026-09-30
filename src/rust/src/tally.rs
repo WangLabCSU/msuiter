@@ -177,6 +177,9 @@ pub enum TallyOutcome {
     LongMnv,
     /// Complex indel: both alleles >1 base, unequal lengths (U-M1c).
     ComplexIndel,
+    /// Repeat of the identical adjacent record (SPMG :1376-1386; the
+    /// U-M1c-01 indel-path dedup).
+    SkippedDuplicateRecord,
     /// Chromosome name not found in the genome (exact-match policy).
     SkippedUnknownChrom,
     /// REF allele disagrees with the reference-genome bases.
@@ -203,6 +206,7 @@ impl TallyOutcome {
             TallyOutcome::Mnv => "mnv",
             TallyOutcome::LongMnv => "long_mnv",
             TallyOutcome::ComplexIndel => "complex_indel",
+            TallyOutcome::SkippedDuplicateRecord => "skipped:duplicate_record",
             TallyOutcome::SkippedUnknownChrom => "skipped:unknown_chrom",
             TallyOutcome::SkippedRefMismatch => "skipped:ref_mismatch",
             TallyOutcome::SkippedNContext => "skipped:n_context",
@@ -227,6 +231,7 @@ impl TallyOutcome {
                 | TallyOutcome::SkippedInvalidBase
                 | TallyOutcome::SkippedEmptyAllele
                 | TallyOutcome::SkippedRefEqualsAlt
+                | TallyOutcome::SkippedDuplicateRecord
                 | TallyOutcome::SkippedSimpleIndel
         )
     }
@@ -239,11 +244,20 @@ impl TallyOutcome {
             LedgerEntry::Mnv => TallyOutcome::Mnv,
             LedgerEntry::LongMnv => TallyOutcome::LongMnv,
             LedgerEntry::ComplexIndel => TallyOutcome::ComplexIndel,
+            // INTERIM (U-M1c-01): the router now emits Id83 for simple
+            // indels; counting them into an ID83 matrix is the tally
+            // wiring unit's job. Until that lands, keep the frozen
+            // "skipped:simple_indel" provenance so existing fixtures and
+            // the R suite stay byte-stable.
+            LedgerEntry::Id83 => TallyOutcome::SkippedSimpleIndel,
             LedgerEntry::Skipped(reason) => match reason {
                 SkipReason::InvalidBase => TallyOutcome::SkippedInvalidBase,
                 SkipReason::EmptyAllele => TallyOutcome::SkippedEmptyAllele,
                 SkipReason::RefEqualsAlt => TallyOutcome::SkippedRefEqualsAlt,
+                // Retired at U-M1c-01 (no longer emitted by the router);
+                // kept for vocabulary stability until the wiring unit.
                 SkipReason::SimpleIndel => TallyOutcome::SkippedSimpleIndel,
+                SkipReason::DuplicateRecord => TallyOutcome::SkippedDuplicateRecord,
             },
         }
     }
@@ -830,10 +844,13 @@ fn tally_event(
             Ok(())
         }
         // Mnv / LongMnv / ComplexIndel are ledger-only until the ID83 and
-        // complex layers land (U-M1c); the baseline outcome stands.
-        RoutedEvent::Mnv { .. } | RoutedEvent::LongMnv { .. } | RoutedEvent::ComplexIndel { .. } => {
-            Ok(())
-        }
+        // complex layers land (U-M1c); the baseline outcome stands. Same
+        // for RoutedEvent::Indel: its ID83 counting is the tally wiring
+        // unit (the router already carried the fields for it, U-M1c-01).
+        RoutedEvent::Mnv { .. }
+        | RoutedEvent::LongMnv { .. }
+        | RoutedEvent::ComplexIndel { .. }
+        | RoutedEvent::Indel { .. } => Ok(()),
     }
 }
 
@@ -1013,8 +1030,8 @@ mod tests {
             v(0, 21, "C", "T", 0, Strand::Transcribed),     // chr1 DBS half A (input after B)
             v(0, 24, "A", "T", 1, Strand::None),            // N strand: no SBS192
             v(0, 27, "C", "G", 1, Strand::Bidirectional),   // B strand: no SBS192
-            v(0, 32, "AC", "G", 1, Strand::None),           // reconnection piece 2
-            v(0, 31, "C", "TA", 1, Strand::None),           // piece 1 -> 3bp MNV
+            v(0, 32, "AC", "G", 1, Strand::None),           // simple deletion: independent indel event (SPMG never merges
+            v(0, 31, "C", "TA", 1, Strand::None),           // it with the adjacent insertion, memo §4)
             v(0, 43, "T", "G", 0, Strand::None),            // genome has A: ref mismatch
             v(0, 36, "ACACAC", "TTTTTT", 0, Strand::None),  // 6bp: long MNV
             v(0, 49, "C", "A", 0, Strand::None),            // +/-2 window hits N at 50
@@ -1041,8 +1058,8 @@ mod tests {
             "6\tdbs",
             "7\tsbs",
             "8\tsbs",
-            "9\tmnv",
-            "10\tmnv",
+            "9\tskipped:simple_indel",
+            "10\tskipped:simple_indel",
             "11\tskipped:ref_mismatch",
             "12\tlong_mnv",
             "13\tskipped:n_context",
@@ -1111,7 +1128,7 @@ mod tests {
 
         // Ledger: byte-exact, input order, mnv.rs rendering.
         assert_eq!(res.ledger_tsv, golden_ledger());
-        assert_eq!(res.n_skipped, 9);
+        assert_eq!(res.n_skipped, 11);
 
         // Contract 7 on the sequential path (single core, the pre-parallel
         // granularity): one poll per (chrom, sample) run — chr1 splits into
@@ -1141,7 +1158,7 @@ mod tests {
         assert!(res.sbs96.is_empty() && res.sbs192.is_empty() && res.sbs384.is_empty());
         assert!(res.sbs1536.is_empty() && res.dbs78.is_empty());
         assert_eq!(res.ledger_tsv, golden_ledger());
-        assert_eq!(res.n_skipped, 9);
+        assert_eq!(res.n_skipped, 11);
     }
 
     #[test]
