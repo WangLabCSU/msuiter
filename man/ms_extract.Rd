@@ -14,8 +14,8 @@ ms_extract(catalog, k, method = NULL, ...)
 exceed `min(nrow(counts), ncol(counts))` (a rank-k NMF needs at most
 one rank per channel and per sample).}
 
-\item{method}{An [MsEngine] spec ([ms_nmf()]), a single registered
-engine name (`"nmf"`), or `NULL` (default: `ms_nmf()`).}
+\item{method}{`NULL` (default) or an [MsEngine] spec ([ms_nmf()]) / a
+single registered engine name (`"nmf"`).}
 
 \item{...}{No passthrough arguments: anything arriving in `...` is
 rejected as an argument-spelling error (`msuiter_error_input`).}
@@ -24,34 +24,51 @@ rejected as an argument-spelling error (`msuiter_error_input`).}
 An [MsSignature] object with the extracted `signatures`,
   `exposures`, the source `catalog_summary` snapshot (A5: dimensions,
   channel-table hash, build -- never the catalog), the engine name, the
-  seed and empty stability/k_evidence slots (M2 evidence units).
+  seed and the method evidence: the pipeline path fills `stability` and
+  `k_evidence`; the single-method path leaves them empty (M1s shape).
 }
 \description{
 `ms_extract()` runs a signature extraction engine on an [MsCatalog] and
 returns an [MsSignature]. The method is an [MsEngine] spec built with a
 factory such as [ms_nmf()] (first-class citizen, A14); a single string
 (`"nmf"`) is sugar resolved against the engine registry via
-[match_ms_engine()], and `NULL` picks the package default
-(`ms_nmf()`). All violations raise `msuiter_error_*` conditions.
+[match_ms_engine()]. All violations raise `msuiter_error_*` conditions.
 }
 \details{
-M1s default (single method): one seeded KL-NMF fit (D6) on the Rust
-kernel, deterministic and thread-invariant. The `method = NULL` default
-is the single KL-NMF method for now; the consensus-CV extraction
-pipeline (ensemble + consensus + K arbitration) becomes the D16 default
-in M2 and will replace it documentedly -- hyper-parameters are frozen on
-the spec, so `ms_extract(cat, 3, ms_nmf(engine = "kl", seed = 42))`
-keeps reproducing today's result across versions.
+**Default (D16, U-M2-03): the consensus-CV extraction pipeline.**
+`method = NULL` runs the ARCHITECTURE section 5 default path at the
+requested rank: a multi-initialization KL-NMF ensemble (initialization
+seeds only, no bootstrap -- PI ruling 2026-09-30), the iterative
+Hungarian consensus of the stacked replicate signatures (SigProfiler
+v1.5 semantics, U-M2-01), a per-sample NNLS refit of the exposures
+against the consensus signatures, and the SUITOR cross-validation
+evidence on the rank grid `1..k` (U-M2-02). Package defaults are frozen:
+`replicates = 8`, `max_iter = 200`, `seed = 1`, `k_folds = 10`,
+`n_seeds = 10` (the seed count is a documented divergence from the
+SUITOR upstream 30; the effective values are recorded in the result's
+`stability` slot). The result fills the [MsSignature] `stability` and
+`k_evidence` slots; `engine` reads `"nmf-pipeline"`. `k_folds` is
+clamped to the channel count (a catalog with fewer than two channels
+cannot run the CV path -- pass an explicit single-method spec there).
+The `selected` column of `k_evidence` records which rank the K
+arbitration ([ms_select_k()]) would pick within the evaluated grid.
 
-Normalization declaration: the kernel returns raw factors W (channels x
-signatures) and H (signatures x samples). The assembly layer scales each
-W column to sum 1 (the catalog convention for signature profiles) and
-multiplies each H row by the same factor, so the `signatures %*%
-exposures` reconstruction of the counts is preserved up to
-floating-point rounding; exposures therefore carry the per-sample
-mutation mass attributed to each signature.
+**Single-method path (M1s).** An explicit method keeps the single
+seeded KL-NMF fit: `ms_extract(cat, 3, ms_nmf(engine = "kl", seed =
+42))` reproduces the M1s result across versions (hyper-parameters are
+frozen on the spec). This is the retained form of the pre-M2 default --
+a first-class spec, not a new variant string.
+
+Normalization declaration (both paths): the kernels return raw factors
+W (channels x signatures) and H (signatures x samples). The assembly
+layer scales each W column to sum 1 (the catalog convention for
+signature profiles) and multiplies each H row by the same factor, so
+the `signatures %*% exposures` reconstruction of the counts is
+preserved up to floating-point rounding; exposures therefore carry the
+per-sample mutation mass attributed to each signature.
 }
 \seealso{
-[ms_nmf()] for the engine factory, [ms_tally()] for the
-  upstream catalog, [ms_signature()] for the low-level constructor.
+[ms_nmf()] for the engine factory, [ms_select_k()] for the K
+  arbitration over a rank grid, [ms_tally()] for the upstream catalog,
+  [ms_signature()] for the low-level constructor.
 }

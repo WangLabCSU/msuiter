@@ -23,6 +23,8 @@ ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand, wa
 
 ms_extract_rust <- function(counts, k, max_iter, seed, engine, n_threads) .Call(wrap__ms_extract_rust, counts, k, max_iter, seed, engine, n_threads)
 
+ms_pipeline_rust <- function(counts, k, replicates, max_iter, seed, k_folds, n_seeds, n_threads) .Call(wrap__ms_pipeline_rust, counts, k, replicates, max_iter, seed, k_folds, n_seeds, n_threads)
+
 ms_stratify_rust <- function(counts, manual_cutoff, seed, n_threads) .Call(wrap__ms_stratify_rust, counts, manual_cutoff, seed, n_threads)
 
 # nolint end

@@ -28,6 +28,14 @@
 //!    `lik = sqrt(·/train.adj)` with `train.adj = NR·NC − |idxMat|`; a
 //!    relative change below `em.eps = 1e-5` (checked from the second round
 //!    on) or the `max.iter` cap ends the run. The reported held-out error is
+//! 4. **Declared divergences (D13, audited)**: (a) upstream runs a full NMF
+//!    burn-in fit (`call_nmf`, source.R:577-598, cap 2000) before the ECM
+//!    rounds; this port seeds directly into the ECM from the pinned random
+//!    init — trajectories differ from upstream, determinism within msuiter
+//!    does not. (b) upstream re-floors the working matrix every ECM round
+//!    (`replaceZeroVal`, source.R:302); this port floors only the initial
+//!    imputation — sub-floor reconstructions may persist across rounds.
+//!    The reported held-out error is
 //!    the masked Poisson deviance of [`poisson_deviance`] (upstream `loglike`
 //!    on `idxMat`, source.R:160-175) — the per-fold value that enters
 //!    `CV.te`. Log arguments are floored at `delta_denom = min(positive
@@ -308,9 +316,14 @@ pub fn aggregate(
         for &f in folds {
             let mut best: Option<&UnitError> = None;
             for u in units {
+                // Upstream getSummary requires BOTH train and test finite
+                // for a seed to be selectable (parity with tmp0 filtering);
+                // test finiteness is unreachable via cv_error but the
+                // kernel contract keeps the two-sided guard.
                 if u.rank == k
                     && u.fold == f
                     && u.train.is_finite()
+                    && u.test.is_finite()
                     && best.map_or(true, |b| u.train < b.train)
                 {
                     best = Some(u);
@@ -924,7 +937,9 @@ mod tests {
         // the pinned ECM semantics: round 1 does not reproduce the observed
         // cells (x̂00 = 91/19 ≈ 4.789 vs v00 = 4), so round 2's MU ratios are
         // not 1 and the iteration keeps moving — the upstream em.eps monitor
-        // (loglike_new + sqrt(train.adj) scaling) first passes at round 22.
+        // (loglike_new over TRAIN cells + sqrt(train.adj) scaling) first
+        // passes at round 17 (audited; an earlier comment said 22 — that
+        // count was taken over all cells, which is not the monitor).
         // The ECM fixed points are exactly the self-consistent matrices
         // A* = W·H whose held cells equal the reconstruction; here the
         // iteration converges on A* = [[4, 6.5, 9], [24/13, 3, 54/13]]
