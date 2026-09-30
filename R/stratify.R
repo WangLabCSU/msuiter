@@ -6,14 +6,18 @@
 # 100 x channels), classification = total > cutoff. See
 # docs/devlog/2026-09-30-GMM-stratify-memo.md (source line numbers there).
 #
-# This unit ships no FFI (the FFI shell is frozen for M1c), so the R side
-# carries a protocol twin of the Rust kernel
-# (src/rust/engine/src/stats.rs): identical EM, identical prune loop, and a
-# bit-exact pure-R replication of the canonical MsRng stream (PCG64 +
+# The FFI is wired (M2 pipeline plan slot, executed early): the MAIN path of
+# ms_stratify_hypermutants() goes through ms_stratify_rust
+# (src/rust/src/stratify.rs) -- the engine kernel
+# (src/rust/engine/src/stats.rs) with zero semantic change. This file keeps
+# the pure-R PROTOCOL TWIN as the reference implementation
+# (msuiter_stratify_twin(), internal): identical EM, identical prune loop,
+# and a bit-exact pure-R replication of the canonical MsRng stream (PCG64 +
 # SplitMix64, 16-bit limbs on doubles -- every intermediate value stays
 # below 2^53, so all limb arithmetic is exact). The KAT test pins this
-# replication to the frozen rng.rs goldens. The twin retires to a reference
-# implementation when the M2 pipeline wires the FFI.
+# replication to the frozen rng.rs goldens; the test battery pins twin and
+# FFI to identical integer outcomes (cutoff, group rosters) on the shared
+# fixtures.
 #
 # Policy divergence (ARCHITECTURE section 5, deliberate): upstream rescales
 # flagged columns down to the cutoff ("normalization"); msuiter EXCLUDES
@@ -549,6 +553,71 @@ msuiter_subset_mean_sd <- function(values, labels, label) {
   msuiter_population_mean_sd(values[keep])
 }
 
+# Reference implementation (kept for testing, internal/noRd): the full
+# stratification decision in EXACTLY the wire shape of ms_stratify_rust --
+# cutoff (integer-valued double), 0-based ascending hypermutant indices,
+# n_hypermutants, and the cluster_stats diagnostics list. The test battery
+# pins this twin and the FFI to identical() integer outcomes on the shared
+# fixtures; only retained_mean/retained_sd may drift across libm
+# implementations (the twin and the kernel share the operation order, so
+# they are bit-identical on any single platform).
+msuiter_stratify_twin <- function(totals, manual_cutoff = 0, seed = 1) {
+  fit <- msuiter_normalization_cutoff(totals, manual_cutoff, seed)
+  idx <- which(totals > fit$cutoff) - 1L
+  list(
+    cutoff = as.numeric(fit$cutoff),
+    hypermutant_idx = as.integer(idx),
+    n_hypermutants = as.numeric(length(idx)),
+    cluster_stats = list(
+      retained_mean = fit$retained_mean,
+      retained_sd = fit$retained_sd,
+      retained_n = as.numeric(fit$retained_n),
+      n_fits = as.numeric(fit$n_fits),
+      converged = isTRUE(fit$converged)
+    )
+  )
+}
+
+# ---------------------------------------------------------------------------
+# FFI wrapper over ms_stratify_rust (the kernel face). Same layering as the
+# other kernels (R/ffi-probes.R helpers): .ms_validate_matrix is the anyNA /
+# REALSXP first layer (contract 3), the whole-number checks are the
+# parameter discipline (msuiter_error_input), and kernel errors surface as
+# msuiter_error_rust conditions through .msffi_check(). Layout: the m x n
+# counts matrix crosses AS-IS (column-major, no transposition -- the kernel
+# sums columns; see docs/ffi-surface.md, ms_stratify_rust row).
+# ---------------------------------------------------------------------------
+
+#' Stratification decision over the FFI (M2 wiring of U-M1c-02).
+#'
+#' Internal wrapper over the Rust kernel: the frozen SigProfiler cutoff rule
+#' on the per-sample totals (column sums of `counts`) plus the
+#' strictly-greater classification. Returns the same wire shape the pure-R
+#' twin (`msuiter_stratify_twin`) reproduces.
+#'
+#' @param counts channels x samples double matrix (no NA/NaN; cells must be
+#'   non-negative integer-valued counts).
+#' @param manual_cutoff,seed Whole numbers (resolved and validated by the
+#'   caller `ms_stratify_hypermutants()`, re-checked here as the FFI first
+#'   layer).
+#' @param threads NULL or a single non-negative integer pool size
+#'   (`.ms_resolve_threads()`); the cutoff rule is a fixed-order sequential
+#'   computation, so the resolved value only feeds the FFI surface contract.
+#' @return Named list: `cutoff` (integer-valued double), `hypermutant_idx`
+#'   (0-based ascending integer indices), `n_hypermutants`, `cluster_stats`
+#'   (list: retained_mean, retained_sd, retained_n, n_fits, converged).
+#' @keywords internal
+#' @noRd
+.ms_stratify_rust <- function(counts, manual_cutoff, seed, threads = NULL) {
+  counts <- .ms_validate_matrix(counts, "counts")
+  msuiter_check_whole_number(manual_cutoff, "manual_cutoff", "input")
+  msuiter_check_whole_number(seed, "seed", "input")
+  n_threads <- .ms_resolve_threads(threads)
+  .msffi_check(ms_stratify_rust(
+    counts, as.numeric(manual_cutoff), as.numeric(seed), n_threads
+  ))
+}
+
 # ---------------------------------------------------------------------------
 # User API
 # ---------------------------------------------------------------------------
@@ -606,12 +675,18 @@ ms_stratify_hypermutants <- function(catalog, manual_cutoff = NULL, seed = 1) {
       )
     }
     # Integer-valued count columns: the column sums are exact in any
-    # accumulation order, so colSums matches the kernel's sequential sums.
+    # accumulation order, so colSums matches the kernel's sequential sums
+    # (the kernel re-derives the same totals on its side of the boundary).
     totals <- colSums(counts)
     if (is.null(manual_cutoff)) manual_cutoff <- 100 * nrow(counts)
+    ffi_counts <- counts
   } else if (is.numeric(catalog) && !is.null(names(catalog))) {
     totals <- catalog
     if (is.null(manual_cutoff)) manual_cutoff <- 0
+    # The totals path crosses the FFI as a 1 x n matrix: one "channel",
+    # every sample its own column, so the kernel column sums reproduce the
+    # totals bit for bit.
+    ffi_counts <- matrix(totals, nrow = 1L)
   } else {
     msuiter_abort(
       "input",
@@ -623,8 +698,17 @@ ms_stratify_hypermutants <- function(catalog, manual_cutoff = NULL, seed = 1) {
   }
 
   # Upfront hygiene (before any computation; the S7 validator alone would
-  # only fire at construction, after the twin has already run):
+  # only fire at construction, after the kernel has already run):
   # totals must be finite, non-negative, and uniquely named.
+  if (length(totals) == 0L) {
+    msuiter_abort(
+      "input",
+      "totals must contain at least one sample",
+      i = "the cutoff rule is defined for non-empty cohorts",
+      j = "received an empty vector",
+      c = "check the catalog or totals vector"
+    )
+  }
   if (anyNA(totals) || any(!is.finite(totals)) || any(totals < 0)) {
     msuiter_abort(
       "input",
@@ -648,24 +732,32 @@ ms_stratify_hypermutants <- function(catalog, manual_cutoff = NULL, seed = 1) {
     )
   }
 
-  fit <- msuiter_normalization_cutoff(totals, manual_cutoff, seed)
-  is_hyper <- totals > fit$cutoff
-  hyper <- names(totals)[is_hyper]
-  nonhyper <- names(totals)[!is_hyper]
+  # Main path: the Rust kernel (engine::stats semantics, zero change). The
+  # pure-R twin (msuiter_stratify_twin) stays as the reference
+  # implementation; the test battery pins the two to identical integer
+  # outcomes.
+  res <- .ms_stratify_rust(ffi_counts, manual_cutoff, seed)
+
+  # 0-based kernel indices -> 1-based sample names. An empty idx1 selects
+  # nothing and removes nothing (R treats a length-0 subscript as
+  # positive-empty, so the two branches are explicit).
+  idx1 <- as.integer(res$hypermutant_idx) + 1L
+  hyper <- names(totals)[idx1]
+  nonhyper <- if (length(idx1) > 0L) names(totals)[-idx1] else names(totals)
 
   MsStratification(
-    cutoff = fit$cutoff,
+    cutoff = res$cutoff,
     totals = totals,
     hyper = hyper,
     nonhyper = nonhyper,
-    n_hyper = as.numeric(length(hyper)),
-    n_nonhyper = as.numeric(length(nonhyper)),
+    n_hyper = as.numeric(res$n_hypermutants),
+    n_nonhyper = as.numeric(length(totals) - res$n_hypermutants),
     gmm = list(
-      retained_mean = fit$retained_mean,
-      retained_sd = fit$retained_sd,
-      retained_n = as.numeric(fit$retained_n),
-      n_fits = as.numeric(fit$n_fits),
-      converged = fit$converged
+      retained_mean = res$cluster_stats$retained_mean,
+      retained_sd = res$cluster_stats$retained_sd,
+      retained_n = as.numeric(res$cluster_stats$retained_n),
+      n_fits = as.numeric(res$cluster_stats$n_fits),
+      converged = res$cluster_stats$converged
     ),
     policy = "exclude_de_novo_then_refit",
     seed = seed

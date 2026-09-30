@@ -34,10 +34,11 @@ tar -cJf /tmp/vendor.tar.xz vendor && stat -f%z /tmp/vendor.tar.xz   # xz -6 默
 | 日期 | 单元 | 新增 vendor 内容 | 未压缩增量 | xz 增量 | 新基线（未压缩 / tar / xz） |
 |---|---|---|---|---|---|
 | 2026-09-28 | U-M0-09 | rayon 1.10.0 + rayon-core 1.12.1（FFI per-call 线程池，ARCH §2 预算内依赖；lock 钉版因 ≥1.11 需 rustc 1.80，方法同 §4） | +1,851,707 B | +282,452 B | **12,526,058 / 16,516,096 / 1,407,588** |
+| 2026-09-30 | U-M1s-09 | memmap2 0.9.11 + libc 0.2.189（ms_tally_rust 将 memmap2 从 catalog dev-dep 升为根 crate 主依赖以做 2bit mmap——ARCH §2 预算内 IO 依赖；libc 为其传递依赖，全平台生成绑定约 4.4 MB）。**纪律缺口声明：该增量当时未按本节纪律记录，首次由 v0.1 发布预备的 --check 演练发现（基线过期 +37.6%）** | +4,712,247 B | +456,028 B | **17,238,305 / 22,952,960 / 1,863,616** |
 
 当前生效基线 = 上表末行；`tools/vendor.sh --check` 的内置常量随之更新（xz 口径仍保留 ±0.1% 版本容差带）。
 
-**预算判断**：vendor.tar.xz 当前 ≈ 1.41 MB（U-M0-09 后），加全包源码（src/rust 13 KB + R/ 侧 ~48 KB 量级）仍远低于 CRAN 5 MB 包体积指导线；后续新增依赖每 ~0.1 MB xz 增量需在本 ADR 追加记录，超出预算即触发依赖再收缩决策（ARCH §11 风险条目）。
+**预算判断**：vendor.tar.xz 当前 ≈ 1.86 MB（U-M1s-09 后），加全包源码（src/rust 13 KB + R/ 侧 ~48 KB 量级）仍远低于 CRAN 5 MB 包体积指导线；后续新增依赖每 ~0.1 MB xz 增量需在本 ADR 追加记录，超出预算即触发依赖再收缩决策（ARCH §11 风险条目）。
 
 ## 3. Offline 与 CRAN 模式构建证明
 

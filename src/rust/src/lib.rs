@@ -12,7 +12,8 @@
 //! Contract map (see `probes.rs` for the pure cores, `condition.rs` for
 //! the error mapping, `replicates.rs` for the first real-kernel driver,
 //! `tally.rs` for the catalog tally core, `extract.rs` for the
-//! single-method extraction core):
+//! single-method extraction core, `stratify.rs` for the GMM stratification
+//! core):
 //! 1. stateless   — every `msffi_*` is one call in/out, no globals;
 //! 2. column-major — `msffi_column_major_probe`;
 //! 3. NA/NaN      — R validator (primary) + `msffi_na_probe`;
@@ -32,6 +33,7 @@ mod condition;
 mod extract;
 mod probes;
 mod replicates;
+mod stratify;
 mod tally;
 
 // Contract 7: polled ONLY on the main thread, ONLY at chunk boundaries.
@@ -582,6 +584,83 @@ fn ms_extract_rust(
     })())
 }
 
+// ---------------------------------------------------------------------------
+// M2 pipeline plan slot (FFI wiring of U-M1c-02): GMM hypermutant
+// stratification kernel (`ms_stratify_rust`, FFI-internal name — the
+// user-facing API stays `ms_stratify_hypermutants()` in R/stratify.R). The
+// pure assembly core lives in `stratify.rs`; this adapter owns the R-matrix
+// handoff and the scalar domain checks.
+// ---------------------------------------------------------------------------
+
+#[extendr]
+fn ms_stratify_rust(counts: Robj, manual_cutoff: f64, seed: f64, n_threads: i32) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Scalar domain (contract 4): whole numbers in [0, 2^53] (doubles
+        // are exact up to 2^53; the u64 kernel domain is far wider than any
+        // count). The R wrapper is the first layer; these guards make the
+        // boundary safe on its own.
+        for (name, v) in [("manual_cutoff", manual_cutoff), ("seed", seed)] {
+            if !v.is_finite() || v < 0.0 || v.fract() != 0.0 || v > 9.007_199_254_740_992e15 {
+                return Err(MsError::new(
+                    "argument",
+                    format!("{name} must be a whole number in [0, 2^53], got {v}"),
+                ));
+            }
+        }
+        // Contract 6 surface: the R wrapper resolves `msuiter.threads` (and
+        // the `_R_CHECK_LIMIT_CORES_` cap) and passes the effective pool
+        // size; 0 is the "rayon default" sentinel. One cutoff-rule run is a
+        // fixed-order sequential computation (A7, trivially
+        // thread-invariant): the value is validated and otherwise unused.
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        // Layout: the m×n counts matrix crosses AS-IS (column-major, no
+        // transposition — the column sums read column j as a contiguous
+        // slab; see stratify.rs module docs for the orientation guard).
+        let (m, n, data) = with_matrix_f64(&counts, |m, n, data| Ok((m, n, data.to_vec())))?;
+        let decision = stratify::stratify(
+            &data,
+            m,
+            n,
+            manual_cutoff as u64,
+            seed as u64,
+        )?;
+
+        // Wire shape: cutoff as an integer-valued double, 0-based
+        // hypermutant indices (documented decision, docs/ffi-surface.md),
+        // and the retained-bulk cluster stats.
+        let pairs = vec![
+            ("cutoff", Robj::from(decision.cutoff as f64)),
+            (
+                "hypermutant_idx",
+                Robj::from(decision.hypermutant_idx.clone()),
+            ),
+            (
+                "n_hypermutants",
+                Robj::from(decision.hypermutant_idx.len() as f64),
+            ),
+            (
+                "cluster_stats",
+                Robj::from(List::from_pairs(vec![
+                    ("retained_mean", Robj::from(decision.cluster.retained_mean)),
+                    ("retained_sd", Robj::from(decision.cluster.retained_sd)),
+                    (
+                        "retained_n",
+                        Robj::from(decision.cluster.retained_n as f64),
+                    ),
+                    ("n_fits", Robj::from(decision.cluster.n_fits as f64)),
+                    ("converged", Robj::from(decision.cluster.converged)),
+                ])),
+            ),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -596,6 +675,7 @@ extendr_module! {
     fn msffi_build_info;
     fn ms_tally_rust;
     fn ms_extract_rust;
+    fn ms_stratify_rust;
 }
 
 #[cfg(test)]

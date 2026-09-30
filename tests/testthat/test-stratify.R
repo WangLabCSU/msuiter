@@ -3,6 +3,10 @@
 # The integer goldens below are THE SAME values pinned by the Rust kernel
 # tests (src/rust/engine/src/stats.rs): the R side is a protocol twin of
 # engine::stats and must reproduce them bit-for-bit on the shared fixtures.
+#
+# The MAIN path of ms_stratify_hypermutants() goes through the FFI
+# (ms_stratify_rust, M2 pipeline plan slot); the pure-R twin is kept as the
+# reference implementation (msuiter_stratify_twin) and pinned to it below.
 
 # Fixtures mirroring stats::tests (same arithmetic formulas).
 bimodal_cohort <- function() {
@@ -101,6 +105,144 @@ test_that("manual_cutoff floors the derived value (call-site convention)", {
     ms_stratify_hypermutants(totals, manual_cutoff = 20000, seed = 1)@cutoff,
     20000
   )
+})
+
+# ---------------------------------------------------------------------------
+# Twin vs FFI: the main path runs the Rust kernel (ms_stratify_rust); the
+# pure-R protocol twin must stay identical on every integer/structural
+# outcome (cutoff, group rosters, counts, convergence flag). retained_mean/
+# retained_sd are the only drift-eligible fields (libm) and are pinned by
+# the engine goldens instead.
+# ---------------------------------------------------------------------------
+
+test_that("FFI main path is identical to the pure-R protocol twin", {
+  combos <- list(
+    list(
+      what = "bimodal cohort (6 injected hypermutants)",
+      totals = setNames(bimodal_cohort(), sprintf("S%02d", 1:50)),
+      manual_cutoff = 0, seed = 1
+    ),
+    list(
+      what = "lone outlier (500000 against a 40-sample ramp)",
+      totals = setNames(ramp_with_outlier(), sprintf("S%02d", 1:41)),
+      manual_cutoff = 0, seed = 3
+    ),
+    list(
+      what = "manual floor wins (20000 over the derived 13804)",
+      totals = setNames(bimodal_cohort(), sprintf("S%02d", 1:50)),
+      manual_cutoff = 20000, seed = 42
+    ),
+    list(
+      what = "all-identical degenerate cohort",
+      totals = setNames(rep(7000, 30), sprintf("S%02d", 1:30)),
+      manual_cutoff = 0, seed = 3
+    ),
+    list(
+      what = "single sample",
+      totals = setNames(12345, "SOLO"),
+      manual_cutoff = 0, seed = 1
+    )
+  )
+  for (cmb in combos) {
+    twin <- msuiter_stratify_twin(cmb$totals, cmb$manual_cutoff, cmb$seed)
+    s <- ms_stratify_hypermutants(
+      cmb$totals, manual_cutoff = cmb$manual_cutoff, seed = cmb$seed
+    )
+    expect_identical(s@cutoff, twin$cutoff, info = cmb$what)
+    expect_identical(
+      s@hyper, names(cmb$totals)[twin$hypermutant_idx + 1L], info = cmb$what
+    )
+    expect_identical(
+      s@nonhyper,
+      if (length(twin$hypermutant_idx) > 0L) {
+        names(cmb$totals)[-c(twin$hypermutant_idx + 1L)]
+      } else {
+        names(cmb$totals)
+      },
+      info = cmb$what
+    )
+    expect_identical(s@n_hyper, twin$n_hypermutants, info = cmb$what)
+    expect_identical(
+      s@n_nonhyper, length(cmb$totals) - twin$n_hypermutants, info = cmb$what
+    )
+    expect_identical(
+      s@gmm$retained_n, twin$cluster_stats$retained_n, info = cmb$what
+    )
+    expect_identical(
+      s@gmm$n_fits, twin$cluster_stats$n_fits, info = cmb$what
+    )
+    expect_identical(
+      s@gmm$converged, twin$cluster_stats$converged, info = cmb$what
+    )
+  }
+})
+
+test_that("twin and FFI agree end-to-end through an MsCatalog", {
+  totals <- bimodal_cohort()
+  samples <- sprintf("S%02d", seq_along(totals))
+  labels <- paste0("CH", 1:4)
+  counts <- matrix(0, 4, length(totals), dimnames = list(labels, samples))
+  counts[1, ] <- totals
+  cat1 <- ms_catalog(counts, list(name = "SYN4", labels = labels), samples,
+    provenance = list(genome = "GRCh38")
+  )
+  twin <- msuiter_stratify_twin(totals, 100 * 4L, 1)
+  s <- ms_stratify_hypermutants(cat1, seed = 1)
+  expect_identical(s@cutoff, twin$cutoff)
+  expect_identical(s@hyper, samples[twin$hypermutant_idx + 1L])
+  expect_identical(s@n_hyper, twin$n_hypermutants)
+})
+
+test_that("kernel-side second-layer guards surface msuiter_error_rust", {
+  # The R validators are the first layer (msuiter_error_input); these go
+  # straight at the FFI wrapper to pin the second layer and the unified
+  # error face (Rust core -> msuiter_error_rust condition, i/j payload).
+  err <- tryCatch(
+    .ms_stratify_rust(matrix(c(1, -5), nrow = 1), 0, 1),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_identical(err$topic, "argument")
+  expect_identical(err$i, 1L)
+  expect_identical(err$j, 2L)
+
+  # Fractional counts are outside the counts domain.
+  err <- tryCatch(
+    .ms_stratify_rust(matrix(1.5, nrow = 1, ncol = 1), 0, 1),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_match(err$message, "integer-valued")
+
+  # Inf passes anyNA and is caught by the kernel scan as `na`.
+  err <- tryCatch(
+    .ms_stratify_rust(matrix(c(Inf, 2), nrow = 1), 0, 1),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_identical(err$topic, "na")
+
+  # No sample columns: the kernel's own empty guard.
+  err <- tryCatch(
+    .ms_stratify_rust(matrix(numeric(0), nrow = 1, ncol = 0), 0, 1),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_match(err$message, "no samples")
+
+  # Through the public API: a seed beyond the 2^53 wire bound (the Rust
+  # conditions carry the i/j/c payload as TOP-LEVEL fields, not the
+  # msuiter_abort structure, so the raw class/topic assertions apply).
+  err <- tryCatch(
+    ms_stratify_hypermutants(setNames(1, "a"), seed = 1e16),
+    error = identity
+  )
+  expect_s3_class(err, "msuiter_error_rust")
+  expect_match(err$message, "seed")
+})
+
+test_that("empty totals vectors are rejected as input errors", {
+  expect_ms_error(ms_stratify_hypermutants(setNames(numeric(0), character(0)), seed = 1), "input")
 })
 
 # ---------------------------------------------------------------------------
