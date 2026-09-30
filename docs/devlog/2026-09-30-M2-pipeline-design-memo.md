@@ -183,3 +183,12 @@ R 参考实现 `source/R/source.R:148-158`；C 默认路径 `source/src/source.c
 6. **零向量余弦**：上游 cos_sim 返回 0、cdist 产 nan 的不一致，我方统一取 0（相似度）→ 距离 1（§5 条目 4）。
 
 （本备忘不实现任何代码；裁决后按 §4 依赖图派 U-M2-01/02 起步。）
+
+---
+
+## PI 裁决（2026-09-30，全部采纳）
+
+1. **0.9 阈值勘误采纳**：v1.5 共识路径无 0.9 阈值（仅 Islam 评测 cutoff=0.9）；sigpro.py:1024 的 "0.85" 为死注释。共识层钉迭代 Hungarian 语义——ARCH §5 相关措辞在实现 PR 时同步勘误。
+2. **ensemble 默认仅多初始化**（resample/bootstrap 留可选开关）；**CV 默认 folds=10、seeds=10**（上游 30 seeds 为显式 divergence，写入文档）。
+3. **填补语义措辞**照 §2 精确化（行中位数初填 + ECM 内 WH 条件均值）；**Wilcoxon 仅诊断**维持 deliberate divergence；**零向量余弦统一取 0**。
+4. **实现切分照 §4 批次 A/B/C**：批次 A = consensus.rs 与 CV 内核并行起步；golden 23 条直译 TDD；线程不变性继承 U-M1s-05 已证模式。
