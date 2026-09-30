@@ -20,6 +20,8 @@ Collate:
     'classes-utils.R'
     'classes-variants.R'
     'io-variants.R'
+    'io-segments.R'
+    'io-sv.R'
     'classes-catalog.R'
     'catalog-tally.R'
     'stratify.R'
