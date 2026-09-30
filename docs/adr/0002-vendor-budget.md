@@ -34,7 +34,7 @@ tar -cJf /tmp/vendor.tar.xz vendor && stat -f%z /tmp/vendor.tar.xz   # xz -6 默
 | 日期 | 单元 | 新增 vendor 内容 | 未压缩增量 | xz 增量 | 新基线（未压缩 / tar / xz） |
 |---|---|---|---|---|---|
 | 2026-09-28 | U-M0-09 | rayon 1.10.0 + rayon-core 1.12.1（FFI per-call 线程池，ARCH §2 预算内依赖；lock 钉版因 ≥1.11 需 rustc 1.80，方法同 §4） | +1,851,707 B | +282,452 B | **12,526,058 / 16,516,096 / 1,407,588** |
-| 2026-09-30 | U-M1s-09 | memmap2 0.9.11 + libc 0.2.189（ms_tally_rust 将 memmap2 从 catalog dev-dep 升为根 crate 主依赖以做 2bit mmap——ARCH §2 预算内 IO 依赖；libc 为其传递依赖，全平台生成绑定约 4.4 MB）。**纪律缺口声明：该增量当时未按本节纪律记录，首次由 v0.1 发布预备的 --check 演练发现（基线过期 +37.6%）** | +4,712,247 B | +456,028 B | **17,238,305 / 22,952,960 / 1,863,616** |
+| 2026-09-30 | U-M1s-08/09 合并记录 | memmap2 0.9.11 + libc 0.2.189（libc 为 memmap2 传递依赖，全平台生成绑定约 4.4 MB）。**归因修正（审核）**：两 crate 实际于 U-M1s-06/07/08（commit 6885078）以 catalog dev-dependency 入 lock——cargo vendor 含 dev-deps，故预算当时已变；U-M1s-09（ms_tally_rust）再把 memmap2 升为根 crate 主依赖。两个未记录事件折叠为本行。**纪律缺口声明：增量未按本节纪律记录，首次由 v0.1 发布预备的 --check 演练发现（基线过期 +37.6%）**；上溯行「22 crates（U-M0-02 基线）」标签同理宜读作「当时 lock 实况」（syn 双版本等演进未逐行记录） | +4,712,247 B | +456,028 B | **17,238,305 / 22,952,960 / 1,863,616** |
 
 当前生效基线 = 上表末行；`tools/vendor.sh --check` 的内置常量随之更新（xz 口径仍保留 ±0.1% 版本容差带）。
 
