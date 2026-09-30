@@ -334,6 +334,16 @@
 #'   edge each skip the record into the ledger (SPMG parity);
 #' * the ledger is switch-independent: context checks run even when the
 #'   corresponding tables are disabled;
+#' * simple indels are classified into the ID83 channel table (SPMG
+#'   `catalogue_generator_INDEL_single` semantics, U-M1c): a classified
+#'   channel lands as the `id83` ledger destination (counted when
+#'   `want_id83` is on); a microhomology-mediated insertion
+#'   (`N:Ins:M:x`, no ID83 channel upstream, MMG:3738) skips as
+#'   `ins_microhomology_no_channel`; an anchor byte that disagrees with
+#'   the reference genome (including a literal N anchor) skips as
+#'   `indel_anchor_mismatch`; an indel walk window past the chromosome
+#'   end skips as `context_bounds`. The pre-ID83 `simple_indel` skip is
+#'   retired;
 #' * DBS pairs are excluded from all SBS matrices (SPMG `dinuc_sub == 1`);
 #' * `(chrom, sample)` partitions run in parallel on a per-call thread pool
 #'   (FFI contract 6); output is bit-identical for every thread count and
@@ -341,24 +351,25 @@
 #'
 #' @param genome_path Path to an (uncompressed) UCSC 2bit reference genome.
 #' @param chrom,pos,ref_,alt,sample,strand Equal-length per-record columns.
-#' @param want_sbs96,want_sbs192,want_sbs384,want_sbs1536,want_dbs78
+#' @param want_sbs96,want_sbs192,want_sbs384,want_sbs1536,want_dbs78,want_id83
 #'   Table switches; disabled tables come back as `table x 0` matrices.
 #' @param threads NULL or a single non-negative integer pool size; passed
 #'   through `.ms_resolve_threads()` (`msuiter.threads` option precedence,
 #'   `_R_CHECK_LIMIT_CORES_` cap, 0 = rayon default sentinel).
 #'
-#' @return Named list: `sbs96`, `sbs192`, `sbs384`, `sbs1536`, `dbs78`
-#'   integer matrices (channels x samples; rows in canonical `channels.rs`
-#'   order labelled from the R channel registry, columns in
-#'   first-appearance order of `sample`); `ledger`, one
-#'   `record TAB destination` line per input record in input order;
-#'   `n_skipped`; `n_variants`.
+#' @return Named list: `sbs96`, `sbs192`, `sbs384`, `sbs1536`, `dbs78`,
+#'   `id83` integer matrices (channels x samples; rows in canonical
+#'   `channels.rs` / `indel83.rs` order — the ID83 labels land in the R
+#'   channel registry with the registry unit, so `id83` carries column
+#'   names only — columns in first-appearance order of `sample`);
+#'   `ledger`, one `record TAB destination` line per input record in input
+#'   order; `n_skipped`; `n_variants`.
 #' @keywords internal
 #' @noRd
 .ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand,
                            want_sbs96 = TRUE, want_sbs192 = FALSE,
                            want_sbs384 = FALSE, want_sbs1536 = FALSE,
-                           want_dbs78 = FALSE, threads = NULL) {
+                           want_dbs78 = FALSE, want_id83 = TRUE, threads = NULL) {
   if (!is.character(genome_path) || length(genome_path) != 1L || is.na(genome_path)) {
     msuiter_abort(
       "input",
@@ -435,11 +446,12 @@
   want_sbs384 <- .ms_validate_switch(want_sbs384, "want_sbs384")
   want_sbs1536 <- .ms_validate_switch(want_sbs1536, "want_sbs1536")
   want_dbs78 <- .ms_validate_switch(want_dbs78, "want_dbs78")
+  want_id83 <- .ms_validate_switch(want_id83, "want_id83")
 
   res <- .msffi_check(ms_tally_rust(
     genome_path, chrom, as.numeric(pos), ref_, alt, sample, strand,
     want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78,
-    .ms_resolve_threads(threads)
+    want_id83, .ms_resolve_threads(threads)
   ))
 
   # Canonical row labels come from the R channel registry (sysdata.rda,
@@ -460,5 +472,12 @@
     dimnames(m) <- list(tables[[tbl_of[[nm]]]]$labels, cols)
     res[[nm]] <- m
   }
+  # ID83 (U-M1c wiring): rows are the canonical `indel83.rs`
+  # ID83_CHANNELS order; the label vector lands in the R channel registry
+  # with the registry unit, so only the sample columns get dimnames here.
+  m83 <- res$id83
+  cols83 <- if (ncol(m83) > 0L) samples else character(0)
+  dimnames(m83) <- list(NULL, cols83)
+  res$id83 <- m83
   res
 }

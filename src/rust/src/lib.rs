@@ -258,6 +258,8 @@ const SBS192_LEN: usize = 192;
 const SBS384_LEN: usize = 384;
 const SBS1536_LEN: usize = 1536;
 const DBS78_LEN: usize = 78;
+// ID83's length comes from `indel83::ID83_CHANNELS.len()` at the call
+// site (a const here would reference a static: E0013 on MSRV 1.71).
 
 /// Names of the per-record columns, for length-mismatch errors (1-based
 /// column number in `j`).
@@ -364,6 +366,7 @@ fn ms_tally_rust(
     want_sbs384: bool,
     want_sbs1536: bool,
     want_dbs78: bool,
+    want_id83: bool,
     n_threads: i32,
 ) -> Robj {
     condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
@@ -463,6 +466,7 @@ fn ms_tally_rust(
             sbs384: want_sbs384,
             sbs1536: want_sbs1536,
             dbs78: want_dbs78,
+            id83: want_id83,
         };
         // Contract 6 + 7: (chrom, sample) partitions run in parallel on a
         // per-call pool; the boundary hook below is polled on THIS (main)
@@ -486,6 +490,7 @@ fn ms_tally_rust(
             ("sbs384", counts_matrix(&result.sbs384, SBS384_LEN, n_samples)?),
             ("sbs1536", counts_matrix(&result.sbs1536, SBS1536_LEN, n_samples)?),
             ("dbs78", counts_matrix(&result.dbs78, DBS78_LEN, n_samples)?),
+            ("id83", counts_matrix(&result.id83, msuiter_catalog::indel83::ID83_CHANNELS.len(), n_samples)?),
             ("ledger", Robj::from(result.ledger_tsv)),
             (
                 "n_skipped",

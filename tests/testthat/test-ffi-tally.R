@@ -37,6 +37,8 @@ test_that("ms_tally_rust replays the hand-derived golden batch", {
   expect_identical(dim(res$sbs384), c(384L, 2L))
   expect_identical(dim(res$sbs1536), c(1536L, 2L))
   expect_identical(dim(res$dbs78), c(78L, 2L))
+  # ID83 (U-M1c wiring): 83 canonical rows, registry labels land later.
+  expect_identical(dim(res$id83), c(83L, 2L))
   expect_identical(rownames(res$sbs96), tables$SBS96$labels)
   expect_identical(rownames(res$sbs192), tables$SBS192$labels)
   expect_identical(rownames(res$sbs384), tables$SBS384$labels)
@@ -44,6 +46,7 @@ test_that("ms_tally_rust replays the hand-derived golden batch", {
   expect_identical(rownames(res$dbs78), tables$DBS78$labels)
   # Column order: first appearance of `sample` in the input rows.
   expect_identical(colnames(res$sbs96), c("S2", "S1"))
+  expect_identical(colnames(res$id83), c("S2", "S1"))
 
   # Hand-derived count cells (labelled access doubles as a layout probe:
   # rows are channels, columns are samples, never transposed).
@@ -73,9 +76,23 @@ test_that("ms_tally_rust replays the hand-derived golden batch", {
   expect_identical(res$dbs78["TG>CA", "S1"], 1L) # chr1 21/22 (reversed input)
   expect_identical(res$sbs96["A[C>T]A", "S1"], 0L) # chr1 21 never in SBS
 
+  # ID83 (U-M1c wiring, cells hand-derived; rows are 1-based channel
+  # indices into the canonical ID83_CHANNELS order):
+  # * rec 9 (S2): chr1 33 AC>G, 1 bp del of C, zero walk extension
+  #   (flanks "A"/"A" mismatch the deleted C) -> 1:Del:C:0 = row 1;
+  # * rec 10 (S2): chr1 32 C>TA, 1 bp ins of A after anchor T; the right
+  #   window reads chr1[0-based 32] = "A" -> 1 extension -> 1:Ins:T:1 =
+  #   row 20;
+  # * rec 15 (S1): anchor byte 'C' vs genome 'A' at 0-based 56 ->
+  #   skipped:indel_anchor_mismatch, never counted.
+  expect_identical(sum(res$id83), 2L)
+  expect_identical(unname(res$id83[1L, "S2"]), 1L)  # 1:Del:C:0
+  expect_identical(unname(res$id83[20L, "S2"]), 1L) # 1:Ins:T:1
+  expect_identical(sum(res$id83[, "S1"]), 0L)
+
   # Ledger, byte-exact; every record lands in exactly one destination.
   expect_identical(res$ledger, .tally_golden_ledger())
-  expect_identical(res$n_skipped, 11L)
+  expect_identical(res$n_skipped, 9L)
   expect_identical(res$n_variants, 22L)
 })
 
@@ -119,14 +136,16 @@ test_that("disabled tables come back as table x 0 matrices, ledger unchanged", {
     chrom = d$chrom, pos = d$pos, ref_ = d$ref_, alt = d$alt,
     sample = d$sample, strand = d$strand,
     want_sbs96 = FALSE, want_sbs192 = FALSE, want_sbs384 = FALSE,
-    want_sbs1536 = FALSE, want_dbs78 = FALSE
+    want_sbs1536 = FALSE, want_dbs78 = FALSE, want_id83 = FALSE
   )
   expect_identical(dim(res$sbs96), c(96L, 0L))
   expect_identical(dim(res$dbs78), c(78L, 0L))
+  expect_identical(dim(res$id83), c(83L, 0L))
   expect_identical(rownames(res$sbs96), .tally_channel_tables()$SBS96$labels)
-  # Switch-independent ledger (context checks always run).
+  # Switch-independent ledger (context checks AND the indel classification
+  # always run): the id83 destinations and the anchor-mismatch skip stand.
   expect_identical(res$ledger, .tally_golden_ledger())
-  expect_identical(res$n_skipped, 11L)
+  expect_identical(res$n_skipped, 9L)
 })
 
 test_that("empty input yields empty matrices and an empty ledger", {
@@ -221,7 +240,7 @@ test_that("R validators reject malformed columns before the FFI", {
 
   # Second layer: the Rust-side strand guard via the raw passthrough.
   err2 <- tryCatch(
-    ms_tally_rust(path, "chr1", 12, "C", "A", "S", "X", TRUE, FALSE, FALSE, FALSE, FALSE, 1L),
+    ms_tally_rust(path, "chr1", 12, "C", "A", "S", "X", TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, 1L),
     error = identity
   )
   expect_s3_class(err2, "msuiter_error_rust")
@@ -239,6 +258,89 @@ test_that("unknown chromosomes are ledger rows, not errors", {
   expect_match(res$ledger, "1\tskipped:unknown_chrom\n", fixed = TRUE)
   expect_match(res$ledger, "2\tsbs\n", fixed = TRUE)
   expect_identical(res$n_skipped, 1L)
+})
+
+# ---------------------------------------------------------------------------
+# ID83 wiring (U-M1c): skip codes and the counting path end to end
+# ---------------------------------------------------------------------------
+
+test_that("the three indel-layer skips land in the ledger with their codes", {
+  path <- .tally_write_2bit(file.path(tempdir(), "tally-id83-skips.2bit"))
+  on.exit(unlink(path), add = TRUE)
+  # chr1 = A C A C ... (0-based even = A); hand derivations:
+  # * 33 A>AAA: 2 bp ins of AA after anchor A@0-based 32. Both walk windows
+  #   ([31,33) and [33,35)) read "CA" and mismatch; the reverse MH search
+  #   reads [32,33) = "A" and hits -> SPMG key 2:Ins:M:1, an extension row
+  #   with no ID83 channel (MMG writes only iloc[:83]) ->
+  #   skipped:ins_microhomology_no_channel;
+  # * 44 TG>T: anchor byte 'T' vs genome 'C' at 0-based 43 (SPMG
+  #   :1408-1421) -> skipped:indel_anchor_mismatch;
+  # * 63 AC>A: 1 bp del of C@63, the chromosome's LAST base; the unguarded
+  #   right-window read fetch(64, 1) is past the end — SPMG's uncaught
+  #   IndexError, hardened to the structured skip (D13, memo G33) ->
+  #   skipped:context_bounds.
+  res <- .ms_tally_rust(path,
+    chrom = c("chr1", "chr1", "chr1"), pos = c(33, 44, 63),
+    ref_ = c("A", "TG", "AC"), alt = c("AAA", "T", "A"),
+    sample = c("S1", "S1", "S1"), strand = c("N", "N", "N")
+  )
+  expect_identical(
+    res$ledger,
+    paste0(
+      paste0(
+        c(
+          "1\tskipped:ins_microhomology_no_channel",
+          "2\tskipped:indel_anchor_mismatch",
+          "3\tskipped:context_bounds"
+        ),
+        collapse = "\n"
+      ),
+      "\n"
+    )
+  )
+  expect_identical(res$n_skipped, 3L)
+  expect_identical(sum(res$id83), 0L)
+  expect_identical(dim(res$id83), c(83L, 1L))
+})
+
+test_that("1 bp indels in repeat runs count into their ID83 channels", {
+  path <- .tally_write_2bit_run(file.path(tempdir(), "tally-id83-run.2bit"))
+  on.exit(unlink(path), add = TRUE)
+  # chrR genome: C's with an A-run of 2 at 1-based 5..6 and an A-run of 4
+  # at 1-based 13..16. Hand derivations (all walks per SPMG :1451-1482 /
+  # :1543-1571; key4 = run extensions for the 1 bp classes):
+  # * 5 AA>A: 1 bp del of A@6; left window reads A@5 (1 extension), right
+  #   window reads C@7 -> 2 A's -> 1:Del:T:1 = row 8;
+  # * 13 AA>A: 1 bp del of A@14; left window reads A@13 (1 extension),
+  #   right windows read A@15, A@16 (2 extensions) -> 4 A's -> 1:Del:T:3
+  #   = row 10;
+  # * 12 C>CA: 1 bp ins of A after anchor C@12; the right walk reads the
+  #   whole 4-run A@13..16 (4 extensions) -> 5 A's -> 1:Ins:T:4 = row 23.
+  res <- .ms_tally_rust(path,
+    chrom = c("chrR", "chrR", "chrR"), pos = c(5, 13, 12),
+    ref_ = c("AA", "AA", "C"), alt = c("A", "A", "CA"),
+    sample = c("S1", "S1", "S1"), strand = c("N", "N", "N")
+  )
+  expect_identical(res$ledger, "1\tid83\n2\tid83\n3\tid83\n")
+  expect_identical(res$n_skipped, 0L)
+  expect_identical(sum(res$id83), 3L)
+  expect_identical(unname(res$id83[8L, "S1"]), 1L)  # 1:Del:T:1
+  expect_identical(unname(res$id83[10L, "S1"]), 1L) # 1:Del:T:3
+  expect_identical(unname(res$id83[23L, "S1"]), 1L) # 1:Ins:T:4
+  # Indels never enter the substitution matrices.
+  expect_identical(sum(res$sbs96), 0L)
+  expect_identical(sum(res$dbs78), 0L)
+
+  # want_id83 = FALSE: empty 83 x 0 matrix, byte-identical ledger.
+  off <- .ms_tally_rust(path,
+    chrom = c("chrR", "chrR", "chrR"), pos = c(5, 13, 12),
+    ref_ = c("AA", "AA", "C"), alt = c("A", "A", "CA"),
+    sample = c("S1", "S1", "S1"), strand = c("N", "N", "N"),
+    want_id83 = FALSE
+  )
+  expect_identical(dim(off$id83), c(83L, 0L))
+  expect_identical(off$ledger, res$ledger)
+  expect_identical(off$n_skipped, 0L)
 })
 
 # ---------------------------------------------------------------------------

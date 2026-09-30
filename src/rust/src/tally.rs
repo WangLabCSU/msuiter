@@ -36,15 +36,32 @@
 //!      table switches, so the ledger is a pure function of
 //!      (genome, variants) — provenance does not depend on which matrices
 //!      the caller asked for.
-//! 4. **Count** enabled matrices. Rows are channels in canonical
-//!    `channels.rs` order; columns are samples in FIRST-APPEARANCE order of
-//!    `sample_idx` in the CALLER's input order (not the sorted order). The
-//!    flat layout is column-major with `nrow = table length` (contract 2):
+//! 4. **Classify indels**: every `RoutedEvent::Indel` goes through
+//!    `indel83::assign_indel83_genome` (SPMG `catalogue_generator_INDEL_single`
+//!    semantics, memo `docs/devlog/2026-09-30-ID83-design-memo.md`):
+//!    * a classified ID83 channel => destination `id83` (counted when the
+//!      ID83 table switch is on);
+//!    * an `N:Ins:M:x` microhomology-mediated insertion (SPMG computes the
+//!      key but writes only `iloc[:83]`, MMG:3738 — no ID83 channel exists)
+//!      => skip `ins_microhomology_no_channel`;
+//!    * an anchor byte disagreeing with the reference genome, including a
+//!      literal N anchor (SPMG :1408-1421) => skip `indel_anchor_mismatch`;
+//!    * a walk/MH window past the chromosome end (SPMG's uncaught IndexError,
+//!      hardened per D13) => skip `context_bounds` (the indel-layer flavour
+//!      of the assembly vocabulary). Like the SBS/DBS checks, the
+//!      classification runs REGARDLESS of the table switches (ledger purity
+//!      above).
+//! 5. **Count** enabled matrices. Rows are channels in canonical
+//!    `channels.rs` order (ID83: `indel83.rs`'s `ID83_CHANNELS`); columns
+//!    are samples in FIRST-APPEARANCE order of `sample_idx` in the CALLER's
+//!    input order (not the sorted order). The flat layout is column-major
+//!    with `nrow = table length` (contract 2):
 //!    `index = sample_column * table_len + channel_row`.
 //!    * DBS pairs are excluded from every SBS matrix (SPMG separates
 //!      `dinuc_sub == 1` doublets from the substitution matrices).
 //!    * MNV / long-MNV / complex-indel events are ledgered but counted
-//!      nowhere (their ID83 / complex destination lands in U-M1c).
+//!      nowhere (SPMG's `complex` row and block substitutions have no ID83
+//!      channel; their destination is provenance only).
 //!    * SBS192 has no B/N strand block (`sbs.rs`): B/N-strand records are
 //!      dropped from SBS192 ONLY (they still count in SBS384's B/N blocks
 //!      and in SBS96/1536). This per-matrix drop is NOT a ledger skip — the
@@ -56,7 +73,10 @@
 //! the exact [`SkipLedger`-style] line format of `mnv.rs`
 //! (`1-based-index TAB destination-or-skipped:reason`, one trailing newline
 //! per line). Assembly-layer reasons extend the router's vocabulary:
-//! `unknown_chrom`, `ref_mismatch`, `n_context`, `n_dinuc`, `context_bounds`.
+//! `unknown_chrom`, `ref_mismatch`, `n_context`, `n_dinuc`, `context_bounds`,
+//! `ins_microhomology_no_channel`, `indel_anchor_mismatch`. The pre-ID83
+//! `simple_indel` skip is RETIRED: simple indels land as the `id83`
+//! destination or one of the indel-layer skips above.
 //!
 //! # Chromosome policy (M1s, deliberately simple)
 //!
@@ -112,6 +132,7 @@ use rayon::prelude::*;
 
 use msuiter_catalog::dbs::assign_dbs78;
 use msuiter_catalog::genome::TwoBitGenome;
+use msuiter_catalog::indel83::{Indel83Outcome, assign_indel83_genome};
 use msuiter_catalog::mnv::{route_variants, LedgerEntry, RoutedEvent, SkipReason, VarRecord};
 use msuiter_catalog::sbs::{
     assign_sbs1536_slice, assign_sbs192_slice, assign_sbs384_slice, assign_sbs96_slice, Strand,
@@ -160,6 +181,10 @@ pub struct TallyTables {
     pub sbs384: bool,
     pub sbs1536: bool,
     pub dbs78: bool,
+    /// ID83 indel matrix (`indel83::ID83_CHANNELS` row order). The indel
+    /// classification itself always runs (ledger purity, module docs);
+    /// this switch only gates the counting.
+    pub id83: bool,
 }
 
 /// Per-record tally outcome: the router destinations plus the
@@ -177,6 +202,10 @@ pub enum TallyOutcome {
     LongMnv,
     /// Complex indel: both alleles >1 base, unequal lengths (U-M1c).
     ComplexIndel,
+    /// Simple indel classified into an ID83 channel (SPMG
+    /// `catalogue_generator_INDEL_single`); counted in the ID83 matrix when
+    /// the table switch is on.
+    Id83,
     /// Repeat of the identical adjacent record (SPMG :1376-1386; the
     /// U-M1c-01 indel-path dedup).
     SkippedDuplicateRecord,
@@ -194,6 +223,19 @@ pub enum TallyOutcome {
     SkippedInvalidBase,
     SkippedEmptyAllele,
     SkippedRefEqualsAlt,
+    /// SPMG classifies the insertion as `N:Ins:M:x` (microhomology-mediated),
+    /// which has no ID83 channel — SPMG computes the key but writes only
+    /// `iloc[:83]` (MMG:3738; golden G28/G29). Explicit provenance skip.
+    SkippedInsMicrohomologyNoChannel,
+    /// The indel anchor byte disagrees with the reference genome, including
+    /// a literal N anchor (SPMG :1408-1421).
+    SkippedIndelAnchorMismatch,
+    /// RETIRED skip reason (`mnv.rs` stopped emitting it at U-M1c-01, when
+    /// simple indels began routing to [`LedgerEntry::Id83`]). The variant
+    /// survives only so the router-reason mapping stays total over the
+    /// retired `SkipReason::SimpleIndel` — no current code path produces
+    /// this outcome; the ledger vocabulary of live indels is `id83` plus
+    /// the indel-layer skips above.
     SkippedSimpleIndel,
 }
 
@@ -206,6 +248,7 @@ impl TallyOutcome {
             TallyOutcome::Mnv => "mnv",
             TallyOutcome::LongMnv => "long_mnv",
             TallyOutcome::ComplexIndel => "complex_indel",
+            TallyOutcome::Id83 => "id83",
             TallyOutcome::SkippedDuplicateRecord => "skipped:duplicate_record",
             TallyOutcome::SkippedUnknownChrom => "skipped:unknown_chrom",
             TallyOutcome::SkippedRefMismatch => "skipped:ref_mismatch",
@@ -215,6 +258,10 @@ impl TallyOutcome {
             TallyOutcome::SkippedInvalidBase => "skipped:invalid_base",
             TallyOutcome::SkippedEmptyAllele => "skipped:empty_allele",
             TallyOutcome::SkippedRefEqualsAlt => "skipped:ref_equals_alt",
+            TallyOutcome::SkippedInsMicrohomologyNoChannel => {
+                "skipped:ins_microhomology_no_channel"
+            }
+            TallyOutcome::SkippedIndelAnchorMismatch => "skipped:indel_anchor_mismatch",
             TallyOutcome::SkippedSimpleIndel => "skipped:simple_indel",
         }
     }
@@ -232,6 +279,8 @@ impl TallyOutcome {
                 | TallyOutcome::SkippedEmptyAllele
                 | TallyOutcome::SkippedRefEqualsAlt
                 | TallyOutcome::SkippedDuplicateRecord
+                | TallyOutcome::SkippedInsMicrohomologyNoChannel
+                | TallyOutcome::SkippedIndelAnchorMismatch
                 | TallyOutcome::SkippedSimpleIndel
         )
     }
@@ -244,18 +293,16 @@ impl TallyOutcome {
             LedgerEntry::Mnv => TallyOutcome::Mnv,
             LedgerEntry::LongMnv => TallyOutcome::LongMnv,
             LedgerEntry::ComplexIndel => TallyOutcome::ComplexIndel,
-            // INTERIM (U-M1c-01): the router now emits Id83 for simple
-            // indels; counting them into an ID83 matrix is the tally
-            // wiring unit's job. Until that lands, keep the frozen
-            // "skipped:simple_indel" provenance so existing fixtures and
-            // the R suite stay byte-stable.
-            LedgerEntry::Id83 => TallyOutcome::SkippedSimpleIndel,
+            // Simple indels count into ID83 (or an indel-layer skip); the
+            // event pass below refines the outcome from
+            // `indel83::assign_indel83_genome`.
+            LedgerEntry::Id83 => TallyOutcome::Id83,
             LedgerEntry::Skipped(reason) => match reason {
                 SkipReason::InvalidBase => TallyOutcome::SkippedInvalidBase,
                 SkipReason::EmptyAllele => TallyOutcome::SkippedEmptyAllele,
                 SkipReason::RefEqualsAlt => TallyOutcome::SkippedRefEqualsAlt,
-                // Retired at U-M1c-01 (no longer emitted by the router);
-                // kept for vocabulary stability until the wiring unit.
+                // Retired at U-M1c-01 and never emitted by the router; see
+                // [`TallyOutcome::SkippedSimpleIndel`].
                 SkipReason::SimpleIndel => TallyOutcome::SkippedSimpleIndel,
                 SkipReason::DuplicateRecord => TallyOutcome::SkippedDuplicateRecord,
             },
@@ -273,6 +320,8 @@ pub struct TallyResult {
     pub sbs384: Vec<u32>,
     pub sbs1536: Vec<u32>,
     pub dbs78: Vec<u32>,
+    /// ID83 counts, rows in canonical `indel83::ID83_CHANNELS` order.
+    pub id83: Vec<u32>,
     /// One line per input record, input order, `mnv.rs` rendering.
     pub ledger_tsv: String,
     /// Number of records whose outcome is a skip.
@@ -287,6 +336,7 @@ struct Counters {
     sbs384: Vec<u32>,
     sbs1536: Vec<u32>,
     dbs78: Vec<u32>,
+    id83: Vec<u32>,
 }
 
 /// Per-partition counters: a `(chrom, sample)` partition touches exactly
@@ -299,6 +349,7 @@ struct ColumnCounters {
     sbs384: Vec<u32>,
     sbs1536: Vec<u32>,
     dbs78: Vec<u32>,
+    id83: Vec<u32>,
 }
 
 impl Counters {
@@ -316,6 +367,7 @@ impl Counters {
             sbs384: len(tables.sbs384, 384),
             sbs1536: len(tables.sbs1536, 1536),
             dbs78: len(tables.dbs78, 78),
+            id83: len(tables.id83, msuiter_catalog::indel83::ID83_CHANNELS.len()),
         }
     }
 
@@ -343,6 +395,11 @@ impl Counters {
         merge(&mut self.sbs384, part.sbs384, 384);
         merge(&mut self.sbs1536, part.sbs1536, 1536);
         merge(&mut self.dbs78, part.dbs78, 78);
+        merge(
+            &mut self.id83,
+            part.id83,
+            msuiter_catalog::indel83::ID83_CHANNELS.len(),
+        );
     }
 }
 
@@ -361,6 +418,7 @@ impl ColumnCounters {
             sbs384: len(tables.sbs384, 384),
             sbs1536: len(tables.sbs1536, 1536),
             dbs78: len(tables.dbs78, 78),
+            id83: len(tables.id83, msuiter_catalog::indel83::ID83_CHANNELS.len()),
         }
     }
 
@@ -626,6 +684,7 @@ pub fn tally(
         sbs384: counters.sbs384,
         sbs1536: counters.sbs1536,
         dbs78: counters.dbs78,
+        id83: counters.id83,
         ledger_tsv,
         n_skipped,
     })
@@ -843,14 +902,54 @@ fn tally_event(
             }
             Ok(())
         }
-        // Mnv / LongMnv / ComplexIndel are ledger-only until the ID83 and
-        // complex layers land (U-M1c); the baseline outcome stands. Same
-        // for RoutedEvent::Indel: its ID83 counting is the tally wiring
-        // unit (the router already carried the fields for it, U-M1c-01).
-        RoutedEvent::Mnv { .. }
-        | RoutedEvent::LongMnv { .. }
-        | RoutedEvent::ComplexIndel { .. }
-        | RoutedEvent::Indel { .. } => Ok(()),
+        // Simple indel: ID83 classification (SPMG
+        // `catalogue_generator_INDEL_single` semantics via
+        // `assign_indel83_genome`, which performs the anchor-vs-genome
+        // comparison this layer owns per memo §4.5). The classification
+        // runs REGARDLESS of `tables.id83` so the ledger stays a pure
+        // function of (genome, variants); the switch only gates counting.
+        RoutedEvent::Indel {
+            record,
+            pos,
+            ref_,
+            alt,
+        } => {
+            // `assign_indel83` owns its coordinate validation (u64 ->
+            // usize narrowing + the anchor fetch, whose bounds error is
+            // the structured form of SPMG's :1391-1406 position skip).
+            match assign_indel83_genome(genome, chrom, pos, ref_, alt) {
+                Ok(Indel83Outcome::Channel(row)) => {
+                    outcomes[record] = Some(TallyOutcome::Id83);
+                    if tables.id83 {
+                        ColumnCounters::bump(&mut counters.id83, row);
+                    }
+                }
+                // SPMG computes the `N:Ins:M:x` key but has no ID83 row for
+                // it (iloc[:83], MMG:3738) — explicit provenance skip.
+                Ok(Indel83Outcome::InsMicrohomologyNoChannel) => {
+                    outcomes[record] = Some(TallyOutcome::SkippedInsMicrohomologyNoChannel);
+                }
+                // Anchor byte vs reference genome mismatch, N anchor
+                // included (SPMG :1408-1421).
+                Ok(Indel83Outcome::AnchorMismatch) => {
+                    outcomes[record] = Some(TallyOutcome::SkippedIndelAnchorMismatch);
+                }
+                // A walk/MH window past the chromosome end: SPMG's uncaught
+                // IndexError, hardened to the structured skip per D13 (the
+                // indel-layer flavour of `context_bounds`).
+                Err(e) if e.topic == "bounds" => {
+                    outcomes[record] = Some(TallyOutcome::SkippedContextBounds);
+                }
+                Err(e) => return Err(e), // io/format: corrupt file fails the call
+            }
+            Ok(())
+        }
+        // Mnv / LongMnv / ComplexIndel are ledger-only: SPMG's block
+        // substitutions and the `complex` row have no ID83 channel (memo
+        // §4), so their destination stays provenance-only.
+        RoutedEvent::Mnv { .. } | RoutedEvent::LongMnv { .. } | RoutedEvent::ComplexIndel { .. } => {
+            Ok(())
+        }
     }
 }
 
@@ -1004,6 +1103,7 @@ mod tests {
             sbs384: true,
             sbs1536: true,
             dbs78: true,
+            id83: true,
         }
     }
 
@@ -1018,8 +1118,10 @@ mod tests {
     /// chromosome (reversed input order), strand-N and strand-B records,
     /// a split 3 bp block substitution reconnected from two pieces, a 6 bp
     /// long MNV, +/-2-window N skips, an N dinucleotide DBS candidate,
-    /// a REF-vs-genome mismatch, a head and a tail context-bounds skip, a
-    /// simple indel, a complex indel and an unknown chromosome.
+    /// a REF-vs-genome mismatch, a head and a tail context-bounds skip,
+    /// three simple indels (two genome-consistent, classified into ID83
+    /// channels — records 9/10; one anchor-mismatched against the fixture
+    /// genome, record 15), a complex indel and an unknown chromosome.
     fn golden_variants() -> Vec<TallyVariant> {
         vec![
             v(1, 33, "C", "A", 1, Strand::Transcribed),     // chr2 DBS half A
@@ -1030,13 +1132,13 @@ mod tests {
             v(0, 21, "C", "T", 0, Strand::Transcribed),     // chr1 DBS half A (input after B)
             v(0, 24, "A", "T", 1, Strand::None),            // N strand: no SBS192
             v(0, 27, "C", "G", 1, Strand::Bidirectional),   // B strand: no SBS192
-            v(0, 32, "AC", "G", 1, Strand::None),           // simple deletion: independent indel event (SPMG never merges
-            v(0, 31, "C", "TA", 1, Strand::None),           // it with the adjacent insertion, memo §4)
+            v(0, 32, "AC", "G", 1, Strand::None),           // 1 bp del, zero-extended -> 1:Del:C:0 (SPMG never merges
+            v(0, 31, "C", "TA", 1, Strand::None),           // it with the adjacent 1 bp ins -> 1:Ins:T:1, memo §4)
             v(0, 43, "T", "G", 0, Strand::None),            // genome has A: ref mismatch
             v(0, 36, "ACACAC", "TTTTTT", 0, Strand::None),  // 6bp: long MNV
             v(0, 49, "C", "A", 0, Strand::None),            // +/-2 window hits N at 50
             v(0, 53, "C", "A", 0, Strand::None),            // +/-2 window inside N block
-            v(0, 56, "CA", "C", 0, Strand::None),           // simple indel
+            v(0, 56, "CA", "C", 0, Strand::None),           // anchor C vs genome A: indel_anchor_mismatch
             v(0, 60, "AC", "TTT", 0, Strand::None),         // complex indel
             v(0, 63, "C", "A", 0, Strand::None),            // 3' flank past chr1 end
             v(0, 1, "C", "A", 0, Strand::None),             // 5' flank before chr1 start
@@ -1048,6 +1150,16 @@ mod tests {
     }
 
     /// Byte-exact golden ledger over the batch above (input order).
+    /// Records 9/10 are simple indels classified into ID83 channels
+    /// (U-M1c ID83 wiring): 9 = 1 bp del of C with zero walk extension
+    /// -> 1:Del:C:0, 10 = 1 bp ins of T with zero walk extension
+    /// -> 1:Ins:T:1 (the inserted A extends one copy right against
+    /// chr1[0-based 32] = 'A'). Record 15 (chr1 57 CA>C) turns out to be an ANCHOR
+    /// MISMATCH against the fixture genome (chr1[0-based 56] = 'A', the
+    /// record's anchor byte is 'C'; SPMG :1408-1421): the interim shim
+    /// never ran the indel-layer genome check, so the true semantics
+    /// surface only at this wiring (memo §9.1 flagged record 15 for
+    /// re-evaluation) -> skipped:indel_anchor_mismatch.
     fn golden_ledger() -> String {
         [
             "1\tdbs",
@@ -1058,13 +1170,13 @@ mod tests {
             "6\tdbs",
             "7\tsbs",
             "8\tsbs",
-            "9\tskipped:simple_indel",
-            "10\tskipped:simple_indel",
+            "9\tid83",
+            "10\tid83",
             "11\tskipped:ref_mismatch",
             "12\tlong_mnv",
             "13\tskipped:n_context",
             "14\tskipped:n_context",
-            "15\tskipped:simple_indel",
+            "15\tskipped:indel_anchor_mismatch",
             "16\tcomplex_indel",
             "17\tskipped:context_bounds",
             "18\tskipped:context_bounds",
@@ -1126,9 +1238,17 @@ mod tests {
         assert_eq!(cell(&res.dbs78, 24, 0, 78), 1);       // CG>AT (chr2 pair)
         assert_eq!(res.dbs78.iter().sum::<u32>(), 2);
 
+        // ID83: the two genome-consistent simple indels (U-M1c wiring).
+        // Sample columns match the SBS layout: sample 1 = col 0, sample
+        // 0 = col 1. Record 15 skips on its anchor (see golden_ledger).
+        // Channel rows cross-pinned against the canonical table below.
+        assert_eq!(cell(&res.id83, 0, 0, 83), 1);         // rec 9: 1:Del:C:0
+        assert_eq!(cell(&res.id83, 19, 0, 83), 1);        // rec 10: 1:Ins:T:1 (A ins extends 1 copy right: chr1[32]='A')
+        assert_eq!(res.id83.iter().sum::<u32>(), 2);
+
         // Ledger: byte-exact, input order, mnv.rs rendering.
         assert_eq!(res.ledger_tsv, golden_ledger());
-        assert_eq!(res.n_skipped, 11);
+        assert_eq!(res.n_skipped, 9);
 
         // Contract 7 on the sequential path (single core, the pre-parallel
         // granularity): one poll per (chrom, sample) run — chr1 splits into
@@ -1138,6 +1258,7 @@ mod tests {
 
         // Cross-pin the derived rows against the canonical tables.
         use msuiter_catalog::dbs::dbs78_label;
+        use msuiter_catalog::indel83::indel83_label;
         use msuiter_catalog::sbs::{sbs1536_label, sbs384_label, sbs96_label};
         assert_eq!(sbs96_label(66).unwrap(), "G[T>C]G");
         assert_eq!(sbs384_label(350).unwrap(), "N:G[T>A]G");
@@ -1145,6 +1266,8 @@ mod tests {
         assert_eq!(sbs1536_label(385).unwrap(), "CA[C>A]AC");
         assert_eq!(dbs78_label(24).unwrap(), "CG>AT");
         assert_eq!(dbs78_label(63).unwrap(), "TG>CA");
+        assert_eq!(indel83_label(0).unwrap(), "1:Del:C:0");
+        assert_eq!(indel83_label(19).unwrap(), "1:Ins:T:1");
     }
 
     /// The ledger is a pure function of (genome, variants): with every
@@ -1156,9 +1279,12 @@ mod tests {
         let variants = golden_variants();
         let res = tally(&bytes, &variants, TallyTables::default(), 1, &no_cancel(), &mut || {}).unwrap();
         assert!(res.sbs96.is_empty() && res.sbs192.is_empty() && res.sbs384.is_empty());
-        assert!(res.sbs1536.is_empty() && res.dbs78.is_empty());
+        assert!(res.sbs1536.is_empty() && res.dbs78.is_empty() && res.id83.is_empty());
+        // The indel classification still ran (ledger purity): records 9/10
+        // keep their id83 destinations and record 15 its anchor-mismatch
+        // skip even with the table off.
         assert_eq!(res.ledger_tsv, golden_ledger());
-        assert_eq!(res.n_skipped, 11);
+        assert_eq!(res.n_skipped, 9);
     }
 
     #[test]
@@ -1167,9 +1293,109 @@ mod tests {
         let mut polls = 0usize;
         let res = tally(&bytes, &[], all_tables(), 1, &no_cancel(), &mut || polls += 1).unwrap();
         assert!(res.sbs96.is_empty() && res.dbs78.is_empty());
+        assert!(res.id83.is_empty());
         assert_eq!(res.ledger_tsv, "");
         assert_eq!(res.n_skipped, 0);
         assert_eq!(polls, 0); // no runs: no boundary polls
+    }
+
+    // -----------------------------------------------------------------
+    // ID83 wiring (U-M1c): the indel counting path end to end.
+    // -----------------------------------------------------------------
+
+    /// A 48 bp chromosome of C's with an A-run of 2 at 0-based 4..6 and an
+    /// A-run of 4 at 0-based 12..16: bounded tandem runs so the walk key4
+    /// lands mid-table (the all-alternating golden fixture can never
+    /// extend a 1 bp walk).
+    fn run_fixture_bytes() -> Vec<u8> {
+        fixture::build(&[fixture::ChromSpec {
+            name: "chrR",
+            size: 48,
+            pattern: |i| {
+                if (4..6).contains(&i) || (12..16).contains(&i) {
+                    b'A'
+                } else {
+                    b'C'
+                }
+            },
+            n_blocks: vec![],
+        }])
+    }
+
+    /// 1 bp deletions/insertions inside repeat runs walk to the correct
+    /// ID83 channel (SPMG :1451-1482/:1543-1571 geometry, key4 = run
+    /// extensions for the 1 bp classes, :1673-1685/:1718-1725).
+    #[test]
+    fn one_bp_indels_in_repeats_count_into_id83_channels() {
+        let bytes = run_fixture_bytes();
+        let variants = vec![
+            // chrR genome around the runs: ...C(3) A(4) A(5) C(6)...C(11)
+            // A(12)..A(15) C(16)...
+            v(0, 4, "AA", "A", 0, Strand::None),  // del A@5: left ext 1 (A@4), right 0 -> 2 A's -> 1:Del:T:1
+            v(0, 12, "AA", "A", 0, Strand::None), // del A@13: left 1 (A@12), right 2 (A@14,15) -> 4 A's -> 1:Del:T:3
+            v(0, 11, "C", "CA", 0, Strand::None), // ins A after anchor C@11: right ext 4 -> 5 A's -> 1:Ins:T:4
+        ];
+        let mut polls = 0usize;
+        let res = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || polls += 1).unwrap();
+
+        assert_eq!(res.ledger_tsv, "1\tid83\n2\tid83\n3\tid83\n");
+        assert_eq!(res.n_skipped, 0);
+        assert_eq!(cell(&res.id83, 7, 0, 83), 1); // "1:Del:T:1"
+        assert_eq!(cell(&res.id83, 9, 0, 83), 1); // "1:Del:T:3"
+        assert_eq!(cell(&res.id83, 22, 0, 83), 1); // "1:Ins:T:4"
+        assert_eq!(res.id83.iter().sum::<u32>(), 3);
+        // No SBS/DBS side effects: indels never enter the substitution tables.
+        assert_eq!(res.sbs96.iter().sum::<u32>(), 0);
+        assert_eq!(res.dbs78.iter().sum::<u32>(), 0);
+        assert_eq!(polls, 1);
+
+        // Label cross-pins (channel arithmetic vs the canonical table).
+        assert_eq!(msuiter_catalog::indel83::indel83_label(7).unwrap(), "1:Del:T:1");
+        assert_eq!(msuiter_catalog::indel83::indel83_label(9).unwrap(), "1:Del:T:3");
+        assert_eq!(msuiter_catalog::indel83::indel83_label(22).unwrap(), "1:Ins:T:4");
+
+        // want_id83 = false: buffers empty, ledger byte-identical (the
+        // classification always runs — ledger purity, module docs).
+        let off = tally(&bytes, &variants, TallyTables::default(), 1, &no_cancel(), &mut || {}).unwrap();
+        assert!(off.id83.is_empty());
+        assert_eq!(off.ledger_tsv, res.ledger_tsv);
+        assert_eq!(off.n_skipped, 0);
+    }
+
+    /// The three indel-layer ledger skips, each hand-derived on the golden
+    /// fixture (chr1 = ACAC..., N block at 0-based 50..52):
+    /// * 2 bp ins of AA after anchor A@32 (ALT = anchor + "AAA"): both walk
+    ///   windows mismatch ("CA"), the reverse MH search hits the anchor
+    ///   (rev_hom = 1) -> SPMG key 2:Ins:M:1, an extension row with no
+    ///   ID83 channel (memo §2.1 rows 83-93) -> ins_microhomology_no_channel;
+    /// * del anchored at C@43 with ref "TG": anchor byte T != genome C
+    ///   (SPMG :1408-1421) -> indel_anchor_mismatch;
+    /// * 1 bp del of C@63 (the chromosome's last base): the unguarded
+    ///   right-window read fetch(64, 1) is past the end — SPMG's
+    ///   IndexError hardened to the structured skip (D13, memo G33)
+    ///   -> context_bounds.
+    #[test]
+    fn indel_layer_skips_land_in_the_ledger() {
+        let bytes = fixture_bytes();
+        let variants = vec![
+            v(0, 32, "A", "AAA", 0, Strand::None),
+            v(0, 43, "TG", "T", 0, Strand::None),
+            v(0, 62, "AC", "A", 0, Strand::None),
+        ];
+        let res = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || {}).unwrap();
+        assert_eq!(
+            res.ledger_tsv,
+            "1\tskipped:ins_microhomology_no_channel\n\
+             2\tskipped:indel_anchor_mismatch\n\
+             3\tskipped:context_bounds\n"
+        );
+        assert_eq!(res.n_skipped, 3);
+        assert_eq!(res.id83.iter().sum::<u32>(), 0);
+
+        // Identical ledger with the table disabled (switch independence).
+        let off = tally(&bytes, &variants, TallyTables::default(), 1, &no_cancel(), &mut || {}).unwrap();
+        assert_eq!(off.ledger_tsv, res.ledger_tsv);
+        assert!(off.id83.is_empty());
     }
 
     /// U-M1s-09 audit regression (P1): routing adjacency is a
@@ -1457,3 +1683,4 @@ mod tests {
         assert!(err.to_string().contains("worker observed"));
     }
 }
+
