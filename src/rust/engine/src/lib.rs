@@ -13,6 +13,7 @@ pub mod nndsvd;
 pub mod nnls;
 pub mod resample;
 pub mod rng;
+pub mod stats;
 
 pub use error::MsError;
 

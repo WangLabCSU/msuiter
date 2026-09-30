@@ -22,6 +22,7 @@ Collate:
     'io-variants.R'
     'classes-catalog.R'
     'catalog-tally.R'
+    'stratify.R'
     'classes-signature.R'
     'classes-fit.R'
     'classes-refdb.R'
