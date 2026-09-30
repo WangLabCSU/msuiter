@@ -56,8 +56,8 @@
 
 ### M1c · 目录完备 + ID83（3 周）
 
-- [ ] ID83（SPMG 语义逐位复刻：重复游走/MH 前向优先/封顶/Q 规则）+ ID83 golden
-- [ ] GMM 分层器（`ms_stratify_hypermutants` 语义落地）
+- [x] ID83（SPMG 语义逐位复刻：重复游走/MH 前向优先/封顶/Q 规则）+ ID83 golden（U-M1c-01；38 golden + 审核 2×P0 修复 + oracle 对拍；设计备忘含 parity=master/v1.3.6 双成立证据）
+- [x] GMM 分层器（`ms_stratify_hypermutants` 语义落地）（U-M1c-02；源码证据推翻流行叙事——无 log/mean+2σ 托底/上游全员重标定为我方 deliberate divergence；审核 PASS）
 
 ### M2 · 统一提取流水线（5 周）
 
