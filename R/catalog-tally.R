@@ -75,7 +75,10 @@
 #' (caller, matched normal, source, parse statistics, ...) with the tally
 #' context: `genome` (build label from the variants), `genome_path` (the 2bit
 #' file used), `mode`, `ledger` (one `record TAB destination` line per input
-#' record, in input order), `n_skipped` and `n_variants`.
+#' record, in input order), `n_skipped` and `n_variants`. On a key collision
+#' the tally context wins: the tally-produced keys (`genome`, `genome_path`,
+#' `mode`, `ledger`, `n_skipped`, `n_variants`) are written after the merge
+#' and overwrite same-named keys coming from the variants' provenance.
 #'
 #' @return An [MsCatalog] object.
 #' @seealso [ms_variants()] for the input container, [ms_catalog()] for the

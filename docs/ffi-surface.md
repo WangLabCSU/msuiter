@@ -37,7 +37,7 @@ ms_extract_rust
 * **状态** 只有两档：`diagnostic`（本单元的契约探测器/元信息，无领域算法）与 `kernel`（真实算法内核导出，M1s 起进入）。M0 里程碑内不存在 `kernel` 导出——这是刻意的（U-M0-09 禁止实现任何真实算法内核）。
 * **since** = 导出首次出现的包版本；一经发布不再改写。
 * 错误协议：所有 `msffi_*` 的 `Err(MsError)` 在 ffi 边界统一转为 class `c("msuiter_error_rust", "error", "condition")` 的 condition 对象（载荷 `message`、`topic`、`i`、`j`、`c`），由 R 包装以 `stop()` 重发；R 侧 validator 的 abort class 为 `msuiter_error_input` / `msuiter_error_na` / `msuiter_error_option`（ARCHITECTURE §3.5 的 `msuiter_error_<topic>` 规范）。
-  **已知形态偏离（2026-09-28 记录，2026-09-28 审计后如实更新）**：R 侧 `rlang::abort` 的上下文字段名为 `context` 而非字面 `c`（rlang 保留 `c` 承载子 condition，字面 `c=` 会被 call 求值劫持），i/j 为顶层字段且无 `msuiter_error` 列——与 U-M0-03 `msuiter_abort` 的 `cnd$msuiter_error` 载荷形态并存。**helper 统一仍未做**：U-M1s-09 未承接（其单元范围只落 kernel 本体），目标顺延至 M1s 收尾小单元；`.ms_tally_rust` 的 R 侧 validator 六处 abort（R/ffi-probes.R：genome_path、record columns ×2、pos anyNA、pos 1-based、strand 词汇表）与 `.ms_validate_switch` 仍走临时 `context=` 形态，统一时同步本注记。
+  **helper 统一已完成（2026-09-28，U-M1s 收尾清账小单元）**：全部 R 侧 abort（`.ms_tally_rust` 六处、`.ms_validate_matrix/_count/_switch`、`.ms_resolve_threads` 及 `.ms_extract_rust` 三处）已统一经共享 `msuiter_abort()`（R/classes-utils.R）发出，先前的临时 `rlang::abort(context=)` 形态不复存在。字面 `context` 字段与 anyNA 的整数 i/j 坐标按 ffi 契约保留为 condition 顶层字段——经 `msuiter_abort(data=)` 兼容参数注入（rlang 保留 `c` 承载子条件，故不直接用 `c=`），规范的 i/j/c 三段 bullet 载于 `cnd$msuiter_error`；测试钉死的 `err$i`/`err$j`/`err$context` 断言保持原样通过。
 * 无状态（契约 1）适用于全部导出：无句柄注册表、无 `.state`、无静默重算；per-call 线程池随调用建毁。
 
 ## 冻结协议

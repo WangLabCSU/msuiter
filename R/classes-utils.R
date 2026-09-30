@@ -12,7 +12,15 @@
 # class `msuiter_error_<topic>`; `i`, `j` and `c` are mandatory single
 # strings (info / location / fix) stored on the condition as the
 # `msuiter_error` payload and rendered as message bullets.
-msuiter_abort <- function(topic, message, i, j, c, call = rlang::caller_call()) {
+#
+# `data` is the FFI-layer compatibility hatch (docs/ffi-surface.md): a named
+# list spliced onto the condition as TOP-LEVEL fields, for callers whose
+# condition shape is pinned downstream -- the ffi validators keep the
+# literal `context` string (rlang reserves `c` for child conditions) and
+# the integer i/j offender coordinates that the `msuiter_error_rust`
+# protocol mirrors. It never replaces the mandatory i/j/c bullets.
+msuiter_abort <- function(topic, message, i, j, c, call = rlang::caller_call(),
+                          data = NULL) {
   stopifnot(
     is.character(topic), length(topic) == 1L, nzchar(topic),
     is.character(message), length(message) == 1L, nzchar(message)
@@ -28,12 +36,22 @@ msuiter_abort <- function(topic, message, i, j, c, call = rlang::caller_call()) 
       )
     }
   }
+  if (!is.null(data)) {
+    if (!is.list(data) || length(data) == 0L || !is.character(names(data)) ||
+        any(!nzchar(names(data)))) {
+      rlang::abort(
+        "msuiter_abort: 'data' must be NULL or a non-empty named list",
+        class = "msuiter_error_internal"
+      )
+    }
+  }
   rlang::abort(
     message,
     class = paste0("msuiter_error_", topic),
     msuiter_error = parts,
     body = c(i = i, j = j, c = c),
-    call = call
+    call = call,
+    !!!data
   )
 }
 

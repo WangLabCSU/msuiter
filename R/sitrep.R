@@ -47,9 +47,12 @@ ms_sitrep <- function() {
   refdb <- "not yet available (no reference signature database is bundled in this release)"
 
   not_yet_available <- c(
-    "reference signature database (refdb; planned for M1s)",
-    "COSMIC on-demand update (tools::R_user_dir cache; planned for M1s)",
-    "NNLS/likelihood kernels (NMF extraction available now via ms_extract(); NNLS planned next)"
+    "reference signature database (refdb v1; planned for M3a)",
+    "COSMIC on-demand update (tools::R_user_dir cache; planned for M4)",
+    paste(
+      "NNLS/likelihood fit kernels (ms_fit() methods; planned for M3a;",
+      "NMF extraction available now via ms_extract())"
+    )
   )
 
   msuiter_opts <- options()[grepl("^msuiter\\.", names(options()))]

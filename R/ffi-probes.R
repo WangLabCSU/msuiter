@@ -9,10 +9,15 @@
 #   * any Rust `Err(MsError)` arrives as a condition object with class
 #     `msuiter_error_rust` carrying the i/j/c payload; `.msffi_check()`
 #     re-signals it with `stop()` so `tryCatch` handlers see it;
-#   * the R-side validators fire FIRST (anyNA etc.) and abort with
-#     `msuiter_error_<topic>` classes via rlang. Their context field is
-#     named `context`, not `c`: rlang reserves `c` for child conditions,
-#     so the literal i/j/c triple lives on the Rust-side condition.
+#   * the R-side validators fire FIRST (anyNA etc.) and abort through the
+#     shared `msuiter_abort()` (R/classes-utils.R) with class
+#     `msuiter_error_<topic>` and the i/j/c bullet payload on
+#     `cnd$msuiter_error`. The ffi-specific condition fields are kept as
+#     TOP-LEVEL fields via the `data=` compatibility hatch: the literal
+#     `context` string (rlang reserves `c` for child conditions) and the
+#     integer i/j offender coordinates of the anyNA validator, mirroring
+#     the `msuiter_error_rust` shape (docs/ffi-surface.md, unified
+#     2026-09-28 -- the interim `rlang::abort(context=)` form is gone).
 
 # ---------------------------------------------------------------------------
 # Thread-pool resolution (contract 6)
@@ -39,10 +44,13 @@
   }
   if (!is.numeric(value) || length(value) != 1L || is.na(value) ||
       !is.finite(value) || value < 0 || value != floor(value)) {
-    rlang::abort(
+    msuiter_abort(
+      "option",
       "`msuiter.threads` must be NULL or a single non-negative integer.",
-      class = "msuiter_error_option",
-      context = "per-call thread-pool resolution (msuiter.threads)"
+      i = "msuiter.threads sets the per-call thread-pool size (0 = rayon default)",
+      j = paste0("received object of class: ", class(value)[1L]),
+      c = "set the option or the threads argument to NULL or a single non-negative integer",
+      data = list(context = "per-call thread-pool resolution (msuiter.threads)")
     )
   }
   as.integer(value)
@@ -69,10 +77,13 @@
 #' @noRd
 .ms_validate_matrix <- function(x, arg = "x") {
   if (!is.matrix(x)) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       sprintf("`%s` must be a matrix.", arg),
-      class = "msuiter_error_input",
-      context = "FFI argument validation (matrix)"
+      i = "the FFI boundary only accepts matrix arguments",
+      j = paste0("`", arg, "` received: ", class(x)[1L]),
+      c = paste0("pass a numeric matrix in `", arg, "`"),
+      data = list(context = "FFI argument validation (matrix)")
     )
   }
   if (is.integer(x)) {
@@ -82,10 +93,13 @@
     storage.mode(x) <- "double"
   }
   if (!is.double(x)) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       sprintf("`%s` must be a double (numeric) matrix.", arg),
-      class = "msuiter_error_input",
-      context = "FFI argument validation (REALSXP)"
+      i = "the Rust kernels read REALSXP matrices",
+      j = paste0("`", arg, "` received: ", class(x)[1L]),
+      c = paste0("pass a double (numeric) matrix in `", arg, "`"),
+      data = list(context = "FFI argument validation (REALSXP)")
     )
   }
   if (anyNA(x)) {
@@ -93,12 +107,17 @@
     nrow <- nrow(x)
     i <- (k - 1L) %% nrow + 1L
     j <- (k - 1L) %/% nrow + 1L
-    rlang::abort(
+    msuiter_abort(
+      "na",
       sprintf("`%s` must not contain NA/NaN (first offender at row %d, column %d).", arg, i, j),
-      class = "msuiter_error_na",
-      i = i,
-      j = j,
-      context = "anyNA() validation on the R side of the FFI boundary (contract 3, first layer)"
+      i = "NA/NaN cannot cross the FFI boundary (contract 3)",
+      j = sprintf("first offender in `%s`: row %d, column %d", arg, i, j),
+      c = "drop or impute the offending entries before the call",
+      data = list(
+        i = i,
+        j = j,
+        context = "anyNA() validation on the R side of the FFI boundary (contract 3, first layer)"
+      )
     )
   }
   x
@@ -112,10 +131,13 @@
 .ms_validate_count <- function(x, arg) {
   if (!is.numeric(x) || length(x) != 1L || is.na(x) || !is.finite(x) ||
       x != floor(x) || x < 0L) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       sprintf("`%s` must be a single non-negative integer.", arg),
-      class = "msuiter_error_input",
-      context = "FFI argument validation (non-negative integer scalar)"
+      i = "FFI integer arguments must be scalar, finite, non-negative integers",
+      j = paste0("`", arg, "` received: ", msuiter_quote_trunc(x)),
+      c = paste0("pass a single non-negative integer in `", arg, "`"),
+      data = list(context = "FFI argument validation (non-negative integer scalar)")
     )
   }
   as.integer(x)
@@ -189,10 +211,13 @@
   n_items <- .ms_validate_count(n_items, "n_items")
   if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
       !is.finite(seed) || seed < 0 || seed != floor(seed) || seed > 2^31 - 1) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`seed` must be a single integer in [0, 2^31 - 1].",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (RNG seed)"
+      i = "each seed selects one PCG64 stream at the FFI boundary (i32 range)",
+      j = paste0("`seed` received: ", msuiter_quote_trunc(seed)),
+      c = "pass a single whole number in [0, 2^31 - 1]",
+      data = list(context = "FFI argument validation (RNG seed)")
     )
   }
   n_threads <- .ms_resolve_threads(threads)
@@ -219,25 +244,34 @@
   replicates <- .ms_validate_count(replicates, "replicates")
   max_iter <- .ms_validate_count(max_iter, "max_iter")
   if (k < 1L) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`k` must be a positive integer.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (rank k >= 1)"
+      i = "the rank is the number of signature columns the kernel factors",
+      j = paste0("received k = ", format(k)),
+      c = "pass k >= 1 (and <= min(channels, samples))",
+      data = list(context = "FFI argument validation (rank k >= 1)")
     )
   }
   if (replicates < 1L) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`replicates` must be a positive integer.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (replicates >= 1)"
+      i = "the driver runs one independent fit per replicate",
+      j = paste0("received replicates = ", format(replicates)),
+      c = "pass replicates >= 1",
+      data = list(context = "FFI argument validation (replicates >= 1)")
     )
   }
   if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
       !is.finite(seed) || seed < 0 || seed != floor(seed) || seed > 2^31 - 1) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`seed` must be a single integer in [0, 2^31 - 1].",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (RNG seed)"
+      i = "each seed selects one PCG64 stream at the FFI boundary (i32 range)",
+      j = paste0("`seed` received: ", msuiter_quote_trunc(seed)),
+      c = "pass a single whole number in [0, 2^31 - 1]",
+      data = list(context = "FFI argument validation (RNG seed)")
     )
   }
   n_threads <- .ms_resolve_threads(threads)
@@ -264,10 +298,13 @@
 #' @noRd
 .ms_validate_switch <- function(x, arg) {
   if (!is.logical(x) || length(x) != 1L || is.na(x)) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       sprintf("`%s` must be a single TRUE or FALSE.", arg),
-      class = "msuiter_error_input",
-      context = "FFI argument validation (tally table switch)"
+      i = "the table switches select which channel matrices the kernel counts",
+      j = paste0("`", arg, "` received: ", class(x)[1L], " of length ", length(x)),
+      c = paste0("pass TRUE or FALSE in `", arg, "`"),
+      data = list(context = "FFI argument validation (tally table switch)")
     )
   }
   x
@@ -323,50 +360,74 @@
                            want_sbs384 = FALSE, want_sbs1536 = FALSE,
                            want_dbs78 = FALSE, threads = NULL) {
   if (!is.character(genome_path) || length(genome_path) != 1L || is.na(genome_path)) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`genome_path` must be a single string.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (genome path)"
+      i = "the tally kernel memory-maps one uncompressed 2bit genome per call",
+      j = paste0("`genome_path` received: ", class(genome_path)[1L]),
+      c = "pass a single non-NA file path to a .2bit genome",
+      data = list(context = "FFI argument validation (genome path)")
     )
   }
   n <- length(chrom)
   for (nm in c("chrom", "ref_", "alt", "sample", "strand")) {
     x <- get(nm)
     if (!is.character(x) || anyNA(x)) {
-      rlang::abort(
+      msuiter_abort(
+        "input",
         sprintf("`%s` must be a character vector without NA.", nm),
-        class = "msuiter_error_input",
-        context = "FFI argument validation (tally record columns)"
+        i = "the per-record tally columns cross the FFI as string vectors",
+        j = sprintf("`%s` received: %s (anyNA = %s)", nm, class(x)[1L], anyNA(x)),
+        c = "pass equal-length character columns without NA",
+        data = list(context = "FFI argument validation (tally record columns)")
       )
     }
     if (length(x) != n) {
-      rlang::abort(
+      msuiter_abort(
+        "input",
         sprintf("`%s` has length %d, expected %d (columns must agree).", nm, length(x), n),
-        class = "msuiter_error_input",
-        context = "FFI argument validation (tally record columns)"
+        i = "the per-record tally columns must be the same length",
+        j = sprintf("`%s` has length %d vs %d", nm, length(x), n),
+        c = "align all record columns to one entry per variant",
+        data = list(context = "FFI argument validation (tally record columns)")
       )
     }
   }
   # Contract 3, first layer: pos crosses as double; NA/NaN rejected here.
   if (!is.numeric(pos) || anyNA(pos) || !all(is.finite(pos))) {
-    rlang::abort(
+    msuiter_abort(
+      "na",
       "`pos` must be a finite numeric vector without NA/NaN.",
-      class = "msuiter_error_na",
-      context = "anyNA() validation on the R side of the FFI boundary (contract 3, first layer)"
+      i = "NA/NaN cannot cross the FFI boundary (contract 3)",
+      j = paste0("`pos` has ", sum(!is.finite(pos)), " NA/NaN or non-finite entries"),
+      c = "drop or fix the offending positions before the call",
+      data = list(
+        context = "anyNA() validation on the R side of the FFI boundary (contract 3, first layer)"
+      )
     )
   }
   if (any(pos < 1) || any(pos != floor(pos))) {
-    rlang::abort(
+    bad <- which(pos < 1 | pos != floor(pos))[1L]
+    msuiter_abort(
+      "input",
       "`pos` must be integer-valued and 1-based.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (1-based variant positions)"
+      i = "positions are 1-based and converted to 0-based inside the kernel",
+      j = sprintf("first offender: pos = %s", format(pos[bad])),
+      c = "pass 1-based integer-valued positions",
+      data = list(context = "FFI argument validation (1-based variant positions)")
     )
   }
   if (!all(strand %in% c("T", "U", "B", "N"))) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`strand` must only contain T, U, B or N.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (transcription strand codes)"
+      i = "the transcription annotation feeds the strand-aware SBS tables",
+      j = paste0(
+        "unexpected codes: ",
+        msuiter_quote_trunc(unique(strand[!strand %in% c("T", "U", "B", "N")]))
+      ),
+      c = "annotate every record with one of T, U, B or N",
+      data = list(context = "FFI argument validation (transcription strand codes)")
     )
   }
   want_sbs96 <- .ms_validate_switch(want_sbs96, "want_sbs96")

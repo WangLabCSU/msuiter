@@ -238,6 +238,22 @@ test_that("two tallies of the same input agree on the derived channel hash", {
   expect_true(grepl("^[0-9a-f]{32}$", a@channels$hash))
 })
 
+# U-M1s-11 audit P3: the hash pins the channel table, so two tallies of the
+# SAME input under DIFFERENT modes must never share one (dimension + label
+# digest differ; a collision here would let a DBS78 catalog pass an SBS96
+# snapshot check).
+test_that("different labels across modes give different channel hashes", {
+  path <- .tally_write_2bit(file.path(tempdir(), "cat-tally-hash-xmode.2bit"))
+  on.exit(unlink(path), add = TRUE)
+  v <- ms_variants(.tally_golden_table(), "GRCh38-test",
+    caller = "synthetic", matched_normal = "none"
+  )
+  sbs96 <- ms_tally(v, path, mode = "SBS96")
+  dbs78 <- ms_tally(v, path, mode = "DBS78")
+  expect_false(identical(sbs96@channels$labels, dbs78@channels$labels))
+  expect_false(identical(sbs96@channels$hash, dbs78@channels$hash))
+})
+
 # ---------------------------------------------------------------------------
 # Argument discipline
 # ---------------------------------------------------------------------------

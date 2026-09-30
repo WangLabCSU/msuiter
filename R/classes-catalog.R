@@ -272,12 +272,24 @@ ms_catalog <- function(counts, channels, samples, provenance) {
   out
 }
 
-# One-line print/format: class name / table id / dimensions.
+# One-line print/format: class name / table id / dimensions, plus a skip
+# summary when the provenance carries tally counters (U-M1s-11 audit P3).
+# Hand-built catalogs without n_skipped/n_variants keep the old line only.
 S7::method(format, MsCatalog) <- function(x, ...) {
-  sprintf(
+  line <- sprintf(
     "<MsCatalog> %s: %d channels x %d samples",
     x@channels$name, nrow(x@counts), ncol(x@counts)
   )
+  n_skipped <- x@provenance$n_skipped
+  n_variants <- x@provenance$n_variants
+  if (is.numeric(n_skipped) && length(n_skipped) == 1L && is.finite(n_skipped) &&
+      is.numeric(n_variants) && length(n_variants) == 1L && is.finite(n_variants)) {
+    line <- paste0(
+      line,
+      sprintf("; skipped %d/%d variants", as.integer(n_skipped), as.integer(n_variants))
+    )
+  }
+  line
 }
 
 S7::method(print, MsCatalog) <- function(x, ...) {

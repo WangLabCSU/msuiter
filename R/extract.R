@@ -242,27 +242,36 @@ S7::method(ms_extract, S7::class_any) <- function(catalog, k, method = NULL, ...
   counts <- .ms_validate_matrix(counts, "counts")
   k <- .ms_validate_count(k, "k")
   if (k < 1L) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`k` must be a positive integer.",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (rank k >= 1)"
+      i = "the rank is the number of signature columns the kernel factors",
+      j = paste0("received k = ", format(k)),
+      c = "pass k >= 1 (and <= min(channels, samples))",
+      data = list(context = "FFI argument validation (rank k >= 1)")
     )
   }
   max_iter <- .ms_validate_count(max_iter, "max_iter")
   if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
       !is.finite(seed) || seed < 0 || seed != floor(seed) || seed > 2^31 - 1) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       "`seed` must be a single integer in [0, 2^31 - 1].",
-      class = "msuiter_error_input",
-      context = "FFI argument validation (RNG seed)"
+      i = "each seed selects one PCG64 stream at the FFI boundary (i32 range)",
+      j = paste0("`seed` received: ", msuiter_quote_trunc(seed)),
+      c = "pass a single whole number in [0, 2^31 - 1]",
+      data = list(context = "FFI argument validation (RNG seed)")
     )
   }
   if (!is.character(engine) || length(engine) != 1L || is.na(engine) ||
       !engine %in% c("kl", "eu")) {
-    rlang::abort(
+    msuiter_abort(
+      "input",
       '`engine` must be a single string, one of "kl" or "eu".',
-      class = "msuiter_error_input",
-      context = "FFI argument validation (NMF variant switch)"
+      i = "the M1s kernel ships exactly two NMF variants (KL and Euclidean)",
+      j = paste0("`engine` received: ", msuiter_quote_trunc(engine)),
+      c = 'pass "kl" (default) or "eu"',
+      data = list(context = "FFI argument validation (NMF variant switch)")
     )
   }
   n_threads <- .ms_resolve_threads(threads)
