@@ -323,7 +323,9 @@ S7::method(ms_extract, S7::class_any) <- function(catalog, k, method = NULL, ...
 # Frozen hyper-parameters of the default path. CV budget = folds 10 /
 # seeds 10 per the PI ruling (2026-09-30): an explicit, documented
 # divergence from the SUITOR upstream 30 seeds; the ensemble is
-# multi-initialization only (no bootstrap).
+# multi-initialization only (no bootstrap). replicates = 8 is likewise an
+# explicit budget divergence from the upstream default 100 (memo §1.1,
+# Sig:331) — recorded per the Delta discipline; raise via ms_select_k().
 .ms_pipeline_defaults <- list(
   replicates = 8L,
   max_iter = 200L,
@@ -478,8 +480,9 @@ S7::method(ms_extract, S7::class_any) <- function(catalog, k, method = NULL, ...
   # --- evidence: one row for the extracted rank; CV columns from this
   #     call's own rank curve (1..k). The arbitration marks is_argmin /
   #     passes_veto / selected; with a single evaluated row the fallback
-  #     semantics are degraded by construction (no warning here: ms_extract
-  #     does not choose k -- ms_select_k() is the arbitration surface).
+  #     semantics are degraded by construction (ms_extract does not choose
+  #     k -- ms_select_k() is the arbitration surface; a single-rank veto
+  #     failure warns + falls back to argmin per memo §3 default).
   ev <- .ms_k_evidence_frame(
     grid = k,
     res_by_k = stats::setNames(list(res), as.character(k)),

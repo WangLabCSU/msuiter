@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
+pub mod ard;
 pub mod linalg;
 pub mod consensus;
 pub mod cv;
@@ -15,6 +16,7 @@ pub mod nndsvd;
 pub mod nnls;
 pub mod resample;
 pub mod rng;
+pub mod sparse;
 pub mod stats;
 
 pub use error::MsError;

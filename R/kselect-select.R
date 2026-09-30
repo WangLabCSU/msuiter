@@ -94,7 +94,12 @@
     curve[is.nan(curve)] <- NA_real_
     curve_tr <- full$cv_per_rank_train
     curve_tr[is.nan(curve_tr)] <- NA_real_
-    fold_mat <- matrix(full$fold_test_deviance, nrow = length(curve))
+    # The FFI vector is rank-major (cv.rs aggregate fills ranks × folds in
+    # rank order); matrix() defaults to column-major fill, which scrambles
+    # every row whose rank differs from k_folds (audited P1-1). byrow=TRUE
+    # restores rank-major row semantics.
+    fold_mat <- matrix(full$fold_test_deviance, nrow = length(curve),
+      ncol = k_folds, byrow = TRUE)
     fold_mat[is.nan(fold_mat)] <- NA_real_
     for (i in seq_len(n)) {
       rk <- grid[i]
