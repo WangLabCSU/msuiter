@@ -1,0 +1,5 @@
+"engine","n_labels","set_eq_msuiter","order_eq_msuiter"
+"msuiter",96,TRUE,TRUE
+"sigminer",96,TRUE,TRUE
+"naiveR",96,TRUE,FALSE
+"MP",96,TRUE,FALSE

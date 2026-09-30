@@ -12,7 +12,9 @@ Encoding: UTF-8
 Depends: R (>= 4.3)
 Imports: S7,
     rlang
-Suggests: testthat (>= 3.0.0),
+Suggests: BSgenome.Hsapiens.UCSC.hg19,
+    sigminer,
+    testthat (>= 3.0.0),
     withr
 Collate:
     'classes-utils.R'

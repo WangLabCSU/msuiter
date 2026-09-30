@@ -8,22 +8,22 @@ SPMG = SigProfilerMatrixGenerator 1.3.6 标准调用（自定义基因组 instal
 
 ## 环境
 
-- date: 2026-09-30 07:30:21 CST
+- date: 2026-09-30 08:21:00 CST
 - R: R version 4.5.2 (2025-10-31) (aarch64-apple-darwin20)
 - python/SPMG: SigProfilerMatrixGenerator 1.3.6 (bench/m1s/.venv)
 - host: aarch64-apple-darwin20（Apple Silicon；功耗状态不可控，数字为该钉硬件口径）
 
 ## 数字（主臂 = dbsfree：同样本同染色体最小间隔 2、无重复记录，双侧逐条对齐）
 
-- 我方 ms_tally 3 次（s）：3.7350, 3.7160, 3.7290 → **median = 3.7290 s（<5s ✓）**
-- 我方 FFI 层 3 次（s）：3.7310, 3.7420, 3.7530 → median = 3.7420 s（S7−FFI 差 ≈ -13.0 ms，噪声级——S7 装配不构成可感开销）
-- SPMG 主臂单次墙钟 = 9.8 s（sanity 探针 0.063 s；单次口径——分钟级不复跑）
-- **speedup = 2.6×；判据 ≥50× 且我方 <5s：FAIL**
+- 我方 ms_tally 3 次（s）：3.6360, 3.5840, 3.6000 → **median = 3.6000 s（<5s ✓）**
+- 我方 FFI 层 3 次（s）：3.6520, 3.6410, 3.6790 → median = 3.6520 s（S7−FFI 差 ≈ -52.0 ms，噪声级——S7 装配不构成可感开销）
+- SPMG 主臂单次墙钟 = 9.7 s（sanity 探针 0.055 s；单次口径——分钟级不复跑）
+- **speedup = 2.7×；判据 ≥50× 且我方 <5s：FAIL**
 - **正确性锚（主臂逐格）**：ours sum=1000000 = SPMG sum=1000000，逐格差 = 0（✓ 完全一致）
 
 ## 次臂 dense（自然相邻密度，(chrom,pos,sample) 去重后对齐）
 
-- 记录数 = 951686；我方判为 DBS 的成员数 = 166104（排除出 SBS96）；我方 median = 2.936 s；SPMG = 46.0 s
+- 记录数 = 951686；我方判为 DBS 的成员数 = 166104（排除出 SBS96）；我方 median = 2.871 s；SPMG = 45.6 s
 - 总量对账：SPMG sum−我方 sum = 166104，与 DBS 成员数相等 = TRUE（且逐格差均 ≥0：SPMG 1.3.6 把 DBS 对成员一并计入 SBS96）
 
 ## 语义探针（sanity 100 变异，含 2 对同样本相邻 + 1 对跨样本相邻）

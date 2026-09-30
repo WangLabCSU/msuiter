@@ -19,7 +19,7 @@ msffi_nmf_replicates_probe <- function(counts, k, replicates, max_iter, seed, n_
 
 msffi_build_info <- function() .Call(wrap__msffi_build_info)
 
-ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand, want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78) .Call(wrap__ms_tally_rust, genome_path, chrom, pos, ref_, alt, sample, strand, want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78)
+ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand, want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78, n_threads) .Call(wrap__ms_tally_rust, genome_path, chrom, pos, ref_, alt, sample, strand, want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78, n_threads)
 
 ms_extract_rust <- function(counts, k, max_iter, seed, engine, n_threads) .Call(wrap__ms_extract_rust, counts, k, max_iter, seed, engine, n_threads)
 

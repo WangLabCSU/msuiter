@@ -297,12 +297,18 @@
 #'   edge each skip the record into the ledger (SPMG parity);
 #' * the ledger is switch-independent: context checks run even when the
 #'   corresponding tables are disabled;
-#' * DBS pairs are excluded from all SBS matrices (SPMG `dinuc_sub == 1`).
+#' * DBS pairs are excluded from all SBS matrices (SPMG `dinuc_sub == 1`);
+#' * `(chrom, sample)` partitions run in parallel on a per-call thread pool
+#'   (FFI contract 6); output is bit-identical for every thread count and
+#'   pinned so by tests on both sides of the FFI.
 #'
 #' @param genome_path Path to an (uncompressed) UCSC 2bit reference genome.
 #' @param chrom,pos,ref_,alt,sample,strand Equal-length per-record columns.
 #' @param want_sbs96,want_sbs192,want_sbs384,want_sbs1536,want_dbs78
 #'   Table switches; disabled tables come back as `table x 0` matrices.
+#' @param threads NULL or a single non-negative integer pool size; passed
+#'   through `.ms_resolve_threads()` (`msuiter.threads` option precedence,
+#'   `_R_CHECK_LIMIT_CORES_` cap, 0 = rayon default sentinel).
 #'
 #' @return Named list: `sbs96`, `sbs192`, `sbs384`, `sbs1536`, `dbs78`
 #'   integer matrices (channels x samples; rows in canonical `channels.rs`
@@ -315,7 +321,7 @@
 .ms_tally_rust <- function(genome_path, chrom, pos, ref_, alt, sample, strand,
                            want_sbs96 = TRUE, want_sbs192 = FALSE,
                            want_sbs384 = FALSE, want_sbs1536 = FALSE,
-                           want_dbs78 = FALSE) {
+                           want_dbs78 = FALSE, threads = NULL) {
   if (!is.character(genome_path) || length(genome_path) != 1L || is.na(genome_path)) {
     rlang::abort(
       "`genome_path` must be a single string.",
@@ -371,7 +377,8 @@
 
   res <- .msffi_check(ms_tally_rust(
     genome_path, chrom, as.numeric(pos), ref_, alt, sample, strand,
-    want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78
+    want_sbs96, want_sbs192, want_sbs384, want_sbs1536, want_dbs78,
+    .ms_resolve_threads(threads)
   ))
 
   # Canonical row labels come from the R channel registry (sysdata.rda,

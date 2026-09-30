@@ -1,0 +1,47 @@
+msuiter: dev-load | sigminer: 2.3.1 | R 4.5.2
+patch genome: chr1:1000001-1200000(200kb) chr7:55000001-55250000(250kb) chr12:10000001-10100000(100kb) (ACGT-only verified)
+variants: 264 SNVs | per sample S1=88 S2=88 S3=88 | min spacing 3bp
+msuiter: 96 channels x 3 samples (S1,S3,S2)
+sigminer: 96 channels x 3 samples (S1,S2,S3)
+MutationalPatterns: MutationalPatterns 3.20.1
+
+== channel label audit (order reference: msuiter) ==
+   engine n_labels set_eq_msuiter order_eq_msuiter
+  msuiter       96           TRUE             TRUE
+ sigminer       96           TRUE             TRUE
+   naiveR       96           TRUE            FALSE
+       MP       96           TRUE            FALSE
+
+== totals audit ==
+         S1 S3 S2
+msuiter  88 88 88
+sigminer 88 88 88
+naiveR   88 88 88
+MP       88 88 88
+input per sample: S1=88 S2=88 S3=88
+    msuiter sigminer naiveR MP
+C>A      44       44     44 44
+C>G      43       43     43 43
+C>T      46       46     46 46
+T>A      44       44     44 44
+T>C      43       43     43 43
+T>G      44       44     44 44
+
+== cell-by-cell identity (label-aligned) ==
+msuiter vs sigminer: IDENTICAL (96 x 3 cells)
+msuiter vs naiveR: IDENTICAL (96 x 3 cells)
+msuiter vs MP: IDENTICAL (96 x 3 cells)
+sigminer vs naiveR: IDENTICAL (96 x 3 cells)
+sigminer vs MP: IDENTICAL (96 x 3 cells)
+naiveR vs MP: IDENTICAL (96 x 3 cells)
+
+== coverage: 96/96 channels hit at least once (targeted pass) ==
+
+== REF-mismatch semantics probe ==
+msuiter: counted total=1; claimed-channel counts: true-ref=1, wrong-ref=0 (wrong-ref=0 means REF was validated and skipped)
+sigminer: counted total=2 (does NOT validate REF vs genome if wrong-ref channel nonzero)
+sigminer hit channels: C[C>A]C 1, C[C>G]G 1
+MutationalPatterns: counted total=2; hit channels: C[C>A]C=1, C[C>G]G=1
+
+mismatch cells across all pairs: 0
+artifacts in /Users/wsx/Documents/GitHub/msuiter/bench/xval

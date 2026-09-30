@@ -221,7 +221,7 @@ test_that("R validators reject malformed columns before the FFI", {
 
   # Second layer: the Rust-side strand guard via the raw passthrough.
   err2 <- tryCatch(
-    ms_tally_rust(path, "chr1", 12, "C", "A", "S", "X", TRUE, FALSE, FALSE, FALSE, FALSE),
+    ms_tally_rust(path, "chr1", 12, "C", "A", "S", "X", TRUE, FALSE, FALSE, FALSE, FALSE, 1L),
     error = identity
   )
   expect_s3_class(err2, "msuiter_error_rust")
@@ -239,4 +239,38 @@ test_that("unknown chromosomes are ledger rows, not errors", {
   expect_match(res$ledger, "1\tskipped:unknown_chrom\n", fixed = TRUE)
   expect_match(res$ledger, "2\tsbs\n", fixed = TRUE)
   expect_identical(res$n_skipped, 1L)
+})
+
+# ---------------------------------------------------------------------------
+# Partition-parallel driver (FFI contract 6): the (chrom, sample) partitions
+# run on a per-call thread pool; output must be bit-identical for every
+# thread count. The golden batch splits into 4 partitions (chr1xS1, chr1xS2,
+# chr2xS2, chrZxS1), so threads > 1 exercises the parallel path, threads = 1
+# the sequential path.
+# ---------------------------------------------------------------------------
+
+test_that("tally output is bit-identical across thread counts (contract 6)", {
+  path <- .tally_write_2bit(file.path(tempdir(), "tally-threads.2bit"))
+  on.exit(unlink(path), add = TRUE)
+  d <- .tally_golden_records()
+  run <- function(threads) {
+    .ms_tally_rust(path,
+      chrom = d$chrom, pos = d$pos, ref_ = d$ref_, alt = d$alt,
+      sample = d$sample, strand = d$strand,
+      want_sbs96 = TRUE, want_sbs192 = TRUE, want_sbs384 = TRUE,
+      want_sbs1536 = TRUE, want_dbs78 = TRUE, threads = threads
+    )
+  }
+  r1 <- run(1L)
+  r4 <- run(4L)
+  r16 <- run(16L)
+  # Three identical() groups: parallel vs sequential for both pool sizes,
+  # plus the ledger TSV byte-exactly against the golden rendering.
+  expect_identical(r4, r1)
+  expect_identical(r16, r1)
+  expect_identical(r1$ledger, .tally_golden_ledger())
+  # The counts matrices themselves are identical() across the board
+  # (covered by the whole-list comparisons above); spell out one labelled
+  # cell as a layout probe on the parallel path.
+  expect_identical(r4$dbs78["TG>CA", "S1"], 1L)
 })

@@ -362,6 +362,7 @@ fn ms_tally_rust(
     want_sbs384: bool,
     want_sbs1536: bool,
     want_dbs78: bool,
+    n_threads: i32,
 ) -> Robj {
     condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
         // Column agreement (contract 4): all six per-record columns must
@@ -385,6 +386,15 @@ fn ms_tally_rust(
                 .with_j(col as i64));
             }
         }
+        // Contract 6: the R wrapper resolves `msuiter.threads` (and the
+        // `_R_CHECK_LIMIT_CORES_` cap) and passes the effective pool size;
+        // 0 is the "rayon default" sentinel.
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
 
         // D12 (contract 1): one call in/out — the file handle and the
         // mapping are built here and dropped with this scope. SAFETY: the
@@ -407,7 +417,11 @@ fn ms_tally_rust(
         })?;
         let mmap = unsafe { memmap2::Mmap::map(&file) }
             .map_err(|e| MsError::new("io", format!("cannot map genome file \"{genome_path}\": {e}")))?;
-        let mut genome = msuiter_catalog::genome::TwoBitGenome::from_bytes(&mmap[..])?;
+        // Parsed once here for chromosome resolution (chromosome names +
+        // per-record chrom indexes); the tally core re-parses the same
+        // immutable bytes (main thread for validation, once per pool
+        // worker on the parallel path — see tally.rs, Concurrency).
+        let genome = msuiter_catalog::genome::TwoBitGenome::from_bytes(&mmap[..])?;
 
         // Chromosome resolution is EXACT string matching (M1s policy, no
         // chr-prefix normalization); unmatched names ledger as
@@ -448,10 +462,20 @@ fn ms_tally_rust(
             sbs1536: want_sbs1536,
             dbs78: want_dbs78,
         };
-        // Contract 7: single-threaded (M1s scope), so the boundary hook is
-        // the whole interrupt story.
+        // Contract 6 + 7: (chrom, sample) partitions run in parallel on a
+        // per-call pool; the boundary hook below is polled on THIS (main)
+        // thread only, and workers see only the in-call cancellation flag
+        // (see tally.rs, Concurrency + Interrupt protocol).
+        let cancelled = AtomicBool::new(false);
         let mut boundary = || unsafe { R_CheckUserInterrupt() };
-        let result = tally::tally(&mut genome, &variants, tables, &mut boundary)?;
+        let result = tally::tally(
+            &mmap[..],
+            &variants,
+            tables,
+            n_threads as usize,
+            &cancelled,
+            &mut boundary,
+        )?;
 
         let n_samples = sample_idx.len();
         let pairs = vec![

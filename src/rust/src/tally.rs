@@ -2,7 +2,7 @@
 //! SBS96/192/384/1536 & DBS78 counting (U-M1s-09).
 //!
 //! This module is the pure (R-type-free) heart of `ms_tally_rust`: it
-//! borrows an already-parsed [`TwoBitGenome`] and a batch of
+//! borrows an already-mapped 2bit reference byte buffer and a batch of
 //! [`TallyVariant`]s, and produces the count matrices plus the provenance
 //! ledger. File I/O and mmap ownership stay in the FFI shell
 //! (`lib.rs`, the only `unsafe` site, FFI contract 1 / D12: the mapping is
@@ -65,17 +65,50 @@
 //! later unit standardizes aliasing). An unmatched name is a per-record
 //! `skipped:unknown_chrom` ledger entry, never an error.
 //!
-//! # Concurrency (M1s scope)
+//! # Concurrency (partition-parallel, contract 6 + 7)
 //!
-//! Single-threaded on purpose: per-variant independence WOULD allow
-//! parallelization, but the decision is deferred until the tally wiring
-//! (U-M1s-11) profiles real variant densities (same reasoning as the
-//! deferred batched-context API in `genome.rs`). Contract 7 is honored in
-//! the single-thread shape: the caller-injected `check_user_interrupt`
-//! hook runs once per (chromosome, sample) run and at fixed event chunks on
-//! the calling (main) thread; there are no workers and no cancellation flag.
+//! The independent units of contract 6 are the `(chrom_idx, sample_idx)`
+//! partitions: routing adjacency is a within-partition criterion, so
+//! partitions share nothing — no router state, no context-fetch cursor, no
+//! output slot. Every partition runs single-threaded with the pipeline's
+//! own fixed record order (in-unit reduction order is part of the output
+//! contract).
+//!
+//! * Per-call ThreadPool (`probes::build_call_pool`, `n_threads` / 0 =
+//!   rayon-default sentinel; the R side resolves `msuiter.threads` and the
+//!   `_R_CHECK_LIMIT_CORES_` cap). The global rayon pool is never used.
+//! * Each pool worker owns its own [`TwoBitGenome`] handle over the shared
+//!   read-only byte buffer (`context` seeks a cursor, so it needs `&mut`;
+//!   handles cannot be shared). The bytes are parsed/validated once on the
+//!   main thread, so the per-worker re-parse is infallible.
+//! * Per-partition counters are single-column (one partition touches one
+//!   sample column) and are merged into the full buffers in partition
+//!   order — a fixed reduction of exact integer adds, never an
+//!   order-sensitive float accumulation. Outcomes are placed by the
+//!   record's input index. Together: `threads ∈ {1, N}` give bit-identical
+//!   output (synthesis A7, pinned by tests on both sides of the FFI).
+//! * Degenerate shapes stay sequential ON THE MAIN THREAD with the
+//!   pre-parallel polling granularity: a single partition (nothing to
+//!   parallelize) or `n_threads == 1` (single-core caller, e.g. the
+//!   pinned-hardware bench) never build a pool.
+//!
+//! # Interrupt protocol (contract 7)
+//!
+//! * Sequential path: the caller-injected `check_user_interrupt` hook runs
+//!   once per partition boundary and every [`POLL_EVERY_EVENTS`] events on
+//!   the calling (main) thread — exactly the pre-parallel shape.
+//! * Parallel path: the main thread polls the hook at CHUNK boundaries
+//!   (partitions are scheduled ~4 per worker, capped); workers see ONLY the
+//!   `cancelled` `AtomicBool` — at partition start and every
+//!   [`POLL_EVERY_EVENTS`] events — never R state. Any cancellation fails
+//!   the whole call with the `interrupted` topic: stateless FFI (D12)
+//!   means there is nothing to clean up and no partial results to
+//!   suppress downstream.
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use rayon::prelude::*;
 
 use msuiter_catalog::dbs::assign_dbs78;
 use msuiter_catalog::genome::TwoBitGenome;
@@ -85,14 +118,17 @@ use msuiter_catalog::sbs::{
 };
 use msuiter_engine::error::MsError;
 
+use super::probes::build_call_pool;
+
 /// Sentinel chromosome index for records whose chromosome name does not
 /// occur in the reference genome; such records are ledgered
 /// `skipped:unknown_chrom` (never an error, never routed).
 pub const UNKNOWN_CHROM: usize = usize::MAX;
 
-/// Interrupt-poll granularity within one (chromosome, sample) routing run
-/// (contract 7: the main-thread hook runs at run boundaries and every
-/// this-many events).
+/// Interrupt-poll granularity within one (chromosome, sample) partition
+/// (contract 7): the main-thread hook runs at this many events on the
+/// sequential path, and workers re-check the cancellation flag at the same
+/// cadence on the parallel path.
 const POLL_EVERY_EVENTS: usize = 4096;
 
 /// One input variant record (owned alleles; the FFI shell builds these
@@ -229,8 +265,21 @@ pub struct TallyResult {
     pub n_skipped: u32,
 }
 
-/// Flat column-major count buffers (contract 2: explicit layout).
+/// Flat column-major count buffers (contract 2: explicit layout), assembled
+/// from the per-partition single columns in partition order.
 struct Counters {
+    sbs96: Vec<u32>,
+    sbs192: Vec<u32>,
+    sbs384: Vec<u32>,
+    sbs1536: Vec<u32>,
+    dbs78: Vec<u32>,
+}
+
+/// Per-partition counters: a `(chrom, sample)` partition touches exactly
+/// ONE sample column, so each enabled table is a single channel-length
+/// vector (channel-major, disabled tables empty). Merging is a fixed-order
+/// scatter of exact integer adds (module docs: thread-count invariance).
+struct ColumnCounters {
     sbs96: Vec<u32>,
     sbs192: Vec<u32>,
     sbs384: Vec<u32>,
@@ -256,16 +305,78 @@ impl Counters {
         }
     }
 
-    /// Bump channel `row` of sample column `col` in `buf`.
+    /// Add one partition's single column into sample column `col`.
+    ///
+    /// u32 addition is exact and associative, and the per-event
+    /// `saturating_add` semantics are preserved by merging saturated
+    /// partition sums (any path reaching u32::MAX saturates to u32::MAX
+    /// again), so the merge order cannot change a single bit of the
+    /// result — the explicit partition order just makes the reduction
+    /// order fixed by construction (contract 6).
+    fn merge_column(&mut self, col: usize, part: ColumnCounters) {
+        let merge = |dst: &mut [u32], src: Vec<u32>, nrow: usize| {
+            if dst.is_empty() {
+                debug_assert!(src.is_empty(), "disabled table produced counts");
+                return;
+            }
+            let off = col * nrow;
+            for (d, s) in dst[off..off + nrow].iter_mut().zip(src) {
+                *d = d.saturating_add(s);
+            }
+        };
+        merge(&mut self.sbs96, part.sbs96, 96);
+        merge(&mut self.sbs192, part.sbs192, 192);
+        merge(&mut self.sbs384, part.sbs384, 384);
+        merge(&mut self.sbs1536, part.sbs1536, 1536);
+        merge(&mut self.dbs78, part.dbs78, 78);
+    }
+}
+
+impl ColumnCounters {
+    fn new(tables: TallyTables) -> Self {
+        let len = |wanted: bool, channels: usize| {
+            if wanted {
+                vec![0u32; channels]
+            } else {
+                Vec::new()
+            }
+        };
+        Self {
+            sbs96: len(tables.sbs96, 96),
+            sbs192: len(tables.sbs192, 192),
+            sbs384: len(tables.sbs384, 384),
+            sbs1536: len(tables.sbs1536, 1536),
+            dbs78: len(tables.dbs78, 78),
+        }
+    }
+
+    /// Bump channel `row` of this partition's single sample column.
     ///
     /// Index arithmetic is bounds-checked implicitly by the panic on a
-    /// bug; every row/col reaching this point is table-derived and
-    /// therefore in range (row < table_len by construction, col <
-    /// n_samples by the sample map).
-    fn bump(buf: &mut [u32], row: usize, col: usize, nrow: usize) {
-        let slot = col * nrow + row;
-        buf[slot] = buf[slot].saturating_add(1);
+    /// bug; every row reaching this point is table-derived and therefore
+    /// in range (row < table_len by construction).
+    fn bump(buf: &mut [u32], row: usize) {
+        buf[row] = buf[row].saturating_add(1);
     }
+}
+
+/// One `(chrom_idx, sample_idx)` partition of the sorted record order: the
+/// independent unit of the parallel driver (contract 6). `run` holds
+/// indices into the caller's `variants` slice in stable-sorted order.
+struct PartitionJob<'a> {
+    chrom_idx: usize,
+    run: &'a [usize],
+    /// Sample column of every record in `run` (first-appearance order of
+    /// the caller's input; decided on the main thread before workers run).
+    col: usize,
+}
+
+/// Everything one partition produced: the per-record outcomes aligned with
+/// [`PartitionJob::run`], and the single-column counters to merge at the
+/// partition's sample column.
+struct PartitionOutput {
+    outcomes: Vec<TallyOutcome>,
+    counters: ColumnCounters,
 }
 
 /// `true` iff every byte is uppercase ACGT.
@@ -292,16 +403,33 @@ fn position_usize(pos0: u64, chrom: &str) -> Result<usize, MsError> {
 
 /// Tally a batch of variants against an in-memory 2bit genome.
 ///
-/// See the module docs for the pipeline, the ledger semantics and the
-/// single-thread scope. `check_user_interrupt` is called on the calling
-/// thread at (chromosome, sample)-run boundaries and every
-/// [`POLL_EVERY_EVENTS`] events (under R: `R_CheckUserInterrupt`, contract 7).
+/// `genome_bytes` is the raw 2bit buffer (the FFI shell's read-only mmap):
+/// it is parsed once here for validation and chromosome names, and once
+/// per pool worker on the parallel path (module docs, Concurrency).
+///
+/// `n_threads` is the per-call pool size; `0` means "rayon default" (the
+/// R side resolves the `msuiter.threads` option and the
+/// `_R_CHECK_LIMIT_CORES_` cap and passes the effective value). A single
+/// partition or `n_threads == 1` degenerates to the sequential main-thread
+/// path (module docs).
+///
+/// `check_user_interrupt` is called on the calling thread at partition /
+/// chunk boundaries and — on the sequential path — every
+/// [`POLL_EVERY_EVENTS`] events (under R: `R_CheckUserInterrupt`,
+/// contract 7). Workers only ever read `cancelled`.
 pub fn tally(
-    genome: &mut TwoBitGenome<'_>,
+    genome_bytes: &[u8],
     variants: &[TallyVariant],
     tables: TallyTables,
+    n_threads: usize,
+    cancelled: &AtomicBool,
     check_user_interrupt: &mut dyn FnMut(),
 ) -> Result<TallyResult, MsError> {
+    // Main-thread parse: format/io validation happens exactly once here
+    // (a per-worker re-parse of the same immutable bytes is therefore
+    // infallible), and the names drive chrom-index validation and the
+    // partition labels.
+    let mut genome = TwoBitGenome::from_bytes(genome_bytes)?;
     let chrom_names = genome.chrom_names();
 
     // Contract 4: every chromosome index is validated up front — either a
@@ -341,20 +469,11 @@ pub fn tally(
         )
     });
 
-    // One outcome per input record, reported in caller order.
-    let mut outcomes: Vec<Option<TallyOutcome>> = vec![None; variants.len()];
-    let mut polls: usize = 0;
-    let mut poll = |polls: &mut usize| {
-        *polls += 1;
-        check_user_interrupt();
-    };
-
-    // Partition the sorted order into per-(chrom, sample) runs: the
+    // Partition the sorted order into per-(chrom, sample) jobs: the
     // router's adjacency is a within-sample criterion (module docs).
+    let mut jobs: Vec<PartitionJob<'_>> = Vec::new();
     let mut start = 0usize;
     while start < order.len() {
-        poll(&mut polls);
-        let mut events_since_poll = 0usize;
         let chrom_idx = variants[order[start]].chrom_idx;
         let sample_idx = variants[order[start]].sample_idx;
         let mut end = start + 1;
@@ -364,44 +483,111 @@ pub fn tally(
         {
             end += 1;
         }
-        let run = &order[start..end];
-        if chrom_idx == UNKNOWN_CHROM {
-            for &k in run {
-                outcomes[k] = Some(TallyOutcome::SkippedUnknownChrom);
-            }
-        } else {
-            let chrom = chrom_names[chrom_idx].as_str();
-            let recs: Vec<VarRecord<'_>> = run
-                .iter()
-                .map(|&k| VarRecord::new(variants[k].pos0, &variants[k].ref_, &variants[k].alt))
-                .collect();
-            let routing = route_variants(&recs);
-            // Baseline outcomes: the router's per-record ledger, verbatim.
-            for (run_k, entry) in routing.ledger.entries().iter().enumerate() {
-                outcomes[run[run_k]] = Some(TallyOutcome::of_entry(*entry));
-            }
-            for event in &routing.events {
-                events_since_poll += 1;
-                if events_since_poll % POLL_EVERY_EVENTS == 0 {
-                    poll(&mut polls);
-                }
-                tally_event(
-                    genome,
-                    chrom,
-                    variants,
-                    run,
-                    event,
-                    tables,
-                    &sample_col,
-                    &mut counters,
-                    &mut outcomes,
-                )?;
-            }
-        }
+        let col = sample_col[&sample_idx];
+        jobs.push(PartitionJob {
+            chrom_idx,
+            run: &order[start..end],
+            col,
+        });
         start = end;
     }
 
-    let resolved: Vec<TallyOutcome> = outcomes
+    // One outcome per input record, reported in caller order.
+    let mut resolved: Vec<Option<TallyOutcome>> = vec![None; variants.len()];
+
+    if n_threads != 1 && jobs.len() > 1 {
+        // ---- Parallel path (contract 6): partitions scheduled in whole
+        // waves. A partition is a COARSE unit (up to whole chromosomes), so
+        // unlike the fine-grained replicate driver (4x oversubscription per
+        // worker), each chunk here must hold at least one full pool wave --
+        // otherwise a small batch (few partitions) would be serialized into
+        // one-partition chunks. Wave count = ceil(jobs / workers), capped
+        // at 16 to bound the boundary-poll interval; the main thread merges
+        // in partition order between waves.
+        let pool = build_call_pool(n_threads)?;
+        let workers = match n_threads {
+            0 => jobs.len(), // rayon default (all cores): one whole wave
+            t => t.clamp(2, 16),
+        };
+        let waves = ((jobs.len() + workers - 1) / workers).clamp(1, 16);
+        let chunk_len = ((jobs.len() + waves - 1) / waves).max(1);
+        let n_chunks = (jobs.len() + chunk_len - 1) / chunk_len;
+
+        for c in 0..n_chunks {
+            // Worker-side view (contract 7): the flag is the only
+            // cross-thread signal; a tripped flag fails the whole call
+            // with no partial results (contract 5).
+            if cancelled.load(Ordering::Relaxed) {
+                return Err(MsError::new(
+                    "interrupted",
+                    format!(
+                        "call interrupted before chunk {}; no partial results are returned",
+                        c + 1
+                    ),
+                )
+                .with_i(c as i64 + 1));
+            }
+            // Main-thread boundary poll (under R: R_CheckUserInterrupt).
+            check_user_interrupt();
+            let first = c * chunk_len;
+            let last = (first + chunk_len).min(jobs.len());
+            let per_partition: Vec<Result<PartitionOutput, MsError>> = pool.install(|| {
+                (first..last)
+                    .into_par_iter()
+                    .map_init(
+                        // One genome handle per pool worker over the shared
+                        // read-only bytes: `context` seeks a cursor, so
+                        // handles cannot be shared across threads. The bytes
+                        // were validated above; this parse is infallible.
+                        || {
+                            TwoBitGenome::from_bytes(genome_bytes)
+                                .expect("genome bytes were validated on the main thread")
+                        },
+                        |genome, p| {
+                            let job = &jobs[p];
+                            process_partition(
+                                genome,
+                                &chrom_names,
+                                variants,
+                                job,
+                                p,
+                                tables,
+                                cancelled,
+                                None,
+                            )
+                        },
+                    )
+                    .collect()
+            });
+            // Fixed reduction in partition order: the first error in order
+            // is exactly what the sequential path would have raised, and
+            // the counter merge order is fixed by construction.
+            for (offset, out) in per_partition.into_iter().enumerate() {
+                let out = out?;
+                absorb(out, &jobs[first + offset], &mut resolved, &mut counters);
+            }
+        }
+    } else {
+        // ---- Sequential path: single partition or single-core caller.
+        // No pool is built; the pre-parallel polling granularity is kept
+        // (boundary per run + every POLL_EVERY_EVENTS events, main thread).
+        for (p, job) in jobs.iter().enumerate() {
+            check_user_interrupt();
+            let out = process_partition(
+                &mut genome,
+                &chrom_names,
+                variants,
+                job,
+                p,
+                tables,
+                cancelled,
+                Some(&mut *check_user_interrupt),
+            )?;
+            absorb(out, job, &mut resolved, &mut counters);
+        }
+    }
+
+    let resolved: Vec<TallyOutcome> = resolved
         .into_iter()
         .map(|o| o.expect("every record receives exactly one outcome"))
         .collect();
@@ -426,10 +612,121 @@ pub fn tally(
     })
 }
 
+/// Place one partition's output: outcomes by the records' input indices,
+/// counters scattered into the partition's sample column. The reduction is
+/// index-ordered by construction (module docs).
+fn absorb(
+    out: PartitionOutput,
+    job: &PartitionJob<'_>,
+    resolved: &mut [Option<TallyOutcome>],
+    counters: &mut Counters,
+) {
+    for (k, o) in out.outcomes.into_iter().enumerate() {
+        resolved[job.run[k]] = Some(o);
+    }
+    counters.merge_column(job.col, out.counters);
+}
+
+/// Process one `(chrom, sample)` partition: routing, context fetch +
+/// validation + counting. Single-threaded by construction (the partition
+/// is the sequential unit of contract 6); `main_poll` is `Some` only on
+/// the main-thread sequential path, where the R interrupt hook runs at
+/// [`POLL_EVERY_EVENTS`] cadence — workers instead re-check the
+/// cancellation flag at the same cadence (contract 7: workers never see R
+/// state).
+#[allow(clippy::too_many_arguments)]
+fn process_partition(
+    genome: &mut TwoBitGenome<'_>,
+    chrom_names: &[String],
+    variants: &[TallyVariant],
+    job: &PartitionJob<'_>,
+    part_no: usize,
+    tables: TallyTables,
+    cancelled: &AtomicBool,
+    mut main_poll: Option<&mut dyn FnMut()>,
+) -> Result<PartitionOutput, MsError> {
+    // Worker-side view (contract 7): the flag is the only cross-thread
+    // signal a unit ever sees; a tripped flag fails the whole call with
+    // no partial results (contract 5).
+    if cancelled.load(Ordering::Relaxed) {
+        return Err(MsError::new(
+            "interrupted",
+            format!(
+                "worker observed cancellation at partition {}; no partial results are returned",
+                part_no + 1
+            ),
+        )
+        .with_i(part_no as i64 + 1));
+    }
+
+    // Partition-local outcomes, indexed by the position within the run.
+    let mut outcomes: Vec<Option<TallyOutcome>> = vec![None; job.run.len()];
+    let mut counters = ColumnCounters::new(tables);
+
+    if job.chrom_idx == UNKNOWN_CHROM {
+        for slot in outcomes.iter_mut() {
+            *slot = Some(TallyOutcome::SkippedUnknownChrom);
+        }
+    } else {
+        let chrom = chrom_names[job.chrom_idx].as_str();
+        let recs: Vec<VarRecord<'_>> = job
+            .run
+            .iter()
+            .map(|&k| VarRecord::new(variants[k].pos0, &variants[k].ref_, &variants[k].alt))
+            .collect();
+        let routing = route_variants(&recs);
+        // Baseline outcomes: the router's per-record ledger, verbatim.
+        for (run_k, entry) in routing.ledger.entries().iter().enumerate() {
+            outcomes[run_k] = Some(TallyOutcome::of_entry(*entry));
+        }
+        let mut events_since_poll = 0usize;
+        for event in &routing.events {
+            events_since_poll += 1;
+            if events_since_poll % POLL_EVERY_EVENTS == 0 {
+                match main_poll.as_deref_mut() {
+                    // Sequential path: the R hook at the pre-parallel
+                    // cadence (under R: R_CheckUserInterrupt).
+                    Some(poll) => poll(),
+                    // Parallel path: workers re-check ONLY the flag.
+                    None => {
+                        if cancelled.load(Ordering::Relaxed) {
+                            return Err(MsError::new(
+                                "interrupted",
+                                format!(
+                                    "worker observed cancellation at partition {}",
+                                    part_no + 1
+                                ),
+                            )
+                            .with_i(part_no as i64 + 1));
+                        }
+                    }
+                }
+            }
+            tally_event(
+                genome,
+                chrom,
+                variants,
+                job.run,
+                event,
+                tables,
+                &mut counters,
+                &mut outcomes,
+            )?;
+        }
+    }
+
+    let outcomes = outcomes
+        .into_iter()
+        .map(|o| o.expect("every record receives exactly one outcome"))
+        .collect();
+    Ok(PartitionOutput { outcomes, counters })
+}
+
 /// Process one routed event: context fetch + validation + counting.
 /// Assembly-layer failures overwrite the baseline (router) outcomes of the
-/// event's records with the qualifying skip. The parameter list mirrors the
-/// call site's locals one-to-one (no context struct at this size).
+/// event's records with the qualifying skip. `outcomes` is the partition's
+/// local slot vector (indexed by position within the run) and `counters`
+/// the partition's single sample column.
 #[allow(clippy::too_many_lines)] // one flat match per event kind reads best
 #[allow(clippy::too_many_arguments)]
 fn tally_event(
@@ -439,8 +736,7 @@ fn tally_event(
     run: &[usize],
     event: &RoutedEvent,
     tables: TallyTables,
-    sample_col: &HashMap<usize, usize>,
-    counters: &mut Counters,
+    counters: &mut ColumnCounters,
     outcomes: &mut [Option<TallyOutcome>],
 ) -> Result<(), MsError> {
     match *event {
@@ -457,39 +753,38 @@ fn tally_event(
             let ctx5 = match genome.context(chrom, pos0, 2, 2) {
                 Ok(bytes) => bytes,
                 Err(e) if e.topic == "bounds" => {
-                    outcomes[orig] = Some(TallyOutcome::SkippedContextBounds);
+                    outcomes[record] = Some(TallyOutcome::SkippedContextBounds);
                     return Ok(());
                 }
                 Err(e) => return Err(e), // io/format: corrupt file fails the call
             };
             if !all_acgt(&ctx5) {
-                outcomes[orig] = Some(TallyOutcome::SkippedNContext);
+                outcomes[record] = Some(TallyOutcome::SkippedNContext);
                 return Ok(());
             }
             if ctx5[2] != ref_byte {
-                outcomes[orig] = Some(TallyOutcome::SkippedRefMismatch);
+                outcomes[record] = Some(TallyOutcome::SkippedRefMismatch);
                 return Ok(());
             }
             let v = &variants[orig];
-            let col = sample_col[&v.sample_idx];
             let ctx3 = &ctx5[1..4];
             if tables.sbs96 {
                 let row = assign_sbs96_slice(ctx3, alt)?;
-                Counters::bump(&mut counters.sbs96, row, col, 96);
+                ColumnCounters::bump(&mut counters.sbs96, row);
             }
             if tables.sbs192 && !matches!(v.strand, Strand::Bidirectional | Strand::None) {
                 // B/N strands have no SBS192 channel: dropped from THIS
                 // matrix only (module docs) — not a ledger skip.
                 let row = assign_sbs192_slice(ctx3, alt, v.strand)?;
-                Counters::bump(&mut counters.sbs192, row, col, 192);
+                ColumnCounters::bump(&mut counters.sbs192, row);
             }
             if tables.sbs384 {
                 let row = assign_sbs384_slice(ctx3, alt, v.strand)?;
-                Counters::bump(&mut counters.sbs384, row, col, 384);
+                ColumnCounters::bump(&mut counters.sbs384, row);
             }
             if tables.sbs1536 {
                 let row = assign_sbs1536_slice(&ctx5, alt)?;
-                Counters::bump(&mut counters.sbs1536, row, col, 1536);
+                ColumnCounters::bump(&mut counters.sbs1536, row);
             }
             Ok(())
         }
@@ -505,7 +800,7 @@ fn tally_event(
                 Ok(bytes) => bytes,
                 Err(e) if e.topic == "bounds" => {
                     for &run_k in &records {
-                        outcomes[run[run_k]] = Some(TallyOutcome::SkippedContextBounds);
+                        outcomes[run_k] = Some(TallyOutcome::SkippedContextBounds);
                     }
                     return Ok(());
                 }
@@ -513,21 +808,19 @@ fn tally_event(
             };
             if !all_acgt(&dinuc) {
                 for &run_k in &records {
-                    outcomes[run[run_k]] = Some(TallyOutcome::SkippedNDinuc);
+                    outcomes[run_k] = Some(TallyOutcome::SkippedNDinuc);
                 }
                 return Ok(());
             }
             if dinuc[0] != ref2[0] || dinuc[1] != ref2[1] {
                 for &run_k in &records {
-                    outcomes[run[run_k]] = Some(TallyOutcome::SkippedRefMismatch);
+                    outcomes[run_k] = Some(TallyOutcome::SkippedRefMismatch);
                 }
                 return Ok(());
             }
             if tables.dbs78 {
                 let row = assign_dbs78(&ref2, &alt2)?;
-                let orig = run[records[0]];
-                let col = sample_col[&variants[orig].sample_idx];
-                Counters::bump(&mut counters.dbs78, row, col, 78);
+                ColumnCounters::bump(&mut counters.dbs78, row);
             }
             Ok(())
         }
@@ -692,6 +985,11 @@ mod tests {
         }
     }
 
+    /// A clean flag for tests that never trip cancellation.
+    fn no_cancel() -> AtomicBool {
+        AtomicBool::new(false)
+    }
+
     /// The hand-derived golden batch (22 records; every outcome and count
     /// derived by hand from the SPMG rules pinned in catalog tests):
     /// plain SNVs across two samples, an adjacent double SNV on each
@@ -760,11 +1058,17 @@ mod tests {
     #[test]
     fn golden_multi_table_tally() {
         let bytes = fixture_bytes();
-        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
         let variants = golden_variants();
         let mut polls = 0usize;
-        let res =
-            tally(&mut genome, &variants, all_tables(), &mut || polls += 1).unwrap();
+        let res = tally(
+            &bytes,
+            &variants,
+            all_tables(),
+            1,
+            &no_cancel(),
+            &mut || polls += 1,
+        )
+        .unwrap();
 
         // Sample columns: sample_idx 1 first appears at input record 1,
         // sample_idx 0 at record 3 — col0 = sample 1, col1 = sample 0.
@@ -804,10 +1108,10 @@ mod tests {
         assert_eq!(res.ledger_tsv, golden_ledger());
         assert_eq!(res.n_skipped, 9);
 
-        // Contract 7 on the single-thread path: one poll per (chrom,
-        // sample) run — chr1 splits into sample-0 and sample-1 segments,
-        // chr2 is one sample-1 segment, chrZ one unknown-chrom segment;
-        // 17 events < POLL_EVERY_EVENTS.
+        // Contract 7 on the sequential path (single core, the pre-parallel
+        // granularity): one poll per (chrom, sample) run — chr1 splits into
+        // sample-0 and sample-1 segments, chr2 is one sample-1 segment,
+        // chrZ one unknown-chrom segment; 17 events < POLL_EVERY_EVENTS.
         assert_eq!(polls, 4);
 
         // Cross-pin the derived rows against the canonical tables.
@@ -827,9 +1131,8 @@ mod tests {
     #[test]
     fn disabled_tables_yield_empty_buffers_and_identical_ledger() {
         let bytes = fixture_bytes();
-        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
         let variants = golden_variants();
-        let res = tally(&mut genome, &variants, TallyTables::default(), &mut || {}).unwrap();
+        let res = tally(&bytes, &variants, TallyTables::default(), 1, &no_cancel(), &mut || {}).unwrap();
         assert!(res.sbs96.is_empty() && res.sbs192.is_empty() && res.sbs384.is_empty());
         assert!(res.sbs1536.is_empty() && res.dbs78.is_empty());
         assert_eq!(res.ledger_tsv, golden_ledger());
@@ -839,9 +1142,8 @@ mod tests {
     #[test]
     fn empty_input_is_all_empty() {
         let bytes = fixture_bytes();
-        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
         let mut polls = 0usize;
-        let res = tally(&mut genome, &[], all_tables(), &mut || polls += 1).unwrap();
+        let res = tally(&bytes, &[], all_tables(), 1, &no_cancel(), &mut || polls += 1).unwrap();
         assert!(res.sbs96.is_empty() && res.dbs78.is_empty());
         assert_eq!(res.ledger_tsv, "");
         assert_eq!(res.n_skipped, 0);
@@ -856,14 +1158,13 @@ mod tests {
     #[test]
     fn cross_sample_adjacent_snvs_are_never_a_dbs_pair() {
         let bytes = fixture_bytes();
-        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
         // chr1 is ACAC...: 0-based 11 is C, 12 is A — the pair is
         // coordinate-adjacent, the samples differ.
         let variants = vec![
             v(0, 11, "C", "A", 0, Strand::None),
             v(0, 12, "A", "T", 1, Strand::None),
         ];
-        let res = tally(&mut genome, &variants, all_tables(), &mut || {}).unwrap();
+        let res = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || {}).unwrap();
 
         assert_eq!(res.ledger_tsv, "1\tsbs\n2\tsbs\n");
         assert_eq!(res.n_skipped, 0);
@@ -882,7 +1183,7 @@ mod tests {
         // Mirrored input order (the later-position record first) must not
         // change the outcome: sorting keeps the pairing within-sample.
         let reversed = variants.iter().rev().cloned().collect::<Vec<_>>();
-        let res = tally(&mut genome, &reversed, all_tables(), &mut || {}).unwrap();
+        let res = tally(&bytes, &reversed, all_tables(), 1, &no_cancel(), &mut || {}).unwrap();
         assert_eq!(res.ledger_tsv, "1\tsbs\n2\tsbs\n");
         assert!(res.dbs78.iter().all(|&c| c == 0));
     }
@@ -892,9 +1193,8 @@ mod tests {
     #[test]
     fn out_of_range_chrom_index_is_a_bounds_error() {
         let bytes = fixture_bytes();
-        let mut genome = TwoBitGenome::from_bytes(&bytes).unwrap();
         let variants = vec![v(2, 10, "A", "T", 0, Strand::None)];
-        let err = tally(&mut genome, &variants, all_tables(), &mut || {}).unwrap_err();
+        let err = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || {}).unwrap_err();
         assert_eq!(err.topic, "bounds");
         assert_eq!(err.i, Some(1));
         assert_eq!(err.j, Some(2));
@@ -909,9 +1209,200 @@ mod tests {
         // 16-byte DNA covers 40 bases); cutting 8 bytes off the tail keeps
         // header + index parseable but breaks the first chr2 read.
         let cut = bytes.len() - 8;
-        let mut genome = TwoBitGenome::from_bytes(&bytes[..cut]).unwrap();
-        let variants = golden_variants();
-        let err = tally(&mut genome, &variants, all_tables(), &mut || {}).unwrap_err();
+        let err = tally(
+            &bytes[..cut],
+            &golden_variants(),
+            all_tables(),
+            1,
+            &no_cancel(),
+            &mut || {},
+        )
+        .unwrap_err();
         assert_eq!(err.topic, "io");
+    }
+
+    // -----------------------------------------------------------------
+    // Partition-parallel driver (contract 6 + 7): thread-count invariance,
+    // sequential-reference parity, chunk-boundary interrupts.
+    // -----------------------------------------------------------------
+
+    /// A larger fixture for the driver tests: 2 x 8192 bp alternating DNA,
+    /// chr2 carrying an N block (n_context / n_dinuc territory at scale).
+    fn big_fixture_bytes() -> Vec<u8> {
+        fixture::build(&[
+            fixture::ChromSpec {
+                name: "chr1",
+                size: 8192,
+                pattern: seq_ac,
+                n_blocks: vec![],
+            },
+            fixture::ChromSpec {
+                name: "chr2",
+                size: 8192,
+                pattern: seq_gc,
+                n_blocks: vec![(4000, 16)],
+            },
+        ])
+    }
+
+    /// Reference base of the big fixture at `pos0` (chrom index 0 = ACAC...,
+    /// chrom index 1 = GCGC...).
+    fn big_ref(chrom: usize, pos0: u64) -> (&'static str, &'static str) {
+        match (chrom, pos0 % 2) {
+            (0, 0) => ("A", "G"),
+            (0, _) => ("C", "T"),
+            (_, 0) => ("G", "T"),
+            (_, _) => ("C", "A"),
+        }
+    }
+
+    /// A deterministic multi-chromosome, multi-sample batch (~2k events):
+    /// SNVs in stride, periodic same-sample adjacent pairs (DBS pairing at
+    /// scale), periodic indels, N-window records on chr2, unknown-chrom
+    /// records, fed in a non-sorted order.
+    fn big_batch() -> Vec<TallyVariant> {
+        let mut out = Vec::new();
+        for chrom in 0..2usize {
+            for sample in 0..3usize {
+                for k in 0..300usize {
+                    let pos0 = 64 + (k * 13) as u64;
+                    let (r, a) = big_ref(chrom, pos0);
+                    out.push(v(chrom, pos0, r, a, sample, Strand::None));
+                    if k % 25 == 0 {
+                        // adjacent same-sample SNV: DBS-candidate territory
+                        let (r1, a1) = big_ref(chrom, pos0 + 1);
+                        out.push(v(chrom, pos0 + 1, r1, a1, sample, Strand::Transcribed));
+                    }
+                    if k % 40 == 0 {
+                        out.push(v(chrom, pos0, "CA", "C", sample, Strand::None)); // simple indel
+                    }
+                }
+            }
+        }
+        for sample in 0..3usize {
+            out.push(v(UNKNOWN_CHROM, 10, "A", "T", sample, Strand::None));
+            // +/-2 window of chr2 position 3999 reaches the N block at 4000.
+            out.push(v(1, 3999, "C", "A", sample, Strand::None));
+        }
+        out.reverse(); // deterministic non-sorted input order
+        out
+    }
+
+    /// Number of (chrom, sample) partitions a batch splits into (mirrors
+    /// the driver's partitioning for the poll-count assertions below).
+    fn partition_count(variants: &[TallyVariant]) -> usize {
+        let mut parts: Vec<(usize, usize)> = variants
+            .iter()
+            .map(|v| (v.chrom_idx, v.sample_idx))
+            .collect();
+        parts.sort_unstable();
+        parts.dedup();
+        parts.len()
+    }
+
+    /// A7 / contract 6 on the real assembly pipeline: threads ∈ {1, 4, 16}
+    /// → bit-identical [`TallyResult`] (`assert_eq!` on the whole struct,
+    /// not tolerance), and the parallel output equals the sequential
+    /// reference (the n_threads == 1 main-thread path).
+    #[test]
+    fn parallel_output_matches_sequential_reference_for_every_thread_count() {
+        let bytes = big_fixture_bytes();
+        let variants = big_batch();
+        let run = |threads: usize| {
+            let mut polls = 0usize;
+            let res =
+                tally(&bytes, &variants, all_tables(), threads, &no_cancel(), &mut || polls += 1)
+                    .unwrap();
+            (res, polls)
+        };
+        let (one, p1) = run(1);
+        let (four, p4) = run(4);
+        let (sixteen, _p16) = run(16);
+        assert_eq!(one, four);
+        assert_eq!(one, sixteen);
+
+        // Pipeline invariants on the batch: every sbs ledger line has
+        // exactly one SBS96 count, and the DBS-pair records land in DBS78
+        // (12 periodic adjacent pairs per (chromosome, sample)).
+        let n_sbs = one
+            .ledger_tsv
+            .lines()
+            .filter(|l| l.ends_with("\tsbs"))
+            .count();
+        assert_eq!(one.sbs96.iter().sum::<u32>(), n_sbs as u32);
+        assert_eq!(one.dbs78.iter().sum::<u32>(), 72);
+
+        // Polling protocols differ by path (both counts deterministic):
+        // sequential = one boundary poll per partition; threads=4 fans 9
+        // partitions over whole waves (ceil(9/4) = 3 waves, capped).
+        let jobs = partition_count(&variants);
+        assert_eq!(p1, jobs);
+        let waves = ((jobs + 4 - 1) / 4).clamp(1, 16);
+        let chunk_len = ((jobs + waves - 1) / waves).max(1);
+        assert_eq!(p4, (jobs + chunk_len - 1) / chunk_len);
+    }
+
+    /// A single (chrom, sample) partition has nothing to parallelize: the
+    /// call degenerates to the sequential main-thread path for every
+    /// thread count, keeping the fine-grained intra-run polling (boundary
+    /// + every POLL_EVERY_EVENTS events).
+    #[test]
+    fn single_partition_degenerates_to_sequential_with_intra_run_polls() {
+        let bytes = fixture::build(&[fixture::ChromSpec {
+            name: "chr1",
+            size: 100_000,
+            pattern: seq_ac,
+            n_blocks: vec![],
+        }]);
+        // 9000 SNVs in stride 11 on one chromosome, one sample: 9000 SBS
+        // events → intra polls at events 4096 and 8192.
+        let variants: Vec<TallyVariant> = (0..9000)
+            .map(|k| {
+                let pos0 = 50 + (k * 11) as u64;
+                let (r, a) = big_ref(0, pos0);
+                v(0, pos0, r, a, 0, Strand::None)
+            })
+            .collect();
+
+        let mut polls1 = 0usize;
+        let one = tally(&bytes, &variants, all_tables(), 1, &no_cancel(), &mut || polls1 += 1).unwrap();
+        assert_eq!(polls1, 3); // 1 boundary + events 4096, 8192
+        assert_eq!(one.sbs96.iter().sum::<u32>(), 9000);
+
+        let mut polls16 = 0usize;
+        let sixteen = tally(&bytes, &variants, all_tables(), 16, &no_cancel(), &mut || polls16 += 1).unwrap();
+        assert_eq!(polls16, 3); // still the sequential path: one partition
+        assert_eq!(one, sixteen);
+    }
+
+    #[test]
+    fn pre_cancelled_parallel_call_fails_without_partial_results() {
+        let bytes = big_fixture_bytes();
+        let variants = big_batch();
+        let cancelled = AtomicBool::new(true);
+        let err = tally(&bytes, &variants, all_tables(), 2, &cancelled, &mut || {}).unwrap_err();
+        assert_eq!(err.topic, "interrupted");
+        assert_eq!(err.i, Some(1));
+    }
+
+    /// The flag tripped in the first boundary poll is observed by the
+    /// chunk's workers (the worker-side contract-7 view: workers never see
+    /// R state, only the flag), failing the whole call (contract 5).
+    #[test]
+    fn flag_tripped_at_first_boundary_fails_with_worker_error() {
+        let bytes = big_fixture_bytes();
+        let variants = big_batch();
+        let cancelled = AtomicBool::new(false);
+        let mut polls = 0usize;
+        let err = tally(&bytes, &variants, all_tables(), 2, &cancelled, &mut || {
+            polls += 1;
+            if polls == 1 {
+                cancelled.store(true, Ordering::Relaxed);
+            }
+        })
+        .unwrap_err();
+        assert_eq!(polls, 1);
+        assert_eq!(err.topic, "interrupted");
+        assert!(err.to_string().contains("worker observed"));
     }
 }
