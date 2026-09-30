@@ -30,6 +30,8 @@ Collate:
     'classes-refdb.R'
     'classes-engines.R'
     'engines-registry.R'
+    'engines-ard.R'
+    'engines-sparse.R'
     'engines-nmf.R'
     'extract.R'
     'kselect-select.R'

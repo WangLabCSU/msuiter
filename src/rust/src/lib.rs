@@ -796,6 +796,282 @@ fn ms_pipeline_rust(
     })())
 }
 
+// ---------------------------------------------------------------------------
+// U-M2-04/05 engine faces: ARD-NMF (SignatureAnalyzer semantics, engine/ard.rs)
+// and penalized sparse NMF (Leplat-Gillis volume / SparseSignatures L1L1,
+// engine/sparse.rs). Both share the ms_extract_rust layout contract: R passes
+// `t(counts)` -- the n_samples x m_channels column-major flat buffer IS the
+// kernel's row-major m x n V (module docs of `extract.rs`, the transposition
+// trap). Declared bounded-duration, non-interruptible (single fit, no chunk
+// structure -- same decision as ms_extract_rust); n_threads validated only
+// (A7: sequential kernels are trivially thread-invariant).
+// ---------------------------------------------------------------------------
+
+#[extendr]
+#[allow(clippy::too_many_arguments)] // FFI face: hyper-parameters are part of the frozen signature
+fn ms_ard_rust(
+    counts: Robj,
+    k0: i32,
+    max_iter: i32,
+    tol: f64,
+    a0: f64,
+    b0: f64,
+    seed: i32,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if k0 < 1 {
+            return Err(MsError::new("argument", format!("k0 must be >= 1, got {k0}"))
+                .with_i(k0 as i64));
+        }
+        if max_iter < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 0, got {max_iter}"),
+            ));
+        }
+        if seed < 0 {
+            return Err(MsError::new("argument", format!("seed must be >= 0, got {seed}")));
+        }
+        if !tol.is_finite() || tol < 0.0 {
+            return Err(MsError::new(
+                "argument",
+                format!("tol must be finite and >= 0, got {tol}"),
+            ));
+        }
+        if !a0.is_finite() || a0 <= 0.0 || !b0.is_finite() || b0 <= 0.0 {
+            return Err(MsError::new(
+                "argument",
+                format!("a0/b0 must be finite and > 0, got a0={a0}, b0={b0}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        let (n, m, v) =
+            with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        let fit = msuiter_engine::ard::fit_ard(
+            &v,
+            m,
+            n,
+            k0 as usize,
+            max_iter as usize,
+            tol,
+            a0,
+            b0,
+            seed as u64,
+        )?;
+        let k_est = fit.k_est;
+        let signatures = extendr_api::wrapper::RMatrix::new_matrix(m, k_est, |r, c| {
+            fit.w_active[r * k_est + c]
+        });
+        let exposures =
+            extendr_api::wrapper::RMatrix::new_matrix(k_est, n, |r, c| fit.h_active[r * n + c]);
+        let active: Vec<Robj> = fit.active.iter().map(|&a| Robj::from(a)).collect();
+        let pairs = vec![
+            ("signatures", Robj::from(signatures)),
+            ("exposures", Robj::from(exposures)),
+            ("active", Robj::from(active)),
+            ("k_est", Robj::from(k_est.min(i32::MAX as usize) as i32)),
+            ("beta", Robj::from(fit.beta.clone())),
+            ("beta_cut", Robj::from(fit.beta_cut)),
+            ("objective", Robj::from(fit.objective)),
+            (
+                "iterations",
+                Robj::from(fit.iterations.min(i32::MAX as usize) as i32),
+            ),
+            ("converged", Robj::from(fit.converged)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+#[extendr]
+#[allow(clippy::too_many_arguments)] // FFI face: hyper-parameters are part of the frozen signature
+fn ms_sparse_rust(
+    counts: Robj,
+    k: i32,
+    max_iter: i32,
+    variant: String,
+    lambda: f64,
+    mu: f64,
+    delta: f64,
+    tol: f64,
+    seed: i32,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if k < 1 {
+            return Err(MsError::new("argument", format!("k must be >= 1, got {k}"))
+                .with_i(k as i64));
+        }
+        if max_iter < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 0, got {max_iter}"),
+            ));
+        }
+        if seed < 0 {
+            return Err(MsError::new("argument", format!("seed must be >= 0, got {seed}")));
+        }
+        if !matches!(variant.as_str(), "volume" | "l1") {
+            return Err(MsError::new(
+                "argument",
+                format!("variant must be \"volume\" or \"l1\", got {variant:?}"),
+            ));
+        }
+        if !lambda.is_finite() || lambda < 0.0 || !mu.is_finite() || mu < 0.0 {
+            return Err(MsError::new(
+                "argument",
+                format!("lambda/mu must be finite and >= 0, got lambda={lambda}, mu={mu}"),
+            ));
+        }
+        if !tol.is_finite() || tol < 0.0 {
+            return Err(MsError::new(
+                "argument",
+                format!("tol must be finite and >= 0, got {tol}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        let (n, m, v) =
+            with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        let fit = match variant.as_str() {
+            "volume" => msuiter_engine::sparse::fit_volume(
+                &v,
+                m,
+                n,
+                k as usize,
+                lambda,
+                if delta > 0.0 { delta } else { 1.0 },
+                max_iter as usize,
+                tol,
+                seed as u64,
+            )?,
+            _ => msuiter_engine::sparse::fit_sparse_l1(
+                &v,
+                m,
+                n,
+                k as usize,
+                lambda,
+                mu,
+                max_iter as usize,
+                tol,
+                seed as u64,
+            )?,
+        };
+        let kk = k as usize;
+        let signatures =
+            extendr_api::wrapper::RMatrix::new_matrix(m, kk, |r, c| fit.w[r * kk + c]);
+        let exposures =
+            extendr_api::wrapper::RMatrix::new_matrix(kk, n, |r, c| fit.h[r * n + c]);
+        let pairs = vec![
+            ("signatures", Robj::from(signatures)),
+            ("exposures", Robj::from(exposures)),
+            ("objective", Robj::from(fit.objective)),
+            (
+                "iterations",
+                Robj::from(fit.iterations.min(i32::MAX as usize) as i32),
+            ),
+            ("converged", Robj::from(fit.converged)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+// ---------------------------------------------------------------------------
+// U-M2-01 evaluation face: the memo section 1.5 match-protocol sweep
+// (Hungarian one-to-one + Islam-compat greedy + split/merge classes) over
+// one cosine matrix. Data face for the M4 `ms_compare()` protocols; the
+// kernel-side `match_solutions` (engine/consensus.rs) is the audited
+// implementation.
+// ---------------------------------------------------------------------------
+
+#[extendr]
+fn ms_match_solutions_rust(estimated: Robj, reference: Robj, dim: i32, thresholds: Robj) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if dim < 1 {
+            return Err(
+                MsError::new("argument", format!("dim must be >= 1, got {dim}")).with_i(dim as i64)
+            );
+        }
+        let est = estimated
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "estimated must be a double vector"))?;
+        let rf = reference
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "reference must be a double vector"))?;
+        let tau = thresholds
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "thresholds must be a double vector"))?;
+        if tau.is_empty() {
+            return Err(MsError::new("argument", "thresholds must be non-empty"));
+        }
+        let sweep =
+            msuiter_engine::consensus::match_solutions(&est, &rf, dim as usize, &tau)?;
+        // Flat per-threshold vectors in sweep order (R re-splits by rows).
+        let mut th: Vec<f64> = Vec::new();
+        let mut tp_n: Vec<i32> = Vec::new();
+        let mut fp: Vec<i32> = Vec::new();
+        let mut fn_miss: Vec<i32> = Vec::new();
+        let mut est_idx: Vec<i32> = Vec::new();
+        let mut est_class: Vec<String> = Vec::new();
+        let mut est_ref: Vec<i32> = Vec::new();
+        for tm in &sweep {
+            th.push(tm.threshold);
+            tp_n.push(tm.tp.len().min(i32::MAX as usize) as i32);
+            fp.push(tm.fp.min(i32::MAX as usize) as i32);
+            fn_miss.push(tm.fn_count.min(i32::MAX as usize) as i32);
+            for (s, cls) in tm.estimated_classes.iter().enumerate() {
+                est_idx.push((s + 1).min(i32::MAX as usize) as i32);
+                est_class.push(
+                    match cls {
+                        msuiter_engine::consensus::EstimatedClass::Matched { .. } => "matched",
+                        msuiter_engine::consensus::EstimatedClass::Split { .. } => "split",
+                        msuiter_engine::consensus::EstimatedClass::Merge { .. } => "merge",
+                        msuiter_engine::consensus::EstimatedClass::Novel => "novel",
+                    }
+                    .to_string(),
+                );
+                est_ref.push(match cls {
+                    msuiter_engine::consensus::EstimatedClass::Matched { reference }
+                    | msuiter_engine::consensus::EstimatedClass::Split { reference } => {
+                        (*reference + 1).min(i32::MAX as usize) as i32
+                    }
+                    msuiter_engine::consensus::EstimatedClass::Merge { references } => {
+                        (references[0] + 1).min(i32::MAX as usize) as i32
+                    }
+                    msuiter_engine::consensus::EstimatedClass::Novel => 0,
+                });
+            }
+        }
+        let p_per_threshold: Vec<i32> = sweep
+            .iter()
+            .map(|tm| tm.estimated_classes.len().min(i32::MAX as usize) as i32)
+            .collect();
+        let pairs = vec![
+            ("threshold", Robj::from(th)),
+            ("tp", Robj::from(tp_n)),
+            ("fp", Robj::from(fp)),
+            ("fn", Robj::from(fn_miss)),
+            ("p_per_threshold", Robj::from(p_per_threshold)),
+            ("estimate_index", Robj::from(est_idx)),
+            ("estimated_class", Robj::from(est_class)),
+            ("reference_index", Robj::from(est_ref)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+// Generates the R registration entry point
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -812,6 +1088,9 @@ extendr_module! {
     fn ms_extract_rust;
     fn ms_pipeline_rust;
     fn ms_stratify_rust;
+    fn ms_ard_rust;
+    fn ms_sparse_rust;
+    fn ms_match_solutions_rust;
 }
 
 #[cfg(test)]

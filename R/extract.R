@@ -217,7 +217,9 @@ S7::method(ms_extract, MsCatalog) <- function(catalog, k, method = NULL, ...) {
   # --- labels: strictly by position here (the kernel's row/column order
   #     IS the catalog's -- the layout contract of the FFI handoff), but
   #     carried as labels so everything downstream matches by label.
-  sig_labels <- sprintf("Sig%d", seq_len(k))
+  # Labels follow the RETURNED rank (ncol), not the requested k: ARD prunes
+  # dead components and may report k_est < k0 (U-M2-04).
+  sig_labels <- sprintf("Sig%d", seq_len(ncol(signatures)))
   dimnames(signatures) <- list(rownames(counts), sig_labels)
   dimnames(exposures) <- list(sig_labels, catalog@samples)
 

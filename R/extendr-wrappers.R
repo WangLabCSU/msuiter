@@ -27,4 +27,10 @@ ms_pipeline_rust <- function(counts, k, replicates, max_iter, seed, k_folds, n_s
 
 ms_stratify_rust <- function(counts, manual_cutoff, seed, n_threads) .Call(wrap__ms_stratify_rust, counts, manual_cutoff, seed, n_threads)
 
+ms_ard_rust <- function(counts, k0, max_iter, tol, a0, b0, seed, n_threads) .Call(wrap__ms_ard_rust, counts, k0, max_iter, tol, a0, b0, seed, n_threads)
+
+ms_sparse_rust <- function(counts, k, max_iter, variant, lambda, mu, delta, tol, seed, n_threads) .Call(wrap__ms_sparse_rust, counts, k, max_iter, variant, lambda, mu, delta, tol, seed, n_threads)
+
+ms_match_solutions_rust <- function(estimated, reference, dim, thresholds) .Call(wrap__ms_match_solutions_rust, estimated, reference, dim, thresholds)
+
 # nolint end
