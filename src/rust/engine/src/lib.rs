@@ -8,6 +8,8 @@
 
 pub mod error;
 pub mod linalg;
+pub mod consensus;
+pub mod cv;
 pub mod nmf;
 pub mod nndsvd;
 pub mod nnls;

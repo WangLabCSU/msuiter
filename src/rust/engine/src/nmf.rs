@@ -247,7 +247,9 @@ pub fn fit_eu_with_init(
 // ======================================================================
 
 /// One KL H step: `H ← H ⊙ (Wᵀ (V ⊘ max(WH, ε))) ⊘ max(Wᵀ 1_m, ε)`.
-fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) {
+/// Crate-visible so the SUITOR CV driver (U-M2-02) reuses the audited MU
+/// kernel verbatim instead of forking it.
+pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) {
     let wh = matmul(w, h, m, n, k);
     // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
     let mut num = vec![0.0f64; k * n];
@@ -276,7 +278,8 @@ fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) 
 }
 
 /// One KL W step: `W ← W ⊙ ((V ⊘ max(WH, ε)) Hᵀ) ⊘ max(1_m Hᵀ, ε)`.
-fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) {
+/// Crate-visible for the SUITOR CV driver (see [`kl_h_step`]).
+pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) {
     let wh = matmul(w, h, m, n, k);
     for i in 0..m {
         for s in 0..k {
@@ -384,8 +387,9 @@ fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) 
     }
 }
 
-/// Row-major `W (m×k) · H (k×n)`.
-fn matmul(w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -> Vec<f64> {
+/// Row-major `W (m×k) · H (k×n)`. Crate-visible for the SUITOR CV driver
+/// (see [`kl_h_step`]).
+pub(crate) fn matmul(w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -> Vec<f64> {
     let mut out = vec![0.0f64; m * n];
     for i in 0..m {
         let wrow = &w[i * k..i * k + k];
