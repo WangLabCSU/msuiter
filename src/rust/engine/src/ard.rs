@@ -242,7 +242,6 @@ pub fn fit_ard_with_init(
             active[s] = false;
         }
     }
-    let k_est = active.iter().filter(|&&a| a).count();
     // Row-major m×k_est assembly (audited P0 fix): the previous version
     // pushed per-survivor COLUMN blocks (column-major), while every
     // consumer reads row-major — a transposed scramble for k_est ≥ 2.
