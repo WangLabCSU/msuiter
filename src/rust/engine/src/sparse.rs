@@ -121,7 +121,10 @@
 //!    guards (ARCH §2 contract).
 //! 2. **Convergence check every iteration**; Sonata checks every
 //!    `conv_test_freq = 10` (mvnmf.py:124) — same tolerance scale, slightly
-//!    earlier stops.
+//!    earlier stops. Sonata also enforces `min_iterations = 500`
+//!    (mvnmf.py:124-125) before the convergence test may fire; this port
+//!    has no minimum — with the default tol the runs here converge well
+//!    past 500, but a loose tol could stop earlier (declared).
 //! 3. **Init**: seeded uniform instead of NNDSVD (see above); the KL data
 //!    term uses the crate `log(ε + ·)` path instead of Sonata's raw form.
 //! 4. **β-divergence generality**: only the β = 1 (KL) member is

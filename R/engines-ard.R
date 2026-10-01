@@ -10,6 +10,12 @@
 #
 # Registration follows R/engines-nmf.R verbatim (certified row; idempotent
 # helper for registry resets).
+#
+# Budget divergence (D13 discipline, recorded): the upstream ARD driver
+# allows n.iter = 2,000,000 with tol = 1e-5; the ms_ard() default cap is
+# max_iter = 2000 (reaching upstream-scale iteration counts is a workload
+# decision — raise max_iter explicitly). Recorded per the Delta discipline
+# (same pattern as replicates = 8).
 
 #' MsArd: ARD engine specification
 #'
@@ -67,7 +73,8 @@ msuiter_validate_ard <- function(self) {
         "engine",
         sprintf("`%s` must be a single finite number > 0", nm),
         i = paste0("got: ", format(v)),
-        c = "the ARD prior is a positive shape/rate pair"
+        j = paste0("the ARD prior property `", nm, "`"),
+        c = "construct with ms_ard(a0 = , b0 = ) using positive values"
       )
     }
   }
@@ -76,7 +83,9 @@ msuiter_validate_ard <- function(self) {
     msuiter_abort(
       "engine",
       "`tol` must be a single finite number >= 0",
-      i = paste0("got: ", format(v))
+      i = paste0("got: ", format(v)),
+      j = "the ARD convergence-tolerance property `tol`",
+      c = "construct with a finite non-negative tolerance"
     )
   }
   v <- self@max_iter
@@ -85,7 +94,9 @@ msuiter_validate_ard <- function(self) {
     msuiter_abort(
       "engine",
       "`max_iter` must be a single positive whole number",
-      i = paste0("got: ", format(v))
+      i = paste0("got: ", format(v)),
+      j = "the ARD iteration-cap property `max_iter`",
+      c = "construct with a positive whole-number max_iter"
     )
   }
   v <- self@seed
@@ -94,7 +105,9 @@ msuiter_validate_ard <- function(self) {
     msuiter_abort(
       "engine",
       "`seed` must be a single whole number in [0, 2^31 - 1]",
-      i = paste0("got: ", format(v))
+      i = paste0("got: ", format(v)),
+      j = "the ARD initializer-seed property `seed`",
+      c = "construct with a whole-number seed in range"
     )
   }
   invisible(NULL)

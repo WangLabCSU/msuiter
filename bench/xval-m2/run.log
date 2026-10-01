@@ -1,0 +1,60 @@
+msuiter: dev-load | sigminer: 2.3.1 | R 4.5.2
+== channel order audit ==
+msuiter registry order == sigminer reference DB rownames: TRUE
+
+== synthetic truth ==
+signatures: 3 (27 anchor channels each + 15 shared background) | samples: 12
+counts: 96 x 12, total = 18695, per-sample median = 1056
+shared-background mass fraction per signature: 0.023, 0.021, 0.022
+
+== msuiter ms_extract(k=3) default pipeline ==
+engine = nmf-pipeline | 7.3 s | 96 x 3, col sums ~ 1.0000/1.0000/1.0000 | rows in input order: TRUE
+stability: avg = 1.000 | k_evidence rows = 1
+
+== sigminer extraction ==
+NMF algorithm: 'brunet'
+Multiple runs: 10
+Mode: sequential [foreach:doParallelMC]
+Runs: |                                                        Runs: |                                                  |   0%Runs: |                                                        Runs: |=====                                             |   9%Runs: |                                                        Runs: |=========                                         |  18%Runs: |                                                        Runs: |==============                                    |  27%Runs: |                                                        Runs: |==================                                |  36%Runs: |                                                        Runs: |=======================                           |  45%Runs: |                                                        Runs: |===========================                       |  55%Runs: |                                                        Runs: |================================                  |  64%Runs: |                                                        Runs: |====================================              |  73%Runs: |                                                        Runs: |=========================================         |  82%Runs: |                                                        Runs: |=============================================     |  91%Runs: |                                                        Runs: |==================================================| 100%
+System time:
+   user  system elapsed 
+  1.134   0.014   1.155 
+sig_extract(method=brunet, nrun=10, seed=123456): 1.3 s | rows in input order: TRUE
+Select Run 8, which K = 3 as best solution.
+sig_auto_extract(L1KL): 0.4 s | auto-selected K = 3 | rows in input order: TRUE
+
+== recovery vs known truth (greedy best-match cosine) ==
+msuiter      truth T1 ~ Sig1 : cosine = 1.0000
+msuiter      truth T2 ~ Sig3 : cosine = 1.0000
+msuiter      truth T3 ~ Sig2 : cosine = 0.9999
+sigminer     truth T2 ~ Sig1 : cosine = 1.0000
+sigminer     truth T1 ~ Sig2 : cosine = 1.0000
+sigminer     truth T3 ~ Sig3 : cosine = 0.9999
+sig-autoKL   truth T2 ~ Sig1 : cosine = 1.0000
+sig-autoKL   truth T1 ~ Sig2 : cosine = 1.0000
+sig-autoKL   truth T3 ~ Sig3 : cosine = 0.9999
+
+== msuiter vs sigminer (3 x 3 cosine grid, greedy pairing) ==
+       Sig1   Sig2   Sig3
+Sig1 0.0016 1.0000 0.0119
+Sig2 0.0007 0.0119 1.0000
+Sig3 1.0000 0.0040 0.0008
+pairing Sig2 ~ Sig3 : cosine = 1.0000
+pairing Sig1 ~ Sig2 : cosine = 1.0000
+pairing Sig3 ~ Sig1 : cosine = 1.0000
+
+== exposure share agreement (paired signatures, 12 samples) ==
+Sig2 ~ Sig3 : exposure-share cosine = 1.0000
+Sig1 ~ Sig2 : exposure-share cosine = 1.0000
+Sig3 ~ Sig1 : exposure-share cosine = 1.0000
+
+== supplementary: msuiter vs sig_auto_extract(L1KL, K=3) best-match cosines ==
+1.0000, 1.0000, 1.0000
+
+== verdict ==
+both engines recover truth (cosine > 0.90 per signature): TRUE
+msuiter ~ sigminer best-match cosine > 0.95 for all 3 pairings: TRUE
+neither engine permuted the input channel order: TRUE
+OVERALL: PASS
+
+artifacts in /Users/wsx/Documents/GitHub/msuiter/bench/xval-m2

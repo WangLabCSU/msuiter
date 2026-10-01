@@ -403,4 +403,37 @@ test_that("the pipeline FFI wrapper validates scalars before the boundary", {
   )
   expect_s3_class(cnd, "msuiter_error_rust")
   expect_identical(cnd$topic, "argument")
+
+
+test_that("fold_test_deviance matrix is rank-major (audited P1-1 regression guard)", {
+  # The FFI vector is rank-major: rank r's fold block comes first. With
+  # k_folds != max(grid), a column-major matrix() fill scrambles every row
+  # (the audited P1-1); this guard pins the byrow reconstruction by value.
+  ch <- 24L
+  ns <- 9L
+  k_folds <- 3L
+  grid <- 2:4 # max(grid) = 4 != k_folds = 3
+  labels <- paste0("C", seq_len(ch))
+  counts <- matrix(1:(ch * ns), ch, ns)
+  dimnames(counts) <- list(labels, paste0("S", seq_len(ns)))
+  cat1 <- ms_catalog(
+    counts = counts,
+    channels = list(name = "SYN24", labels = labels),
+    samples = paste0("S", seq_len(ns)),
+    provenance = list(genome = "SYN")
+  )
+  sel <- ms_select_k(cat1, k_grid = grid, k_folds = k_folds, cv = TRUE)
+  ev <- sel@k_evidence
+  expect_identical(nrow(ev), length(grid))
+  # Per-rank fold block sums must equal that rank's cv_test_deviance
+  # (Σ_folds == CV.te, memo §2.3): a transposed/scrambled fill breaks this
+  # identity for k_folds != max(grid).
+  for (i in seq_len(nrow(ev))) {
+    expect_identical(
+      sum(ev$fold_test_deviance[i, ], na.rm = TRUE),
+      ev$cv_test_deviance[i],
+      info = paste0("rank ", ev$k[i])
+    )
+  }
+})
 })

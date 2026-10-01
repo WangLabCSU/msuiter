@@ -82,7 +82,9 @@ msuiter_validate_sparse <- function(self) {
       msuiter_abort(
         "engine",
         sprintf("`%s` must be a single finite number >= 0", nm),
-        i = paste0("got: ", format(v))
+        i = paste0("got: ", format(v)),
+        j = paste0("the sparse penalty/tolerance property `", nm, "`"),
+        c = "construct with ms_sparse(...) using non-negative values"
       )
     }
   }
@@ -91,6 +93,7 @@ msuiter_validate_sparse <- function(self) {
       "engine",
       "the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)",
       i = paste0("got mu: ", format(self@mu)),
+      j = "the MsSparse l1-variant `mu` property",
       c = "use the volume variant for a single-penalty form"
     )
   }
@@ -100,7 +103,9 @@ msuiter_validate_sparse <- function(self) {
     msuiter_abort(
       "engine",
       "`max_iter` must be a single positive whole number",
-      i = paste0("got: ", format(v))
+      i = paste0("got: ", format(v)),
+      j = "the sparse iteration-cap property `max_iter`",
+      c = "construct with a positive whole-number max_iter"
     )
   }
   v <- self@seed
@@ -109,7 +114,9 @@ msuiter_validate_sparse <- function(self) {
     msuiter_abort(
       "engine",
       "`seed` must be a single whole number in [0, 2^31 - 1]",
-      i = paste0("got: ", format(v))
+      i = paste0("got: ", format(v)),
+      j = "the sparse initializer-seed property `seed`",
+      c = "construct with a whole-number seed in range"
     )
   }
   invisible(NULL)
