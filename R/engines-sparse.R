@@ -3,7 +3,9 @@
 #
 # MsSparse wraps the engine/sparse.rs kernels: "volume" = KL + lambda *
 # log-det volume regularization on W (Leplat-Gillis-Ang; mvnmf.py, MIT)
-# and "l1" = KL + lambda * sum(H) + mu * sum(W) (SparseSignatures L1L1).
+# and "l1" = KL + lambda * sum(H) + mu * sum(W) (Hoyer/Cichocki KL-L1L1
+# MU; SparseSignatures itself is least-squares + LASSO — attribution
+# erratum in engine/sparse.rs).
 # The l1 variant needs BOTH penalties: with mu = 0 the exposure scale is
 # absorbed into W and the sparsity degenerates (documented derivation in
 # the kernel module docs).
@@ -16,7 +18,9 @@
 #' [MsSparse] is the concrete [MsEngine] spec for penalized sparse NMF
 #' extraction (U-M2-05): `"volume"` = KL likelihood with a log-det volume
 #' regularizer on W (Leplat-Gillis-Ang), `"l1"` = KL with L1 penalties on
-#' both factors (SparseSignatures semantics; mu = 0 degenerates). Build one
+#' both factors (Hoyer/Cichocki KL-L1L1 MU; SparseSignatures itself is
+#' least-squares + LASSO — attribution erratum in engine/sparse.rs).
+#' mu = 0 degenerates). Build one
 #' with [ms_sparse()]. Violations raise `msuiter_error_engine`.
 #'
 #' @param name registry key; fixed to `"sparse"`.

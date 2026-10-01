@@ -79,13 +79,16 @@ msuiter_validate_ard <- function(self) {
     }
   }
   v <- self@tol
-  if (!is.numeric(v) || length(v) != 1L || !is.finite(v) || v < 0) {
+  # tol = 0 would pass the R validator but the KERNEL rejects tol <= 0
+  # (upstream semantics: the relative-change criterion must be reachable);
+  # align the R surface with the kernel domain (audited P2-b).
+  if (!is.numeric(v) || length(v) != 1L || !is.finite(v) || v <= 0) {
     msuiter_abort(
       "engine",
-      "`tol` must be a single finite number >= 0",
+      "`tol` must be a single finite number > 0",
       i = paste0("got: ", format(v)),
       j = "the ARD convergence-tolerance property `tol`",
-      c = "construct with a finite non-negative tolerance"
+      c = "construct with a finite positive tolerance"
     )
   }
   v <- self@max_iter

@@ -44,3 +44,6 @@ docs/site/
 /bench/g0/cache/
 /bench/g0/**/__pycache__/
 /tools/kl-crosscheck/driver/target/
+
+# sigminer runtime artifacts
+/bench/xval-m2/sigminer-auto/

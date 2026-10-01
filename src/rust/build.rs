@@ -14,7 +14,7 @@ fn main() {
     // to be first on PATH (e.g. a conda-installed one), not the toolchain
     // compiling this crate.
     let rustc_bin = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
-    let version = Command::new(&rustc_bin)
+    let version = Command::new(rustc_bin.as_str())
         .arg("--version")
         .output()
         .ok()

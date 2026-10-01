@@ -14,6 +14,7 @@ pub mod cv;
 pub mod nmf;
 pub mod nndsvd;
 pub mod nnls;
+pub mod likelihood;
 pub mod resample;
 pub mod rng;
 pub mod sparse;

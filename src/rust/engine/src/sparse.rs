@@ -17,7 +17,14 @@
 //! The log-determinant volume term shrinks the simplex volume spanned by
 //! the signature columns, restoring identifiability under correlated /
 //! near-parallel signatures (the linear-world counterpart of Cornet's
-//! embedding model, `docs/research/01` §1/§9).
+//! embedding model, `docs/research/04` §9).
+//!
+//! **Attribution erratum (audited)**: the L1L1 update below is the
+//! Hoyer/Cichocki KL-L1 multiplicative form; upstream `SparseSignatures`
+//! (Lal et al. 2021) is least-squares + LASSO, NOT this KL-MU family —
+//! earlier comments/research notes calling it "SparseSignatures semantics"
+//! were wrong. `docs/research/01` §9 likewise mislabels it "L1-penalized
+//! Poisson NMF" (erratum recorded in the M1c devlog).
 //!
 //! Upstream implementation anchor (pinned to source, D11/D13):
 //! `parklab/Sonata` `src/sonata/models/mvnmf.py` (MIT), line numbers of
@@ -54,9 +61,12 @@
 //! the exact λ → 0 limit of the objective — so the volume pipeline at λ = 0
 //! is plain KL-NMF plus W-column normalization.
 //!
-//! # 2. L1-penalized NMF ([`fit_sparse_l1`], SparseSignatures L1L1)
+//! # 2. L1-penalized NMF ([`fit_sparse_l1`], Hoyer/Cichocki KL-L1L1 MU;
+//! ##     NOT SparseSignatures — see the attribution erratum above)
 //!
-//! Objective (SparseSignatures; `docs/research/01` §9 "SparseSignatures:
+//! Objective (Hoyer/Cichocki KL-L1L1 MU; `docs/research/04` §9 —
+//! `SparseSignatures` itself is least-squares + LASSO, not this form:
+//! "SparseSignatures:
 //! L1-penalized Poisson NMF"; classic penalized MU, Hoyer 2002 / Cichocki
 //! et al. 2009):
 //!
@@ -232,6 +242,10 @@ pub fn fit_volume_with_init(
         let w_unc = volume_w_proposal(v, &w, &h, m, n, k, lambda, delta)?;
         let prev = objective[objective.len() - 1];
         // Trial step γ = 1: proposal, normalized + clipped (mvnmf.py:80-82).
+        // Declared divergence (audited): the acceptance reference `prev` is
+        // taken BEFORE the H step (i.e., the previous-iteration record);
+        // Sonata compares against the post-H-step value. The trace stays
+        // monotone and the fixed point is unaffected (audited).
         let (mut wn, mut hn) = normalize_wh(&w_unc, &h, m, n, k);
         clip_below(&mut wn);
         clip_below(&mut hn);

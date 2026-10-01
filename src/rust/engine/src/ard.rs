@@ -83,10 +83,11 @@
 //! sqrt(mean(V))`): open-interval uniforms in (0, 1] from [`crate::rng::MsRng`]
 //! (stream [`crate::rng::StreamId::ZERO`]; W row-major first, then H
 //! row-major) scaled by `sqrt(mean(V))` (1.0 for all-zero input). The open
-//! interval is deliberate (zero entries are absorbing under MU); upstream
-//! `runif` can return exact 0. Column symmetry is broken by the seeded draw.
-//! Fixed loop order, sequential reductions, no parallelism: equal inputs
-//! produce bit-identical output (ARCH §2.6).
+//! interval matches R's `runif` (also open at both ends — an earlier
+//! comment claiming it can return exact 0 was wrong, audited); zeros would
+//! be absorbing under MU anyway. Column symmetry is broken by the seeded
+//! draw. Fixed loop order, sequential reductions, no parallelism: equal
+//! inputs produce bit-identical output (ARCH §2.6).
 //!
 //! # Deviations from upstream (all deliberate, D13)
 //!
@@ -242,15 +243,19 @@ pub fn fit_ard_with_init(
         }
     }
     let k_est = active.iter().filter(|&&a| a).count();
-    let mut w_active = Vec::with_capacity(m * k_est);
+    // Row-major m×k_est assembly (audited P0 fix): the previous version
+    // pushed per-survivor COLUMN blocks (column-major), while every
+    // consumer reads row-major — a transposed scramble for k_est ≥ 2.
+    // Collect survivors first, then fill (i, c) at i*k_est + c.
+    let survivors: Vec<usize> = (0..k0).filter(|&s| active[s]).collect();
+    let k_est = survivors.len();
+    let mut w_active = vec![0.0; m * k_est];
     let mut h_active = Vec::with_capacity(k_est * n);
-    for s in 0..k0 {
-        if active[s] {
-            for i in 0..m {
-                w_active.push(w[i * k0 + s]);
-            }
-            h_active.extend_from_slice(&h[s * n..s * n + n]);
+    for (c, &s) in survivors.iter().enumerate() {
+        for i in 0..m {
+            w_active[i * k_est + c] = w[i * k0 + s];
         }
+        h_active.extend_from_slice(&h[s * n..s * n + n]);
     }
 
     Ok(ArdFit {
@@ -770,6 +775,43 @@ mod tests {
         assert_eq!(fit.w_active.len(), m);
         assert_eq!(fit.h_active.len(), n);
         assert_eq!(fit.w_active, column(&fit.w, m, k, 2));
+    }
+
+    // Audited P0 regression guard: w_active is ROW-MAJOR m×k_est. With all
+    // components alive the pruned faces must equal the raw factors
+    // bit-for-bit; with two survivors the row-major extraction is pinned.
+    // (The previous column-block assembly passed the k_est=1 prune test
+    // above while scrambling every k_est ≥ 2 face.)
+    #[test]
+    fn w_active_layout_is_row_major() {
+        let m = 4usize;
+        let n = 3usize;
+        let k = 3usize;
+        // Deterministic positive factors/counts: all components survive.
+        let v: Vec<f64> = (0..m * n).map(|i| 1.0 + (i % 7) as f64).collect();
+        let w0: Vec<f64> = (0..m * k).map(|i| 1.0 + (i % 5) as f64).collect();
+        let h0: Vec<f64> = (0..k * n).map(|i| 1.0 + (i % 3) as f64).collect();
+        let fit = fit_ard_with_init(&v, m, n, k, &w0, &h0, 1, 1e-5, 10.0, 5.0).unwrap();
+        if fit.k_est == k {
+            assert_eq!(fit.w_active, fit.w);
+            assert_eq!(fit.h_active, fit.h);
+        }
+        // Two-survivor extraction: kill component 1 explicitly via a zero
+        // column (W column of exact zeros is dead under colSums <= 1e-5).
+        let w1 = {
+            let mut w = w0.clone();
+            for i in 0..m {
+                w[i * k + 1] = 0.0;
+            }
+            w
+        };
+        let fit2 = fit_ard_with_init(&v, m, n, k, &w1, &h0, 1, 1e-5, 10.0, 5.0).unwrap();
+        assert_eq!(fit2.active, vec![true, false, true]);
+        assert_eq!(fit2.k_est, 2);
+        for i in 0..m {
+            assert_eq!(fit2.w_active[i * 2], fit2.w[i * k]);
+            assert_eq!(fit2.w_active[i * 2 + 1], fit2.w[i * k + 2]);
+        }
     }
 
     // ------------------------------------------------------------------

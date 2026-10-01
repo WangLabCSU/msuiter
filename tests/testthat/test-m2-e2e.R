@@ -77,6 +77,29 @@ test_that("ard and sparse engines register, parse and extract", {
   expect_true(nrow(fit_ard@signatures) == ch)
   expect_true(ncol(fit_ard@signatures) <= 2L) # ARD may prune
 
+  # Audited P0 regression: the ARD pruned faces must be row-major (a
+  # column-block assembly scrambled every k_est >= 2 extraction through R).
+  # Separable 96x12 truth: ms_ard(k = 3) must recover all planted
+  # signatures at cosine >= 0.95 through the FULL R path.
+  ch96 <- 96L
+  k3 <- 3L
+  sigs96 <- t(vapply(0:(k3 - 1L), function(s) {
+    v <- numeric(ch96)
+    v[(s * 32L + 1L):((s + 1L) * 32L)] <- 1
+    v / sqrt(sum(v^2))
+  }, numeric(ch96)))
+  H96 <- matrix(0.01, k3, 12L)
+  for (j in seq_len(12L)) H96[(j - 1L) %% k3 + 1L, j] <- 10
+  c96 <- round(100 * t(sigs96) %*% H96)
+  dimnames(c96) <- list(paste0("C", seq_len(ch96)), paste0("S", seq_len(12L)))
+  cat96 <- ms_catalog(c96, list(name = "SYN96", labels = paste0("C", seq_len(ch96))),
+    paste0("S", seq_len(12L)), list(genome = "SYN"))
+  fit96 <- ms_extract(cat96, k = k3, method = "ard")
+  rec_n <- sweep(fit96@signatures, 2L, sqrt(colSums(fit96@signatures^2)), "/")
+  sig_n <- sweep(sigs96, 1L, sqrt(rowSums(sigs96^2)), "/")
+  best <- apply(sig_n %*% rec_n, 1L, max)
+  expect_true(all(best > 0.95), info = paste(round(best, 4), collapse = ", "))
+
   fit_sp <- ms_extract(cat1, k = 2, method = ms_sparse(variant = "l1", lambda = 0.1, mu = 0.1))
   expect_true(S7::S7_inherits(fit_sp, MsSignature))
   expect_true(all(is.finite(as.numeric(fit_sp@signatures))))
