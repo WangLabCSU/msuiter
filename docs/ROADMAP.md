@@ -61,10 +61,10 @@
 
 ### M2 · 统一提取流水线（5 周）
 
-- [ ] `ms_extract()` 默认流水线（ensemble + 共识 + **K 默认仲裁规则**文档化 + refit）；SUITOR 式 CV 为可选开关（v0.2 期）；Wilcoxon 仅诊断
-- [ ] Hungarian unmatched 的 split/merge 显式语义（兼容 Islam 阈值扫描）
-- [ ] 引擎注册表接入 MsNmf/MsArd/MsSparse；契约测试全过；`extending.Rmd`
-- [ ] 端到端合成测试（cosine>0.95）；Islam 2022 协议复现（**语义逐位**：贪心 max-cosine ≥0.90）
+- [x] `ms_extract()` 默认流水线（ensemble + 共识 + **K 默认仲裁规则**文档化 + refit）；SUITOR 式 CV 为可选开关（v0.2 期）；Wilcoxon 仅诊断（U-M2-03；folds=10/seeds=10/replicates=8 divergence 已记录）
+- [x] Hungarian unmatched 的 split/merge 显式语义（兼容 Islam 阈值扫描）（U-M2-01 consensus.rs； Islam 协议复现固化 test-islam-xval.R）
+- [x] 引擎注册表接入 MsNmf/MsArd/MsSparse；契约测试全过；`extending.Rmd`（U-M2-04/05/06：ard/sparse/nmf 三引擎 certified 注册；extending.Rmd 在 U-M2 收尾批补齐）
+- [x] 端到端合成测试（cosine>0.95）；Islam 2022 协议复现（**语义逐位**：贪心 max-cosine ≥0.90）（test-m2-e2e.R + test-islam-xval.R + bench/xval-m2 sigminer 三方互证 0.99999+）
 
 ### M3a · 拟合三法 + bootstrap（4 周）
 
