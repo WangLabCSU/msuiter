@@ -97,9 +97,12 @@
 #' @param engine_class an S7 class deriving from the abstract [MsEngine].
 #'   String sugar resolves through `engine_class()`, so its property defaults
 #'   must form a valid spec (defaults for `name`, `mode`, `deterministic`).
-#' @param fit_fn the engine implementation, called as `fit_fn(engine, ...)`
-#'   by [fit_engine()]; data plumbing arrives with the extraction/fitting
-#'   units (M1/M2).
+#' @param fit_fn the engine implementation. For `mode = "extract"` engines
+#'   it is called as `fit_fn(engine, catalog = <MsCatalog>, k = <rank>)` and
+#'   must return a list with `signatures` (channels x k, row-major) and
+#'   `exposures` (k x samples); `ms_extract()` owns display normalization
+#'   and the MsSignature assembly. For `mode = "fit"` engines the
+#'   `ms_fit()` face contracts apply (see R/fit.R).
 #' @param packages character vector of required R packages reported by
 #'   [required_pkgs()] (may be empty).
 #' @param tags character vector of free-form tags (may be empty), e.g. for
@@ -236,6 +239,22 @@ register_ms_engine <- function(name, mode, engine_class, fit_fn,
       j = paste0("received: ", msuiter_quote_trunc(certified)),
       c = "declare the trust level explicitly (A17)"
     )
+  }
+  # Extract-mode engines must expose a numeric `seed` property: the
+  # ms_extract() assembly reads spec@seed for the MsSignature provenance
+  # slot, and a missing property would surface as a raw S7 error at
+  # assembly time (audited P2 -- registry-level guard, msuiter_error_registry).
+  if (identical(mode, "extract")) {
+    seed_prop <- tryCatch(engine_class@properties[["seed"]], error = function(e) NULL)
+    if (is.null(seed_prop)) {
+      msuiter_abort(
+        "registry",
+        'extract-mode engines must declare a numeric `seed` property',
+        i = paste0("engine_class `", class(engine_class)[1L], "` has no `seed` property"),
+        j = "ms_extract() reads spec@seed for the MsSignature provenance slot",
+        c = 'add a numeric `seed` S7 property (see MsNmf in R/engines-nmf.R)'
+      )
+    }
   }
 
   assign(

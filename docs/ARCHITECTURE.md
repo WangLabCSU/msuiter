@@ -198,7 +198,7 @@ MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 
 ### 3.4 引擎注册表（v2.1 增治理字段）
 
-`register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`。`certified ∈ {certified, self-reported, unknown}`；`ms_benchmark()` 对 non-certified 引擎显式 warning；文档声明信任边界（"注册引擎代码将以你的权限执行"）；maintainer 月度反向依赖兼容矩阵 job。扩展契约：第三方包 `.onLoad()` 注册 + `S7::methods_register()`；`vignettes/extending.Rmd` + 配套 harness。
+`register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`。`certified ∈ {certified, self-reported, unknown}`；`ms_benchmark()` 对 non-certified 引擎显式 warning（实现注记：告警在引擎解析点 match_ms_engine()/ms_extract()/ms_fit() 每会话每引擎一次，benchmark 过滤读取同一注册表状态）；文档声明信任边界（"注册引擎代码将以你的权限执行"）；maintainer 月度反向依赖兼容矩阵 job。扩展契约：第三方包 `.onLoad()` 注册 + `S7::methods_register()`；`vignettes/extending.Rmd` + 配套 harness。
 
 ### 3.5 Error & lifecycle（v2.1 新增）
 

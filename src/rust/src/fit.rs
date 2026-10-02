@@ -90,13 +90,50 @@
 //! Fixed loop order, first-index tie-breaking in every argmin/argmax, no
 //! hashing, no threads: equal inputs produce bit-identical output (pinned
 //! by tests for all three methods).
+//!
+//! # U-M3a-03 extension: bootstrap CI + cohort presence test
+//!
+//! Two faces land here, both composed ONLY of the audited primitives above
+//! (no kernel semantics change):
+//!
+//! * [`bootstrap`] — the nonparametric (multinomial) percentile bootstrap
+//!   of the whole three-method fit (research/02 §2: "bootstrap 应重采样
+//!   突变（多项）而非通道"). Per boot `b`, every sample `j` has its `N_j`
+//!   mutations resampled from the empirical channel distribution via
+//!   [`msuiter_engine::resample::multinomial`] on the boot's own canonical
+//!   stream `StreamId { replicate: b, rank: 0, fold: 0 }` (the
+//!   `resample.rs` batch layout; the n per-sample draws consume the stream
+//!   sequentially in fixed sample order). Each resampled catalog is fitted
+//!   with the selected method; across boots this yields the 2.5/97.5
+//!   percentile CI and the support stability (frequency of `support = 1`).
+//!   Parallelism exists ONLY between boots (contract 6 independent units,
+//!   chunk-boundary interrupt polling per the `replicates.rs` skeleton);
+//!   each boot is a sequential fit, so `threads ∈ {1, N}` are bit-identical.
+//!   The wire format is the COMPRESSED choice (documented decision): CI
+//!   summaries `ci_lower` / `ci_upper` / `support_stability` (k×n), not the
+//!   raw `n_boot × k × n` cube — deterministic given the seed, bounded
+//!   memory, and the percentile arithmetic is pinned by tests.
+//! * [`presence_test`] — the cohort per-signature presence test with
+//!   Benjamini–Hochberg multiplicity control (research/02 §2, mSigAct
+//!   "χ²₁ + BH q"): the entry-wise LRT machinery of [`fit`] (which is
+//!   method-independent by construction) is pooled across samples by
+//!   SUMMING the per-sample statistics (independent likelihoods add), the
+//!   raw p is the calibrated boundary half-tail `½·erfc(√(D/2))`, and
+//!   [`bh_adjust`] applies the step-up BH correction over the k-signature
+//!   family. `pass_bh` is the `p_bh ≤` [`BH_ALPHA`] verdict.
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use rayon::prelude::*;
 
 use msuiter_engine::error::MsError;
 use msuiter_engine::likelihood::{
-    fisher_se, lrt_stat, multinomial_ll_per_mutation, nb_ll, p_chisq1_lrt, zeroing_mask_share,
-    LL_EPS,
+    fisher_se, lrt_stat, multinomial_ll_per_mutation, nb_ll, p_chisq1_lrt, p_chisq1_upper,
+    zeroing_mask_share, LL_EPS,
 };
 use msuiter_engine::nnls::{nnls_gram, NnlsOptions};
+use msuiter_engine::resample;
+use msuiter_engine::rng::{MsRng, StreamId};
 
 /// Convergence tolerance of the internal NB-MLE projected-gradient ascent:
 /// stop once an accepted step improves the log-likelihood by at most
@@ -223,21 +260,11 @@ pub fn fit(
         let v: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
         let b_j: Vec<f64> = (0..k).map(|a| b[a * n + j]).collect();
 
-        // Full NNLS solution: the nnls exposures themselves and the warm
-        // start of every NB-MLE below (one shared deterministic start).
-        let warm = nnls_gram(&g, &b_j, k, &NnlsOptions::default())?;
-
-        // --- method exposures (h_method) -------------------------------
-        let (h_method, method_converged) = match method {
-            FitMethod::Nnls => (warm.x.clone(), true),
-            FitMethod::LikelihoodBidirectional => {
-                bidirectional(sigs, m, &g, &b_j, &v, k, eps, max_iter)?
-            }
-            FitMethod::Lrt => {
-                let all_free = vec![true; k];
-                nb_mle(sigs, m, k, &v, nb_size, &warm.x, &all_free, max_iter)?
-            }
-        };
+        // Method exposures + the shared NNLS warm start + the zeroing
+        // mask (bit-identical to the original inline block; see
+        // `method_exposures` — shared with the bootstrap driver).
+        let (h_method, warm_x, mask, method_converged) =
+            method_exposures(sigs, m, &g, &b_j, &v, k, method, nb_size, eps, max_iter, zero_threshold)?;
 
         // --- uniform presence-LRT evidence at the NB-MLE exposures -----
         // Always warm-started from the FULL NNLS solution, so the columns
@@ -247,7 +274,7 @@ pub fn fit(
             (h_method.clone(), method_converged)
         } else {
             let all_free = vec![true; k];
-            nb_mle(sigs, m, k, &v, nb_size, &warm.x, &all_free, max_iter)?
+            nb_mle(sigs, m, k, &v, nb_size, &warm_x, &all_free, max_iter)?
         };
         if !method_converged || !mle_converged {
             out.converged = false;
@@ -270,7 +297,6 @@ pub fn fit(
         }
 
         // --- zeroing decision on the RETURNED exposures ----------------
-        let mask = zeroing_mask_share(&h_method, zero_threshold)?;
         for a in 0..k {
             let idx = a * n + j;
             if mask[a] {
@@ -292,21 +318,18 @@ pub fn fit(
     Ok(out)
 }
 
-/// Structured input validation (FFI contracts 3/4, second layer): shape,
-/// finiteness (`"na"`), non-negativity/integrality (`"argument"`), with
-/// 1-based (row, column) payload in the natural matrix coordinates of each
-/// argument (counts: channel × sample; signatures: channel × signature).
-#[allow(clippy::too_many_arguments)]
-fn validate_inputs(
+/// Structured input validation of the two matrices (FFI contracts 3/4,
+/// second layer): shapes, finiteness (`"na"`), non-negativity/integrality
+/// (`"argument"`), with 1-based (row, column) payload in the natural
+/// matrix coordinates of each argument (counts: channel × sample;
+/// signatures: channel × signature). Shared by [`fit`], [`bootstrap`] and
+/// [`presence_test`].
+fn validate_matrices(
     counts: &[f64],
     sigs: &[f64],
     m: usize,
     n: usize,
     k: usize,
-    nb_size: f64,
-    eps: f64,
-    max_iter: usize,
-    zero_threshold: f64,
 ) -> Result<(), MsError> {
     if m == 0 || n == 0 || k == 0 {
         return Err(MsError::new(
@@ -373,6 +396,24 @@ fn validate_inputs(
             }
         }
     }
+    Ok(())
+}
+
+/// Structured input validation (FFI contracts 3/4, second layer): the
+/// shared matrix checks plus the scalar domains of [`fit`].
+#[allow(clippy::too_many_arguments)]
+fn validate_inputs(
+    counts: &[f64],
+    sigs: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    nb_size: f64,
+    eps: f64,
+    max_iter: usize,
+    zero_threshold: f64,
+) -> Result<(), MsError> {
+    validate_matrices(counts, sigs, m, n, k)?;
     if !nb_size.is_finite() {
         return Err(MsError::new("na", "nb_size must be finite (no NaN/Inf)"));
     }
@@ -582,7 +623,10 @@ fn bidirectional(
 /// the (concave) NB log-likelihood `Σᵢ dnbinom(xᵢ; μᵢ = (Sh)ᵢ, size)`,
 /// warm-started at `h0`. `free[a] = false` pins signature a at its `h0`
 /// value (0 in the reduced presence refits). The curvature block is
-/// `SᵀDS` with `D_ii = xᵢ/(eps+μᵢ)² − xᵢ/(size+μᵢ)² ≥ 0`; a (near-)
+/// `SᵀDS` with `D_ii = xᵢ/(eps+μᵢ)² − (xᵢ+size)/(size+μᵢ)² ≥ 0` — a
+/// strict correction on top of the Poisson curvature (audited precision;
+/// NB concavity in μ holds only for μ ≤ x + √(x² + x·size), the guarded
+/// ascent keeps iterates in that region); a (near-)
 /// singular block degrades the step to steepest ascent. Returns
 /// `(h, converged)`; `converged` is false only when `max_iter` iterations
 /// elapsed without meeting the KKT / relative-improvement stops.
@@ -721,6 +765,472 @@ fn nb_mle(
         }
     }
     Ok((h, false))
+}
+
+/// Per-sample method exposures: the shared heart of [`fit`] and the
+/// U-M3a-03 bootstrap driver. One NNLS warm start on the K-format pair,
+/// the selected method's exposure solve, the share-zeroing decision, and
+/// the raw NNLS solution (the warm start of every NB-MLE evidence fit)
+/// alongside. Bit-identical to the original inline block of [`fit`] — a
+/// pure extraction, pinned by the untouched fit tests.
+///
+/// Returns `(h_method, warm_x, mask, converged)`; `mask[a] == true` means
+/// "zero the a-th exposure" (the [`zeroing_mask_share`] decision rule).
+/// (The tuple face is internal to this module; a struct would freeze a
+/// four-field shape used exactly twice.)
+#[allow(clippy::too_many_arguments)] // internal face mirrors the frozen FFI scalar set
+#[allow(clippy::type_complexity)] // (h_method, warm NNLS start, zeroing mask, converged)
+fn method_exposures(
+    sigs: &[f64],
+    m: usize,
+    g: &[f64],
+    b_j: &[f64],
+    v: &[f64],
+    k: usize,
+    method: FitMethod,
+    nb_size: f64,
+    eps: f64,
+    max_iter: usize,
+    zero_threshold: f64,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<bool>, bool), MsError> {
+    let warm = nnls_gram(g, b_j, k, &NnlsOptions::default())?;
+    let (h_method, converged) = match method {
+        FitMethod::Nnls => (warm.x.clone(), true),
+        FitMethod::LikelihoodBidirectional => bidirectional(sigs, m, g, b_j, v, k, eps, max_iter)?,
+        FitMethod::Lrt => {
+            let all_free = vec![true; k];
+            nb_mle(sigs, m, k, v, nb_size, &warm.x, &all_free, max_iter)?
+        }
+    };
+    let mask = zeroing_mask_share(&h_method, zero_threshold)?;
+    Ok((h_method, warm.x, mask, converged))
+}
+
+// ======================================================================
+// U-M3a-03: bootstrap CI + cohort presence test (BH)
+// ======================================================================
+
+/// Frozen MuSiCal LTH epsilon of every bootstrap replicate's
+/// `likelihood_bidirectional` fit: the R-side `.ms_fit_defaults$eps`
+/// (research/02 §1.1 upstream default). The `ms_fit_bootstrap_rust` FFI
+/// face deliberately does not take `tol`/`max_iter` — the bootstrap reuses
+/// the frozen `ms_fit` hyper-parameters (same Delta discipline as
+/// `ms_fit`; a re-freeze moves both sides together).
+pub const FIT_EPS: f64 = 0.001;
+
+/// Frozen round/iteration cap shared with the R `.ms_fit_defaults$max_iter`
+/// (the upstream MuSiCal anti-cycling cap): caps the bidirectional rounds,
+/// the NB-MLE iterations of every bootstrap replicate fit, and the
+/// NB-MLE refits of the presence test.
+pub const FIT_MAX_ITER: usize = 1000;
+
+/// Family-wise alpha of the BH `pass_bh` verdict of the presence test
+/// (the conventional 5% genome-wide screening level; the raw and adjusted
+/// p-values are returned so callers can re-threshold without a refit).
+pub const BH_ALPHA: f64 = 0.05;
+
+/// Percentile levels of the bootstrap CI (the classic percentile method,
+/// research/02 §2 "重采样突变→重拟合→百分位 CI").
+pub const BOOTSTRAP_CI_LEVELS: (f64, f64) = (0.025, 0.975);
+
+/// Output of [`bootstrap`]. All grids are **row-major k×n** (signatures ×
+/// samples); the FFI adapter transposes them into column-major R matrices.
+///
+/// Documented wire-format decision: the COMPRESSED CI summary is returned,
+/// not the raw `n_boot × k × n` exposure cube — deterministic given the
+/// seed, bounded memory, and the percentile arithmetic is pinned by tests.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BootstrapOutput {
+    /// Lower percentile-CI bound ([`BOOTSTRAP_CI_LEVELS`].0) per
+    /// (signature, sample), over the post-zeroing boot exposures.
+    pub ci_lower: Vec<f64>,
+    /// Upper percentile-CI bound ([`BOOTSTRAP_CI_LEVELS`].1).
+    pub ci_upper: Vec<f64>,
+    /// Support stability: the frequency of `support = 1` (the share-rule
+    /// zeroing keeping the exposure) across the `n_boot` replicates.
+    pub support_stability: Vec<f64>,
+    /// The number of bootstrap replicates actually run.
+    pub n_boot: usize,
+    /// AND over all boots of the per-fit method convergence.
+    pub converged: bool,
+}
+
+/// Nonparametric (multinomial) percentile bootstrap of the whole fit
+/// (U-M3a-03; research/02 §2 semantics: "per-sample 多项重采样").
+///
+/// For boot `b`, sample `j`: `counts_b[:, j] ~ Multinomial(N_j, v_j / N_j)`
+/// drawn with [`msuiter_engine::resample::multinomial`] — exactly `N_j`
+/// stream words, zero-weight channels receive exactly zero — from the
+/// boot's own canonical stream `StreamId { replicate: b, rank: 0, fold: 0 }`
+/// (the `resample.rs` batch layout; the n per-sample draws consume that one
+/// stream sequentially in fixed sample order, so a boot is a pure function
+/// of `(seed, b, counts)`). The resampled catalog is fitted per sample with
+/// the selected method via [`method_exposures`] (post-zeroing exposures +
+/// support). Parallelism exists ONLY between boots: they are the
+/// independent units of contract 6, scheduled in chunks with main-thread
+/// boundary interrupt polling (the `replicates.rs` skeleton, copied
+/// locally — see [`run_boots_in_chunks`]); each boot is a single-threaded
+/// sequential fit, so `threads ∈ {1, N}` give bit-identical output (A7).
+///
+/// The CI is the classic percentile interval at [`BOOTSTRAP_CI_LEVELS`]
+/// (type-7 linear interpolation on the ascending-sorted boot values, the R
+/// `quantile` default — pinned by tests); [`support_stability`][BootstrapOutput::support_stability]
+/// is the kept-frequency across boots.
+#[allow(clippy::too_many_arguments)]
+pub fn bootstrap(
+    counts: &[f64],
+    sigs: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    method: FitMethod,
+    n_boot: usize,
+    nb_size: f64,
+    zero_threshold: f64,
+    seed: u64,
+    n_threads: usize,
+    cancelled: &AtomicBool,
+    check_user_interrupt: &mut dyn FnMut(),
+) -> Result<BootstrapOutput, MsError> {
+    validate_inputs(
+        counts,
+        sigs,
+        m,
+        n,
+        k,
+        nb_size,
+        FIT_EPS,
+        FIT_MAX_ITER,
+        zero_threshold,
+    )?;
+    if n_boot == 0 {
+        return Err(MsError::new("argument", "n_boot must be >= 1"));
+    }
+    // Per-sample mutation totals N_j: the resample budget of sample j.
+    // They must stay in the exactly-representable integer domain (each
+    // draw allocates one of N_j words); a catalog beyond 2^53 mutations
+    // per sample is outside the double-exact count domain anyway.
+    let mut totals = vec![0.0f64; n];
+    for j in 0..n {
+        let mut t = 0.0f64;
+        for i in 0..m {
+            t += counts[i * n + j];
+        }
+        if !t.is_finite() || t > 9.007_199_254_740_992e15 {
+            return Err(MsError::new(
+                "argument",
+                "a sample's total count exceeds the exactly-representable bootstrap domain",
+            )
+            .with_j(j as i64 + 1));
+        }
+        totals[j] = t;
+    }
+    // Per-sample weight vectors, gathered once (constant across boots):
+    // the raw counts are passed as unnormalized weights — `multinomial`
+    // normalizes by Σp, and raw counts ARE the empirical channel
+    // distribution of the nonparametric bootstrap.
+    let cols: Vec<Vec<f64>> = (0..n)
+        .map(|j| (0..m).map(|i| counts[i * n + j]).collect())
+        .collect();
+    // The dictionary is constant across boots: one Gram matrix shared by
+    // every boot's K-format solves.
+    let g = gram_from_sigs(sigs, m, k);
+
+    // One whole boot: resample every sample on the boot's own stream,
+    // then fit the resampled catalog per sample (sequential inside).
+    let unit = |b: usize| -> Result<(Vec<f64>, Vec<i32>, bool), MsError> {
+        let mut rng =
+            MsRng::from_stream(seed, StreamId { replicate: b as u64, rank: 0, fold: 0 });
+        let mut boot = vec![0.0f64; m * n];
+        for j in 0..n {
+            let draws = resample::multinomial(&mut rng, &cols[j], totals[j] as u64);
+            for i in 0..m {
+                boot[i * n + j] = draws[i] as f64;
+            }
+        }
+        let b_cross = cross_from_sv(sigs, &boot, m, k, n);
+        let mut exposures = vec![0.0f64; k * n];
+        let mut support = vec![0i32; k * n];
+        let mut converged = true;
+        for j in 0..n {
+            let v: Vec<f64> = (0..m).map(|i| boot[i * n + j]).collect();
+            let b_j: Vec<f64> = (0..k).map(|a| b_cross[a * n + j]).collect();
+            let (h, _warm, mask, conv) = method_exposures(
+                sigs,
+                m,
+                &g,
+                &b_j,
+                &v,
+                k,
+                method,
+                nb_size,
+                FIT_EPS,
+                FIT_MAX_ITER,
+                zero_threshold,
+            )?;
+            if !conv {
+                converged = false;
+            }
+            for a in 0..k {
+                let idx = a * n + j;
+                if mask[a] {
+                    exposures[idx] = 0.0;
+                } else {
+                    exposures[idx] = h[a];
+                    support[idx] = 1;
+                }
+            }
+        }
+        Ok((exposures, support, converged))
+    };
+
+    let per_boot = run_boots_in_chunks(n_boot, n_threads, cancelled, check_user_interrupt, unit)?;
+
+    // Fixed-order reduction (no order-sensitive float accumulation): the
+    // percentile CI and support stability per (signature, sample) cell.
+    let converged = per_boot.iter().all(|(_, _, c)| *c);
+    let mut ci_lower = vec![0.0f64; k * n];
+    let mut ci_upper = vec![0.0f64; k * n];
+    let mut stability = vec![0.0f64; k * n];
+    let mut col = vec![0.0f64; n_boot];
+    for a in 0..k {
+        for j in 0..n {
+            for (b, row) in per_boot.iter().enumerate() {
+                col[b] = row.0[a * n + j];
+            }
+            col.sort_by(f64::total_cmp);
+            ci_lower[a * n + j] = percentile_sorted(&col, BOOTSTRAP_CI_LEVELS.0);
+            ci_upper[a * n + j] = percentile_sorted(&col, BOOTSTRAP_CI_LEVELS.1);
+            let kept: usize = per_boot.iter().map(|r| r.1[a * n + j] as usize).sum();
+            stability[a * n + j] = kept as f64 / n_boot as f64;
+        }
+    }
+    Ok(BootstrapOutput {
+        ci_lower,
+        ci_upper,
+        support_stability: stability,
+        n_boot,
+        converged,
+    })
+}
+
+/// Chunked parallel driver over independent boot units — the
+/// `replicates.rs` scheduling skeleton applied to whole-fit boots (the
+/// driver there is module-private and the crates' file discipline keeps
+/// this unit self-contained; the protocol is identical): units are
+/// scheduled in chunks (≈4 per worker, capped), the main thread polls the
+/// interrupt hook between chunks, each chunk runs its units in parallel on
+/// the per-call pool, workers see ONLY the `cancelled` flag, and chunks
+/// are gathered in chunk-index order (pure index placement — no
+/// order-sensitive floating-point reduction anywhere, so `threads ∈ {1, N}`
+/// give bit-identical output).
+fn run_boots_in_chunks<T, F>(
+    units: usize,
+    n_threads: usize,
+    cancelled: &AtomicBool,
+    check_user_interrupt: &mut dyn FnMut(),
+    unit: F,
+) -> Result<Vec<T>, MsError>
+where
+    T: Send,
+    F: Fn(usize) -> Result<T, MsError> + Sync,
+{
+    let pool = super::probes::build_call_pool(n_threads)?;
+    let target_chunks = n_threads.clamp(1, 16) * 4;
+    let chunk_len = ((units + target_chunks - 1) / target_chunks).max(1);
+    let n_chunks = (units + chunk_len - 1) / chunk_len;
+
+    let mut per_chunk: Vec<(usize, Vec<T>)> = Vec::with_capacity(n_chunks);
+    for c in 0..n_chunks {
+        if cancelled.load(Ordering::Relaxed) {
+            return Err(MsError::new(
+                "interrupted",
+                format!(
+                    "call interrupted before chunk {}; no partial results are returned",
+                    c + 1
+                ),
+            )
+            .with_i((c + 1) as i64));
+        }
+        // Main-thread boundary poll (under R: R_CheckUserInterrupt).
+        check_user_interrupt();
+        let start = c * chunk_len;
+        let end = (start + chunk_len).min(units);
+        let chunk: Vec<T> = pool.install(|| {
+            (start..end)
+                .into_par_iter()
+                .map(|b| {
+                    if cancelled.load(Ordering::Relaxed) {
+                        return Err(MsError::new(
+                            "interrupted",
+                            format!("worker observed cancellation at boot {}", b + 1),
+                        )
+                        .with_i((b + 1) as i64));
+                    }
+                    unit(b)
+                })
+                .collect::<Result<Vec<T>, MsError>>()
+        })?;
+        per_chunk.push((c, chunk));
+    }
+
+    per_chunk.sort_unstable_by_key(|(c, _)| *c);
+    let mut out = Vec::with_capacity(units);
+    for (_, mut vals) in per_chunk {
+        out.append(&mut vals);
+    }
+    debug_assert_eq!(out.len(), units);
+    Ok(out)
+}
+
+/// Type-7 linear-interpolation percentile of ascending-sorted data (the R
+/// `quantile` default): position `p·(len−1)` on the 0-based order
+/// statistics, linear interpolation between the neighbours. Exact for
+/// `len == 1` (degenerate single-boot CI).
+fn percentile_sorted(sorted: &[f64], p: f64) -> f64 {
+    let len = sorted.len();
+    debug_assert!(len > 0, "percentile of an empty slice");
+    if len == 1 {
+        return sorted[0];
+    }
+    let pos = p * (len - 1) as f64;
+    let lo = pos.floor() as usize;
+    let hi = (lo + 1).min(len - 1);
+    let frac = pos - lo as f64;
+    sorted[lo] + frac * (sorted[hi] - sorted[lo])
+}
+
+/// Output of [`presence_test`]: per-signature pooled evidence with BH
+/// multiplicity control (all vectors length k, signature order).
+#[derive(Debug, Clone, PartialEq)]
+pub struct PresenceOutput {
+    /// Pooled LRT statistic `D_a` (length k).
+    pub lrt_stat: Vec<f64>,
+    /// Raw boundary p-value `½·erfc(√(D_a/2))` (length k; no BH).
+    pub lrt_p_raw: Vec<f64>,
+    /// BH-adjusted p-value over the k-signature family (length k).
+    pub lrt_p_bh: Vec<f64>,
+    /// `lrt_p_bh[a] <= BH_ALPHA` verdict (length k).
+    pub pass_bh: Vec<bool>,
+    /// AND over all samples of the full and reduced NB-MLE convergence.
+    pub converged: bool,
+}
+
+/// Per-signature cohort presence test with BH multiplicity control
+/// (U-M3a-03): the entry-wise presence LRT machinery of [`fit`] — which is
+/// method-independent by construction (the uniform evidence columns) —
+/// pooled across samples by SUMMING the per-sample statistics
+/// `D_a = Σ_j D_{a,j}` (independent likelihoods add), the raw p-value as
+/// the calibrated boundary half-tail `½·erfc(√(D_a/2))` (the Self–Liang
+/// convention of [`msuiter_engine::likelihood::p_chisq1_lrt`]; exactly
+/// calibrated for a single sample, and the evidence-pooling convention
+/// pinned by the size/power smoke below), then [`bh_adjust`] over the
+/// k-signature family and the [`BH_ALPHA`] verdict.
+///
+/// NB-MLE refits use the frozen [`FIT_MAX_ITER`] cap (the `ms_fit`
+/// default); `nb_size` is the mSigAct `nbinom.size`. Sequential and
+/// trivially thread-invariant (A7) — the `ms_fit` bounded-batch decision;
+/// `n_threads` lives only on the FFI surface for contract-6 uniformity.
+pub fn presence_test(
+    counts: &[f64],
+    sigs: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    nb_size: f64,
+) -> Result<PresenceOutput, MsError> {
+    validate_matrices(counts, sigs, m, n, k)?;
+    if !nb_size.is_finite() {
+        return Err(MsError::new("na", "nb_size must be finite (no NaN/Inf)"));
+    }
+    if nb_size <= 0.0 {
+        return Err(MsError::new(
+            "argument",
+            "nb_size must be positive (mSigAct nbinom.size semantics)",
+        ));
+    }
+    let g = gram_from_sigs(sigs, m, k);
+    let b = cross_from_sv(sigs, counts, m, k, n);
+    let mut stat = vec![0.0f64; k];
+    let mut converged = true;
+    for j in 0..n {
+        let v: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
+        let b_j: Vec<f64> = (0..k).map(|a| b[a * n + j]).collect();
+        // The uniform evidence machinery of `fit`: NB-MLE at the FULL NNLS
+        // warm start, then the reduced refit without signature a.
+        let warm = nnls_gram(&g, &b_j, k, &NnlsOptions::default())?;
+        let all_free = vec![true; k];
+        let (h_mle, mle_converged) =
+            nb_mle(sigs, m, k, &v, nb_size, &warm.x, &all_free, FIT_MAX_ITER)?;
+        if !mle_converged {
+            converged = false;
+        }
+        let ll_full = nb_ll(&v, &recon(sigs, m, k, &h_mle), nb_size)?;
+        for a in 0..k {
+            let mut h_without = h_mle.clone();
+            h_without[a] = 0.0;
+            let mut free = vec![true; k];
+            free[a] = false;
+            let (h_red, red_converged) =
+                nb_mle(sigs, m, k, &v, nb_size, &h_without, &free, FIT_MAX_ITER)?;
+            if !red_converged {
+                converged = false;
+            }
+            let ll_without = nb_ll(&v, &recon(sigs, m, k, &h_red), nb_size)?;
+            // Ascending-j accumulation order per signature (fixed).
+            stat[a] += lrt_stat(ll_without, ll_full);
+        }
+    }
+    let lrt_p_raw: Vec<f64> = stat.iter().map(|&d| 0.5 * p_chisq1_upper(d)).collect();
+    let lrt_p_bh = bh_adjust(&lrt_p_raw)?;
+    let pass_bh = lrt_p_bh.iter().map(|&q| q <= BH_ALPHA).collect();
+    Ok(PresenceOutput {
+        lrt_stat: stat,
+        lrt_p_raw,
+        lrt_p_bh,
+        pass_bh,
+        converged,
+    })
+}
+
+/// Benjamini–Hochberg step-up adjusted p-values over one family of `m`
+/// tests (research/02 §2, the mSigAct "χ²₁ + BH q" semantics): sort the
+/// p-values ascending, scale the i-th smallest by `m / i`, then enforce
+/// monotonicity with a cumulative minimum from the largest p down (the
+/// "单调折返" fold-back), capped at 1. Ties keep first-index order (stable
+/// sort); every adjusted value is ≥ its raw p and the adjustment is
+/// monotone in the sorted order (both pinned by tests).
+pub fn bh_adjust(p: &[f64]) -> Result<Vec<f64>, MsError> {
+    for (i, &v) in p.iter().enumerate() {
+        if !v.is_finite() {
+            return Err(MsError::new(
+                "na",
+                "p-values must be finite (no NaN/Inf)",
+            )
+            .with_i(i as i64 + 1));
+        }
+        if !(0.0..=1.0).contains(&v) {
+            return Err(MsError::new("argument", "p-values must lie in [0, 1]")
+                .with_i(i as i64 + 1));
+        }
+    }
+    let m = p.len();
+    if m == 0 {
+        return Err(MsError::new(
+            "argument",
+            "the BH family must contain at least one p-value",
+        ));
+    }
+    let mut order: Vec<usize> = (0..m).collect();
+    order.sort_by(|&x, &y| p[x].total_cmp(&p[y])); // stable: first-index ties
+    let mut out = vec![1.0f64; m];
+    let mut running = f64::INFINITY;
+    for i in (0..m).rev() {
+        let raw = p[order[i]] * (m as f64) / (i as f64 + 1.0);
+        running = running.min(raw);
+        out[order[i]] = running.min(1.0);
+    }
+    Ok(out)
 }
 
 // ======================================================================
@@ -1282,4 +1792,401 @@ mod tests {
         assert_eq!(e.topic(), "na");
     }
 
+    // ==================================================================
+    // U-M3a-03: bootstrap determinism/threads/layout/CI + BH goldens +
+    // presence size/power smoke + validation/interrupt protocol.
+    // ==================================================================
+
+    fn no_poll() {}
+
+    /// Bootstrap fixture: separable 12-channel × 4-sample, 2-signature
+    /// truth with anchor-channel blocks (the asymmetric m ≠ n layout
+    /// guard) and interior truth exposures well away from the zeroing
+    /// boundary. Returns `(counts, sigs, h_true, m, n, k)` with `h_true`
+    /// row-major k×n.
+    fn boot_fixture() -> (Vec<f64>, Vec<f64>, [f64; 8], usize, usize, usize) {
+        let (m, n, k) = (12usize, 4usize, 2usize);
+        let mut rng = MsRng::from_stream(0xB005, StreamId { replicate: 5, rank: 5, fold: 5 });
+        let mut sigs = vec![0.0f64; m * k];
+        for a in 0..k {
+            let mut col: Vec<f64> = (0..m)
+                .map(|i| if i / 6 == a { 0.5 + uniform(&mut rng) } else { 0.0 })
+                .collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                sigs[i * k + a] = col[i];
+            }
+        }
+        // Interior, separated truth exposures (row-major k×n).
+        let h_true = [700.0, 550.0, 400.0, 250.0, 100.0, 250.0, 400.0, 550.0];
+        let mut counts = vec![0.0f64; m * n];
+        for i in 0..m {
+            for a in 0..k {
+                for j in 0..n {
+                    counts[i * n + j] += sigs[i * k + a] * h_true[a * n + j];
+                }
+            }
+        }
+        let counts: Vec<f64> = counts.iter().map(|x| x.floor()).collect();
+        (counts, sigs, h_true, m, n, k)
+    }
+
+    fn same_boot_bits(a: &BootstrapOutput, b: &BootstrapOutput) -> bool {
+        let g = |x: &[f64], y: &[f64]| {
+            x.len() == y.len() && x.iter().zip(y.iter()).all(|(p, q)| p.to_bits() == q.to_bits())
+        };
+        g(&a.ci_lower, &b.ci_lower)
+            && g(&a.ci_upper, &b.ci_upper)
+            && g(&a.support_stability, &b.support_stability)
+            && a.n_boot == b.n_boot
+    }
+
+    #[test]
+    fn bootstrap_is_deterministic_and_thread_invariant() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let run = |seed: u64, threads: usize| {
+            let cancelled = AtomicBool::new(false);
+            bootstrap(
+                &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.0, seed, threads,
+                &cancelled, &mut no_poll,
+            )
+            .unwrap()
+        };
+        let a = run(11, 1);
+        let b = run(11, 1);
+        let c = run(11, 4);
+        assert!(same_boot_bits(&a, &b), "same seed must be bit-identical");
+        assert!(same_boot_bits(&a, &c), "threads in {{1, 4}} must be bit-identical");
+        // A different seed changes at least one CI bound (resampling live).
+        let d = run(12, 1);
+        assert!(!same_boot_bits(&a, &d));
+        // Sanity: ordered bounds, stability on the unit interval.
+        for i in 0..k * n {
+            assert!(a.ci_lower[i] <= a.ci_upper[i]);
+            assert!((0.0..=1.0).contains(&a.support_stability[i]));
+        }
+    }
+
+    #[test]
+    fn bootstrap_stream_layout_matches_the_canonical_resample_stream() {
+        // n_boot = 1 must equal a hand-driven resample + a plain fit: the
+        // boot's single canonical stream StreamId { replicate: 0, rank: 0,
+        // fold: 0 } is consumed sequentially, one multinomial draw per
+        // sample in fixed sample order (the resample.rs composition
+        // contract: "composing several resamples on one stream is
+        // transparent"). The stream layout (boot index on the replicate
+        // axis) is pinned here.
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 1, NB_SIZE_SBS96, 0.0, 42, 1,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let mut rng = MsRng::from_stream(42, StreamId { replicate: 0, rank: 0, fold: 0 });
+        let mut boot = vec![0.0f64; m * n];
+        for j in 0..n {
+            let col: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
+            let total: f64 = col.iter().sum();
+            let draws = resample::multinomial(&mut rng, &col, total as u64);
+            for i in 0..m {
+                boot[i * n + j] = draws[i] as f64;
+            }
+        }
+        let pt = fit(&boot, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0)
+            .unwrap();
+        // Bit-identical: the boot unit runs the exact same op sequence.
+        assert_eq!(out.ci_lower, pt.exposures);
+        assert_eq!(out.ci_upper, pt.exposures);
+        assert_eq!(out.support_stability.len(), k * n);
+    }
+
+    #[test]
+    fn bootstrap_resample_is_per_sample_multinomial() {
+        // All mass on channel 0: every boot resample is the same counts
+        // vector (zero-weight channels get exactly zero draws), so the
+        // percentile CI degenerates to the point solution and the support
+        // stability is exactly the point support.
+        let sigs = [1.0, 0.0, 0.0, 1.0];
+        let counts = [100.0, 0.0];
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, 2, 1, 2, FitMethod::Nnls, 9, NB_SIZE_SBS96, 0.01, 7, 2,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        assert_eq!(out.n_boot, 9);
+        assert!(out.converged);
+        assert!((out.ci_lower[0] - 100.0).abs() <= 1e-8, "h0 = {}", out.ci_lower[0]);
+        assert!((out.ci_upper[0] - 100.0).abs() <= 1e-8, "h0 = {}", out.ci_upper[0]);
+        assert_eq!(out.ci_lower[1], 0.0);
+        assert_eq!(out.ci_upper[1], 0.0);
+        assert_eq!(out.support_stability, vec![1.0, 0.0]);
+    }
+
+    #[test]
+    fn bootstrap_reuses_all_three_methods() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        for method in [FitMethod::LikelihoodBidirectional, FitMethod::Lrt] {
+            let cancelled = AtomicBool::new(false);
+            let out = bootstrap(
+                &counts, &sigs, m, n, k, method, 5, NB_SIZE_SBS96, 0.01, 9, 2,
+                &cancelled, &mut no_poll,
+            )
+            .unwrap();
+            assert!(out.converged, "{method:?} boots must converge");
+            for i in 0..k * n {
+                assert!(out.ci_lower[i] <= out.ci_upper[i]);
+                assert!((0.0..=1.0).contains(&out.support_stability[i]));
+            }
+        }
+    }
+
+    #[test]
+    fn bootstrap_percentile_ci_covers_truth() {
+        // True model: 2 well-conditioned signatures over 6 channels, 2
+        // samples with interior exposures, ~1200 mutations per sample.
+        // 100 experiments: counts ~ Multinomial per sample drawn from the
+        // truth; the 40-boot percentile CI must cover the true exposure
+        // in ≈95% of experiments. Pooled over the 4 cells (SE of the
+        // coverage estimate ≈ sqrt(0.95·0.05/400) ≈ 0.011), the window
+        // below leaves room for estimator bias while still failing any
+        // systematic miscalibration (a 50%-coverage bug cannot pass).
+        let (m, n, k) = (6usize, 2usize, 2usize);
+        let mut rng = MsRng::from_stream(0xC0DE, StreamId { replicate: 1, rank: 2, fold: 3 });
+        let mut sigs = vec![0.0f64; m * k];
+        for a in 0..k {
+            let mut col: Vec<f64> = (0..m)
+                .map(|i| if i / 3 == a { 0.5 + uniform(&mut rng) } else { 0.0 })
+                .collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                sigs[i * k + a] = col[i];
+            }
+        }
+        let h_true = [700.0, 150.0, 250.0, 650.0]; // row-major k×n, interior
+        let (n_boot, experiments) = (40usize, 100usize);
+        let (mut covered, mut total) = (0usize, 0usize);
+        for e in 0..experiments {
+            let mut counts = vec![0.0f64; m * n];
+            for j in 0..n {
+                let expected: Vec<f64> = (0..m)
+                    .map(|i| (0..k).map(|a| sigs[i * k + a] * h_true[a * n + j]).sum())
+                    .collect();
+                // The resample budget is the truth's own per-sample total
+                // (signature columns sum to 1, so Σrecon = Σ_a h_true[a,j]).
+                let budget: u64 = (h_true[j] + h_true[n + j]) as u64;
+                let draws = resample::multinomial_from_stream(
+                    0xE0F,
+                    StreamId { replicate: e as u64, rank: j as u64, fold: 0 },
+                    &expected,
+                    budget,
+                )
+                .unwrap();
+                for i in 0..m {
+                    counts[i * n + j] = draws[i] as f64;
+                }
+            }
+            let cancelled = AtomicBool::new(false);
+            let out = bootstrap(
+                &counts, &sigs, m, n, k, FitMethod::Nnls, n_boot, NB_SIZE_SBS96, 0.0, 77, 2,
+                &cancelled, &mut no_poll,
+            )
+            .unwrap();
+            for (idx, &truth) in h_true.iter().enumerate() {
+                total += 1;
+                if out.ci_lower[idx] <= truth && truth <= out.ci_upper[idx] {
+                    covered += 1;
+                }
+            }
+        }
+        let cov = covered as f64 / total as f64;
+        assert!((0.88..=0.995).contains(&cov), "pooled coverage {cov} over {total} cells");
+    }
+
+    #[test]
+    fn bootstrap_interrupt_protocol_mirrors_replicates() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        // Pre-cancelled flag fails the whole call without partial results.
+        let cancelled = AtomicBool::new(true);
+        let err = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 2,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap_err();
+        assert_eq!(err.topic, "interrupted");
+        assert_eq!(err.i, Some(1));
+        // Mid-run trip at a chunk boundary: the next chunk refuses.
+        let cancelled = AtomicBool::new(false);
+        let mut chunks = 0usize;
+        let err = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1,
+            &cancelled,
+            &mut || {
+                chunks += 1;
+                if chunks == 1 {
+                    cancelled.store(true, Ordering::Relaxed);
+                }
+            },
+        )
+        .unwrap_err();
+        assert_eq!(chunks, 1);
+        assert_eq!(err.topic, "interrupted");
+        assert!(err.to_string().contains("worker observed"));
+        // Boundary polls: 8 boots, 1 thread → target 4 chunks → 4 polls.
+        let cancelled = AtomicBool::new(false);
+        let mut polls = 0usize;
+        bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1,
+            &cancelled, &mut || polls += 1,
+        )
+        .unwrap();
+        assert_eq!(polls, 4);
+    }
+
+    #[test]
+    fn bootstrap_and_presence_validation_errors() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let cancelled = AtomicBool::new(false);
+        let mk_boot = |n_boot: usize, nb: f64, c: &[f64]| {
+            bootstrap(
+                c, &sigs, m, n, k, FitMethod::Nnls, n_boot, nb, 0.0, 1, 1, &cancelled,
+                &mut no_poll,
+            )
+        };
+        assert_eq!(mk_boot(0, NB_SIZE_SBS96, &counts).unwrap_err().topic, "argument");
+        assert_eq!(mk_boot(5, 0.0, &counts).unwrap_err().topic, "argument");
+        let mut bad = counts.clone();
+        bad[3] = 1.5; // non-integral count
+        assert_eq!(mk_boot(5, NB_SIZE_SBS96, &bad).unwrap_err().topic, "argument");
+        // Presence face: the same matrix gate + the nb_size domain.
+        assert_eq!(
+            presence_test(&[f64::NAN, 1.0], &GOLDEN_SIGS, 2, 1, 2, 8.0)
+                .unwrap_err()
+                .topic,
+            "na"
+        );
+        assert_eq!(
+            presence_test(&GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2, 0.0)
+                .unwrap_err()
+                .topic,
+            "argument"
+        );
+        assert_eq!(
+            presence_test(&GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2, f64::NAN)
+                .unwrap_err()
+                .topic,
+            "na"
+        );
+        assert_eq!(
+            presence_test(&GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2, -1.0)
+                .unwrap_err()
+                .topic,
+            "argument"
+        );
+    }
+
+    #[test]
+    fn bh_golden_fold_back() {
+        // Hand-derived: p = [0.01, 0.04, 0.03, 0.005], m = 4 → sorted
+        // m/i scaling = [0.02, 0.02, 0.04, 0.04]; the fold-back keeps them
+        // monotone; mapped back to the original order:
+        // [0.02, 0.04, 0.04, 0.02].
+        assert_eq!(bh_adjust(&[0.01, 0.04, 0.03, 0.005]).unwrap(), vec![0.02, 0.04, 0.04, 0.02]);
+        // Cap at 1: the m/i scaling of the smaller p exceeds 1 and folds
+        // back to the larger p's 0.6.
+        assert_eq!(bh_adjust(&[0.5, 0.6]).unwrap(), vec![0.6, 0.6]);
+        // Single test: BH is the identity.
+        assert_eq!(bh_adjust(&[0.3]).unwrap(), vec![0.3]);
+        // Properties on a deterministic p grid: adjusted ≥ raw, monotone
+        // in the sorted order.
+        let p: Vec<f64> = (0..12).map(|i| (i * 7919 % 97) as f64 / 97.0).collect();
+        let adj = bh_adjust(&p).unwrap();
+        for (r, a) in p.iter().zip(adj.iter()) {
+            assert!(a >= r, "adjusted {a} < raw {r}");
+        }
+        let mut order: Vec<usize> = (0..12).collect();
+        order.sort_by(|&x, &y| p[x].total_cmp(&p[y]));
+        for w in order.windows(2) {
+            assert!(adj[w[0]] <= adj[w[1]], "fold-back monotonicity broken");
+        }
+        // Validation errors (contract 5).
+        assert_eq!(bh_adjust(&[0.5, f64::NAN]).unwrap_err().topic, "na");
+        assert_eq!(bh_adjust(&[0.5, -0.1]).unwrap_err().topic, "argument");
+        assert_eq!(bh_adjust(&[1.5]).unwrap_err().topic, "argument");
+        assert_eq!(bh_adjust(&[]).unwrap_err().topic, "argument");
+    }
+
+    #[test]
+    fn presence_single_sample_matches_fit_lrt_columns() {
+        // n = 1: the pooled statistic IS the entry-wise fit statistic, and
+        // the raw p is the fit's lrt_p — bit-identical (same machinery).
+        let (m, n, k) = (6usize, 1usize, 3usize);
+        let mut rng = MsRng::from_stream(21, StreamId { replicate: 3, rank: 1, fold: 4 });
+        let mut sigs = vec![0.0f64; m * k];
+        for a in 0..k {
+            let mut col: Vec<f64> = (0..m).map(|_| uniform(&mut rng)).collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                sigs[i * k + a] = col[i];
+            }
+        }
+        let counts: Vec<f64> = (0..m)
+            .map(|i| if i % 5 == 0 { 0.0 } else { (uniform(&mut rng) * 200.0).floor() })
+            .collect();
+        let pt = presence_test(&counts, &sigs, m, n, k, 8.0).unwrap();
+        let fl = fit(&counts, &sigs, m, n, k, FitMethod::Nnls, 8.0, 0.001, 1000, 0.01).unwrap();
+        assert!(pt.converged);
+        for a in 0..k {
+            assert_eq!(pt.lrt_stat[a], fl.lrt_stat[a * n], "sig {a} stat");
+            assert_eq!(pt.lrt_p_raw[a], fl.lrt_p[a * n], "sig {a} raw p");
+        }
+        // BH ≥ raw everywhere; the verdict matches BH_ALPHA.
+        for (r, q) in pt.lrt_p_raw.iter().zip(pt.lrt_p_bh.iter()) {
+            assert!(q >= r);
+        }
+        for (q, ok) in pt.lrt_p_bh.iter().zip(pt.pass_bh.iter()) {
+            assert_eq!(*ok, *q <= BH_ALPHA);
+        }
+    }
+
+    #[test]
+    fn presence_size_and_power_smoke() {
+        // Engine-test convention: Poisson-limit NB (size = 1e8), sigs
+        // [0.5, 0.9; 0.5, 0.1]. H0 means (500, 500) — signature 1 absent —
+        // must reject at ≈ α = 0.05 through the BH verdict (window around
+        // the engine primitive's exact-rate anchor 0.052); H1 (700, 300)
+        // must give decisive power. Single-sample catalogs keep the
+        // Self–Liang boundary calibration exact.
+        let sigs = [0.5, 0.9, 0.5, 0.1];
+        let n_reps = 1000_u64;
+        let run = |means: [f64; 2], seed: u64| -> f64 {
+            let mut rejects = 0_u64;
+            for r in 0..n_reps {
+                let mut rng = MsRng::from_stream(seed, StreamId { replicate: r, rank: 0, fold: 0 });
+                let x0 = poisson_draw(&mut rng, means[0]) as f64;
+                let x1 = poisson_draw(&mut rng, means[1]) as f64;
+                let pt = presence_test(&[x0, x1], &sigs, 2, 1, 2, 1e8).unwrap();
+                assert!(pt.converged, "NB-MLE must converge in the smoke");
+                if pt.pass_bh[1] {
+                    rejects += 1;
+                }
+            }
+            rejects as f64 / n_reps as f64
+        };
+        let size = run([500.0, 500.0], 0xDADA);
+        let power = run([700.0, 300.0], 0xBEAD);
+        assert!((0.02..=0.10).contains(&size), "presence size at α=0.05: {size}");
+        assert!(power > 0.8, "presence power at the strong alternative: {power}");
+        assert!(power > size, "power must dominate size: {power} vs {size}");
+    }
 }
