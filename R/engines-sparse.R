@@ -130,8 +130,8 @@ msuiter_validate_sparse <- function(self) {
 #'
 #' Build an [MsSparse] spec for [ms_extract(method =)].
 #'
-#' @param variant `"volume"` (KL + log-det volume regularizer on W) or
-#'   `"l1"` (KL + L1 penalties on both factors).
+#' @param variant `"l1"` (KL + L1 penalties on both factors; default) or
+#'   `"volume"` (KL + log-det volume regularizer on W).
 #' @param lambda signatures penalty (volume strength / H-row L1).
 #' @param mu W-column L1 penalty (l1 variant; must be > 0).
 #' @param delta volume ridge (volume variant; 0 = kernel default 1).

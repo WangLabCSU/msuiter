@@ -31,6 +31,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 mod condition;
 mod extract;
+mod fit;
 mod pipeline;
 mod probes;
 mod replicates;
@@ -591,6 +592,105 @@ fn ms_extract_rust(
 }
 
 // ---------------------------------------------------------------------------
+// U-M3a-02 reference-based fitting kernel (`ms_fit_rust`, FFI-internal name
+// — the user-facing `ms_fit()` generic lands in R/fit.R). The pure assembly
+// core lives in `fit.rs` (three methods: nnls / likelihood_bidirectional /
+// lrt); this adapter owns the R-matrix handoff (the same t(counts) layout
+// contract as ms_extract_rust, extended to the t(sigs) dictionary) and the
+// scalar domain guards.
+// ---------------------------------------------------------------------------
+
+#[extendr]
+#[allow(clippy::too_many_arguments)] // FFI face: hyper-parameters are part of the frozen signature
+fn ms_fit_rust(
+    counts: Robj,
+    signatures: Robj,
+    method: String,
+    nb_size: f64,
+    tol: f64,
+    max_iter: i32,
+    zero_threshold: f64,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Argument guards (contract 4): explicit, error-not-panic. The
+        // core re-validates every matrix cell and the scalar domains.
+        if max_iter < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("max_iter must be >= 1, got {max_iter}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        let method = fit::FitMethod::parse(&method)?;
+        // Layout contract (fit.rs module docs, the transposition trap):
+        // R passes t(counts) — n x m column-major flat buffer IS the
+        // row-major m x n counts — and t(sigs) — k x m column-major flat
+        // buffer IS the row-major m x k signatures. Zero marshalling here;
+        // the asymmetric-golden recovery smokes on both sides guard the
+        // orientation.
+        let (n, m, counts_data) =
+            with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        let (k, m2, sigs_data) =
+            with_matrix_f64(&signatures, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        if m2 != m {
+            return Err(MsError::new(
+                "argument",
+                format!(
+                    "signatures and counts must share the channel dimension: counts has {m}, signatures have {m2}"
+                ),
+            )
+            .with_i(m as i64)
+            .with_j(m2 as i64));
+        }
+        // Contract 7, declared decision: bounded-duration call, no boundary
+        // polls (single bounded batch over samples; see fit.rs docs).
+        // `n_threads` is validated above and otherwise unused (A7: the
+        // sequential core is trivially thread-invariant).
+        let out = fit::fit(
+            &counts_data,
+            &sigs_data,
+            m,
+            n,
+            k,
+            method,
+            nb_size,
+            tol,
+            max_iter as usize,
+            zero_threshold,
+        )?;
+
+        // Wire shape (contract 2, column-major k x n grids).
+        let kk = k;
+        let nn = n;
+        let col_major_f64 =
+            |grid: &[f64]| extendr_api::wrapper::RMatrix::new_matrix(kk, nn, |r, c| grid[r * nn + c]);
+        let exposures = col_major_f64(&out.exposures);
+        let lrt_stat = col_major_f64(&out.lrt_stat);
+        let lrt_p = col_major_f64(&out.lrt_p);
+        let se = col_major_f64(&out.se);
+        let support_data: Vec<i32> = out.support.clone();
+        let support =
+            extendr_api::wrapper::RMatrix::new_matrix(kk, nn, |r, c| support_data[r * nn + c]);
+        let pairs = vec![
+            ("exposures", Robj::from(exposures)),
+            ("support", Robj::from(support)),
+            ("lrt_stat", Robj::from(lrt_stat)),
+            ("lrt_p", Robj::from(lrt_p)),
+            ("se", Robj::from(se)),
+            ("method", Robj::from(method.as_str())),
+            ("converged", Robj::from(out.converged)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+// ---------------------------------------------------------------------------
 // M2 pipeline plan slot (FFI wiring of U-M1c-02): GMM hypermutant
 // stratification kernel (`ms_stratify_rust`, FFI-internal name — the
 // user-facing API stays `ms_stratify_hypermutants()` in R/stratify.R). The
@@ -1090,6 +1190,7 @@ extendr_module! {
     fn ms_stratify_rust;
     fn ms_ard_rust;
     fn ms_sparse_rust;
+    fn ms_fit_rust;
     fn ms_match_solutions_rust;
 }
 

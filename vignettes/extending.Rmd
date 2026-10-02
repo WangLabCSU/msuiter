@@ -1,0 +1,376 @@
+---
+title: "Extending msuiter: third-party engines and the registry contract"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Extending msuiter: third-party engines and the registry contract}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(msuiter)
+```
+
+This vignette is the extension contract promised by ARCHITECTURE.md section 3.4:
+it walks through everything a third-party package must do to add a new
+extraction engine to msuiter, and everything it promises in return. The example
+engine uses nothing but base R and msuiter itself, so you can copy the whole
+tutorial into your own package and adapt it.
+
+The registry is *data, not a class explosion*: one row per engine name, keyed
+by the engine name and carrying the spec class, the implementation function and
+three governance fields (`engine_version`, `contract_version`, `certified`).
+Your engine becomes available to every user of `ms_extract(method =)` and
+`method = "<name>"` string sugar the moment its row exists.
+
+## 1. The engine spec: an `MsEngine` subclass
+
+Engine specs are small, serializable S7 objects. Create a subclass of the
+abstract `MsEngine` with `S7::new_class()` and give its properties *defaults
+that form a valid spec* — string sugar (`method = "tutorial_eu"`) resolves by
+constructing the class with no arguments and checking the result against the
+registry key.
+
+```{r engine-class}
+TutorialEu <- S7::new_class(
+  "TutorialEu", package = "tutorial.othersig", parent = MsEngine,
+  properties = list(
+    name          = S7::new_property(S7::class_character, default = "tutorial_eu"),
+    mode          = S7::new_property(S7::class_character, default = "extract"),
+    deterministic = S7::new_property(S7::class_logical,   default = TRUE),
+    packages      = S7::new_property(S7::class_character, default = character(0)),
+    label         = S7::new_property(S7::class_character,
+                                     default = "Tutorial Frobenius NMF (base R)"),
+    max_iter      = S7::new_property(S7::class_numeric,   default = 200),
+    seed          = S7::new_property(S7::class_numeric,   default = 1)
+  )
+)
+```
+
+Contract notes on the properties:
+
+* `name`, `mode`, `deterministic` **must** have valid defaults: string sugar
+  constructs the class bare, and `match_ms_engine()` rejects classes whose
+  defaults fail validation or disagree with the registry key.
+* `seed` is required for `mode = "extract"` engines: the `ms_extract()`
+  assembly records the spec's `seed` on the returned `MsSignature` for
+  provenance. A spec class without a `seed` property will fail late, inside
+  the assembly — declare it even if your algorithm is fully deterministic.
+* `deterministic = TRUE` is a promise: same inputs, same output, independent
+  of thread count. The engine below owns its RNG draws (seeded) and is pure R,
+  so the promise is easy to keep.
+* Hyper-parameters (`max_iter`, `seed` here) are *frozen on the spec object*
+  at construction time — the object, not a config file, is the unit of
+  reproducibility.
+
+## 2. The fit function
+
+The registry calls your implementation as `fit_fn(engine, catalog = , k = )`
+through `fit_engine()`. For an `"extract"` engine it must return a plain list
+with two **raw, unnormalized** matrices:
+
+* `signatures`: `channels x k`
+* `exposures`: `k x samples`
+
+Assembly into a labelled `MsSignature` (display normalization, labels, the
+catalog snapshot) is `ms_extract()`'s job, not yours. The layout contract is
+strict: channels in rows, in the catalog's channel order.
+
+```{r fit-function}
+tutorial_eu_fit <- function(engine, catalog, k, ...) {
+  # Error protocol: violations raise msuiter_error_<topic> through
+  # rlang::abort, carrying the i/j/c information payload (ARCHITECTURE.md
+  # section 3.5). Never call stop().
+  if (!S7::S7_inherits(catalog, MsCatalog)) {
+    rlang::abort(
+      "catalog must be an MsCatalog object",
+      class = "msuiter_error_input",
+      msuiter_error = list(
+        topic = "input",
+        i = "the tutorial engine factorizes a channel x sample count matrix",
+        j = paste0("received: ", class(catalog)[1L]),
+        c = "tally variants with ms_tally(), or build one with ms_catalog()"
+      )
+    )
+  }
+  if (!is.numeric(k) || length(k) != 1L || is.na(k) || k < 1 || k != trunc(k)) {
+    rlang::abort(
+      "k must be a single positive whole number",
+      class = "msuiter_error_input",
+      msuiter_error = list(
+        topic = "input",
+        i = "a rank-k factorization needs one signature per rank",
+        j = paste0("received: ", format(k)),
+        c = "pass e.g. k = 3"
+      )
+    )
+  }
+  k <- as.integer(k)
+  counts <- catalog@counts # channels x samples, non-negative
+
+  # Determinism: seed our own draws, and leave the caller's RNG state alone.
+  had_seed <- exists(".Random.seed", envir = globalenv())
+  if (had_seed) old_seed <- get(".Random.seed", envir = globalenv())
+  on.exit(
+    if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()),
+    add = TRUE
+  )
+  set.seed(engine@seed)
+
+  m <- nrow(counts)
+  n <- ncol(counts)
+  eps <- 1e-12
+  # Initialization: a uniform share for every channel plus one contiguous
+  # anchor block per signature (seeded jitter breaks ties). Plain
+  # multiplicative updates then converge without collapsing a component.
+  block <- rep(seq_len(k), each = ceiling(m / k))[seq_len(m)]
+  W <- matrix(1 / m, m, k)
+  W[cbind(seq_len(m), block)] <- 1 / k
+  W <- W * (1 + 0.1 * stats::runif(m * k))
+  W <- sweep(W, 2, colSums(W), "/") # gauge: columns sum to 1
+  H <- matrix(mean(counts), k, n) * (0.5 + stats::runif(k * n))
+  # Lee-Seung multiplicative updates, Frobenius ("eu") divergence: the
+  # denominator couples both factors, so the scale of W and H cannot run
+  # away. Numerical guards live only in the divisions.
+  for (iter in seq_len(engine@max_iter)) {
+    H <- H * (crossprod(W, counts) + eps) / (crossprod(W, W %*% H) + eps)
+    W <- W * (tcrossprod(counts, H) + eps) / (W %*% tcrossprod(H, H) + eps)
+  }
+  list(signatures = W, exposures = H) # raw factors: m x k and k x n
+}
+```
+
+Anything your function raises as an `msuiter_error_*` condition propagates to
+the caller as-is: `ms_extract()` wraps dispatch, not your errors. Raise them
+with the three-part payload (`i` = what invariant holds, `j` = what arrived,
+`c` = what to do) so users and tests can match on
+`cnd$msuiter_error` (`topic`/`i`/`j`/`c`).
+
+## 3. Register the engine
+
+```{r register}
+register_ms_engine(
+  name = "tutorial_eu",
+  mode = "extract",
+  engine_class = TutorialEu,
+  fit_fn = tutorial_eu_fit,
+  packages = character(0),
+  tags = c("third-party", "tutorial", "nmf"),
+  engine_version = "0.1.0",
+  contract_version = "1",
+  certified = "self-reported"
+)
+```
+
+The nine fields, and what each one owes the registry:
+
+| field | meaning |
+|---|---|
+| `name` | registry key; single lower-case snake_case string (`^[a-z][a-z0-9_]*$`), unique per session |
+| `mode` | `"extract"` (signature discovery) or `"fit"` (reference-based fitting) |
+| `engine_class` | S7 class deriving from `MsEngine` with valid property defaults |
+| `fit_fn` | the implementation, called as `fit_fn(engine, catalog = , k = )` |
+| `packages` | R packages your engine needs, reported by `required_pkgs()` |
+| `tags` | free-form labels (e.g. for benchmark filtering) |
+| `engine_version` | version of *your* engine implementation |
+| `contract_version` | version of the msuiter registry/extension contract you coded against (`"1"` today) |
+| `certified` | one of `"certified"`, `"self-reported"`, `"unknown"` — see governance below |
+
+Duplicate names are rejected (registration errors instead of silently
+shadowing), and `contract_version` is your pin: when msuiter changes the
+extension contract, the version bumps and stale engines are visible in
+`ms_engines()` at a glance.
+
+```{r engines-table}
+ms_engines()
+```
+
+## 4. Trust boundary and governance
+
+`certified` is the trust level of the row:
+
+* `"certified"` — the engine passed the msuiter maintainers' compatibility
+  review. In-tree engines (`nmf`, `ard`, `sparse`) are registered this way.
+* `"self-reported"` — the engine's author vouches for the contract. Third
+  parties almost always land here.
+* `"unknown"` — trust level not established.
+
+Trust boundary, stated plainly (from the `register_ms_engine()` docs):
+**registered engine code runs with your permissions.** Registering and
+resolving an engine runs *its* class and function objects inside *your*
+session, with your user's rights. Only attach engines from packages you
+trust, exactly as you would trust any R package you install.
+
+Non-certified engines are loud, not silent: the first resolution of a
+`"self-reported"` or `"unknown"` engine in a session — through
+`match_ms_engine()`, and therefore also through `ms_extract()` /
+`ms_fit()` / any benchmark that resolves the engine — warns once per session
+per engine with condition class `msuiter_warning_uncertified_engine`. The
+warning fires where the engine enters the computation, so a benchmark that
+consumes a non-certified engine carries the warning with it; certified
+engines never warn.
+
+## 5. End to end: extract signatures with the tutorial engine
+
+A small synthetic catalog: 48 channels x 8 samples built from three planted
+signatures with disjoint channel blocks (seeded, so the vignette is
+reproducible). In a real analysis the catalog would come from
+`ms_variants() |> ms_tally()`.
+
+```{r synthetic-catalog}
+set.seed(11)
+ch <- 48L; ns <- 8L; k_true <- 3L
+planted <- t(vapply(seq_len(k_true) - 1L, function(s) {
+  v <- numeric(ch)
+  v[(s * 16L + 1L):((s + 1L) * 16L)] <- 0.5 + stats::runif(16L)
+  v / sum(v)
+}, numeric(ch))) # k_true x channels, disjoint supports
+H_true <- matrix(2, k_true, ns)
+for (j in seq_len(ns)) H_true[(j - 1L) %% k_true + 1L, j] <- 60
+counts <- round(100 * crossprod(planted, H_true))
+dimnames(counts) <- list(paste0("C", seq_len(ch)), paste0("S", seq_len(ns)))
+
+cat1 <- ms_catalog(
+  counts = counts,
+  channels = list(name = "SYN48", labels = paste0("C", seq_len(ch))),
+  samples = paste0("S", seq_len(ns)),
+  provenance = list(genome = "SYN")
+)
+```
+
+String sugar first. Because the engine is `"self-reported"`, the first
+resolution warns (once per session):
+
+```{r extract-sugar}
+fit <- ms_extract(cat1, k = 3, method = "tutorial_eu")
+```
+
+The spec object is the first-class citizen (A14): passing `TutorialEu()`
+carries the frozen hyper-parameters and warns no further — the one-time
+warning is idempotent per engine.
+
+```{r extract-object}
+fit2 <- ms_extract(cat1, 3, TutorialEu(max_iter = 500, seed = 7))
+identical(fit2@engine, "tutorial_eu")
+```
+
+The result is a standard `MsSignature`, indistinguishable from one produced
+by an in-tree engine: the engine name and seed ride along for provenance.
+
+```{r signature}
+fit
+```
+
+Recovery check against the planted truth — each planted signature against its
+best-matching recovered signature (cosine):
+
+```{r recovery}
+recovered <- fit@signatures # channels x signatures, columns sum to 1
+planted_n <- sweep(planted, 1, sqrt(rowSums(planted^2)), "/")
+recovered_n <- sweep(recovered, 2, sqrt(colSums(recovered^2)), "/")
+round(apply(planted_n %*% recovered_n, 1, max), 4)
+```
+
+The raw-factor contract is also visible directly: `fit_engine()` dispatches
+to the registered `fit_fn`, and `required_pkgs()` reports the registry row.
+
+```{r raw-contract}
+spec <- match_ms_engine("tutorial_eu")
+raw <- fit_engine(spec, catalog = cat1, k = 3)
+dim(raw$signatures); dim(raw$exposures)
+required_pkgs(spec)
+```
+
+## 6. Shipping the engine in your package
+
+In a real package the registration belongs in `.onLoad()`, so the row exists
+before any user call can resolve it:
+
+```{r, eval = FALSE}
+# yourpackage/R/zzz.R
+.onLoad <- function(libname, pkgname) {
+  msuiter::register_ms_engine(
+    name = "othersig_kl", mode = "fit", engine_class = OthersigKlEngine,
+    fit_fn = othersig_kl_fit, packages = "othersig",
+    engine_version = "2.3.4", contract_version = "1",
+    certified = "self-reported"
+  )
+}
+```
+
+Notes:
+
+* The registry is **per-session state**: it ships empty and lives in memory,
+  so your package must re-register on every load — which `.onLoad()` does.
+* `S7::methods_register()` is *not* needed for registration itself (registry
+  rows are data). Call it in your `.onLoad()` only if your package defines
+  its own S7 methods on msuiter generics (say, a `format()` method for your
+  spec class), and only after those definitions.
+* Guard idempotently if you source the registration outside a package
+  context; inside `.onLoad()` it runs once per session anyway.
+* Pick a name namespaced to your package (`"othersig_kl"`, not `"kl"`) — the
+  registry is shared by every attached package in the session, and duplicate
+  keys are rejected.
+
+## 7. Your obligations: error protocol and contract tests
+
+**Error protocol** (ARCHITECTURE.md section 3.5). Every violation your engine
+detects raises `msuiter_error_<topic>` via `rlang::abort()` with the
+`msuiter_error` payload named `c("topic", "i", "j", "c")` — the three-part
+information shown in section 2. Bare `stop()` is a contract violation:
+callers match on the condition class and the payload, not on message text.
+
+**Contract-test checklist** — what msuiter expects an engine (and its
+package) to test, mirroring the in-tree suites
+(`tests/testthat/test-engines-registry.R` and
+`tests/testthat/test-extend-contract.R`, which you can read as executable
+templates):
+
+1. Registration stores all nine fields; `ms_engines()` lists the row.
+2. Duplicate names are rejected and the existing row survives.
+3. Field violations raise `msuiter_error_registry`: name grammar, unknown
+   mode, non-`MsEngine` class, non-function `fit_fn`, `NA`/empty entries in
+   `packages`/`tags`, and missing or invalid governance fields
+   (`engine_version`, `contract_version`, `certified`).
+4. `certified` accepts exactly the three governance states.
+5. String sugar resolves; an unknown name fails with *every* available engine
+   name listed in the message.
+6. A spec object passes through `match_ms_engine()` unchanged.
+7. `fit_engine()` dispatches to the registered `fit_fn` (dots pass through);
+   an unregistered spec fails with `msuiter_error_registry`.
+8. `required_pkgs()` prefers the registry row.
+9. The `.onLoad()` registration path works end to end, and non-certified
+   engines warn exactly once per session per engine (string path *and*
+   object path).
+10. An engine class without usable defaults fails resolution with a clear
+    `msuiter_error_registry`.
+11. End to end through `ms_extract()`: your engine produces an `MsSignature`
+    with the right `engine` name, `seed`, dimensions and labels; a degenerate
+    fit (a signature column without positive mass) surfaces as
+    `msuiter_error_signature`; engine failures surface with their own
+    `msuiter_error_*` class; `"fit"`-mode engines are rejected by
+    `ms_extract()` with `msuiter_error_input`.
+
+Items 1-10 are registry-side and identical for every engine; item 11 is yours
+to reproduce for your implementation.
+
+## 8. Session notes
+
+* `certified = "certified"` is reserved for the maintainer review (A17);
+  self-certifying as `"certified"` is a contract violation. The maintainers
+  re-run a monthly reverse-dependency compatibility matrix over certified
+  engines; `"self-reported"` engines are revisited on maintainer request.
+* There is no deregistration API: to clear the registry (tests, exploration),
+  restart the session. Package-internal test helpers use
+  `msuiter:::msuiter_registry_reset()`.
+* The contract this vignette documents is `contract_version = "1"`. Read the
+  `contract_version` field on every `ms_engines()` row before relying on
+  cross-engine metadata.
+```

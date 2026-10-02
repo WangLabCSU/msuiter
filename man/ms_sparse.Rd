@@ -5,7 +5,7 @@
 \title{ms_sparse(): penalized sparse NMF engine factory}
 \usage{
 ms_sparse(
-  variant = c("l1", "volume"),
+  variant = "l1",
   lambda = 0,
   mu = 0,
   delta = 0,
@@ -15,8 +15,8 @@ ms_sparse(
 )
 }
 \arguments{
-\item{variant}{`"volume"` (KL + log-det volume regularizer on W) or
-`"l1"` (KL + L1 penalties on both factors).}
+\item{variant}{`"l1"` (KL + L1 penalties on both factors; default) or
+`"volume"` (KL + log-det volume regularizer on W).}
 
 \item{lambda}{signatures penalty (volume strength / H-row L1).}
 

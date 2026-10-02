@@ -2,10 +2,14 @@
 
 test_that("valid MsFit constructs and prints a one-line summary", {
   refdb <- .make_refdb()
-  fit <- ms_fit(
+  # U-M3a-02: `ms_fit` is now the fitting generic (R/fit.R); precomputed
+  # parts assemble through the S7 class constructor, which validates too.
+  fit <- MsFit(
     exposures = .make_exposures(),
     engine = "msu-fit",
-    reference_summary = msuiter_refdb_summary(refdb)
+    reference_summary = msuiter_refdb_summary(refdb),
+    support = data.frame(),
+    tests = data.frame()
   )
   expect_is_ms(fit, "MsFit")
   expect_identical(fit@engine, "msu-fit")
@@ -36,20 +40,20 @@ test_that("fit exposures are validated", {
   exp1 <- .make_exposures()
   exp1[1, 1] <- -2
   expect_ms_error(
-    ms_fit(exp1, "msu-fit", ref_summary),
+    MsFit(exposures = exp1, engine = "msu-fit", reference_summary = ref_summary, support = data.frame(), tests = data.frame()),
     "fit", regexp = "negative"
   )
   exp2 <- .make_exposures()
   exp2[1, 1] <- NA_real_
   expect_ms_error(
-    ms_fit(exp2, "msu-fit", ref_summary),
+    MsFit(exposures = exp2, engine = "msu-fit", reference_summary = ref_summary, support = data.frame(), tests = data.frame()),
     "fit", regexp = "NA"
   )
   # Duplicated exposure row labels are rejected (labels are identities).
   exp3 <- .make_exposures()
   rownames(exp3)[2] <- "SIG1"
   expect_ms_error(
-    ms_fit(exp3, "msu-fit", ref_summary),
+    MsFit(exposures = exp3, engine = "msu-fit", reference_summary = ref_summary, support = data.frame(), tests = data.frame()),
     "fit", regexp = "duplicate"
   )
 })
@@ -58,7 +62,7 @@ test_that("reference_summary structure is validated", {
   bad <- msuiter_refdb_summary(.make_refdb())
   bad$sha256 <- NULL
   expect_ms_error(
-    ms_fit(.make_exposures(), "msu-fit", bad),
+    MsFit(exposures = .make_exposures(), engine = "msu-fit", reference_summary = bad, support = data.frame(), tests = data.frame()),
     "fit", regexp = "reference_summary"
   )
 })
@@ -66,7 +70,7 @@ test_that("reference_summary structure is validated", {
 test_that("support and tests must be data frames", {
   expect_ms_error(
     S7::set_props(
-      ms_fit(.make_exposures(), "msu-fit", msuiter_refdb_summary(.make_refdb())),
+      MsFit(exposures = .make_exposures(), engine = "msu-fit", reference_summary = msuiter_refdb_summary(.make_refdb()), support = data.frame(), tests = data.frame()),
       support = "nope"
     ),
     "fit"
@@ -74,7 +78,7 @@ test_that("support and tests must be data frames", {
 })
 
 test_that("RDS round trip preserves dispatch and validity", {
-  fit <- ms_fit(.make_exposures(), "msu-fit", msuiter_refdb_summary(.make_refdb()))
+  fit <- MsFit(exposures = .make_exposures(), engine = "msu-fit", reference_summary = msuiter_refdb_summary(.make_refdb()), support = data.frame(), tests = data.frame())
   fit2 <- .roundtrip(fit)
   expect_identical(format(fit2), format(fit))
   expect_no_error(S7::validate(fit2))

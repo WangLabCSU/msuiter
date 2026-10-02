@@ -31,6 +31,8 @@ ms_ard_rust <- function(counts, k0, max_iter, tol, a0, b0, seed, n_threads) .Cal
 
 ms_sparse_rust <- function(counts, k, max_iter, variant, lambda, mu, delta, tol, seed, n_threads) .Call(wrap__ms_sparse_rust, counts, k, max_iter, variant, lambda, mu, delta, tol, seed, n_threads)
 
+ms_fit_rust <- function(counts, signatures, method, nb_size, tol, max_iter, zero_threshold, n_threads) .Call(wrap__ms_fit_rust, counts, signatures, method, nb_size, tol, max_iter, zero_threshold, n_threads)
+
 ms_match_solutions_rust <- function(estimated, reference, dim, thresholds) .Call(wrap__ms_match_solutions_rust, estimated, reference, dim, thresholds)
 
 # nolint end

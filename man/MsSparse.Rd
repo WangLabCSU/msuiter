@@ -55,6 +55,8 @@ kernel default 1).}
 [MsSparse] is the concrete [MsEngine] spec for penalized sparse NMF
 extraction (U-M2-05): `"volume"` = KL likelihood with a log-det volume
 regularizer on W (Leplat-Gillis-Ang), `"l1"` = KL with L1 penalties on
-both factors (SparseSignatures semantics; mu = 0 degenerates). Build one
+both factors (Hoyer/Cichocki KL-L1L1 MU; SparseSignatures itself is
+least-squares + LASSO — attribution erratum in engine/sparse.rs).
+mu = 0 degenerates). Build one
 with [ms_sparse()]. Violations raise `msuiter_error_engine`.
 }

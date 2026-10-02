@@ -13,9 +13,12 @@ Depends: R (>= 4.3)
 Imports: S7,
     rlang
 Suggests: BSgenome.Hsapiens.UCSC.hg19,
+    knitr,
+    rmarkdown,
     sigminer,
     testthat (>= 3.0.0),
     withr
+VignetteBuilder: knitr
 Collate:
     'classes-utils.R'
     'classes-variants.R'
@@ -34,6 +37,7 @@ Collate:
     'engines-sparse.R'
     'engines-nmf.R'
     'extract.R'
+    'fit.R'
     'kselect-select.R'
     'classes-benchmark.R'
     'msuiter-package.R'

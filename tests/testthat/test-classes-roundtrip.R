@@ -9,7 +9,9 @@
       .make_variants_provenance()),
     catalog = .make_catalog(),
     signature = .make_signature(),
-    fit = ms_fit(.make_exposures(), "msu-fit", msuiter_refdb_summary(refdb)),
+    fit = MsFit(exposures = .make_exposures(), engine = "msu-fit",
+      reference_summary = msuiter_refdb_summary(refdb),
+      support = data.frame(), tests = data.frame()),
     refdb = refdb,
     benchmark = ms_benchmark(results = .make_benchmark_results(), settings = list())
   )

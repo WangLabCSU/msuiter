@@ -119,33 +119,11 @@ msuiter_validate_fit <- function(self) {
   NULL
 }
 
-#' Construct an MsFit object
-#'
-#' Builds and validates an [MsFit]. Derive `reference_summary` with
-#' [msuiter_refdb_summary()] from the [MsRefDb] used for fitting.
-#'
-#' @inheritParams MsFit
-#' @return An [MsFit] object.
-#' @examples
-#' labels <- paste0("CH", 1:4)
-#' exp1 <- matrix(1:8, 2, 4,
-#'   dimnames = list(c("SIG1", "SIG2"), c("S1", "S2", "S3", "S4")))
-#' ref_summary <- list(
-#'   version = "1", class = "SYN", build = "GRCh38", schema_version = "1",
-#'   sha256 = paste0(rep("a", 64), collapse = ""), n_signatures = 2L
-#' )
-#' ms_fit(exp1, engine = "msu-fit", reference_summary = ref_summary)
-#' @export
-ms_fit <- function(exposures, engine, reference_summary, support = data.frame(),
-                   tests = data.frame()) {
-  out <- MsFit(
-    exposures = exposures, engine = engine,
-    reference_summary = reference_summary, support = support, tests = tests
-  )
-  out
-}
-
 # One-line print/format: class name / dimensions / method identity.
+# (The former low-level `ms_fit()` constructor was superseded in U-M3a-02:
+# `ms_fit` is now the fitting generic of R/fit.R — ms_fit(catalog,
+# signatures, ...) — and precomputed-parts assembly goes through the S7
+# class constructor `MsFit(...)`, which runs the same validator.)
 S7::method(format, MsFit) <- function(x, ...) {
   sprintf(
     "<MsFit> %d signatures x %d samples | engine: %s | refdb: %s",
