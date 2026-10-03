@@ -256,7 +256,10 @@ test_that("third-party .onLoad registration path works end to end", {
 
 test_that("engine classes without usable defaults fail resolution clearly", {
   msuiter_registry_reset()
-  register_ms_engine(
+  # The no-seed extract class triggers the registry seed warning (by
+  # design since the hard-reject downgrade) — expect it here.
+  expect_warning(
+    register_ms_engine(
     name = "nodefault",
     mode = "extract",
     engine_class = S7::new_class("NoDefaults", package = "msuiter.test", parent = MsEngine),
@@ -266,7 +269,8 @@ test_that("engine classes without usable defaults fail resolution clearly", {
     engine_version = "1",
     contract_version = "1",
     certified = "certified"
-  )
+  ))
+
   expect_ms_error(
     match_ms_engine("nodefault"),
     "registry",

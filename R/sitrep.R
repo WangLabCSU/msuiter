@@ -44,14 +44,14 @@ ms_sitrep <- function() {
     }
   )
 
-  refdb <- "not yet available (no reference signature database is bundled in this release)"
+  # refdb v1 shipped in U-M3a-06: report the bundled version honestly.
+  refdb <- "COSMIC v3.6 bundled (SBS96/DBS78 GRCh37+GRCh38, ID83 GRCh37;\n    schema_version 1; see ms_refdb_bundled())"
 
   not_yet_available <- c(
-    "reference signature database (refdb v1; planned for M3a)",
     "COSMIC on-demand update (tools::R_user_dir cache; planned for M4)",
     paste(
-      "NNLS/likelihood fit kernels (ms_fit() methods; planned for M3a;",
-      "NMF extraction available now via ms_extract())"
+      "likelihood-based fitting methods (ms_fit() methods shipped in M3a;",
+      "MSU-Fit calibration statistics planned for M3b)"
     )
   )
 
