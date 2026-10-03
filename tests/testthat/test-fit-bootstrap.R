@@ -160,7 +160,7 @@ test_that("presence test (catalog face) separates present from absent signatures
   expect_identical(nrow(pres), 2L)
   expect_named(pres, c("signature", "stat", "p_raw", "p_bh", "pass_bh"))
   expect_identical(pres$signature, c("SIGa", "SIGb"))
-  expect_true(all(pres$p_raw >= 0 & pres$p_raw <= 0.5))
+  expect_true(all(pres$p_raw >= 0 & pres$p_raw <= 1))
   expect_true(all(pres$p_bh >= pres$p_raw))
   expect_identical(pres$pass_bh, pres$p_bh <= 0.05)
   # Both signatures carry real mass in the mixed truth -> both decisively
@@ -205,8 +205,71 @@ test_that("presence test (MsFit face) agrees with the catalog face", {
   expect_equal(from_fit$p_raw, from_cat$p_raw, tolerance = 1e-8)
   expect_equal(from_fit$p_bh, from_cat$p_bh, tolerance = 1e-8)
   expect_identical(from_fit$pass_bh, from_cat$pass_bh)
+  # The MsFit face re-derives p_raw with the pure-R mixture twin: pin it
+  # against the hand-computed exact pooled null (n = 6 samples here).
+  n6 <- ncol(fit@exposures)
+  hand <- vapply(from_fit$stat, function(d) {
+    sum(dbinom(1:n6, n6, 0.5) * pchisq(d, df = 1:n6, lower.tail = FALSE))
+  }, numeric(1L), USE.NAMES = FALSE)
+  expect_equal(from_fit$p_raw, hand, tolerance = 1e-10)
   # The MsFit face must reject a stray signatures argument.
   expect_ms_error(ms_test_presence(fit, fx$sigs), "input")
+})
+
+test_that("the exact pooled-null twin matches the kernel semantics", {
+  # n = 1: bit-identical to the Self-Liang boundary half-tail (the kernel's
+  # n = 1 degeneracy, mirrored in R).
+  stat <- c(0, 0.5, 2.705543454095404, 12, 40)
+  expect_identical(
+    .ms_presence_pooled_p(stat, 1),
+    0.5 * pchisq(stat, df = 1, lower.tail = FALSE)
+  )
+  # n = 2 (hand-derivable): P = 1/2 * P(chi^2_1 > D) + 1/4 * P(chi^2_2 > D)
+  # (the delta_0 atom is 0 for D >= 0). Golden from 30-digit mpmath.
+  expect_equal(
+    .ms_presence_pooled_p(c(0.5, 3.841458820694124, 12), 2),
+    c(0.43445025686132795, 0.06162501612152111, 0.0008856907967362144),
+    tolerance = 1e-12
+  )
+  # D = 0: every chi^2_m term is 1, the atom is 0 -> p = 1 - 2^-n (the
+  # computed weight sum; also pins the dbinom far-tail underflow parity).
+  expect_equal(.ms_presence_pooled_p(0, 2), 0.75, tolerance = 1e-12)
+  expect_equal(.ms_presence_pooled_p(0, 1500), 1, tolerance = 1e-12)
+  # Degenerate thresholds mirror the kernel: negative -> 1, +Inf -> 0.
+  expect_identical(.ms_presence_pooled_p(c(-1, Inf), 4), c(1, 0))
+  # Error paths.
+  expect_ms_error(.ms_presence_pooled_p(numeric(0), 4), "input")
+  expect_ms_error(.ms_presence_pooled_p(1, 0), "input")
+})
+
+test_that("presence H0 calibration matrix (exact pooled null, R face)", {
+  # P0 acceptance, R face: under H0 (signature 2 absent, signature 1
+  # present; Poisson-limit NB) the BH verdict on the absent signature must
+  # stay at level for EVERY cohort size. The old chi^2_1 half-tail
+  # reference measured 0.117/0.261/0.557/0.920 at n = 2/4/8/16 (the
+  # independent audit's phenomenon); the exact Binomial(n, 1/2)-mixed
+  # chi^2 reference restores calibration. Fixed seeds, deterministic.
+  sigs <- cbind(c(0.5, 0.5), c(0.9, 0.1))
+  n_reps <- 400L
+  for (n in c(1L, 2L, 4L, 8L, 16L)) {
+    # Fresh Poisson catalogs per replicate: a (2, n, n_reps) cube of
+    # i.i.d. Poisson(500) draws (both channels, matching the kernel
+    # suite's H0 fixture); stored as double for the FFI boundary.
+    counts <- withr::with_seed(9000 + n, {
+      array(as.numeric(rpois(n_reps * 2L * n, 500)), dim = c(2L, n, n_reps))
+    })
+    rejects <- 0L
+    for (r in seq_len(n_reps)) {
+      res <- .ms_test_presence_rust(matrix(counts[, , r], nrow = 2L), sigs, 1e8)
+      if (isTRUE(res$pass_bh[2])) rejects <- rejects + 1L
+    }
+    rate <- rejects / n_reps
+    expect_true(
+      rate >= 0.02 && rate <= 0.08,
+      info = sprintf("H0 pass_bh rate at n=%d: %.4f (%d/%d)", n, rate,
+        rejects, n_reps)
+    )
+  }
 })
 
 test_that("the pure-R BH twin is bit-identical to the kernel fold-back", {

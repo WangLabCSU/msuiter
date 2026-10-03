@@ -118,9 +118,12 @@
 //!   "χ²₁ + BH q"): the entry-wise LRT machinery of [`fit`] (which is
 //!   method-independent by construction) is pooled across samples by
 //!   SUMMING the per-sample statistics (independent likelihoods add), the
-//!   raw p is the calibrated boundary half-tail `½·erfc(√(D/2))`, and
-//!   [`bh_adjust`] applies the step-up BH correction over the k-signature
-//!   family. `pass_bh` is the `p_bh ≤` [`BH_ALPHA`] verdict.
+//!   raw p is the **exact pooled-null tail** — the Binomial(n, ½) mixture
+//!   of χ²_m ([`pooled_presence_p`]; the 2026-10 independent-audit P0
+//!   correction of the pooled chi-square reference, bit-identical to the
+//!   Self–Liang half-tail `½·erfc(√(D/2))` at n = 1) — and [`bh_adjust`]
+//!   applies the step-up BH correction over the k-signature family.
+//!   `pass_bh` is the `p_bh ≤` [`BH_ALPHA`] verdict.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -128,8 +131,8 @@ use rayon::prelude::*;
 
 use msuiter_engine::error::MsError;
 use msuiter_engine::likelihood::{
-    fisher_se, lrt_stat, multinomial_ll_per_mutation, nb_ll, p_chisq1_lrt, p_chisq1_upper,
-    zeroing_mask_share, LL_EPS,
+    fisher_se, ln_gamma, lrt_stat, multinomial_ll_per_mutation, nb_ll, p_chisq1_lrt,
+    p_chisq1_upper, zeroing_mask_share, LL_EPS,
 };
 use msuiter_engine::nnls::{nnls_gram, NnlsOptions};
 use msuiter_engine::resample;
@@ -1100,13 +1103,215 @@ fn percentile_sorted(sorted: &[f64], p: f64) -> f64 {
     sorted[lo] + frac * (sorted[hi] - sorted[lo])
 }
 
+// ======================================================================
+// The exact pooled null of the cohort presence test (P0 correction,
+// independent audit 2026-10)
+// ======================================================================
+//
+// Under H0 (the signature is absent in EVERY cohort sample) each
+// per-sample entry-wise statistic D_j follows the Self–Liang (1987)
+// boundary law `½·δ₀ + ½·χ²₁`, and independent catalogs make the D_j
+// independent. The pooled statistic `D = Σ_j D_j` (the estimand —
+// independent likelihoods add) therefore has the EXACT null law
+//
+//     D ~ Σ_{m=0}^{n} C(n,m)/2ⁿ · χ²_m ,
+//
+// a Binomial(n, ½) mixture of chi-squares: m counts how many of the n
+// samples contributed their χ²₁ component, the remaining n−m contributed
+// the δ₀ atom. The previously shipped reference — a single χ²₁ half-tail
+// evaluated on the pooled D — is exact only for n = 1 and
+// anti-conservative for every n ≥ 2 (the statistic grows with n while the
+// reference does not): the audit's H0 simulation measured pass_bh rates
+// 0.035 (n=1, calibrated) → 0.135 (n=2) → 0.545 (n=8) → 0.860 (n=16).
+//
+// This is a CORRECTION OF THE CHI-SQUARE REFERENCE, not a new statistical
+// claim (D13 discipline): the pooled-cohort estimand, the per-sample
+// `lrt_p` columns, BH and `pass_bh` logic are all unchanged; only the
+// reference distribution the raw p reads its tail from is corrected.
+
+/// Log-weight floor of the mixture sum: terms whose Binomial(n, ½) weight
+/// falls below `e⁻⁷⁰⁰ ≈ 1e−304` are skipped (their χ² tail evaluation is
+/// skipped with them). The skipped probability mass is bounded by the far
+/// tail of the Binomial below the floor — it only activates for
+/// `n ≥ 1010` (where `2⁻ⁿ` itself underflows past the floor) and stays
+/// below `~n·1e−304·2`, i.e. `< 1e−12` in the p-value for every realistic
+/// cohort size (pinned by the `pooled_null_weights_sum_to_one` test up to
+/// n = 1500).
+const MIXTURE_LN_WEIGHT_FLOOR: f64 = -700.0;
+
+/// Exact binomial coefficient `C(n, m)` as `u128` (multiplicative formula;
+/// each intermediate is itself a binomial coefficient, so the division is
+/// exact). Used on the exact-weight branch, which requires `n ≤ 53` so
+/// that `C(n, m) < 2⁵³` and the dyadic weight `C(n,m)/2ⁿ` is exactly
+/// representable in `f64`.
+fn binom_u128(n: usize, m: usize) -> u128 {
+    debug_assert!(m <= n);
+    let k = m.min(n - m);
+    let mut acc: u128 = 1;
+    for i in 1..=k {
+        acc = acc * (n - k + i) as u128 / i as u128;
+    }
+    acc
+}
+
+/// Upper regularized incomplete gamma `Q(a, x) = Γ(a,x)/Γ(a)` for `a > 0`,
+/// `x ≥ 0` — the Numerical-Recipes split already audited in
+/// `engine::likelihood` (`erfc`): power series for `x < a + 1` (as
+/// `1 − P(a,x)`), modified-Lentz continued fraction above. The engine's
+/// series/continued-fraction helpers are private, so this module carries
+/// the identical logic (same iteration form, same `1e−16` break) with a
+/// raised 1200-iteration cap — the mixture evaluates `Q` at large shape
+/// parameters `a = df/2` (df up to the cohort size), where convergence
+/// near the seam can need more terms than the engine's erfc-domain 300.
+/// NaN propagates; `x ≤ 0` is exactly 1.
+fn gamma_q_reg(a: f64, x: f64) -> f64 {
+    debug_assert!(a > 0.0);
+    if x.is_nan() {
+        return f64::NAN;
+    }
+    if x <= 0.0 {
+        return 1.0;
+    }
+    if x < a + 1.0 {
+        // Power series for P(a, x); Q = 1 − P.
+        let mut ap = a;
+        let mut sum = 1.0 / a;
+        let mut del = sum;
+        for _ in 0..1200 {
+            ap += 1.0;
+            del *= x / ap;
+            sum += del;
+            if del.abs() < sum.abs() * 1e-16 {
+                break;
+            }
+        }
+        let log_prefactor = -x + a * x.ln() - ln_gamma(a);
+        1.0 - log_prefactor.exp() * sum
+    } else {
+        // Modified-Lentz continued fraction for Γ(a,x)/Γ(a).
+        const FPMIN: f64 = 1e-300;
+        let mut b = x + 1.0 - a;
+        let mut c = 1.0 / FPMIN;
+        let mut d = 1.0 / b;
+        let mut h = d;
+        for i in 1..1200 {
+            let an = -(i as f64) * (i as f64 - a);
+            b += 2.0;
+            d = an * d + b;
+            if d.abs() < FPMIN {
+                d = FPMIN;
+            }
+            c = b + an / c;
+            if c.abs() < FPMIN {
+                c = FPMIN;
+            }
+            d = 1.0 / d;
+            let del = d * c;
+            h *= del;
+            if (del - 1.0).abs() < 1e-16 {
+                break;
+            }
+        }
+        let log_prefactor = -x + a * x.ln() - ln_gamma(a);
+        log_prefactor.exp() * h
+    }
+}
+
+/// Chi-square upper tail `P(χ²_df > stat)` for integer `df` — the survival
+/// function the pooled null is summed over.
+///
+/// * `df = 0` is the `δ₀` atom of the boundary law: the STRICT upper tail
+///   `P(0 > stat) = [stat < 0]` — 0 for every admissible (clamped ≥ 0)
+///   statistic. (R's `pchisq(x, 0, lower.tail = FALSE)` uses a different
+///   convention at `x = 0`; the pure-R twin handles the atom explicitly.)
+/// * `df = 1` routes to [`msuiter_engine::likelihood::p_chisq1_upper`]
+///   (the audited erfc path) — this is what makes the n = 1 pooled p
+///   bit-identical to the previous Self–Liang half-tail.
+/// * `df ≥ 2` is `Q(df/2, stat/2)` via [`gamma_q_reg`] (the χ²₂ closed
+///   form `e^(−stat/2)` and the classic quantile anchors pin the accuracy).
+fn chisq_survival(stat: f64, df: u32) -> f64 {
+    if df == 0 {
+        return if stat < 0.0 { 1.0 } else { 0.0 };
+    }
+    if stat.is_nan() {
+        return f64::NAN;
+    }
+    if stat <= 0.0 {
+        // Strict upper tail of a continuous law at 0: exactly 1.
+        return 1.0;
+    }
+    if stat.is_infinite() {
+        return 0.0;
+    }
+    if df == 1 {
+        return p_chisq1_upper(stat);
+    }
+    gamma_q_reg(df as f64 / 2.0, stat / 2.0)
+}
+
+/// Exact pooled-null p-value of the cohort presence test: the strict upper
+/// tail of the Binomial(n, ½) mixture of χ²_m at the observed pooled
+/// statistic `d`,
+///
+/// ```text
+/// p = Σ_{m=0}^{n} C(n,m)/2ⁿ · P(χ²_m > d)
+///   = Σ_{m=1}^{n} C(n,m)/2ⁿ · P(χ²_m > d)    (d ≥ 0; the m=0 atom is 0)
+/// ```
+///
+/// Weights: for `n ≤ 53` the dyadic weights `C(n,m)/2ⁿ` are computed
+/// EXACTLY (`C(n,m) < 2⁵³`, power-of-two denominator — this is what makes
+/// n = 1 bit-identical to the previous `0.5·erfc` half-tail); for larger n
+/// the weights run in log space (`ln Γ` recurrence) with the documented
+/// [`MIXTURE_LN_WEIGHT_FLOOR`] skip. Summation order is ascending `m`
+/// (deterministic). `d < 0` returns 1 (every component exceeds a negative
+/// threshold); `d = +inf` returns 0; NaN propagates (and is rejected
+/// downstream by the BH family validation).
+pub(crate) fn pooled_presence_p(d: f64, n: usize) -> f64 {
+    if d.is_nan() {
+        return f64::NAN;
+    }
+    if d < 0.0 {
+        return 1.0;
+    }
+    if d.is_infinite() {
+        return 0.0;
+    }
+    // The m = 0 term is P(δ₀ > d) = 0 for every d ≥ 0 (see
+    // [`chisq_survival`]), so the sum starts at m = 1.
+    let mut p = 0.0;
+    if n <= 53 {
+        // Exact dyadic weights: C(n,m) < 2⁵³ and the denominator is a
+        // power of two, so every weight is exactly representable.
+        let denom = (1u128 << n) as f64;
+        for m in 1..=n {
+            p += binom_u128(n, m) as f64 / denom * chisq_survival(d, m as u32);
+        }
+    } else {
+        // Log-space weights, ascending m, incremental recurrence
+        // ln w_m = ln w_{m−1} + ln((n−m+1)/m); terms under the weight
+        // floor are skipped (tail mass < 1e−12, see the constant's docs).
+        let mut ln_w = -(n as f64) * std::f64::consts::LN_2; // m = 0
+        for m in 1..=n {
+            ln_w += ((n - m + 1) as f64 / m as f64).ln();
+            if ln_w < MIXTURE_LN_WEIGHT_FLOOR {
+                continue;
+            }
+            p += ln_w.exp() * chisq_survival(d, m as u32);
+        }
+    }
+    // The exact sum is ≤ 1; cap a possible last-ulp rounding excursion.
+    p.min(1.0)
+}
+
 /// Output of [`presence_test`]: per-signature pooled evidence with BH
 /// multiplicity control (all vectors length k, signature order).
 #[derive(Debug, Clone, PartialEq)]
 pub struct PresenceOutput {
     /// Pooled LRT statistic `D_a` (length k).
     pub lrt_stat: Vec<f64>,
-    /// Raw boundary p-value `½·erfc(√(D_a/2))` (length k; no BH).
+    /// Raw p-value from the exact pooled null — the strict upper tail of
+    /// the Binomial(n, ½) mixture of χ²_m ([`pooled_presence_p`]; bit-level
+    /// Self–Liang half-tail `½·erfc(√(D/2))` at n = 1) (length k; no BH).
     pub lrt_p_raw: Vec<f64>,
     /// BH-adjusted p-value over the k-signature family (length k).
     pub lrt_p_bh: Vec<f64>,
@@ -1120,11 +1325,12 @@ pub struct PresenceOutput {
 /// (U-M3a-03): the entry-wise presence LRT machinery of [`fit`] — which is
 /// method-independent by construction (the uniform evidence columns) —
 /// pooled across samples by SUMMING the per-sample statistics
-/// `D_a = Σ_j D_{a,j}` (independent likelihoods add), the raw p-value as
-/// the calibrated boundary half-tail `½·erfc(√(D_a/2))` (the Self–Liang
-/// convention of [`msuiter_engine::likelihood::p_chisq1_lrt`]; exactly
-/// calibrated for a single sample, and the evidence-pooling convention
-/// pinned by the size/power smoke below), then [`bh_adjust`] over the
+/// `D_a = Σ_j D_{a,j}` (independent likelihoods add). The raw p-value is
+/// the strict upper tail of the EXACT pooled null — under H0 each
+/// per-sample statistic is `½·δ₀ + ½·χ²₁` (Self–Liang boundary law) and
+/// independent catalogs make the sum a Binomial(n, ½) mixture of χ²_m
+/// ([`pooled_presence_p`]; bit-identical to the `½·erfc(√(D/2))`
+/// Self–Liang half-tail at n = 1) — then [`bh_adjust`] over the
 /// k-signature family and the [`BH_ALPHA`] verdict.
 ///
 /// NB-MLE refits use the frozen [`FIT_MAX_ITER`] cap (the `ms_fit`
@@ -1181,7 +1387,9 @@ pub fn presence_test(
             stat[a] += lrt_stat(ll_without, ll_full);
         }
     }
-    let lrt_p_raw: Vec<f64> = stat.iter().map(|&d| 0.5 * p_chisq1_upper(d)).collect();
+    // Exact pooled-null tail per signature (Binomial(n, ½)-χ²_m mixture;
+    // n = 1 degenerates bitwise to the Self–Liang half-tail).
+    let lrt_p_raw: Vec<f64> = stat.iter().map(|&d| pooled_presence_p(d, n)).collect();
     let lrt_p_bh = bh_adjust(&lrt_p_raw)?;
     let pass_bh = lrt_p_bh.iter().map(|&q| q <= BH_ALPHA).collect();
     Ok(PresenceOutput {
@@ -2188,5 +2396,196 @@ mod tests {
         assert!((0.02..=0.10).contains(&size), "presence size at α=0.05: {size}");
         assert!(power > 0.8, "presence power at the strong alternative: {power}");
         assert!(power > size, "power must dominate size: {power} vs {size}");
+    }
+
+
+
+
+
+    // ==================================================================
+    // Exact pooled null (P0 correction): survival-function anchors,
+    // mixture analytic anchors, weight-sum identity, H0 calibration
+    // matrix, power vs cohort size.
+    // ==================================================================
+
+    /// Relative-tolerance assert (D11 numeric-protocol convention).
+    fn assert_close(actual: f64, expected: f64, rel: f64, what: &str) {
+        let scale = expected.abs().max(1e-300);
+        assert!(
+            (actual - expected).abs() <= rel * scale,
+            "{what}: actual {actual}, expected {expected}"
+        );
+    }
+
+    #[test]
+    fn pooled_null_chisq_survival_anchors() {
+        // Known χ² quantiles (scipy.stats.chi2.isf, f64): P(χ²_df > stat) = p.
+        // df = 1 takes the audited erfc path, df ≥ 2 the gamma_q_reg path.
+        let cases: &[(u32, f64, f64)] = &[
+            (1, 3.841_458_820_694_126_3, 0.05),
+            (2, 4.605_170_185_988_092, 0.10),
+            (3, 7.814_727_903_251_182, 0.05),
+            (4, 9.487_729_036_781_158, 0.05),
+            (8, 13.361_566_136_511_726, 0.10),
+            (16, 26.296_227_604_864_246, 0.05),
+            // Arbitrary interior points (not quantile-derived).
+            (3, 2.0, 0.572_406_704_470_879_8),
+            (8, 20.0, 0.010_336_050_675_925_718),
+            (16, 20.0, 0.220_220_646_601_698_94),
+        ];
+        for &(df, stat, p) in cases {
+            assert_close(chisq_survival(stat, df), p, 1e-10, "χ² survival anchor");
+        }
+        // The χ²₂ closed form e^(−stat/2) pins the gamma path to 1e-12.
+        for stat in [0.5_f64, 4.605_170_185_988_092, 12.0] {
+            assert_close(
+                chisq_survival(stat, 2),
+                (-stat / 2.0).exp(),
+                1e-12,
+                "χ²₂ closed form",
+            );
+        }
+        // Edges: the δ₀ atom (df = 0) uses the STRICT tail [stat < 0]; a
+        // nonpositive statistic gives exactly 1 for df ≥ 1; NaN propagates;
+        // +inf decays to 0.
+        assert_eq!(chisq_survival(0.0, 0), 0.0);
+        assert_eq!(chisq_survival(-1.0, 0), 1.0);
+        assert_eq!(chisq_survival(0.0, 4), 1.0);
+        assert!(chisq_survival(f64::NAN, 4).is_nan());
+        assert_eq!(chisq_survival(f64::INFINITY, 4), 0.0);
+    }
+
+    #[test]
+    fn pooled_null_mixture_analytic_anchors() {
+        // n = 1: bit-identical to the previous Self–Liang half-tail (the
+        // exact dyadic weight ½ times the audited erfc path).
+        for d in [0.0_f64, 0.5, 2.705_543_454_095_404, 12.0, 40.0] {
+            assert_eq!(
+                pooled_presence_p(d, 1),
+                0.5 * p_chisq1_upper(d),
+                "n=1 bitwise anchor at d={d}"
+            );
+        }
+        // n = 2 (hand-derivable): P = ½·P(χ²₁ > D) + ¼·P(χ²₂ > D)
+        // (the δ₀ atom is 0 for D ≥ 0; P(χ²₂ > D) = e^(−D/2)).
+        // Goldens from 30-digit mpmath.
+        let cases: &[(f64, f64)] = &[
+            (0.5, 0.434_450_256_861_327_95),
+            (3.841_458_820_694_124, 0.061_625_016_121_521_11),
+            (12.0, 0.000_885_690_796_736_214_4),
+        ];
+        for &(d, p) in cases {
+            assert_close(pooled_presence_p(d, 2), p, 1e-12, "n=2 mixture golden");
+        }
+        // D = 0: p = 1 − 2⁻ⁿ exactly (every χ²_m term is 1, the atom is 0);
+        // the dyadic weight sum is exact.
+        assert_eq!(pooled_presence_p(0.0, 1), 0.5);
+        assert_eq!(pooled_presence_p(0.0, 2), 0.75);
+        assert_eq!(pooled_presence_p(0.0, 16), 1.0 - 0.5_f64.powi(16));
+        // Direction and range: p is nonincreasing in D and stays in [0, 1].
+        let mut prev = 1.0;
+        for i in 0..40 {
+            let p = pooled_presence_p(i as f64 * 0.5, 8);
+            assert!((0.0..=1.0).contains(&p));
+            assert!(p <= prev, "p must be nonincreasing in D");
+            prev = p;
+        }
+        // Degenerate thresholds: negative → 1, +inf → 0, NaN propagates.
+        assert_eq!(pooled_presence_p(-1.0, 4), 1.0);
+        assert_eq!(pooled_presence_p(f64::INFINITY, 4), 0.0);
+        assert!(pooled_presence_p(f64::NAN, 4).is_nan());
+    }
+
+    #[test]
+    fn pooled_null_weights_sum_to_one() {
+        // At D = 0 every χ²_m term is exactly 1, so the returned value IS
+        // the computed weight sum 1 − 2⁻ⁿ — an end-to-end check of both
+        // weight branches (exact dyadic n ≤ 53 / log-space above) and of
+        // the documented skip floor (activated past n ≈ 1010; the skipped
+        // mass stays below the pinned 1e−12).
+        for &n in &[2usize, 3, 16, 53, 54, 100, 1009, 1500] {
+            let p = pooled_presence_p(0.0, n);
+            let expected = 1.0 - 0.5_f64.powi(n as i32);
+            assert!(
+                (p - expected).abs() < 1e-12,
+                "weight sum at n={n}: {p} vs {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn presence_h0_calibration_matrix() {
+        // P0 acceptance matrix: under H0 (signature 1 absent, signature 0
+        // present; Poisson-limit NB) the BH verdict on the absent
+        // signature must stay at level for EVERY cohort size. The old
+        // χ²₁-half-tail reference measured 0.058 / 0.117 / 0.261 / 0.557 /
+        // 0.920 on these exact streams (the independent audit's
+        // 0.135/0.545/0.860 phenomenon) — the exact Binomial(n, ½)-mixture
+        // reference restores calibration. Fixed seeds, deterministic.
+        let sigs = [0.5, 0.9, 0.5, 0.1];
+        let n_reps = 1000_u64;
+        for &n in &[1usize, 2, 4, 8, 16] {
+            let mut rejects = 0_u64;
+            for r in 0..n_reps {
+                let mut rng =
+                    MsRng::from_stream(0xCA1B, StreamId { replicate: r, rank: 0, fold: 0 });
+                // Channel-major m×n layout: channel 0 for all samples, then
+                // channel 1 (the fit layout contract counts[i*n + j]).
+                let mut counts = Vec::with_capacity(2 * n);
+                for _j in 0..n {
+                    counts.push(poisson_draw(&mut rng, 500.0) as f64);
+                }
+                for _j in 0..n {
+                    counts.push(poisson_draw(&mut rng, 500.0) as f64);
+                }
+                let pt = presence_test(&counts, &sigs, 2, n, 2, 1e8).unwrap();
+                assert!(pt.converged, "NB-MLE must converge in the smoke");
+                if pt.pass_bh[1] {
+                    rejects += 1;
+                }
+            }
+            let rate = rejects as f64 / n_reps as f64;
+            // α = 0.05 with a ±4·SE window at 1000 reps (4SE ≈ 0.028).
+            assert!(
+                (0.02..=0.08).contains(&rate),
+                "H0 pass_bh rate at n={n}: {rate} ({rejects}/{n_reps})"
+            );
+        }
+    }
+
+    #[test]
+    fn presence_power_grows_with_cohort_size() {
+        // The pooling estimand's payoff: a weak true effect (h₁ = 50 on
+        // 1000 mutations, means (520, 480)) must be detected MORE often as
+        // the cohort grows — the exact mixture reference keeps the level
+        // fixed while the evidence accumulates. (Under the old χ²₁
+        // reference this comparison is meaningless: the level itself
+        // explodes with n — see the calibration matrix.)
+        let sigs = [0.5, 0.9, 0.5, 0.1];
+        let n_reps = 1000_u64;
+        let power = |n: usize| -> f64 {
+            let mut rejects = 0_u64;
+            for r in 0..n_reps {
+                let mut rng =
+                    MsRng::from_stream(0xF0CE, StreamId { replicate: r, rank: 0, fold: 0 });
+                let mut counts = Vec::with_capacity(2 * n);
+                for _j in 0..n {
+                    counts.push(poisson_draw(&mut rng, 520.0) as f64);
+                }
+                for _j in 0..n {
+                    counts.push(poisson_draw(&mut rng, 480.0) as f64);
+                }
+                let pt = presence_test(&counts, &sigs, 2, n, 2, 1e8).unwrap();
+                if pt.pass_bh[1] {
+                    rejects += 1;
+                }
+            }
+            rejects as f64 / n_reps as f64
+        };
+        let p1 = power(1);
+        let p8 = power(8);
+        assert!((0.15..=0.60).contains(&p1), "weak-effect power at n=1: {p1}");
+        assert!(p8 > 0.60, "weak-effect power at n=8: {p8}");
+        assert!(p8 > p1, "power must grow with cohort size: {p8} vs {p1}");
     }
 }

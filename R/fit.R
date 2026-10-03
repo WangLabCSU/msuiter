@@ -861,17 +861,31 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 # mSigAct "chi^2_1 + BH q" semantics; CAPABILITY-MATRIX L-D "chi^2_1 LRT
 # p/q").
 #
+# P0 CORRECTION (2026-10 independent audit): the pooled raw p is the exact
+# pooled-null tail. Under H0 (signature absent in every sample) each
+# per-sample entry-wise statistic is 1/2 * delta_0 + 1/2 * chi^2_1 (the
+# Self-Liang boundary law), so the pooled sum over n independent samples is
+# EXACTLY Binomial(n, 1/2)-mixed chi^2: sum_m C(n,m)/2^n * chi^2_m. The
+# previously shipped reference (a single chi^2_1 half-tail on the pooled
+# statistic) is exact only for n = 1 and anti-conservative for n >= 2 (H0
+# pass_bh rates 0.135/0.545/0.860 at n = 2/8/16 in the audit's simulation).
+# This is a correction of the chi-square REFERENCE, not a new statistic:
+# the pooled estimand, the per-sample lrt_p columns, BH and pass_bh logic
+# are unchanged; at n = 1 the new p is bit-identical to the old half-tail.
+#
 # Two dispatch faces over one result shape (k rows, one per signature):
 #   * MsCatalog (+ a dictionary): the kernel face -- the entry-wise
 #     presence LRT machinery of ms_fit (method-independent by
 #     construction), pooled across samples by summing the per-sample
-#     statistics, raw p = the Self-Liang boundary half-tail, BH over the
-#     k-signature family, all computed in the Rust kernel.
+#     statistics, raw p = the exact pooled-null tail (kernel
+#     fit::pooled_presence_p), BH over the k-signature family, all
+#     computed in the Rust kernel.
 #   * MsFit: the same aggregation over the fit's `tests` grid (the kernel
 #     evidence is method-independent, so any ms_fit method's grid pools
-#     identically) -- stat = sum over samples, raw p = the same half-tail
-#     (0.5 * pchisq(stat, 1, lower.tail = FALSE)), BH via the pure-R twin
-#     .ms_bh_adjust of the kernel's fold-back.
+#     identically) -- stat = sum over samples, raw p = the same exact
+#     pooled-null tail re-derived in R (.ms_presence_pooled_p: dbinom
+#     weights x pchisq upper tails), BH via the pure-R twin .ms_bh_adjust
+#     of the kernel's fold-back.
 #
 # `pass_bh` uses the frozen family-wise alpha 0.05 (kernel fit::BH_ALPHA;
 # raw and adjusted p are returned so callers can re-threshold).
@@ -885,9 +899,20 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 #' chi^2_1 + BH q semantics). The evidence is the entry-wise presence LRT
 #' of [ms_fit()] -- which is method-independent by construction: per
 #' sample, the full NB-MLE model against the model refit without the
-#' signature, `D = 2(ll_with - ll_without)` with the Self-Liang boundary
-#' half-tail p-value. Per-sample statistics are pooled across the cohort by
-#' summation (independent likelihoods add). All violations raise
+#' signature, `D = 2(ll_with - ll_without)`. Per-sample statistics are
+#' pooled across the cohort by summation (independent likelihoods add).
+#'
+#' **Exact pooled null (P0 correction, 2026-10 independent audit).** Under
+#' H0 each per-sample statistic follows the Self-Liang boundary law
+#' `1/2 * delta_0 + 1/2 * chi^2_1`, so the pooled statistic over n
+#' independent samples has the exact null law
+#' `sum_m C(n,m)/2^n * chi^2_m` (a Binomial(n, 1/2) mixture of
+#' chi-squares); `p_raw` is the strict upper tail of that reference. At
+#' n = 1 it is bit-identical to the Self-Liang half-tail
+#' `1/2 * pchisq(D, 1, lower.tail = FALSE)`. For n >= 2 the earlier
+#' chi^2_1 reference was anti-conservative (the statistic grows with n
+#' while the reference does not); this is a correction of the chi-square
+#' reference, not a change of estimand. All violations raise
 #' `msuiter_error_*` conditions.
 #'
 #' @param x An [MsCatalog] (together with `signatures`; the test runs in
@@ -904,7 +929,7 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 #' @details
 #' **Result.** A data.frame with one row per signature (the dictionary
 #' order), columns `signature`, `stat` (pooled LRT statistic),
-#' `p_raw` (boundary half-tail p-value, before correction), `p_bh`
+#' `p_raw` (exact pooled-null p-value, before correction), `p_bh`
 #' (Benjamini-Hochberg adjusted p over the k-signature family: sorted
 #' p x m/i with the cumulative-minimum fold-back, capped at 1) and
 #' `pass_bh` (`p_bh <= 0.05`, the frozen family-wise alpha).
@@ -971,8 +996,10 @@ S7::method(ms_test_presence, MsFit) <- function(x, signatures = NULL,
   stat <- vapply(labels, function(s) sum(tests$lrt_stat[tests$signature == s]),
     numeric(1L), USE.NAMES = FALSE
   )
-  # The Self-Liang boundary half-tail (the kernel's p_chisq1_lrt scale).
-  p_raw <- 0.5 * pchisq(stat, df = 1, lower.tail = FALSE)
+  # The exact pooled-null tail (Binomial(n, 1/2)-mixed chi^2; the pure-R
+  # twin of the kernel's fit::pooled_presence_p). n = the fit's sample
+  # count; at n = 1 the twin is bit-identical to the Self-Liang half-tail.
+  p_raw <- .ms_presence_pooled_p(stat, ncol(x@exposures))
   p_bh <- .ms_bh_adjust(p_raw)
   data.frame(
     signature = labels,
@@ -1019,6 +1046,74 @@ S7::method(ms_test_presence, S7::class_any) <- function(x, signatures = NULL,
   .msffi_check(ms_test_presence_rust(
     t(counts), t(signatures), as.numeric(nb_size), n_threads
   ))
+}
+
+# ---------------------------------------------------------------------------
+# The exact pooled-null p-value: the pure-R twin of the kernel's
+# fit::pooled_presence_p (P0 correction, 2026-10 independent audit).
+#
+# Under H0 each per-sample entry-wise statistic is 1/2 * delta_0 +
+# 1/2 * chi^2_1 (Self-Liang boundary law) and independent samples make the
+# pooled sum D = sum_j D_j exactly Binomial(n, 1/2)-mixed chi^2:
+#   p(D) = sum_m C(n,m)/2^n * P(chi^2_m > D).
+# The m = 0 atom is P(0 > D) = 0 for every admissible D >= 0 and is
+# handled explicitly (R's pchisq(x, df = 0, lower.tail = FALSE) uses a
+# different convention at x = 0). dbinom underflows to 0 in the far tails,
+# which is exactly the kernel's documented weight-floor skip; both faces
+# therefore evaluate the same mathematical quantity to well below the
+# 1e-8 face-agreement tolerance.
+# ---------------------------------------------------------------------------
+
+#' Exact pooled-null p-value (pure-R twin of fit::pooled_presence_p).
+#' @param stat Numeric pooled statistics (any values; NA/Inf pass through
+#'   with the same semantics as the kernel: NA -> NA, negative -> 1,
+#'   +Inf -> 0).
+#' @param n Single positive sample count.
+#' @return Numeric vector of pooled-null upper-tail p-values.
+#' @keywords internal
+#' @noRd
+.ms_presence_pooled_p <- function(stat, n) {
+  if (!is.numeric(stat) || length(stat) < 1L) {
+    msuiter_abort(
+      "input",
+      "stat must be a non-empty numeric vector",
+      i = "the pooled-null tail is evaluated per signature statistic",
+      j = paste0("received: ", msuiter_quote_trunc(stat)),
+      c = "pass the pooled lrt_stat vector of one presence-test family"
+    )
+  }
+  n <- as.integer(n)
+  if (length(n) != 1L || is.na(n) || n < 1L) {
+    msuiter_abort(
+      "input",
+      "n must be a single positive sample count",
+      i = "the pooled null is the Binomial(n, 1/2)-mixed chi^2 over n samples",
+      j = paste0("received: ", msuiter_quote_trunc(n)),
+      c = "pass the fit's sample count (ncol(exposures))"
+    )
+  }
+  m <- seq_len(n + 1L) - 1L
+  # C(n,m)/2^n for m = 1..n (the m = 0 atom contributes 0 for D >= 0 and
+  # is handled by the d < 0 branch below). Far-tail weights underflow to 0
+  # exactly like the kernel's MIXTURE_LN_WEIGHT_FLOOR skip.
+  w <- dbinom(m[-1L], size = n, prob = 0.5)
+  vapply(
+    stat,
+    function(d) {
+      if (is.na(d)) {
+        return(NA_real_)
+      }
+      if (d < 0) {
+        return(1) # every mixture component exceeds a negative threshold
+      }
+      if (d == Inf) {
+        return(0)
+      }
+      sum(w * pchisq(d, df = m[-1L], lower.tail = FALSE))
+    },
+    numeric(1L),
+    USE.NAMES = FALSE
+  )
 }
 
 # ---------------------------------------------------------------------------
