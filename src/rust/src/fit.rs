@@ -1254,6 +1254,18 @@ pub fn bootstrap(
                     support[idx] = 1;
                 }
             }
+            // Audited P1 fix: renormalize each boot exposure column to the
+            // ORIGINAL sample totals[j] so boots live on the same scale as
+            // the point fit's rescale=TRUE exposures (the resample column
+            // sums equal totals[j] by construction, and a bare multiply
+            // double-scales — first fix attempt taught this). Zeros stay
+            // zero; percentile order per column is unchanged by the shared
+            // positive factor.
+            let col_sum: f64 = (0..m).map(|i| boot[i * n + j]).sum();
+            let scale = if col_sum > 0.0 { totals[j] / col_sum } else { 0.0 };
+            for a in 0..k {
+                exposures[a * n + j] *= scale;
+            }
         }
         Ok((exposures, support, converged))
     };
