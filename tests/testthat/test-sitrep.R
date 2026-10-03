@@ -15,9 +15,10 @@ test_that("ms_sitrep prints a report and returns the sections invisibly", {
   expect_match(out$r_version, "^R version")
   expect_type(out$threads, "list")
   expect_identical(out$threads$effective, .ms_resolve_threads())
+  # refdb v1 shipped (U-M3a-06): reported as bundled, not "not yet".
+  expect_match(out$refdb, "COSMIC v3.6 bundled")
   # Data that does not ship yet is reported honestly, not guessed.
-  expect_match(out$refdb, "not yet available")
-  expect_true(all(grepl("not yet available|M1s|planned", out$not_yet_available)))
+  expect_true(all(grepl("planned|M3b", out$not_yet_available)))
 })
 
 test_that("ms_sitrep output mentions the core facts", {
