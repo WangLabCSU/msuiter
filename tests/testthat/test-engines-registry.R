@@ -33,7 +33,7 @@
 
 .register_synth <- function(name = "synth_a", mode = "extract",
                             packages = character(0), certified = "certified") {
-  register_ms_engine(
+  suppressWarnings(register_ms_engine(
     name = name,
     mode = mode,
     engine_class = .make_engine_class(name, mode, packages),
@@ -43,7 +43,7 @@
     engine_version = "0.1.0",
     contract_version = "1",
     certified = certified
-  )
+  ))
 }
 
 test_that("ms_engines() on an empty registry returns a zero-row summary", {
