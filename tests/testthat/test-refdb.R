@@ -149,7 +149,7 @@ test_that("schema_version forward rejection fails closed", {
   expect_ms_error(
     .ms_refdb_load_bundle(tmp),
     "refdb",
-    regexp = "above the supported set"
+    regexp = "outside the supported set"
   )
 })
 
