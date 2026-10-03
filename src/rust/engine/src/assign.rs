@@ -1095,7 +1095,7 @@ mod tests {
         let res =
             tsb_test_per_signature(&fit.assignments, m, n, k, &mask, TsbTest::Binomial).unwrap();
         assert_eq!(res.len(), k);
-        for (s, tm) in res.iter().enumerate() {
+        for (s, _tm) in res.iter().enumerate() {
             let mut ts = 0.0;
             let mut uts = 0.0;
             for (i, masked) in mask.iter().enumerate().take(m) {
@@ -1108,8 +1108,8 @@ mod tests {
                     }
                 }
             }
-            assert_close(tm.ts, ts, 1e-12, "tensor fold ts");
-            assert_close(tm.uts, uts, 1e-12, "tensor fold uts");
+            assert_close(res[s].ts, ts, 1e-12, "tensor fold ts");
+            assert_close(res[s].uts, uts, 1e-12, "tensor fold uts");
         }
     }
 

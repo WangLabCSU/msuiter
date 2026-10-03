@@ -408,6 +408,8 @@ impl ConnectedSpec {
                 "connected component indices must be distinct",
             ));
         }
+        // Audited P1-1 note: consumers (fix_and_refit) normalize the spec
+        // themselves — validate takes &self and cannot sort in place.
         Ok(())
     }
 }
@@ -426,8 +428,14 @@ fn fix_and_refit(
     h_init: &[f64],
     components: &[usize],
 ) -> Result<Vec<f64>, MsError> {
+    // Audited P1-1: normalize the spec locally (sorted + deduped) so the
+    // binary_search precondition holds regardless of caller input order —
+    // `connected = c(2, 1)` previously corrupted the FixAndRefit semantics.
+    let mut components: Vec<usize> = components.to_vec();
+    components.sort_unstable();
+    components.dedup();
     let mut h = h_current.to_vec();
-    for &c in components {
+    for &c in &components {
         h[c] = h_init[c];
     }
     let is_fixed = |a: usize| components.binary_search(&a).is_ok();
@@ -439,7 +447,7 @@ fn fix_and_refit(
     let mut rhs = b_j.to_vec();
     for &a in &free {
         let mut acc = 0.0f64;
-        for &c in components {
+        for &c in &components {
             acc += g[a * k + c] * h[c];
         }
         rhs[a] -= acc;

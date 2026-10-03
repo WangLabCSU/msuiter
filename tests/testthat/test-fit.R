@@ -347,4 +347,25 @@ test_that("connected and rescale gates raise structured errors", {
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = "yes"), "input")
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = NA), "input")
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = c(TRUE, TRUE)), "input")
+
+
+test_that("connected spec is order-insensitive (audited P1-1 regression)", {
+  ch <- 24L
+  ns <- 6L
+  counts <- matrix(1:(ch * ns), ch, ns)
+  dimnames(counts) <- list(paste0("C", seq_len(ch)), paste0("S", seq_len(ns)))
+  cat1 <- ms_catalog(
+    counts = counts,
+    channels = list(name = "SYN24", labels = labels <- paste0("C", seq_len(ch))),
+    samples = paste0("S", seq_len(ns)),
+    provenance = list(genome = "SYN")
+  )
+  sigs <- matrix(1:(ch * 2), ch, 2)
+  fit12 <- ms_fit(cat1, sigs, method = "nnls", connected = c(1, 2))
+  fit21 <- ms_fit(cat1, sigs, method = "nnls", connected = c(2, 1))
+  # Audited P1-1: reversed input previously corrupted FixAndRefit
+  # (exposures (999, 0) instead of the fixed-component solution).
+  expect_identical(fit12@exposures, fit21@exposures)
+  expect_true(all(is.finite(fit21@exposures)))
+})
 })
