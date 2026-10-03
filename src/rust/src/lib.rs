@@ -611,6 +611,8 @@ fn ms_fit_rust(
     max_iter: i32,
     zero_threshold: f64,
     n_threads: i32,
+    connected_components: Option<Vec<i32>>,
+    rescale: bool,
 ) -> Robj {
     condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
         // Argument guards (contract 4): explicit, error-not-panic. The
@@ -627,6 +629,27 @@ fn ms_fit_rust(
                 format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
             ));
         }
+        // U-M3a-05 wire: NULL/empty connected_components = no rejoin; the
+        // components are 0-based dictionary indices (the R wrapper converts
+        // from the 1-based user API). Non-empty selects the FixAndRefit
+        // strategy — JointRefit is declared future work and the pure core
+        // rejects it with a structured error if it is ever requested.
+        let connected = match connected_components {
+            Some(c) if !c.is_empty() => {
+                if let Some(&bad) = c.iter().find(|&&x| x < 0) {
+                    return Err(MsError::new(
+                        "argument",
+                        format!("connected_components must be non-negative 0-based indices, got {bad}"),
+                    )
+                    .with_i(bad as i64));
+                }
+                Some(fit::ConnectedSpec {
+                    components: c.iter().map(|&x| x as usize).collect(),
+                    strategy: fit::ConnectedStrategy::FixAndRefit,
+                })
+            }
+            _ => None,
+        };
         let method = fit::FitMethod::parse(&method)?;
         // Layout contract (fit.rs module docs, the transposition trap):
         // R passes t(counts) — n x m column-major flat buffer IS the
@@ -651,19 +674,40 @@ fn ms_fit_rust(
         // Contract 7, declared decision: bounded-duration call, no boundary
         // polls (single bounded batch over samples; see fit.rs docs).
         // `n_threads` is validated above and otherwise unused (A7: the
-        // sequential core is trivially thread-invariant).
-        let out = fit::fit(
-            &counts_data,
-            &sigs_data,
-            m,
-            n,
-            k,
-            method,
-            nb_size,
-            tol,
-            max_iter as usize,
-            zero_threshold,
-        )?;
+        // sequential core is trivially thread-invariant). The U-M3a-05
+        // post-steps (connected rejoin, TMB rescale) run core-side before
+        // the share-zeroing decision; the no-post-steps case keeps the
+        // frozen `fit` face as its dedicated call site (bit-identity by
+        // construction, not only by delegation).
+        let out = if connected.is_none() && !rescale {
+            fit::fit(
+                &counts_data,
+                &sigs_data,
+                m,
+                n,
+                k,
+                method,
+                nb_size,
+                tol,
+                max_iter as usize,
+                zero_threshold,
+            )?
+        } else {
+            fit::fit_with(
+                &counts_data,
+                &sigs_data,
+                m,
+                n,
+                k,
+                method,
+                nb_size,
+                tol,
+                max_iter as usize,
+                zero_threshold,
+                connected.as_ref(),
+                rescale,
+            )?
+        };
 
         // Wire shape (contract 2, column-major k x n grids).
         let kk = k;

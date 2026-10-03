@@ -124,6 +124,45 @@
 //!   Self–Liang half-tail `½·erfc(√(D/2))` at n = 1) — and [`bh_adjust`]
 //!   applies the step-up BH correction over the k-signature family.
 //!   `pass_bh` is the `p_bh ≤` [`BH_ALPHA`] verdict.
+//!
+//! # U-M3a-05 extension: TMB rescale + connected-signature rejoin
+//!
+//! The two whole-fit post-steps of the MSU-Fit table (ARCHITECTURE §5,
+//! "背景签名策略 + connected 组配置") land here as pure grid transforms on
+//! the returned exposures (research/02 §1 anchors: the MuSiCal TMB rescale
+//! is `02-fitting-inference.md` line 27 — "放大到 N 总突变跑稀疏搜索，再回
+//! 原计数重解"; the connected rejoin is line 23 — "保留签名的 connected 签名
+//! 在最终 NNLS 前重新加入", groups per line 30 / `utils.py SIGS_ASSOCIATED`):
+//!
+//! * [`rescale_to_totals`] — per-sample multiplication of the exposure
+//!   column back onto the original mutation-total scale (the MuSiCal
+//!   rescale semantics: after any fit on a normalized/amplified catalog,
+//!   exposures are brought back so that, per sample, the kept exposures sum
+//!   to the sample's own mutation total). Conservation is pinned at 1e-12
+//!   by tests; an all-zero column stays zero (nothing to conserve).
+//! * [`ConnectedSpec`] / [`ConnectedStrategy::FixAndRefit`] — the
+//!   clock-like connected components (e.g. the SBS1/SBS5-flavoured
+//!   background group) rejoin the fit: they are FIXED at their initial
+//!   full-dictionary NNLS solution while the remaining components are
+//!   re-optimized against the residual (grouped alternating minimization
+//!   with a frozen block, which converges after the single free-block
+//!   solve implemented here). **Documented approximation (D13)**: the
+//!   upstream rejoins the connected signatures into the final NNLS support
+//!   and re-solves ALL components JOINTLY (research/02 §1 line 23);
+//!   FixAndRefit instead pins the connected block at the initial solution,
+//!   so it never adjusts to the sparse refit. [`ConnectedStrategy::
+//!   JointRefit`] — the upstream-exact joint re-solve — is DECLARED FUTURE
+//!   WORK: requesting it is a structured argument error, never a silent
+//!   simplification.
+//!
+//! Both steps run after the method's exposure solve and BEFORE the
+//! share-zeroing decision (shares are per-sample scale invariant, so the
+//! rescale cannot flip a zeroing verdict; the rejoin can). The uniform
+//! evidence columns (`lrt_stat` / `lrt_p`) are untouched: they are defined
+//! at the NB-MLE exposures of the raw catalog and remain bit-identical
+//! across connected/rescale configurations. [`fit`] keeps its frozen
+//! signature and delegates to [`fit_with`] with `(connected = None,
+//! rescale = false)` — the legacy path, bit-identical by tests.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -230,6 +269,10 @@ pub struct FitOutput {
 /// `max_iter` caps the bidirectional rounds and the NB-MLE iterations.
 /// `zero_threshold` drives the share-based zeroing decision on the returned
 /// exposures. See the module docs for the per-method semantics.
+///
+/// Frozen legacy face: delegates to [`fit_with`] with no connected
+/// configuration and no rescale — bit-identical to the pre-U-M3a-05
+/// pipeline (pinned by tests).
 #[allow(clippy::too_many_arguments)]
 pub fn fit(
     counts: &[f64],
@@ -243,10 +286,217 @@ pub fn fit(
     max_iter: usize,
     zero_threshold: f64,
 ) -> Result<FitOutput, MsError> {
-    validate_inputs(counts, sigs, m, n, k, nb_size, eps, max_iter, zero_threshold)?;
+    fit_with(
+        counts, sigs, m, n, k, method, nb_size, eps, max_iter, zero_threshold, None, false,
+    )
+}
 
-    // K-format pair, computed once: G = SᵀS (k×k, symmetric) and
-    // B = SᵀV (row-major k×n; column j is b_j = Sᵀv_j).
+// ======================================================================
+// U-M3a-05: TMB rescale + connected-signature rejoin (MSU-Fit whole-fit
+// post-steps; ARCHITECTURE §5 "背景签名策略 + connected 组配置").
+// ======================================================================
+
+/// Rescale the exposure grid back onto the original per-sample mutation
+/// totals (the MuSiCal TMB-rescale semantics, research/02 §1 line 27:
+/// "放大到 N 总突变跑稀疏搜索，再回原计数重解" — after any fit on a
+/// normalized/amplified catalog, exposures are brought back to the original
+/// count scale). `exposures` is the row-major k×n grid this module returns
+/// everywhere; `sample_totals[j]` is the original mutation total of sample
+/// `j`. Every exposure of sample `j` is multiplied by
+/// `totals[j] / Σ_a exposures[a, j]`, so the column sums to the original
+/// total (conservation pinned at 1e-12 by tests). An all-zero column has
+/// nothing to conserve and stays all-zero; a zero total zeroes the column
+/// (factor 0). Zeros introduced by an earlier zeroing decision are never
+/// resurrected: the rescale multiplies, it does not redistribute.
+pub fn rescale_to_totals(
+    exposures: &[f64],
+    sample_totals: &[f64],
+    n: usize,
+) -> Result<Vec<f64>, MsError> {
+    let k = exposures.len().checked_div(n).unwrap_or(0);
+    if exposures.len() != k * n || sample_totals.len() != n {
+        return Err(MsError::new(
+            "argument",
+            "rescale needs exposures of k*n elements and one total per sample",
+        )
+        .with_i(exposures.len() as i64)
+        .with_j(sample_totals.len() as i64));
+    }
+    for (j, &t) in sample_totals.iter().enumerate() {
+        if !t.is_finite() || t < 0.0 {
+            return Err(MsError::new(
+                "argument",
+                "sample totals must be finite and non-negative",
+            )
+            .with_j(j as i64 + 1));
+        }
+    }
+    let mut out = exposures.to_vec();
+    for j in 0..n {
+        let sum: f64 = (0..k).map(|a| out[a * n + j]).sum();
+        if sum > 0.0 {
+            let factor = sample_totals[j] / sum;
+            for a in 0..k {
+                out[a * n + j] *= factor;
+            }
+        }
+        // sum == 0: nothing to conserve (all-zero column stays all-zero;
+        // a zero total is already met exactly).
+    }
+    Ok(out)
+}
+
+/// Strategy of the connected-signature rejoin (U-M3a-05).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectedStrategy {
+    /// The connected components (e.g. the SBS1/SBS5-flavoured clock group)
+    /// are FIXED at their initial full-dictionary NNLS solution after the
+    /// method refit; the remaining components are re-optimized against the
+    /// residual (grouped alternating minimization with a frozen block).
+    ///
+    /// Declared approximation of the upstream MuSiCal connected semantics
+    /// (research/02 §1 line 23): upstream rejoins the connected signatures
+    /// into the final NNLS support and re-solves ALL components jointly,
+    /// so the connected block there DOES adjust to the sparse refit, and
+    /// the sparsified solution there can still drop a connected signature
+    /// if the joint solve zeroes it. FixAndRefit pins the block instead —
+    /// an acceptable background-anchor semantics, documented here per D13
+    /// and never presented as upstream-exact.
+    FixAndRefit,
+    /// The upstream-exact joint re-solve: connected components rejoin the
+    /// support and ALL components are optimized together. DECLARED FUTURE
+    /// WORK of U-M3a-05 (the joint face needs the upstream's support-set
+    /// bookkeeping across the bidirectional machinery); requesting it is a
+    /// structured argument error at every entry point — never a silent
+    /// simplification.
+    JointRefit,
+}
+
+/// Connected-signature configuration of one fit: the signature indices
+/// (0-based, into the dictionary's column order) forming the connected
+/// group, plus the rejoin [`ConnectedStrategy`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectedSpec {
+    /// 0-based dictionary indices of the connected signatures.
+    pub components: Vec<usize>,
+    /// The rejoin strategy (only [`ConnectedStrategy::FixAndRefit`] is
+    /// implemented; see its docs for the declared approximation).
+    pub strategy: ConnectedStrategy,
+}
+
+impl ConnectedSpec {
+    /// Validate the component list (distinct, in-range) against a
+    /// dictionary of `k` signatures.
+    pub fn validate(&self, k: usize) -> Result<(), MsError> {
+        for (pos, &c) in self.components.iter().enumerate() {
+            if c >= k {
+                return Err(MsError::new(
+                    "argument",
+                    format!(
+                        "connected component index {c} is outside the dictionary (k = {k})"
+                    ),
+                )
+                .with_i(pos as i64 + 1));
+            }
+        }
+        let mut sorted = self.components.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        if sorted.len() != self.components.len() {
+            return Err(MsError::new(
+                "argument",
+                "connected component indices must be distinct",
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// FixAndRefit rejoin for one sample: the connected components are pinned
+/// at the initial full-NNLS solution `h_init` and the remaining components
+/// are re-optimized by NNLS on the residual `v − S_fix·h_fix` (the
+/// free-block minimizer of the grouped problem; with the connected block
+/// frozen, grouped alternating minimization converges after this single
+/// free-block solve). Returns the rejoined exposure vector (length k).
+fn fix_and_refit(
+    g: &[f64],
+    b_j: &[f64],
+    k: usize,
+    h_current: &[f64],
+    h_init: &[f64],
+    components: &[usize],
+) -> Result<Vec<f64>, MsError> {
+    let mut h = h_current.to_vec();
+    for &c in components {
+        h[c] = h_init[c];
+    }
+    let is_fixed = |a: usize| components.binary_search(&a).is_ok();
+    let free: Vec<usize> = (0..k).filter(|&a| !is_fixed(a)).collect();
+    if free.is_empty() {
+        return Ok(h); // degenerate all-connected dictionary: nothing to refit
+    }
+    // Residual right-hand side for the free block: b_f − G_fc·h_fix.
+    let mut rhs = b_j.to_vec();
+    for &a in &free {
+        let mut acc = 0.0f64;
+        for &c in components {
+            acc += g[a * k + c] * h[c];
+        }
+        rhs[a] -= acc;
+    }
+    let refit = nnls_on_subset(g, &rhs, k, &free)?;
+    for &f in &free {
+        h[f] = refit[f];
+    }
+    Ok(h)
+}
+
+/// [`fit`] with the U-M3a-05 whole-fit post-steps: an optional
+/// [`ConnectedSpec`] (connected-signature rejoin) and the TMB `rescale`
+/// flag (per-sample rescale back onto the original mutation totals via
+/// [`rescale_to_totals`]).
+///
+/// Pipeline per sample: method exposures → (rejoin) → (rescale) →
+/// share-zeroing decision → Fisher SE. `rescale` divides nothing: it only
+/// multiplies by the per-sample factor, so zeros stay zero. The uniform
+/// evidence columns are computed before the post-steps and never see them.
+/// Passing `(None, false)` is bit-identical to [`fit`] (pinned by tests).
+#[allow(clippy::too_many_arguments)]
+pub fn fit_with(
+    counts: &[f64],
+    sigs: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    method: FitMethod,
+    nb_size: f64,
+    eps: f64,
+    max_iter: usize,
+    zero_threshold: f64,
+    connected: Option<&ConnectedSpec>,
+    rescale: bool,
+) -> Result<FitOutput, MsError> {
+    validate_inputs(counts, sigs, m, n, k, nb_size, eps, max_iter, zero_threshold)?;
+    if let Some(spec) = connected {
+        spec.validate(k)?;
+        if spec.strategy == ConnectedStrategy::JointRefit {
+            return Err(MsError::new(
+                "argument",
+                "ConnectedStrategy::JointRefit is declared future work (U-M3a-05 ships \
+                 FixAndRefit only); no joint connected re-solve is implemented",
+            ));
+        }
+    }
+    // Per-sample mutation totals for the rescale (counts are validated
+    // integral and non-negative, so the sums are exact-integer doubles).
+    let totals: Vec<f64> = if rescale {
+        (0..n)
+            .map(|j| (0..m).map(|i| counts[i * n + j]).sum())
+            .collect()
+    } else {
+        Vec::new()
+    };
+
     let g = gram_from_sigs(sigs, m, k);
     let b = cross_from_sv(sigs, counts, m, k, n);
 
@@ -263,16 +513,11 @@ pub fn fit(
         let v: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
         let b_j: Vec<f64> = (0..k).map(|a| b[a * n + j]).collect();
 
-        // Method exposures + the shared NNLS warm start + the zeroing
-        // mask (bit-identical to the original inline block; see
-        // `method_exposures` — shared with the bootstrap driver).
-        let (h_method, warm_x, mask, method_converged) =
-            method_exposures(sigs, m, &g, &b_j, &v, k, method, nb_size, eps, max_iter, zero_threshold)?;
+        let (mut h_method, warm_x, mut mask, method_converged) = method_exposures(
+            sigs, m, &g, &b_j, &v, k, method, nb_size, eps, max_iter, zero_threshold,
+        )?;
 
-        // --- uniform presence-LRT evidence at the NB-MLE exposures -----
-        // Always warm-started from the FULL NNLS solution, so the columns
-        // are bit-identical across methods for the same input (see the
-        // module docs, "uniform evidence columns").
+        // --- uniform presence-LRT evidence (unchanged by the post-steps) --
         let (h_mle, mle_converged) = if method == FitMethod::Lrt {
             (h_method.clone(), method_converged)
         } else {
@@ -286,9 +531,6 @@ pub fn fit(
         let mu_full = recon(sigs, m, k, &h_mle);
         let ll_full = nb_ll(&v, &mu_full, nb_size)?;
         for a in 0..k {
-            // Refit without signature a (mSigAct "去目标签名拟合"): warm
-            // start from the full solution minus a; the objective is
-            // concave, so the warm start reaches the same optimum.
             let mut h_without = h_mle.clone();
             h_without[a] = 0.0;
             let mut free = vec![true; k];
@@ -299,7 +541,28 @@ pub fn fit(
             out.lrt_p[a * n + j] = p_chisq1_lrt(ll_without, ll_full);
         }
 
-        // --- zeroing decision on the RETURNED exposures ----------------
+        // --- connected rejoin + TMB rescale, then the zeroing decision ---
+        let post_steps = connected.is_some() || rescale;
+        if post_steps {
+            if let Some(spec) = connected {
+                h_method = fix_and_refit(
+                    &g,
+                    &b_j,
+                    k,
+                    &h_method,
+                    &warm_x,
+                    &spec.components,
+                )?;
+            }
+            if rescale {
+                h_method = rescale_to_totals(&h_method, &[totals[j]], 1)?;
+            }
+            // Shares are per-sample scale invariant (the rescale cannot flip
+            // a verdict) but the rejoin changes them, so the decision rule
+            // is re-evaluated on the final exposures.
+            mask = zeroing_mask_share(&h_method, zero_threshold)?;
+        }
+
         for a in 0..k {
             let idx = a * n + j;
             if mask[a] {
@@ -1998,6 +2261,276 @@ mod tests {
         let e = fit(&[f64::NAN, 42.0], &GOLDEN_SIGS, 2, 1, 2, FitMethod::Lrt, 8.0, 0.001, 10, 0.01)
             .unwrap_err();
         assert_eq!(e.topic(), "na");
+    }
+
+    // ==================================================================
+    // U-M3a-05: TMB rescale conservation + connected FixAndRefit
+    // goldens + the frozen-legacy bit-identity of fit() vs fit_with().
+    // ==================================================================
+
+    #[test]
+    fn rescale_conserves_per_sample_totals() {
+        // Random grid and integer totals: after the rescale every sample's
+        // exposure sum equals its original total (relative 1e-12), and the
+        // transform is exactly a per-sample scalar multiplication.
+        let (k, n) = (4usize, 7usize);
+        let mut rng = MsRng::from_stream(0xA5, StreamId { replicate: 5, rank: 5, fold: 5 });
+        let grid: Vec<f64> = (0..k * n).map(|_| uniform(&mut rng) * 250.0).collect();
+        let totals: Vec<f64> = (0..n).map(|j| 100.0 * (j as f64 + 1.0)).collect();
+        let out = rescale_to_totals(&grid, &totals, n).unwrap();
+        for j in 0..n {
+            let sum: f64 = (0..k).map(|a| out[a * n + j]).sum();
+            assert_close(sum, totals[j], 1e-12, "rescale conservation");
+            // Column j was scaled by exactly totals[j]/sum_j: spot-check the
+            // factor on the largest entry (deterministic, no cancellation).
+            let sum_before: f64 = (0..k).map(|a| grid[a * n + j]).sum();
+            let factor = totals[j] / sum_before;
+            let a_max = (0..k)
+                .max_by(|&a, &b| grid[a * n + j].total_cmp(&grid[b * n + j]))
+                .unwrap();
+            assert_close(
+                out[a_max * n + j],
+                grid[a_max * n + j] * factor,
+                1e-15,
+                "per-sample scalar factor",
+            );
+        }
+        // Zeroed entries stay zero (the rescale multiplies, never moves mass
+        // onto a zero entry).
+        let mut zeroed = grid.clone();
+        zeroed[2 * n + 3] = 0.0;
+        let out2 = rescale_to_totals(&zeroed, &totals, n).unwrap();
+        assert_eq!(out2[2 * n + 3], 0.0);
+    }
+
+    #[test]
+    fn rescale_edges_all_zero_and_zero_total() {
+        // k = 2, n = 3, row-major columns: sample 0 = (3, 0), sample 1 =
+        // (4, 0), sample 2 = (0, 5). Totals (10, 7, 0): the first two
+        // columns are rescaled onto their totals, the zero-total column is
+        // zeroed exactly (factor 0).
+        let grid = [3.0, 4.0, 0.0, 0.0, 0.0, 5.0];
+        let out = rescale_to_totals(&grid, &[10.0, 7.0, 0.0], 3).unwrap();
+        assert_close(out[0], 10.0, 1e-12, "column 0 conserved");
+        assert_eq!(out[3], 0.0);
+        assert_close(out[1], 7.0, 1e-12, "column 1 conserved");
+        assert_eq!(out[4], 0.0);
+        // Zero-total column (0, 5): the factor 0 zeroes it exactly.
+        assert_eq!(out[2], 0.0);
+        assert_eq!(out[5], 0.0);
+        // A genuinely all-zero column stays exactly zero even with a
+        // positive total (nothing to conserve, nothing to redistribute).
+        let zero_col = [3.0, 0.0, 0.0, 0.0, 0.0, 4.0];
+        let out2 = rescale_to_totals(&zero_col, &[10.0, 5.0, 4.0], 3).unwrap();
+        assert_eq!(out2[1], 0.0);
+        assert_eq!(out2[3], 0.0);
+        // Validation: negative / NaN totals are structured argument errors.
+        assert_eq!(
+            rescale_to_totals(&grid, &[-1.0, 7.0, 0.0], 3).unwrap_err().topic,
+            "argument"
+        );
+        assert_eq!(
+            rescale_to_totals(&grid, &[f64::NAN, 7.0, 0.0], 3).unwrap_err().topic,
+            "argument"
+        );
+        assert_eq!(
+            rescale_to_totals(&grid, &[1.0, 2.0], 3).unwrap_err().topic,
+            "argument"
+        );
+    }
+
+    #[test]
+    fn connected_fix_and_refit_golden() {
+        // The 2x2 golden: bidirectional removes signature 2 (h = (h0, 0),
+        // h0 = 51.6/0.52). FixAndRefit with component 1 (0-based) rejoins
+        // the clock signature at its INITIAL full-NNLS value h1 = 20 and
+        // re-optimizes signature 1 against the residual:
+        //   rhs0 = b0 − G01·20 = 51.6 − 0.5·20 = 41.6;  h0 = 41.6/0.52 = 80.
+        // Expected final exposures (80, 20), both above the zeroing share.
+        let spec = ConnectedSpec {
+            components: vec![1],
+            strategy: ConnectedStrategy::FixAndRefit,
+        };
+        let out = fit_with(
+            &GOLDEN_COUNTS,
+            &GOLDEN_SIGS,
+            2,
+            1,
+            2,
+            FitMethod::LikelihoodBidirectional,
+            NB_SIZE_SBS96,
+            0.001,
+            100,
+            0.01,
+            Some(&spec),
+            false,
+        )
+        .unwrap();
+        assert!(out.converged);
+        assert_eq!(out.support, vec![1, 1]);
+        assert!((out.exposures[0] - 80.0).abs() <= 1e-8, "h0 = {}", out.exposures[0]);
+        assert!((out.exposures[1] - 20.0).abs() <= 1e-8, "h1 = {}", out.exposures[1]);
+        // The rescale onto the 100-mutation total is a no-op here (the
+        // rejoined exposures already sum to 100) — the two post-steps
+        // compose.
+        let out_r = fit_with(
+            &GOLDEN_COUNTS,
+            &GOLDEN_SIGS,
+            2,
+            1,
+            2,
+            FitMethod::LikelihoodBidirectional,
+            NB_SIZE_SBS96,
+            0.001,
+            100,
+            0.01,
+            Some(&spec),
+            true,
+        )
+        .unwrap();
+        assert_close(out_r.exposures[0], 80.0, 1e-9, "rejoin + rescale h0");
+        assert_close(out_r.exposures[1], 20.0, 1e-9, "rejoin + rescale h1");
+        // Uniform evidence columns are untouched by the post-steps: the
+        // plain fit's grids must be bit-identical.
+        let plain = fit(
+            &GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2,
+            FitMethod::LikelihoodBidirectional, NB_SIZE_SBS96, 0.001, 100, 0.01,
+        )
+        .unwrap();
+        assert_eq!(out.lrt_stat, plain.lrt_stat);
+        assert_eq!(out.lrt_p, plain.lrt_p);
+    }
+
+    #[test]
+    fn connected_nnls_is_a_fixed_point() {
+        // With the nnls method the method solution IS the initial NNLS
+        // solution: the rejoin resets the connected entries to values they
+        // already hold and the residual refit reproduces the same free
+        // block. Mathematically an exact fixed point; numerically the
+        // subset re-solve may differ from the full solve in the last ulps,
+        // so the guarantee is pinned at 1e-9 relative (the rejoin is a
+        // different arithmetic route, not a different solution).
+        let (m, n, k) = (8usize, 3usize, 3usize);
+        let mut rng = MsRng::from_stream(2026, StreamId { replicate: 3, rank: 1, fold: 1 });
+        let mut sigs = vec![0.0f64; m * k];
+        for a in 0..k {
+            let mut col: Vec<f64> = (0..m).map(|_| uniform(&mut rng)).collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                sigs[i * k + a] = col[i];
+            }
+        }
+        let counts: Vec<f64> = (0..m * n)
+            .map(|i| if i % 13 == 0 { 0.0 } else { (uniform(&mut rng) * 300.0).floor() })
+            .collect();
+        let spec = ConnectedSpec {
+            components: vec![0, 2],
+            strategy: ConnectedStrategy::FixAndRefit,
+        };
+        let plain = fit(&counts, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0)
+            .unwrap();
+        let rejoined = fit_with(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0,
+            Some(&spec), false,
+        )
+        .unwrap();
+        for (p, r) in plain.exposures.iter().zip(rejoined.exposures.iter()) {
+            assert_close(*r, *p, 1e-9, "nnls rejoin fixed point");
+        }
+        assert_eq!(plain.support, rejoined.support);
+    }
+
+    #[test]
+    fn fit_legacy_face_is_bit_identical_to_fit_with_none_false() {
+        // The frozen contract: fit(...) == fit_with(..., None, false) at the
+        // bit level, for all three methods (the bootstrap driver shares the
+        // guarantee through method_exposures, untouched here).
+        let (m, n, k) = (7usize, 4usize, 3usize);
+        let mut rng = MsRng::from_stream(11, StreamId { replicate: 1, rank: 2, fold: 3 });
+        let mut sigs = vec![0.0f64; m * k];
+        for a in 0..k {
+            let mut col: Vec<f64> = (0..m).map(|_| uniform(&mut rng)).collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                sigs[i * k + a] = col[i];
+            }
+        }
+        let counts: Vec<f64> = (0..m * n)
+            .map(|i| if i % 11 == 0 { 0.0 } else { (uniform(&mut rng) * 90.0).floor() })
+            .collect();
+        let same = |x: &[f64], y: &[f64]| {
+            x.len() == y.len() && x.iter().zip(y.iter()).all(|(p, q)| p.to_bits() == q.to_bits())
+        };
+        for method in [FitMethod::Nnls, FitMethod::LikelihoodBidirectional, FitMethod::Lrt] {
+            let a = fit(&counts, &sigs, m, n, k, method, NB_SIZE_SBS96, 0.001, 1000, 0.01).unwrap();
+            let b = fit_with(
+                &counts, &sigs, m, n, k, method, NB_SIZE_SBS96, 0.001, 1000, 0.01, None, false,
+            )
+            .unwrap();
+            assert!(same(&a.exposures, &b.exposures) && a.support == b.support);
+            assert!(same(&a.se, &b.se) && same(&a.lrt_stat, &b.lrt_stat));
+        }
+        // rescale = true with no zeroing changes the exposures only by the
+        // per-sample factor: the column sums equal the sample totals.
+        let rescaled = fit_with(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0,
+            None, true,
+        )
+        .unwrap();
+        for j in 0..n {
+            let total: f64 = (0..m).map(|i| counts[i * n + j]).sum();
+            let sum: f64 = (0..k).map(|a| rescaled.exposures[a * n + j]).sum();
+            assert_close(sum, total, 1e-12, "end-to-end rescale conservation");
+        }
+    }
+
+    #[test]
+    fn connected_validation_errors() {
+        // JointRefit is declared future work: a structured argument error,
+        // never a silent fallback.
+        let joint = ConnectedSpec {
+            components: vec![0],
+            strategy: ConnectedStrategy::JointRefit,
+        };
+        let e = fit_with(
+            &GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2,
+            FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 10, 0.01,
+            Some(&joint), false,
+        )
+        .unwrap_err();
+        assert_eq!(e.topic, "argument");
+        assert!(e.to_string().contains("future work"), "{}", e);
+        // Out-of-range and duplicate components.
+        let e = fit_with(
+            &GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2,
+            FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 10, 0.01,
+            Some(&ConnectedSpec {
+                components: vec![2],
+                strategy: ConnectedStrategy::FixAndRefit,
+            }),
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(e.topic, "argument");
+        assert!(e.to_string().contains("outside the dictionary"), "{}", e);
+        let e = fit_with(
+            &GOLDEN_COUNTS, &GOLDEN_SIGS, 2, 1, 2,
+            FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 10, 0.01,
+            Some(&ConnectedSpec {
+                components: vec![1, 1],
+                strategy: ConnectedStrategy::FixAndRefit,
+            }),
+            false,
+        )
+        .unwrap_err();
+        assert_eq!(e.topic, "argument");
+        assert!(e.to_string().contains("distinct"), "{}", e);
     }
 
     // ==================================================================

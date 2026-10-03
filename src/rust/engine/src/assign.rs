@@ -151,8 +151,11 @@ pub struct PerMutationAssignment {
     /// Per-mutation signature responsibilities, row-major `m×n×k` with index
     /// `(i·n + j)·k + s`: the fraction of catalog cell `(i, j)`'s count
     /// attributed to signature `s`. Cell-wise `Σ_s assignments = counts[i,j]`
-    /// whenever the reconstruction `(WH)[i,j] > 0`; exactly 0 for every `s`
-    /// where the reconstruction is 0 (that mass moves to `unassigned`).
+    /// whenever the reconstruction `(WH)[i,j] >= KL_EPS` (below the floor the
+    /// ε-guard rescales to `v·(WH)/KL_EPS`, which under-allocates by design —
+    /// audited P2-1); exactly 0 for every `s` where the reconstruction is 0
+    /// (that mass moves to `unassigned`; "exactly" up to f64 rounding of the
+    /// per-term product — audited P2-2).
     pub assignments: Vec<f64>,
     /// Unassigned residual pseudo-signature, row-major `m×n`:
     /// `max(counts − WH, 0)` per channel and sample (signature.tools.lib
@@ -608,7 +611,7 @@ mod tests {
         let h = [4.0, 8.0];
         let fit = assign_per_mutation(&v, &w, &h, 2, 1, 2).unwrap();
         // wh = [7, 6]; c[i,j,s] = v * w * h / wh.
-        assert_eq!(fit.assignments.len(), 2 * 1 * 2);
+        assert_eq!(fit.assignments.len(), 4);
         assert_close(fit.assignments[0], 1.0, 1e-12, "c[0,0,0]");
         assert_close(fit.assignments[1], 6.0, 1e-12, "c[0,0,1]");
         assert_close(fit.assignments[2], 2.0, 1e-12, "c[1,0,0]");
@@ -909,8 +912,10 @@ mod tests {
         // Near-balanced large n (40 mutations off dead center of 15500,
         // z ~ 0.6): p in the non-significant mid range, finite.
         let r = tsb_test(7730.0, 7770.0, TsbTest::Binomial).unwrap();
+        // Numeric anchor (audited): R binom.test = 0.7540876806589, engine
+        // agrees to 1.1e-8 relative (Lanczos ln-Gamma at large arguments).
         assert!(
-            (0.05..=1.0).contains(&r.p_value),
+            (r.p_value - 0.754_087_680_650_5).abs() / 0.754_087_680_650_5 < 1e-6,
             "balanced large-n p = {}",
             r.p_value
         );
@@ -1090,21 +1095,21 @@ mod tests {
         let res =
             tsb_test_per_signature(&fit.assignments, m, n, k, &mask, TsbTest::Binomial).unwrap();
         assert_eq!(res.len(), k);
-        for s in 0..k {
+        for (s, tm) in res.iter().enumerate() {
             let mut ts = 0.0;
             let mut uts = 0.0;
-            for i in 0..m {
+            for (i, masked) in mask.iter().enumerate().take(m) {
                 for j in 0..n {
                     let c = fit.assignments[(i * n + j) * k + s];
-                    if mask[i] {
+                    if *masked {
                         ts += c;
                     } else {
                         uts += c;
                     }
                 }
             }
-            assert_close(res[s].ts, ts, 1e-12, "tensor fold ts");
-            assert_close(res[s].uts, uts, 1e-12, "tensor fold uts");
+            assert_close(tm.ts, ts, 1e-12, "tensor fold ts");
+            assert_close(tm.uts, uts, 1e-12, "tensor fold uts");
         }
     }
 

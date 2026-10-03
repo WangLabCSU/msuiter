@@ -256,3 +256,95 @@ test_that("the adhoc digest is a real SHA-256 (FIPS 180-4 vectors)", {
     "e3b332c7ed06cfcb684b85cd801c8a2e6c13402b83ee1c6d33d1e0cad8e48fac"
   )
 })
+
+# ---------------------------------------------------------------------------
+# U-M3a-05: TMB rescale + connected-signature rejoin (FixAndRefit).
+# ---------------------------------------------------------------------------
+
+# Golden fixture mirroring the Rust connected golden: 2 channels, 1 sample,
+# dictionary (0.6, 0.4) / (0.5, 0.5), counts (58, 42). The bidirectional
+# method removes the second signature; connected = 2 rejoins it at its
+# initial NNLS value 20 and re-optimizes the first signature to exactly 80
+# (hand-derived: rhs = 51.6 - 0.5 * 20 = 41.6; 41.6 / 0.52 = 80).
+.ms_fit_connected_fixture <- function() {
+  labels <- c("CH1", "CH2")
+  counts <- matrix(c(58, 42), nrow = 2, dimnames = list(labels, "S01"))
+  sigs <- matrix(c(0.6, 0.4, 0.5, 0.5), nrow = 2, dimnames = list(labels, c("SIGa", "SIGb")))
+  catalog <- ms_catalog(
+    counts = counts,
+    channels = list(name = "SYN2", labels = labels),
+    samples = "S01",
+    provenance = list(genome = "SYN")
+  )
+  list(catalog = catalog, sigs = sigs, counts = counts)
+}
+
+test_that("connected FixAndRefit rejoins the clock signature (golden)", {
+  fx <- .ms_fit_connected_fixture()
+  ref <- ms_fit(fx$catalog, fx$sigs, method = "likelihood_bidirectional",
+    rescale = FALSE)
+  # Without the rejoin the sparse refit keeps only SIGa (h0 = 99.2308...).
+  expect_identical(ref@support$active, c(TRUE, FALSE))
+  # connected = 2: SIGb is FIXED at its initial NNLS value 20, SIGa is
+  # re-optimized on the residual to exactly 80.
+  fit <- ms_fit(fx$catalog, fx$sigs, method = "likelihood_bidirectional",
+    rescale = FALSE, connected = 2)
+  expect_equal(as.numeric(fit@exposures), c(80, 20), tolerance = 1e-8)
+  expect_true(all(fit@support$active))
+  # Presence evidence is untouched by the post-steps (bit-identical grids).
+  expect_identical(ref@tests$lrt_stat, fit@tests$lrt_stat)
+  expect_identical(ref@tests$lrt_p, fit@tests$lrt_p)
+})
+
+test_that("rescale restores the original per-sample totals (conservation)", {
+  fx <- .ms_fit_connected_fixture()
+  # The bidirectional solution sums to 99.23... < 100 on this fixture; the
+  # default rescale multiplies it back onto the 100-mutation total.
+  raw <- ms_fit(fx$catalog, fx$sigs, method = "likelihood_bidirectional",
+    rescale = FALSE)
+  expect_equal(sum(raw@exposures), 51.6 / 0.52, tolerance = 1e-8)
+  rescaled <- ms_fit(fx$catalog, fx$sigs, method = "likelihood_bidirectional")
+  expect_equal(sum(rescaled@exposures), sum(fx$counts), tolerance = 1e-12)
+  # Shares and zeroing decisions are invariant (per-sample scale invariance).
+  expect_identical(raw@support$active, rescaled@support$active)
+  expect_equal(raw@support$share, rescaled@support$share, tolerance = 1e-12)
+})
+
+test_that("default rescale keeps separable recovery and conserves totals", {
+  fx <- .ms_fit_fixture()
+  fit <- ms_fit(fx$catalog, fx$sigs, zero_threshold = 0)
+  expect_gte(.ms_fit_recon_cos(fit, fx$sigs, fx$catalog@counts), 0.99)
+  expect_equal(colSums(fit@exposures), colSums(fx$catalog@counts),
+    tolerance = 1e-12
+  )
+})
+
+test_that("connected rejoin keeps separable recovery (regression)", {
+  fx <- .ms_fit_fixture()
+  fit <- ms_fit(fx$catalog, fx$sigs, connected = 1, zero_threshold = 0)
+  expect_gte(.ms_fit_recon_cos(fit, fx$sigs, fx$catalog@counts), 0.99)
+  # With the nnls method the full-dictionary rejoin is (numerically) the
+  # plain fit: every component already sits at its initial NNLS value.
+  plain <- ms_fit(fx$catalog, fx$sigs, zero_threshold = 0, rescale = FALSE)
+  full <- ms_fit(fx$catalog, fx$sigs, connected = c(1, 2),
+    zero_threshold = 0, rescale = FALSE)
+  expect_equal(as.vector(full@exposures), as.vector(plain@exposures),
+    tolerance = 1e-8
+  )
+})
+
+test_that("connected and rescale gates raise structured errors", {
+  fx <- .ms_fit_fixture()
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, connected = 0), "input")
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, connected = 3), "input",
+    regexp = "1, k]"
+  )
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, connected = c(1, 1)), "input",
+    regexp = "distinct"
+  )
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, connected = "SIGa"), "input")
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, connected = NA), "input")
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = "yes"), "input")
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = NA), "input")
+  expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = c(TRUE, TRUE)), "input")
+})

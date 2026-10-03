@@ -27,9 +27,12 @@ same grammar as the `MsEngine` `name` property).}
 String sugar resolves through `engine_class()`, so its property defaults
 must form a valid spec (defaults for `name`, `mode`, `deterministic`).}
 
-\item{fit_fn}{the engine implementation, called as `fit_fn(engine, ...)`
-by [fit_engine()]; data plumbing arrives with the extraction/fitting
-units (M1/M2).}
+\item{fit_fn}{the engine implementation. For `mode = "extract"` engines
+it is called as `fit_fn(engine, catalog = <MsCatalog>, k = <rank>)` and
+must return a list with `signatures` (channels x k, row-major) and
+`exposures` (k x samples); `ms_extract()` owns display normalization
+and the MsSignature assembly. For `mode = "fit"` engines the
+`ms_fit()` face contracts apply (see R/fit.R).}
 
 \item{packages}{character vector of required R packages reported by
 [required_pkgs()] (may be empty).}

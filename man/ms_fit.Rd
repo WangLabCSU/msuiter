@@ -9,7 +9,9 @@ ms_fit(
   signatures,
   method = "nnls",
   nb_size = 8,
-  zero_threshold = 0.01
+  zero_threshold = 0.01,
+  connected = NULL,
+  rescale = TRUE
 )
 }
 \arguments{
@@ -36,6 +38,29 @@ share below which an exposure is zeroed (decision rule, sigfit
 CI-zeroing family anchor 0.01). Zeroed exposures are set to exactly 0
 and reported `active = FALSE`; standard errors exist only on the
 interior support ("boundary parameters get tests, not intervals").}
+
+\item{connected}{NULL (default; no rejoin) or a vector of distinct
+1-based signature indices (dictionary column order) forming the
+connected-signature group -- the clock-like background signatures
+(e.g. the SBS1/SBS5 pair) of the MSU-Fit "connected 组配置"
+(ARCHITECTURE section 5). The rejoined signatures are FIXED at their
+initial full-NNLS solution after the method refit (`FixAndRefit`) and
+the remaining signatures are re-optimized against the residual.
+**Divergence (D13)**: this is a documented approximation of the
+upstream MuSiCal connected semantics (research/02 section 1, line 23),
+which rejoins the connected signatures into the final NNLS support and
+re-solves ALL signatures jointly; here the connected block never
+adjusts to the sparse refit. The upstream-exact `JointRefit` strategy
+is declared future work and is never silently substituted.}
+
+\item{rescale}{Single logical (default `TRUE`): the TMB rescale --
+multiply each sample's exposures back onto its original mutation total
+(the MuSiCal rescale semantics, research/02 section 1 line 27), so the
+kept exposures carry the sample's own mutation mass on the original
+count scale. The rescale only multiplies: zeroed entries stay zero and
+the per-sample shares (hence the zeroing decision) are invariant.
+Presence evidence (`tests`) is computed before the post-steps and is
+unaffected by either argument.}
 }
 \value{
 An [MsFit] object.

@@ -211,6 +211,69 @@
   invisible(NULL)
 }
 
+# Scalar gates (U-M3a-05): the connected-signature configuration. `connected`
+# is NULL (no rejoin) or a vector of DISTINCT 1-based signature indices
+# (dictionary column order) forming the connected group, e.g. the clock-like
+# background pair. The kernel rejoins them at their initial full-NNLS
+# solution (FixAndRefit) and re-optimizes the remaining signatures.
+.ms_fit_gate_connected <- function(connected, k) {
+  if (is.null(connected)) {
+    return(invisible(NULL))
+  }
+  bad_shape <- !is.numeric(connected) || anyNA(connected) ||
+    any(!is.finite(connected)) || any(connected != floor(connected)) ||
+    length(connected) < 1L
+  if (bad_shape) {
+    msuiter_abort(
+      "input",
+      "connected must be NULL or a vector of whole signature indices",
+      i = paste(
+        "connected selects the connected-signature group (e.g. the SBS1/SBS5-",
+        "flavoured clock pair) that is fixed at the initial solution after refit"
+      ),
+      j = paste0("received: ", msuiter_quote_trunc(connected)),
+      c = "pass distinct 1-based signature indices, or NULL for no rejoin"
+    )
+  }
+  connected <- as.integer(connected)
+  if (anyDuplicated(connected) > 0L) {
+    msuiter_abort(
+      "input",
+      "connected signature indices must be distinct",
+      i = "each dictionary signature joins the connected group at most once",
+      j = msuiter_quote_trunc(connected[duplicated(connected)]),
+      c = "pass each connected signature index once"
+    )
+  }
+  if (any(connected < 1L) || any(connected > k)) {
+    msuiter_abort(
+      "input",
+      "connected signature indices must lie in [1, k] (the dictionary order)",
+      i = paste0("the dictionary has k = ", k, " signatures"),
+      j = msuiter_quote_trunc(connected[connected < 1L | connected > k]),
+      c = "index the dictionary columns (1-based) to select the connected group"
+    )
+  }
+  invisible(NULL)
+}
+
+# Scalar gates (U-M3a-05): the TMB-rescale switch.
+.ms_fit_gate_rescale <- function(rescale) {
+  if (!is.logical(rescale) || length(rescale) != 1L || is.na(rescale)) {
+    msuiter_abort(
+      "input",
+      "rescale must be a single TRUE or FALSE",
+      i = paste(
+        "rescale multiplies each sample's exposures back onto its original",
+        "mutation total (the MuSiCal TMB-rescale semantics, research/02 section 1)"
+      ),
+      j = paste0("received: ", msuiter_quote_trunc(rescale)),
+      c = "pass TRUE (default) or FALSE"
+    )
+  }
+  invisible(NULL)
+}
+
 # All three ms_fit scalar gates in the ms_fit order.
 .ms_fit_gate_fit_args <- function(method, nb_size, zero_threshold) {
   .ms_fit_gate_method(method)
@@ -276,6 +339,27 @@
 #'   CI-zeroing family anchor 0.01). Zeroed exposures are set to exactly 0
 #'   and reported `active = FALSE`; standard errors exist only on the
 #'   interior support ("boundary parameters get tests, not intervals").
+#' @param connected NULL (default; no rejoin) or a vector of distinct
+#'   1-based signature indices (dictionary column order) forming the
+#'   connected-signature group -- the clock-like background signatures
+#'   (e.g. the SBS1/SBS5 pair) of the MSU-Fit "connected 组配置"
+#'   (ARCHITECTURE section 5). The rejoined signatures are FIXED at their
+#'   initial full-NNLS solution after the method refit (`FixAndRefit`) and
+#'   the remaining signatures are re-optimized against the residual.
+#'   **Divergence (D13)**: this is a documented approximation of the
+#'   upstream MuSiCal connected semantics (research/02 section 1, line 23),
+#'   which rejoins the connected signatures into the final NNLS support and
+#'   re-solves ALL signatures jointly; here the connected block never
+#'   adjusts to the sparse refit. The upstream-exact `JointRefit` strategy
+#'   is declared future work and is never silently substituted.
+#' @param rescale Single logical (default `TRUE`): the TMB rescale --
+#'   multiply each sample's exposures back onto its original mutation total
+#'   (the MuSiCal rescale semantics, research/02 section 1 line 27), so the
+#'   kept exposures carry the sample's own mutation mass on the original
+#'   count scale. The rescale only multiplies: zeroed entries stay zero and
+#'   the per-sample shares (hence the zeroing decision) are invariant.
+#'   Presence evidence (`tests`) is computed before the post-steps and is
+#'   unaffected by either argument.
 #'
 #' @details
 #' **Method semantics** (research/02 section 1; D11 anchors). `"nnls"`
@@ -318,14 +402,16 @@ ms_fit <- S7::new_generic(
   "ms_fit",
   "catalog",
   function(catalog, signatures, method = "nnls", nb_size = 8,
-           zero_threshold = 0.01) S7::S7_dispatch()
+           zero_threshold = 0.01, connected = NULL, rescale = TRUE)
+    S7::S7_dispatch()
 )
 
 # Method: MsCatalog -> MsFit. Resolves the dictionary through the shared
 # preparation (U-M3a-03 extraction; semantics unchanged), gates the scalars
 # and runs the kernel through the FFI wrapper.
 S7::method(ms_fit, MsCatalog) <- function(catalog, signatures, method = "nnls",
-                                          nb_size = 8, zero_threshold = 0.01) {
+                                          nb_size = 8, zero_threshold = 0.01,
+                                          connected = NULL, rescale = TRUE) {
   prep <- .ms_fit_prepare_dictionary(catalog, signatures)
   counts <- prep$counts
   sig_norm <- prep$signatures
@@ -333,12 +419,17 @@ S7::method(ms_fit, MsCatalog) <- function(catalog, signatures, method = "nnls",
 
   # --- scalar gates (FFI contract 4, first layer) --------------------------
   .ms_fit_gate_fit_args(method, nb_size, zero_threshold)
+  .ms_fit_gate_connected(connected, length(sig_labels))
+  .ms_fit_gate_rescale(rescale)
 
   # --- kernel (the FFI wrapper re-validates the raw scalars) ---------------
+  # connected crosses the FFI as 0-based indices (NULL stays NULL).
   res <- .ms_fit_rust(
     counts = counts, signatures = sig_norm, method = method,
     nb_size = nb_size, tol = .ms_fit_defaults$eps,
-    max_iter = .ms_fit_defaults$max_iter, zero_threshold = zero_threshold
+    max_iter = .ms_fit_defaults$max_iter, zero_threshold = zero_threshold,
+    connected_components = if (is.null(connected)) NULL else as.integer(connected - 1L),
+    rescale = rescale
   )
 
   # --- assembly: labels, tidy evidence tables, adhoc reference snapshot ----
@@ -393,7 +484,8 @@ S7::method(ms_fit, MsCatalog) <- function(catalog, signatures, method = "nnls",
 # Fallback: anything that is not an MsCatalog gets a project error instead
 # of the raw S7 dispatch failure.
 S7::method(ms_fit, S7::class_any) <- function(catalog, signatures, method = "nnls",
-                                              nb_size = 8, zero_threshold = 0.01) {
+                                              nb_size = 8, zero_threshold = 0.01,
+                                              connected = NULL, rescale = TRUE) {
   msuiter_abort(
     "input",
     "catalog must be an MsCatalog object",
@@ -454,7 +546,7 @@ S7::method(ms_fit, S7::class_any) <- function(catalog, signatures, method = "nnl
 #'   per-call pool (CAPABILITY-MATRIX L-D).
 #' @param seed Single non-negative whole number: the master seed addressing
 #'   the per-boot canonical PCG64 streams (boot `b` draws on
-#'   `StreamId{replicate: b, rank: 0, fold: 0}`; per-sample resamples
+#'   \code{StreamId\{replicate: b, rank: 0, fold: 0\}}; per-sample resamples
 #'   consume the boot's stream sequentially in fixed sample order). Same
 #'   seed, same output -- bit-identically.
 #' @param nb_size,zero_threshold As in [ms_fit()].
@@ -591,15 +683,22 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 # on both sides run on m != n shapes).
 # ---------------------------------------------------------------------------
 
-#' Fitting kernel wrapper over ms_fit_rust (U-M3a-02).
+#' Fitting kernel wrapper over ms_fit_rust (U-M3a-02; U-M3a-05 extension).
 #'
 #' Internal wrapper over the Rust kernel: the three fitting methods on one
-#' bounded sequential batch. Returns the RAW kernel grids; label assembly,
-#' tidy tables and the adhoc reference snapshot live in `ms_fit()`.
+#' bounded sequential batch, plus the U-M3a-05 whole-fit post-steps
+#' (connected rejoin, TMB rescale). Returns the RAW kernel grids; label
+#' assembly, tidy tables and the adhoc reference snapshot live in `ms_fit()`.
 #' @param counts,signatures channels x samples / channels x signatures
 #'   double matrices (no NA/NaN).
 #' @param method,nb_size,tol,max_iter,zero_threshold Validated scalars
 #'   (the kernel re-checks every domain).
+#' @param connected_components NULL or a validated integer vector of
+#'   0-based connected-signature indices (the kernel rejoins them at the
+#'   initial NNLS solution, FixAndRefit).
+#' @param rescale Single logical: multiply each sample's exposures back onto
+#'   its original mutation total (the kernel runs it before the zeroing
+#'   decision).
 #' @param threads NULL or a single non-negative integer pool size
 #'   (`.ms_resolve_threads()`); this unit is sequential (A7), the resolved
 #'   value only feeds the FFI surface contract.
@@ -609,7 +708,8 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 #' @keywords internal
 #' @noRd
 .ms_fit_rust <- function(counts, signatures, method, nb_size, tol, max_iter,
-                         zero_threshold, threads = NULL) {
+                         zero_threshold, connected_components = NULL,
+                         rescale = TRUE, threads = NULL) {
   counts <- .ms_validate_matrix(counts, "counts")
   signatures <- .ms_validate_matrix(signatures, "signatures")
   if (!is.character(method) || length(method) != 1L || is.na(method) ||
@@ -669,9 +769,13 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
     )
   }
   n_threads <- .ms_resolve_threads(threads)
+  # U-M3a-05 post-steps: connected crosses as 0-based indices (NULL = no
+  # rejoin; the kernel rejects duplicates and out-of-range values
+  # structurally), rescale as a plain logical.
   .msffi_check(ms_fit_rust(
     t(counts), t(signatures), method, as.numeric(nb_size), as.numeric(tol),
-    as.integer(max_iter), as.numeric(zero_threshold), n_threads
+    as.integer(max_iter), as.numeric(zero_threshold), n_threads,
+    connected_components, isTRUE(rescale)
   ))
 }
 
@@ -1096,7 +1200,7 @@ S7::method(ms_test_presence, S7::class_any) <- function(x, signatures = NULL,
   # C(n,m)/2^n for m = 1..n (the m = 0 atom contributes 0 for D >= 0 and
   # is handled by the d < 0 branch below). Far-tail weights underflow to 0
   # exactly like the kernel's MIXTURE_LN_WEIGHT_FLOOR skip.
-  w <- dbinom(m[-1L], size = n, prob = 0.5)
+  w <- stats::dbinom(m[-1L], size = n, prob = 0.5)
   vapply(
     stat,
     function(d) {
@@ -1109,7 +1213,7 @@ S7::method(ms_test_presence, S7::class_any) <- function(x, signatures = NULL,
       if (d == Inf) {
         return(0)
       }
-      sum(w * pchisq(d, df = m[-1L], lower.tail = FALSE))
+      sum(w * stats::pchisq(d, df = m[-1L], lower.tail = FALSE))
     },
     numeric(1L),
     USE.NAMES = FALSE
