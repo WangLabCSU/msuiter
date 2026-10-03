@@ -15,6 +15,7 @@ pub mod nmf;
 pub mod nndsvd;
 pub mod nnls;
 pub mod assign;
+pub mod bca;
 pub mod likelihood;
 pub mod resample;
 pub mod rng;

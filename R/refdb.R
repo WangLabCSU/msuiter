@@ -131,7 +131,7 @@
       "refdb",
       paste0(
         "reference manifest schema_version '", manifest$schema_version,
-        "' is above the supported set (",
+        "' is outside the supported set (",
         paste(.MS_REFDB_SUPPORTED_SCHEMAS, collapse = ", "),
         ") -- refusing to read a forward-incompatible bundle"
       ),

@@ -12,7 +12,8 @@ ms_fit_bootstrap(
   seed = 1,
   nb_size = 8,
   zero_threshold = 0.01,
-  n_threads = NULL
+  n_threads = NULL,
+  bca = FALSE
 )
 }
 \arguments{
@@ -43,6 +44,20 @@ seed, same output -- bit-identically.}
 \item{n_threads}{NULL (resolve the `msuiter.threads` option, capped by
 `_R_CHECK_LIMIT_CORES_`) or a single non-negative integer pool size;
 0 means the rayon default.}
+
+\item{bca}{Single logical (default `FALSE`): additionally compute the
+**BCa interval** (bias-corrected and accelerated; Hall 1988) from the
+SAME replicates -- zero extra resampling. `z0 = Phi^{-1}(#{boot <
+point}/B)` corrects median bias and the acceleration comes from the
+fixed-active-set analytic jackknife (one LDL^T per sample, not a
+per-mutation refit). Cells whose correction is below the MC noise of
+the bounds (`|z0| < 0.1` and `|a| < 0.05`), past the acceleration
+cap (`|a| > 0.2`), below the stability floor (`< 0.9`), or at the
+zeroing boundary fall back to the percentile interval with an
+explicit flag. When `TRUE`, the exposures carry `bca_lower`,
+`bca_upper`, `bca_fallback` (labelled matrices; fallback = 1) and
+`ci_method = "bca"` attributes, and the support table gains a
+`bca_fallback` column. The percentile attributes are unchanged.}
 }
 \value{
 An [MsFit] object with bootstrap CI attributes.
@@ -68,7 +83,10 @@ evidence: the exposures matrix carries `ci_lower`, `ci_upper`,
 `n_boot`, `seed` and `ci_level` attributes, and the `support` table
 gains the `boot_stability` column. The percentile bounds are computed
 kernel-side with type-7 linear interpolation (the R `quantile` default)
-over the post-zeroing replicate exposures.
+over the post-zeroing replicate exposures, each replicate rescaled onto
+its sample's original mutation total by the same rule as the point
+fit's `rescale = TRUE` (the divisor is the replicate's exposure column
+sum), so the CI is directly comparable to the point exposures.
 }
 \seealso{
 [ms_fit()] for the point fit, [ms_test_presence()] for the

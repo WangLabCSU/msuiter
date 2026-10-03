@@ -166,11 +166,32 @@
 //! across connected/rescale configurations. [`fit`] keeps its frozen
 //! signature and delegates to [`fit_with`] with `(connected = None,
 //! rescale = false)` — the legacy path, bit-identical by tests.
+//!
+//! # U-M3b-02 extension: the BCa interval face of the bootstrap
+//!
+//! [`bootstrap`] gains `bca: bool` (default-off: the percentile face keeps
+//! its exact legacy cost and output). When on, the SAME boot sample yields
+//! the bias-corrected-and-accelerated interval (Hall 1988; design memo
+//! `docs/devlog/2026-10-04-M3b-design-memo.md` §1.2, PI ruling: BCa
+//! default, percentile as the flagged degenerate fallback) with zero extra
+//! resampling: `z₀ = Φ⁻¹(#{θ*_b < θ̂}/B)` reads the existing replicates,
+//! and the acceleration comes from the fixed-active-set analytic jackknife
+//! (`engine::bca` — one pivoted LDLᵀ of the active Gram per sample,
+//! `u_c = G_A⁻¹ s_A[c]`, never a per-mutation refit). The point fit `θ̂`
+//! runs through the identical [`method_exposures`] + zeroing +
+//! [`rescale_to_totals`] sequence as a boot unit, so `θ̂` and the boots
+//! share their scale by construction. Degenerate cells (the PI band
+//! `|ẑ₀| < 0.1 ∧ |â| < 0.05`, the `|â| > 0.2` cap, the stability `< 0.9`
+//! floor, boundary cells, singular active Grams) fall back to the
+//! percentile interval with an explicit flag column
+//! ([`BcaInterval::fallback`]) — their bounds are bit-identical to the
+//! percentile face.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use rayon::prelude::*;
 
+use msuiter_engine::bca;
 use msuiter_engine::error::MsError;
 use msuiter_engine::likelihood::{
     fisher_se, ln_gamma, lrt_stat, multinomial_ll_per_mutation, nb_ll, p_chisq1_lrt,
@@ -1134,6 +1155,31 @@ pub struct BootstrapOutput {
     pub n_boot: usize,
     /// AND over all boots of the per-fit method convergence.
     pub converged: bool,
+    /// BCa interval face (U-M3b-02): `Some` iff the caller passed
+    /// `bca = true` — the percentile grids above are unchanged either way
+    /// (compatibility-first wire decision).
+    pub bca: Option<BcaInterval>,
+}
+
+/// BCa interval grids of [`BootstrapOutput::bca`] (row-major k×n, same
+/// layout and scale as the percentile CI: post-zeroing, post-rescale).
+///
+/// The bounds are the type-7 quantiles of the SAME boot sample the
+/// percentile face uses, at the `engine::bca`-corrected levels (Hall 1988
+/// z₀ bias correction + fixed-active-set analytic-jackknife acceleration;
+/// zero extra resampling). `fallback[a*n+j] = 1` marks every cell that
+/// took the flagged percentile path (degenerate `|ẑ₀|/|â|` band, hard
+/// acceleration cap, stability floor, boundary cell, singular `G_A`) —
+/// those cells' bounds are bit-identical to the percentile face.
+#[derive(Debug, Clone, PartialEq)]
+pub struct BcaInterval {
+    /// Lower BCa bound per (signature, sample).
+    pub lower: Vec<f64>,
+    /// Upper BCa bound per (signature, sample).
+    pub upper: Vec<f64>,
+    /// Explicit fallback flag per (signature, sample): 1 = percentile
+    /// path taken (the memo's "回退 percentile + 显式 flag 列").
+    pub fallback: Vec<i32>,
 }
 
 /// Nonparametric (multinomial) percentile bootstrap of the whole fit
@@ -1163,6 +1209,23 @@ pub struct BootstrapOutput {
 /// (type-7 linear interpolation on the ascending-sorted boot values, the R
 /// `quantile` default — pinned by tests); [`support_stability`][BootstrapOutput::support_stability]
 /// is the kept-frequency across boots.
+///
+/// # U-M3b-02: the `bca` face
+///
+/// With `bca = true` the SAME boot sample additionally yields the BCa
+/// interval ([`BcaInterval`], zero extra resampling): the point fit is run
+/// once (the identical [`method_exposures`] + zeroing +
+/// [`rescale_to_totals`] pipeline, so `θ̂` shares the boot scale), and per
+/// sample the fixed-active-set analytic jackknife
+/// ([`bca::analytic_acceleration`]: one pivoted LDLᵀ of
+/// the active Gram, `u_c = G_A⁻¹ s_A[c]`) supplies the acceleration. The
+/// corrected levels come from [`bca::bca_levels`]; its
+/// flagged percentile fallback (degenerate `|ẑ₀| < 0.1 ∧ |â| < 0.05` band,
+/// `|â| > 0.2` cap, stability ` < 0.9` floor, boundary cells, singular
+/// active Grams) returns the nominal levels, making those cells'
+/// bounds bit-identical to the percentile face. The percentile grids and
+/// `converged` semantics are UNCHANGED by `bca` (the point fit's own
+/// convergence is reported by `ms_fit`, not duplicated here).
 #[allow(clippy::too_many_arguments)]
 pub fn bootstrap(
     counts: &[f64],
@@ -1176,6 +1239,7 @@ pub fn bootstrap(
     zero_threshold: f64,
     seed: u64,
     n_threads: usize,
+    bca: bool,
     cancelled: &AtomicBool,
     check_user_interrupt: &mut dyn FnMut(),
 ) -> Result<BootstrapOutput, MsError> {
@@ -1222,6 +1286,28 @@ pub fn bootstrap(
     // The dictionary is constant across boots: one Gram matrix shared by
     // every boot's K-format solves.
     let g = gram_from_sigs(sigs, m, k);
+
+    // U-M3b-02 BCa prelude: the point fit (θ̂ on the boot scale — the
+    // identical method_exposures + zeroing + rescale_to_totals pipeline,
+    // bit-parallel to the boot unit's inner loop) and the per-cell
+    // analytic accelerations. Skipped entirely when `bca = false`: the
+    // percentile face keeps its exact legacy cost and output.
+    let bca_prep = if bca {
+        Some(bca_prepare(
+            counts,
+            sigs,
+            m,
+            n,
+            k,
+            &g,
+            method,
+            nb_size,
+            zero_threshold,
+            &totals,
+        )?)
+    } else {
+        None
+    };
 
     // One whole boot: resample every sample on the boot's own stream,
     // then fit the resampled catalog per sample (sequential inside).
@@ -1285,11 +1371,19 @@ pub fn bootstrap(
     let per_boot = run_boots_in_chunks(n_boot, n_threads, cancelled, check_user_interrupt, unit)?;
 
     // Fixed-order reduction (no order-sensitive float accumulation): the
-    // percentile CI and support stability per (signature, sample) cell.
+    // percentile CI and support stability per (signature, sample) cell —
+    // plus, when the BCa face is on, the same sorted column fed through
+    // the corrected levels (fallback cells land on the nominal pair, so
+    // their bounds are bit-identical to the percentile face).
     let converged = per_boot.iter().all(|(_, _, c)| *c);
     let mut ci_lower = vec![0.0f64; k * n];
     let mut ci_upper = vec![0.0f64; k * n];
     let mut stability = vec![0.0f64; k * n];
+    let mut bca_out = bca_prep.as_ref().map(|_| BcaInterval {
+        lower: vec![0.0f64; k * n],
+        upper: vec![0.0f64; k * n],
+        fallback: vec![0i32; k * n],
+    });
     let mut col = vec![0.0f64; n_boot];
     for a in 0..k {
         for j in 0..n {
@@ -1301,6 +1395,21 @@ pub fn bootstrap(
             ci_upper[a * n + j] = percentile_sorted(&col, BOOTSTRAP_CI_LEVELS.1);
             let kept: usize = per_boot.iter().map(|r| r.1[a * n + j] as usize).sum();
             stability[a * n + j] = kept as f64 / n_boot as f64;
+            if let (Some(prep), Some(out)) = (bca_prep.as_ref(), bca_out.as_mut()) {
+                let idx = a * n + j;
+                let supported = prep.support[idx] == 1 && prep.usable[idx];
+                let levels = bca::bca_levels(
+                    prep.point[idx],
+                    &col,
+                    prep.accel[idx],
+                    BOOTSTRAP_CI_LEVELS,
+                    stability[idx],
+                    supported,
+                );
+                out.lower[idx] = percentile_sorted(&col, levels.alpha_lower);
+                out.upper[idx] = percentile_sorted(&col, levels.alpha_upper);
+                out.fallback[idx] = i32::from(levels.fallback);
+            }
         }
     }
     Ok(BootstrapOutput {
@@ -1309,7 +1418,97 @@ pub fn bootstrap(
         support_stability: stability,
         n_boot,
         converged,
+        bca: bca_out,
     })
+}
+
+/// BCa prelude of [`bootstrap`] (U-M3b-02): the point fit `θ̂` (post-zeroing,
+/// post-[`rescale_to_totals`] — the same op sequence as the boot unit's
+/// inner loop, so the point estimate shares the boots' scale exactly) and
+/// the per-cell fixed-active-set analytic accelerations. `usable[a*n+j]`
+/// is false wherever the influence map does not exist (boundary cell,
+/// singular active Gram, empty active set, zero-count sample) — those
+/// cells take the flagged percentile fallback downstream. Errors from the
+/// acceleration primitive never abort the face (they ARE the fallback
+/// criterion); errors from the point fit itself propagate like any boot.
+#[allow(clippy::too_many_arguments)] // mirrors the bootstrap driver's frozen scalar set
+fn bca_prepare(
+    counts: &[f64],
+    sigs: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    g: &[f64],
+    method: FitMethod,
+    nb_size: f64,
+    zero_threshold: f64,
+    totals: &[f64],
+) -> Result<BcaPrep, MsError> {
+    let b_cross = cross_from_sv(sigs, counts, m, k, n);
+    let mut point = vec![0.0f64; k * n];
+    let mut support = vec![0i32; k * n];
+    let mut accel = vec![0.0f64; k * n];
+    let mut usable = vec![false; k * n];
+    for j in 0..n {
+        let v: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
+        let b_j: Vec<f64> = (0..k).map(|a| b_cross[a * n + j]).collect();
+        let (h, _warm, mask, _conv) = method_exposures(
+            sigs,
+            m,
+            g,
+            &b_j,
+            &v,
+            k,
+            method,
+            nb_size,
+            FIT_EPS,
+            FIT_MAX_ITER,
+            zero_threshold,
+        )?;
+        // The sample's active set (support = 1 at the point fit): the
+        // fixed set the analytic jackknife reads. Collected before the
+        // rescale — the influence map is defined on the raw interior.
+        let active: Vec<usize> = (0..k).filter(|&a| !mask[a]).collect();
+        // One LDLᵀ for the whole sample: the accelerations of ALL active
+        // signatures at once (engine::bca docs). Any failure (singular
+        // G_A, empty active set, zero-count sample) only downgrades this
+        // sample's cells to the flagged percentile path.
+        let accels = bca::analytic_acceleration(g, sigs, &v, m, k, &active);
+        for a in 0..k {
+            let idx = a * n + j;
+            if mask[a] {
+                point[idx] = 0.0;
+            } else {
+                point[idx] = h[a];
+                support[idx] = 1;
+            }
+        }
+        if let Ok(accels) = accels {
+            for (p, &a) in active.iter().enumerate() {
+                accel[a * n + j] = accels[p];
+                usable[a * n + j] = true;
+            }
+        }
+    }
+    // The point exposures pass through the SAME rescale_to_totals rule as
+    // the boots (zeros stay zero; the divisor is the exposure column sum),
+    // putting θ̂ on the boot scale bit-compatibly.
+    let point = rescale_to_totals(&point, totals, n)?;
+    Ok(BcaPrep {
+        point,
+        support,
+        accel,
+        usable,
+    })
+}
+
+/// Row-major k×n struct bundle of [`bca_prepare`] (internal face; a struct
+/// freezes the four-grid shape used by the bootstrap reduction).
+struct BcaPrep {
+    point: Vec<f64>,
+    support: Vec<i32>,
+    accel: Vec<f64>,
+    usable: Vec<bool>,
 }
 
 /// Chunked parallel driver over independent boot units — the
@@ -1405,7 +1604,8 @@ fn percentile_sorted(sorted: &[f64], p: f64) -> f64 {
 //
 // Under H0 (the signature is absent in EVERY cohort sample) each
 // per-sample entry-wise statistic D_j follows the Self–Liang (1987)
-// boundary law `½·δ₀ + ½·χ²₁`, and independent catalogs make the D_j
+// large-sample boundary law `½·δ₀ + ½·χ²₁` (the mixed-step version is
+// exact; see the memo), and independent catalogs make the D_j
 // independent. The pooled statistic `D = Σ_j D_j` (the estimand —
 // independent likelihoods add) therefore has the EXACT null law
 //
@@ -2624,7 +2824,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.0, seed, threads,
-                &cancelled, &mut no_poll,
+                false, &cancelled, &mut no_poll,
             )
             .unwrap()
         };
@@ -2656,7 +2856,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 1, NB_SIZE_SBS96, 0.0, 42, 1,
-            &cancelled, &mut no_poll,
+            false, &cancelled, &mut no_poll,
         )
         .unwrap();
         let mut rng = MsRng::from_stream(42, StreamId { replicate: 0, rank: 0, fold: 0 });
@@ -2693,7 +2893,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, 2, 1, 2, FitMethod::Nnls, 9, NB_SIZE_SBS96, 0.01, 7, 2,
-            &cancelled, &mut no_poll,
+            false, &cancelled, &mut no_poll,
         )
         .unwrap();
         assert_eq!(out.n_boot, 9);
@@ -2712,7 +2912,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             let out = bootstrap(
                 &counts, &sigs, m, n, k, method, 5, NB_SIZE_SBS96, 0.01, 9, 2,
-                &cancelled, &mut no_poll,
+                false, &cancelled, &mut no_poll,
             )
             .unwrap();
             assert!(out.converged, "{method:?} boots must converge");
@@ -2774,7 +2974,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             let out = bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, n_boot, NB_SIZE_SBS96, 0.0, 77, 2,
-                &cancelled, &mut no_poll,
+                false, &cancelled, &mut no_poll,
             )
             .unwrap();
             for (idx, &truth) in h_true.iter().enumerate() {
@@ -2846,7 +3046,7 @@ mod tests {
         .unwrap();
         let boot = bootstrap(
             &counts, &sigs, m, n, 1, FitMethod::Nnls, 200, NB_SIZE_SBS96, 0.01, 77, 2,
-            &cancelled, &mut no_poll,
+            false, &cancelled, &mut no_poll,
         )
         .unwrap();
 
@@ -2876,7 +3076,7 @@ mod tests {
         let cancelled = AtomicBool::new(true);
         let err = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 2,
-            &cancelled, &mut no_poll,
+            false, &cancelled, &mut no_poll,
         )
         .unwrap_err();
         assert_eq!(err.topic, "interrupted");
@@ -2885,7 +3085,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let mut chunks = 0usize;
         let err = bootstrap(
-            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1,
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1, false,
             &cancelled,
             &mut || {
                 chunks += 1;
@@ -2902,7 +3102,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let mut polls = 0usize;
         bootstrap(
-            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1,
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1, false,
             &cancelled, &mut || polls += 1,
         )
         .unwrap();
@@ -2915,7 +3115,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let mk_boot = |n_boot: usize, nb: f64, c: &[f64]| {
             bootstrap(
-                c, &sigs, m, n, k, FitMethod::Nnls, n_boot, nb, 0.0, 1, 1, &cancelled,
+                c, &sigs, m, n, k, FitMethod::Nnls, n_boot, nb, 0.0, 1, 1, false, &cancelled,
                 &mut no_poll,
             )
         };
@@ -2949,6 +3149,238 @@ mod tests {
                 .topic,
             "argument"
         );
+    }
+
+    // ==================================================================
+    // U-M3b-02: the BCa face of the bootstrap (bca = true). The pure
+    // z₀/level/quantile arithmetic and the analytic jackknife are pinned
+    // in engine::bca's tests against R goldens; here the FACE is pinned:
+    // compat when off, the fallback flag semantics (flagged cells
+    // bit-equal the percentile face), the point-scale identity,
+    // determinism across threads, and the boundary/degenerate paths.
+    // ==================================================================
+
+    /// bca = false must leave the percentile face bit-identical to the
+    /// legacy call (compatibility-first wire decision), and bca = true
+    /// must not disturb any percentile member.
+    #[test]
+    fn bootstrap_bca_off_is_bit_identical_to_the_legacy_face() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let run = |bca: bool| {
+            let cancelled = AtomicBool::new(false);
+            bootstrap(
+                &counts, &sigs, m, n, k, FitMethod::Nnls, 13, NB_SIZE_SBS96, 0.01, 5, 1, bca,
+                &cancelled, &mut no_poll,
+            )
+            .unwrap()
+        };
+        let legacy = run(false);
+        let with_face = run(true);
+        assert!(legacy.bca.is_none());
+        assert!(with_face.bca.is_some());
+        assert_eq!(legacy.ci_lower, with_face.ci_lower);
+        assert_eq!(legacy.ci_upper, with_face.ci_upper);
+        assert_eq!(legacy.support_stability, with_face.support_stability);
+        assert_eq!(legacy.n_boot, with_face.n_boot);
+        assert_eq!(legacy.converged, with_face.converged);
+    }
+
+    #[test]
+    fn bootstrap_bca_grids_are_ordered_and_flag_consistent() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 41, NB_SIZE_SBS96, 0.01, 5, 2, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let bca = out.bca.as_ref().unwrap();
+        assert_eq!(bca.lower.len(), k * n);
+        for i in 0..k * n {
+            assert!(bca.lower[i] <= bca.upper[i], "bounds crossed at {i}");
+            assert!(bca.fallback[i] == 0 || bca.fallback[i] == 1);
+            // Flagged cells are bit-identical to the percentile face.
+            if bca.fallback[i] == 1 {
+                assert_eq!(bca.lower[i].to_bits(), out.ci_lower[i].to_bits());
+                assert_eq!(bca.upper[i].to_bits(), out.ci_upper[i].to_bits());
+            } else {
+                // Non-fallback cells necessarily cleared the stability
+                // floor (the gate would have flagged them otherwise).
+                assert!(out.support_stability[i] >= msuiter_engine::bca::BCA_STABILITY_MIN);
+            }
+        }
+    }
+
+    #[test]
+    fn bootstrap_bca_point_shares_the_boot_scale() {
+        // The θ̂ fed to z₀ is the point fit through the SAME zeroing +
+        // rescale_to_totals sequence as the boots: it must coincide with a
+        // plain fit_with(..., rescale = true) and sit inside its own BCa
+        // interval on every non-fallback (interior, stable) cell.
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 60, NB_SIZE_SBS96, 0.01, 5, 1, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let pt = fit_with(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.01, None,
+            true,
+        )
+        .unwrap();
+        let bca = out.bca.as_ref().unwrap();
+        let mut checked = 0;
+        for i in 0..k * n {
+            if bca.fallback[i] == 0 {
+                assert!(pt.exposures[i] > 0.0, "interior cell {i}");
+                assert!(bca.lower[i] <= pt.exposures[i] + 1e-6, "lower covers θ̂ at {i}");
+                assert!(bca.upper[i] >= pt.exposures[i] - 1e-6, "upper covers θ̂ at {i}");
+                checked += 1;
+            }
+        }
+        // The near-separable anchor fixture has tiny influence skew
+        // (|a| ≈ 0.005–0.015), so MOST cells honestly sit in the PI
+        // degeneracy band and fall back; sample 0's cells (seed 5, 60
+        // boots) clear z₀ ≥ 0.1 and stay on the BCa path. Pin both sides
+        // of that split deterministically.
+        assert!(checked >= 1, "at least one cell must stay on the BCa path");
+        assert!(checked < k * n, "fixture must exercise the fallback too");
+    }
+
+    #[test]
+    fn bootstrap_bca_boundary_cells_take_the_flagged_percentile_path() {
+        // All mass on channel 0: signature 1 is exactly zero at the point
+        // fit (boundary parameter — no influence map), so its cell takes
+        // the flagged fallback and its bounds ARE the percentile bounds.
+        // Signature 0's cell degenerates to identical boots (all 100) and
+        // stays finite through the clamped-z₀ BCa path.
+        let sigs = [1.0, 0.0, 0.0, 1.0];
+        let counts = [100.0, 0.0];
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, 2, 1, 2, FitMethod::Nnls, 9, NB_SIZE_SBS96, 0.01, 7, 1, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let bca = out.bca.as_ref().unwrap();
+        assert_eq!(bca.fallback[1], 1, "boundary cell must be flagged");
+        assert_eq!(bca.lower[1].to_bits(), out.ci_lower[1].to_bits());
+        assert_eq!(bca.upper[1].to_bits(), out.ci_upper[1].to_bits());
+        assert_eq!(bca.lower[1], 0.0);
+        assert_eq!(bca.upper[1], 0.0);
+        // The kept cell: finite, ordered, collapsed onto the point.
+        assert!(bca.lower[0] <= bca.upper[0]);
+        assert!((bca.lower[0] - 100.0).abs() <= 1e-8);
+        assert!((bca.upper[0] - 100.0).abs() <= 1e-8);
+    }
+
+    #[test]
+    fn bootstrap_bca_is_deterministic_and_thread_invariant() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let run = |threads: usize| {
+            let cancelled = AtomicBool::new(false);
+            bootstrap(
+                &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.01, 11, threads,
+                true, &cancelled, &mut no_poll,
+            )
+            .unwrap()
+        };
+        let a = run(1);
+        let b = run(4);
+        assert_eq!(a.bca, b.bca, "bca grids must be bit-identical across threads");
+        // A different seed moves at least one BCa bound (resampling live).
+        let cancelled = AtomicBool::new(false);
+        let c = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.01, 12, 1, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        assert_ne!(a.bca, c.bca);
+    }
+
+    #[test]
+    fn bootstrap_bca_survives_all_three_methods() {
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        for method in [FitMethod::Nnls, FitMethod::LikelihoodBidirectional, FitMethod::Lrt] {
+            let cancelled = AtomicBool::new(false);
+            let out = bootstrap(
+                &counts, &sigs, m, n, k, method, 15, NB_SIZE_SBS96, 0.01, 9, 2, true,
+                &cancelled, &mut no_poll,
+            )
+            .unwrap();
+            let bca = out.bca.as_ref().expect("bca face present");
+            for i in 0..k * n {
+                assert!(bca.lower[i] <= bca.upper[i]);
+                if bca.fallback[i] == 1 {
+                    assert_eq!(bca.lower[i].to_bits(), out.ci_lower[i].to_bits());
+                    assert_eq!(bca.upper[i].to_bits(), out.ci_upper[i].to_bits());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bootstrap_bca_accelerations_land_in_the_documented_regime() {
+        // On the well-conditioned fixture every kept cell's acceleration
+        // (recomputed here through the engine primitive on the point fit's
+        // active set) is finite, inside the hard cap, and its non-fallback
+        // bounds are ordered — the face never needs the emergency paths.
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, 25, NB_SIZE_SBS96, 0.01, 5, 1, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let bca = out.bca.as_ref().unwrap();
+        let g = gram_from_sigs(&sigs, m, k);
+        let b_cross = cross_from_sv(&sigs, &counts, m, k, n);
+        for j in 0..n {
+            let v: Vec<f64> = (0..m).map(|i| counts[i * n + j]).collect();
+            let b_j: Vec<f64> = (0..k).map(|a| b_cross[a * n + j]).collect();
+            let (_h, _w, mask, _) = method_exposures(
+                &sigs, m, &g, &b_j, &v, k, FitMethod::Nnls, NB_SIZE_SBS96, FIT_EPS, FIT_MAX_ITER,
+                0.01,
+            )
+            .unwrap();
+            let active: Vec<usize> = (0..k).filter(|&a| !mask[a]).collect();
+            let accels = bca::analytic_acceleration(&g, &sigs, &v, m, k, &active).unwrap();
+            for (p, &a) in active.iter().enumerate() {
+                let idx = a * n + j;
+                assert!(accels[p].is_finite() && accels[p].abs() <= bca::BCA_A_MAX);
+                if bca.fallback[idx] == 0 {
+                    assert!(bca.lower[idx] <= bca.upper[idx]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn bootstrap_bca_empty_sample_falls_back_cleanly() {
+        // Sample 2 is empty (zero counts): no jackknife and no boot
+        // variation — its cells take the flagged percentile path and stay
+        // exactly 0 (the rescale-to-zero column), never NaN.
+        let sigs = [1.0, 0.0, 0.0, 1.0];
+        let counts = [50.0, 0.0, 0.0, 0.0]; // column-major m×n read: [50,0 | 0,0]
+        let cancelled = AtomicBool::new(false);
+        let out = bootstrap(
+            &counts, &sigs, 2, 2, 2, FitMethod::Nnls, 7, NB_SIZE_SBS96, 0.01, 7, 1, true,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+        let bca = out.bca.as_ref().unwrap();
+        for i in 0..4 {
+            assert!(bca.lower[i].is_finite() && bca.upper[i].is_finite());
+            assert!(bca.lower[i] <= bca.upper[i]);
+        }
+        // The empty sample's cells: zero and flagged.
+        for a in 0..2 {
+            let idx = a * 2 + 1;
+            assert_eq!(bca.fallback[idx], 1, "empty-sample cell {idx} must be flagged");
+            assert_eq!(bca.lower[idx], 0.0);
+            assert_eq!(bca.upper[idx], 0.0);
+        }
     }
 
     #[test]

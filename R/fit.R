@@ -553,6 +553,19 @@ S7::method(ms_fit, S7::class_any) <- function(catalog, signatures, method = "nnl
 #' @param n_threads NULL (resolve the `msuiter.threads` option, capped by
 #'   `_R_CHECK_LIMIT_CORES_`) or a single non-negative integer pool size;
 #'   0 means the rayon default.
+#' @param bca Single logical (default `FALSE`): additionally compute the
+#'   **BCa interval** (bias-corrected and accelerated; Hall 1988) from the
+#'   SAME replicates -- zero extra resampling. `z0 = Phi^{-1}(#{boot <
+#'   point}/B)` corrects median bias and the acceleration comes from the
+#'   fixed-active-set analytic jackknife (one LDL^T per sample, not a
+#'   per-mutation refit). Cells whose correction is below the MC noise of
+#'   the bounds (`|z0| < 0.1` and `|a| < 0.05`), past the acceleration
+#'   cap (`|a| > 0.2`), below the stability floor (`< 0.9`), or at the
+#'   zeroing boundary fall back to the percentile interval with an
+#'   explicit flag. When `TRUE`, the exposures carry `bca_lower`,
+#'   `bca_upper`, `bca_fallback` (labelled matrices; fallback = 1) and
+#'   `ci_method = "bca"` attributes, and the support table gains a
+#'   `bca_fallback` column. The percentile attributes are unchanged.
 #'
 #' @details
 #' **Result.** An [MsFit] whose point exposures/tests are one ordinary
@@ -576,7 +589,7 @@ ms_fit_bootstrap <- S7::new_generic(
   "ms_fit_bootstrap",
   "catalog",
   function(catalog, signatures, method = "nnls", n_boot = 200, seed = 1,
-           nb_size = 8, zero_threshold = 0.01, n_threads = NULL)
+           nb_size = 8, zero_threshold = 0.01, n_threads = NULL, bca = FALSE)
     S7::S7_dispatch()
 )
 
@@ -586,17 +599,28 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
                                                     method = "nnls", n_boot = 200,
                                                     seed = 1, nb_size = 8,
                                                     zero_threshold = 0.01,
-                                                    n_threads = NULL) {
+                                                    n_threads = NULL,
+                                                    bca = FALSE) {
   prep <- .ms_fit_prepare_dictionary(catalog, signatures)
   .ms_fit_gate_fit_args(method, nb_size, zero_threshold)
   .ms_fit_gate_boot(n_boot, seed)
+  if (!is.logical(bca) || length(bca) != 1L || is.na(bca)) {
+    msuiter_abort(
+      "input",
+      "bca must be a single TRUE or FALSE",
+      i = paste("bca = TRUE adds the bias-corrected and accelerated (BCa)",
+        "interval computed from the SAME replicates (no extra resampling)"),
+      j = paste0("received: ", msuiter_quote_trunc(bca)),
+      c = "leave the default FALSE for the percentile interval only"
+    )
+  }
   n_threads_resolved <- .ms_resolve_threads(n_threads)
 
   # Point fit (the ms_fit face; identical grids) + the bootstrap CI.
   point <- .ms_fit_rust(prep$counts, prep$signatures, method, nb_size,
     .ms_fit_defaults$eps, .ms_fit_defaults$max_iter, zero_threshold)
   boot <- .ms_fit_bootstrap_rust(prep$counts, prep$signatures, method, n_boot,
-    nb_size, zero_threshold, seed, n_threads_resolved)
+    nb_size, zero_threshold, seed, n_threads_resolved, bca)
 
   # --- assembly: the ms_fit conventions + CI attributes --------------------
   samples <- catalog@samples
@@ -615,6 +639,16 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
   attr(exposures, "n_boot") <- boot$n_boot
   attr(exposures, "seed") <- as.integer(seed)
   attr(exposures, "ci_level") <- c(lower = 0.025, upper = 0.975)
+  # U-M3b-02: the BCa face rides along as ADDITIONAL attributes (the
+  # percentile attributes above are unchanged -- compatibility first);
+  # fallback = 1 marks cells on the flagged percentile path, whose BCa
+  # bounds are bit-identical to the percentile bounds.
+  if (bca) {
+    attr(exposures, "bca_lower") <- labelled(boot$bca_lower)
+    attr(exposures, "bca_upper") <- labelled(boot$bca_upper)
+    attr(exposures, "bca_fallback") <- labelled(boot$bca_fallback)
+    attr(exposures, "ci_method") <- "bca"
+  }
 
   n_samples <- length(samples)
   k <- length(prep$labels)
@@ -632,6 +666,9 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
     boot_stability = as.vector(boot$support_stability),
     stringsAsFactors = FALSE
   )
+  if (bca) {
+    support$bca_fallback <- as.logical(as.vector(boot$bca_fallback))
+  }
   se_vec <- as.vector(point$se)
   se_vec[is.nan(se_vec)] <- NA_real_ # boundary: no interval, only tests
   tests <- data.frame(
@@ -666,7 +703,8 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
                                                         method = "nnls", n_boot = 200,
                                                         seed = 1, nb_size = 8,
                                                         zero_threshold = 0.01,
-                                                        n_threads = NULL) {
+                                                        n_threads = NULL,
+                                                        bca = FALSE) {
   msuiter_abort(
     "input",
     "catalog must be an MsCatalog object",
@@ -801,17 +839,28 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 #' @keywords internal
 #' @noRd
 .ms_fit_bootstrap_rust <- function(counts, signatures, method, n_boot, nb_size,
-                                   zero_threshold, seed, threads = NULL) {
+                                   zero_threshold, seed, threads = NULL,
+                                   bca = FALSE) {
   counts <- .ms_validate_matrix(counts, "counts")
   signatures <- .ms_validate_matrix(signatures, "signatures")
   .ms_fit_gate_method(method)
   .ms_fit_gate_nb_size(nb_size)
   .ms_fit_gate_zero_threshold(zero_threshold)
   .ms_fit_gate_boot(n_boot, seed)
+  if (!is.logical(bca) || length(bca) != 1L || is.na(bca)) {
+    msuiter_abort(
+      "input",
+      "bca must be a single TRUE or FALSE",
+      i = paste("bca = TRUE adds the bias-corrected and accelerated (BCa)",
+        "interval computed from the SAME replicates (no extra resampling)"),
+      j = paste0("received: ", msuiter_quote_trunc(bca)),
+      c = "leave the default FALSE for the percentile interval only"
+    )
+  }
   n_threads <- .ms_resolve_threads(threads)
   .msffi_check(ms_fit_bootstrap_rust(
     t(counts), t(signatures), method, as.integer(n_boot), as.numeric(nb_size),
-    as.numeric(zero_threshold), as.integer(seed), n_threads
+    as.numeric(zero_threshold), as.integer(seed), n_threads, bca
   ))
 }
 

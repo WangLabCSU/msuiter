@@ -220,6 +220,84 @@ test_that("bootstrap error paths are structured msuiter_error_* conditions", {
   expect_ms_error(ms_fit_bootstrap(fx$catalog, fx$sigs, nb_size = 0), "input")
 })
 
+# ---------------------------------------------------------------------------
+# U-M3b-02: the BCa face (bca = TRUE). The z0 / level-correction / type-7
+# arithmetic and the fixed-active-set analytic jackknife are pinned
+# Rust-side against R goldens (engine::bca tests, the Exp(1)-mean classic
+# cross-checked against boot::boot.ci); here the R FACE is pinned: the
+# additional attributes, the fallback flag semantics (flagged cells
+# bit-identical to the percentile face), the support-table column, the
+# default-off compatibility, and the validation path.
+# ---------------------------------------------------------------------------
+
+test_that("bca = TRUE adds BCa attributes with percentile-bit-identical fallbacks", {
+  fx <- .ms_boot_fixture()
+  boot <- ms_fit_bootstrap(fx$catalog, fx$sigs, method = "nnls", n_boot = 60,
+    seed = 5, bca = TRUE)
+  ex <- boot@exposures
+  expect_identical(attr(ex, "ci_method"), "bca")
+  bca_low <- attr(ex, "bca_lower")
+  bca_up <- attr(ex, "bca_upper")
+  fb <- attr(ex, "bca_fallback")
+  pct_low <- attr(ex, "ci_lower")
+  pct_up <- attr(ex, "ci_upper")
+  expect_identical(dimnames(bca_low), dimnames(ex))
+  expect_identical(dimnames(bca_up), dimnames(ex))
+  expect_identical(dimnames(fb), dimnames(ex))
+  expect_true(all(fb == 0L | fb == 1L))
+  expect_true(all(bca_low <= bca_up))
+  # Flagged cells (fallback = 1) are bit-identical to the percentile face.
+  flag <- fb == 1L
+  expect_identical(bca_low[flag], pct_low[flag])
+  expect_identical(bca_up[flag], pct_up[flag])
+  # On this separable fixture both paths are exercised (fixed seed):
+  # most cells sit in the degenerate band, near-pure group 1 clears z0.
+  expect_true(any(flag), info = "fallback cells exist")
+  expect_true(any(!flag), info = "BCa cells exist")
+  # Non-fallback cells cleared the stability floor by construction.
+  stab <- attr(ex, "support_stability")
+  expect_true(all(stab[!flag] >= 0.9))
+  # The BCa bounds differ from the percentile bounds on the BCa cells
+  # (the corrected levels moved the interval on the skewed path).
+  expect_true(any(bca_low[!flag] != pct_low[!flag]) ||
+    any(bca_up[!flag] != pct_up[!flag]))
+  # The support table carries the flag as a logical column mirroring the
+  # attribute grid.
+  expect_named(boot@support, c("signature", "sample", "exposure", "share",
+    "active", "boot_stability", "bca_fallback"))
+  expect_identical(
+    as.logical(as.vector(fb)),
+    boot@support$bca_fallback
+  )
+  # The percentile attributes are unchanged by bca = TRUE.
+  ref <- ms_fit_bootstrap(fx$catalog, fx$sigs, method = "nnls", n_boot = 60,
+    seed = 5)
+  expect_identical(pct_low, attr(ref@exposures, "ci_lower"))
+  expect_identical(pct_up, attr(ref@exposures, "ci_upper"))
+  expect_identical(stab, attr(ref@exposures, "support_stability"))
+})
+
+test_that("bca = FALSE stays on the legacy wire format", {
+  fx <- .ms_boot_fixture()
+  boot <- ms_fit_bootstrap(fx$catalog, fx$sigs, method = "nnls", n_boot = 12,
+    seed = 3, bca = FALSE)
+  ex <- boot@exposures
+  expect_null(attr(ex, "bca_lower"))
+  expect_null(attr(ex, "bca_upper"))
+  expect_null(attr(ex, "bca_fallback"))
+  expect_null(attr(ex, "ci_method"))
+  expect_named(boot@support, c("signature", "sample", "exposure", "share",
+    "active", "boot_stability"))
+})
+
+test_that("bca validation: non-logical values are structured input errors", {
+  fx <- .ms_boot_fixture()
+  expect_ms_error(ms_fit_bootstrap(fx$catalog, fx$sigs, bca = "yes"), "input")
+  expect_ms_error(ms_fit_bootstrap(fx$catalog, fx$sigs, bca = NA), "input")
+  expect_ms_error(ms_fit_bootstrap(fx$catalog, fx$sigs, bca = c(TRUE, FALSE)),
+    "input")
+})
+
 test_that("presence test (catalog face) separates present from absent signatures", {
   fx <- .ms_boot_fixture()
   pres <- ms_test_presence(fx$catalog, fx$sigs)

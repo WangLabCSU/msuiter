@@ -755,6 +755,7 @@ fn ms_fit_bootstrap_rust(
     zero_threshold: f64,
     seed: i32,
     n_threads: i32,
+    bca: bool,
 ) -> Robj {
     condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
         // Argument guards (contract 4): explicit, error-not-panic. The
@@ -816,21 +817,29 @@ fn ms_fit_bootstrap_rust(
             zero_threshold,
             seed as u64,
             n_threads as usize,
+            bca,
             &cancelled,
             &mut boundary,
         )?;
 
         // Wire shape (contract 2, column-major k×n grids). Documented
         // compressed choice: CI summaries, not the raw n_boot × k × n cube
-        // (fit.rs module docs, U-M3a-03).
+        // (fit.rs module docs, U-M3a-03). U-M3b-02: with `bca = true` the
+        // BCa grids ride along as ADDITIONAL list members (compatibility
+        // first — the percentile members and their semantics are
+        // unchanged either way); with `bca = false` the list is exactly
+        // the legacy wire format.
         let kk = k;
         let nn = n;
         let col_major_f64 =
             |grid: &[f64]| extendr_api::wrapper::RMatrix::new_matrix(kk, nn, |r, c| grid[r * nn + c]);
+        let col_major_i32 = |grid: &[i32]| {
+            extendr_api::wrapper::RMatrix::new_matrix(kk, nn, |r, c| grid[r * nn + c])
+        };
         let ci_lower = col_major_f64(&out.ci_lower);
         let ci_upper = col_major_f64(&out.ci_upper);
         let stability = col_major_f64(&out.support_stability);
-        let pairs = vec![
+        let mut pairs = vec![
             ("ci_lower", Robj::from(ci_lower)),
             ("ci_upper", Robj::from(ci_upper)),
             ("support_stability", Robj::from(stability)),
@@ -838,6 +847,14 @@ fn ms_fit_bootstrap_rust(
             ("method", Robj::from(method.as_str())),
             ("converged", Robj::from(out.converged)),
         ];
+        if let Some(bca) = &out.bca {
+            let bca_lower = col_major_f64(&bca.lower);
+            let bca_upper = col_major_f64(&bca.upper);
+            let bca_fallback = col_major_i32(&bca.fallback);
+            pairs.push(("bca_lower", Robj::from(bca_lower)));
+            pairs.push(("bca_upper", Robj::from(bca_upper)));
+            pairs.push(("bca_fallback", Robj::from(bca_fallback)));
+        }
         Ok(Robj::from(List::from_pairs(pairs)))
     })())
 }
