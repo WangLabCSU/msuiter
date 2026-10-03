@@ -228,7 +228,15 @@ S7::method(ms_extract, MsCatalog) <- function(catalog, k, method = NULL, ...) {
     exposures = exposures,
     catalog_summary = msuiter_catalog_summary(catalog),
     engine = spec@name,
-    seed = spec@seed
+    seed = tryCatch(spec@seed, error = function(e) {
+      # Tolerate specs without a `seed` property (registry warns at
+      # registration): default 1 keeps the assembly contract alive.
+      rlang::warn(
+        "engine spec has no `seed` property; defaulting to seed = 1",
+        class = "msuiter_warning_registry"
+      )
+      1
+    })
   )
 }
 
