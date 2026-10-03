@@ -61,8 +61,10 @@ Contract notes on the properties:
   defaults fail validation or disagree with the registry key.
 * `seed` is required for `mode = "extract"` engines: the `ms_extract()`
   assembly records the spec's `seed` on the returned `MsSignature` for
-  provenance. A spec class without a `seed` property will fail late, inside
-  the assembly — declare it even if your algorithm is fully deterministic.
+  provenance. A spec class without a `seed` property does not stop the
+  assembly: it degrades to a registry warning and the `seed = 1` default —
+  declare the property anyway so your provenance is real, even if your
+  algorithm is fully deterministic.
 * `deterministic = TRUE` is a promise: same inputs, same output, independent
   of thread count. The engine below owns its RNG draws (seeded) and is pure R,
   so the promise is easy to keep.

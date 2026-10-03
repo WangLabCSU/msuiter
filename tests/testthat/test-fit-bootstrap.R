@@ -89,19 +89,86 @@ test_that("ms_fit_bootstrap returns an MsFit whose CI covers the truth", {
   # Coverage: the truth lies inside the percentile CI for the dominant
   # near-pure cells (strong signal; the Rust suite pins the 95%-level
   # calibration on simulated experiments, this is the end-to-end guard).
+  # The audited P1-B rescale puts the boots on the point fit's totals
+  # scale, which moves the percentile bounds by sub-percent factors
+  # (dividing each replicate by its own exposure column sum removes the
+  # resample-total noise), so the smoke guard carries a 0.2% tolerance.
   truth_h <- fx$truth$h
   for (j in 1:4) { # the two near-pure groups
     dom <- if (j <= 2L) "SIGa" else "SIGb"
     a <- match(dom, c("SIGa", "SIGb"))
     # Coverage: truth inside the percentile interval.
-    expect_lte(ci_low[a, j], truth_h[a, j])
-    expect_gte(ci_up[a, j], truth_h[a, j])
+    expect_lte(ci_low[a, j], truth_h[a, j] * (1 + 2e-3))
+    expect_gte(ci_up[a, j], truth_h[a, j] * (1 - 2e-3))
     expect_identical(stab[a, j], 1) # every replicate keeps the dominant exposure
   }
   # The support table's boot_stability mirrors the attribute grid.
   stab_lookup <- boot@support$boot_stability[
     boot@support$signature == "SIGa" & boot@support$sample == "F01"]
   expect_identical(stab_lookup, stab["SIGa", "F01"])
+})
+
+test_that("underfit dictionary: the CI shares the point fit's rescale scale", {
+  # Audited P1-B regression: the generative truth has two signatures but
+  # the dictionary offers only SIGa, so the raw NNLS exposure column sums
+  # are NOT the sample totals. The point fit's rescale=TRUE divides by the
+  # EXPOSURE column sum and lands on the totals scale; the first fix
+  # attempt divided the boots by the resample COUNT column sum, which
+  # equals totals[j] by multinomial construction -- an identity that left
+  # the CI on the raw method scale, far below the point exposures. The
+  # boots now pass through the same rescale_to_totals rule, so every point
+  # estimate must sit inside its own percentile CI (6/6 cells) and each CI
+  # bound must be on the totals scale (with k = 1 and no zeroing, the only
+  # identifiable truth is the per-sample total, so the honest percentile
+  # CI degenerates to that total).
+  withr::with_seed(11, {
+    m <- 24L
+    n <- 6L
+    w <- matrix(0, nrow = m, ncol = 2)
+    for (s in 1:2) {
+      col <- rep(0, m)
+      idx <- ((s - 1L) * 12L + 1L):(s * 12L)
+      col[idx] <- 0.5 + runif(12L)
+      w[, s] <- col / sum(col)
+    }
+    h_true <- rbind(
+      SIGa = c(600, 300, 900, 200, 450, 700),
+      SIGb = c(250, 200, 350, 150, 300, 280)
+    )
+    counts <- round(w %*% h_true)
+  })
+  labels <- sprintf("CH%02d", seq_len(m))
+  samples <- sprintf("F%02d", seq_len(n))
+  dimnames(counts) <- list(labels, samples)
+  catalog <- ms_catalog(
+    counts = counts,
+    channels = list(name = "SYN24", labels = labels),
+    samples = samples,
+    provenance = list(genome = "SYN-true")
+  )
+  siga <- w[, 1, drop = FALSE]
+  dimnames(siga) <- list(labels, "SIGa")
+
+  point <- ms_fit(catalog, siga, method = "nnls", rescale = TRUE)
+  boot <- ms_fit_bootstrap(catalog, siga, method = "nnls", n_boot = 50, seed = 3)
+  totals <- colSums(counts)
+  ci_low <- attr(boot@exposures, "ci_lower")
+  ci_up <- attr(boot@exposures, "ci_upper")
+
+  # The point fit is on the totals scale (the rescale conserves the kept
+  # column; a single kept signature carries the whole column).
+  expect_equal(as.numeric(point@exposures), as.numeric(totals), tolerance = 1e-8)
+  for (j in seq_len(n)) {
+    # The point estimate lies inside its own percentile CI (6/6 cells;
+    # tolerance absorbs the ulp-level rounding of the two rescale paths).
+    expect_lte(ci_low[1, j], point@exposures[1, j] + 1e-6 * totals[j])
+    expect_gte(ci_up[1, j], point@exposures[1, j] - 1e-6 * totals[j])
+  }
+  # The CI bounds are on the totals scale, not the raw NNLS scale (the raw
+  # sums sit far below the totals under this dictionary; before the fix
+  # the CI sat there too).
+  expect_equal(as.numeric(ci_low), as.numeric(totals), tolerance = 1e-6)
+  expect_equal(as.numeric(ci_up), as.numeric(totals), tolerance = 1e-6)
 })
 
 test_that("bootstrap is seed-deterministic and thread-invariant end to end", {

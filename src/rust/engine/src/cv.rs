@@ -49,7 +49,7 @@
 //!    i.e. the lowest rank on ties. `MSErr = sqrt(CV.te/M)` with `M = NR·NC`;
 //!    the training analog divides by `M·(Kfold − 1)` (the total number of
 //!    training cells across folds).
-//! 5. **Stream layout** (memo §2.4, frozen): unit `(rank, fold, seed_idx)`
+//! 7. **Stream layout** (memo §2.4, frozen): unit `(rank, fold, seed_idx)`
 //!    draws its initializer from
 //!    `StreamId { replicate: seed_idx, rank, fold: 1-based fold }` of the
 //!    canonical layout v1 — W row-major first, then H row-major, open-interval

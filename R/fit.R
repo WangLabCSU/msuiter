@@ -562,7 +562,10 @@ S7::method(ms_fit, S7::class_any) <- function(catalog, signatures, method = "nnl
 #' `n_boot`, `seed` and `ci_level` attributes, and the `support` table
 #' gains the `boot_stability` column. The percentile bounds are computed
 #' kernel-side with type-7 linear interpolation (the R `quantile` default)
-#' over the post-zeroing replicate exposures.
+#' over the post-zeroing replicate exposures, each replicate rescaled onto
+#' its sample's original mutation total by the same rule as the point
+#' fit's `rescale = TRUE` (the divisor is the replicate's exposure column
+#' sum), so the CI is directly comparable to the point exposures.
 #'
 #' @return An [MsFit] object with bootstrap CI attributes.
 #'

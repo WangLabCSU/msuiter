@@ -104,7 +104,10 @@
 //!   stream `StreamId { replicate: b, rank: 0, fold: 0 }` (the
 //!   `resample.rs` batch layout; the n per-sample draws consume the stream
 //!   sequentially in fixed sample order). Each resampled catalog is fitted
-//!   with the selected method; across boots this yields the 2.5/97.5
+//!   with the selected method and rescaled onto the sample's original
+//!   mutation total (the same [`rescale_to_totals`] rule as the point
+//!   fit's `rescale = TRUE`, so the CI shares the point scale); across
+//!   boots this yields the 2.5/97.5
 //!   percentile CI and the support stability (frequency of `support = 1`).
 //!   Parallelism exists ONLY between boots (contract 6 independent units,
 //!   chunk-boundary interrupt polling per the `replicates.rs` skeleton);
@@ -1109,6 +1112,10 @@ pub const BOOTSTRAP_CI_LEVELS: (f64, f64) = (0.025, 0.975);
 
 /// Output of [`bootstrap`]. All grids are **row-major k×n** (signatures ×
 /// samples); the FFI adapter transposes them into column-major R matrices.
+/// The CI grids live on the point fit's `rescale = TRUE` scale (each boot's
+/// kept exposures sum to the sample's original mutation total — audited
+/// P1-B), so percentile intervals are directly comparable to the point
+/// exposures.
 ///
 /// Documented wire-format decision: the COMPRESSED CI summary is returned,
 /// not the raw `n_boot × k × n` exposure cube — deterministic given the
@@ -1140,7 +1147,13 @@ pub struct BootstrapOutput {
 /// stream sequentially in fixed sample order, so a boot is a pure function
 /// of `(seed, b, counts)`). The resampled catalog is fitted per sample with
 /// the selected method via [`method_exposures`] (post-zeroing exposures +
-/// support). Parallelism exists ONLY between boots: they are the
+/// support), and every boot then passes through the SAME
+/// [`rescale_to_totals`] rule as the point fit's `rescale = TRUE` (the
+/// divisor is the boot exposure column sum Σ_a h, not the resample counts
+/// column sum — the latter equals `totals[j]` by multinomial construction,
+/// so normalizing by it would be an identity and leave the boots on the
+/// method's raw scale; audited P1-B). Parallelism exists ONLY between
+/// boots: they are the
 /// independent units of contract 6, scheduled in chunks with main-thread
 /// boundary interrupt polling (the `replicates.rs` skeleton, copied
 /// locally — see [`run_boots_in_chunks`]); each boot is a single-threaded
@@ -1254,19 +1267,18 @@ pub fn bootstrap(
                     support[idx] = 1;
                 }
             }
-            // Audited P1 fix: renormalize each boot exposure column to the
-            // ORIGINAL sample totals[j] so boots live on the same scale as
-            // the point fit's rescale=TRUE exposures (the resample column
-            // sums equal totals[j] by construction, and a bare multiply
-            // double-scales — first fix attempt taught this). Zeros stay
-            // zero; percentile order per column is unchanged by the shared
-            // positive factor.
-            let col_sum: f64 = (0..m).map(|i| boot[i * n + j]).sum();
-            let scale = if col_sum > 0.0 { totals[j] / col_sum } else { 0.0 };
-            for a in 0..k {
-                exposures[a * n + j] *= scale;
-            }
         }
+        // Audited P1 fix (third attempt; the first multiplied by totals[j]
+        // outright — double-scaling — and the second divided by the resample
+        // COUNT column sum, which is totals[j] by multinomial construction
+        // and therefore an identity): every boot passes through the SAME
+        // [`rescale_to_totals`] rule as the point fit's `rescale = TRUE` —
+        // the divisor is the boot EXPOSURE column sum Σ_a h, which under a
+        // misfit dictionary is NOT totals[j], so this is a real rescale that
+        // puts the boots on the point fit's count scale. Zeros stay zero; a
+        // zero-sum column stays all-zero; percentile order per column is
+        // unchanged by the shared positive factor.
+        let exposures = rescale_to_totals(&exposures, &totals, n)?;
         Ok((exposures, support, converged))
     };
 
@@ -2657,9 +2669,14 @@ mod tests {
                 boot[i * n + j] = draws[i] as f64;
             }
         }
-        let pt = fit(&boot, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0)
-            .unwrap();
-        // Bit-identical: the boot unit runs the exact same op sequence.
+        // Bit-identical: the boot unit runs the exact same op sequence —
+        // the plain NNLS fit of the resampled catalog followed by the SAME
+        // rescale_to_totals post-step the point fit's rescale=TRUE applies
+        // (audited P1-B: boots share the point scale).
+        let pt = fit_with(
+            &boot, &sigs, m, n, k, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.0, None, true,
+        )
+        .unwrap();
         assert_eq!(out.ci_lower, pt.exposures);
         assert_eq!(out.ci_upper, pt.exposures);
         assert_eq!(out.support_stability.len(), k * n);
@@ -2769,6 +2786,87 @@ mod tests {
         }
         let cov = covered as f64 / total as f64;
         assert!((0.88..=0.995).contains(&cov), "pooled coverage {cov} over {total} cells");
+    }
+
+    #[test]
+    fn bootstrap_ci_shares_the_point_fit_scale_under_a_misfit_dictionary() {
+        // Audited P1-B regression: the generative truth has two signatures
+        // but the dictionary offers only SIGa, so the NNLS raw exposure
+        // column sums are NOT the sample totals (the unreached channels
+        // carry mass the dictionary cannot absorb). The point fit's
+        // `rescale = TRUE` divides by the EXPOSURE column sum and lands on
+        // the totals scale; before the fix the boots normalized by the
+        // resample COUNT column sum — totals[j] by multinomial
+        // construction, hence an identity — and stayed on the raw method
+        // scale, putting every point estimate far above its own CI. The
+        // boots now pass through the same `rescale_to_totals` rule, so
+        // every cell's point estimate must sit inside its percentile CI
+        // and each boot column must conserve the sample total (with k = 1
+        // and no zeroing the only identifiable truth is the per-sample
+        // total, so the degenerate CI at the total is the honest answer).
+        let (m, n) = (12usize, 6usize);
+        let mut rng = MsRng::from_stream(0xF17, StreamId { replicate: 3, rank: 1, fold: 0 });
+        let mut truth = vec![0.0f64; m * 2];
+        for a in 0..2usize {
+            let mut col: Vec<f64> = (0..m)
+                .map(|i| if i / 6 == a { 0.5 + uniform(&mut rng) } else { 0.0 })
+                .collect();
+            let s: f64 = col.iter().sum();
+            for x in col.iter_mut() {
+                *x /= s;
+            }
+            for i in 0..m {
+                truth[i * 2 + a] = col[i];
+            }
+        }
+        // Both signatures contribute substantial mass in every sample, so
+        // the single-signature dictionary can never absorb the truth.
+        let h_true = [
+            600.0, 300.0, 900.0, 200.0, 450.0, 700.0, // SIGa, row-major k×n
+            250.0, 200.0, 350.0, 150.0, 300.0, 280.0, // SIGb (not in the dictionary)
+        ];
+        let mut counts = vec![0.0f64; m * n];
+        for i in 0..m {
+            for a in 0..2usize {
+                for j in 0..n {
+                    counts[i * n + j] += truth[i * 2 + a] * h_true[a * n + j];
+                }
+            }
+        }
+        let counts: Vec<f64> = counts.iter().map(|x| x.floor()).collect();
+        let sigs: Vec<f64> = (0..m).map(|i| truth[i * 2]).collect(); // SIGa only
+        let totals: Vec<f64> =
+            (0..n).map(|j| (0..m).map(|i| counts[i * n + j]).sum()).collect();
+
+        let cancelled = AtomicBool::new(false);
+        let point = fit_with(
+            &counts, &sigs, m, n, 1, FitMethod::Nnls, NB_SIZE_SBS96, 0.001, 1000, 0.01, None,
+            true,
+        )
+        .unwrap();
+        let boot = bootstrap(
+            &counts, &sigs, m, n, 1, FitMethod::Nnls, 200, NB_SIZE_SBS96, 0.01, 77, 2,
+            &cancelled, &mut no_poll,
+        )
+        .unwrap();
+
+        for (j, &t) in totals.iter().enumerate() {
+            let h = point.exposures[j];
+            assert!(
+                (h - t).abs() <= 1e-6 * t,
+                "point column {j} must be rescaled onto the total: {h} vs {t}"
+            );
+            // The fix's headline invariant: the point estimate lies inside
+            // its own percentile CI (6/6 cells; the epsilon absorbs the
+            // ulp-level rounding of the two rescale arithmetic paths).
+            let tol = 1e-6 * t;
+            assert!(
+                boot.ci_lower[j] <= h + tol && h - tol <= boot.ci_upper[j],
+                "point {h} outside CI [{}, {}] in column {j}",
+                boot.ci_lower[j],
+                boot.ci_upper[j]
+            );
+        }
     }
 
     #[test]

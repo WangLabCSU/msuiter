@@ -54,11 +54,13 @@
 //!
 //! **Mass accounting (the two outputs measure different things).** The
 //! allocation is mass-conserving per cell: `Σ_s c[i,j,s] = v[i,j]` whenever
-//! `(WH)[i,j] >= KL_EPS` — below the floor the ε-guard rescales the cell to
-//! `v·(WH)/KL_EPS` (audited P2-1: in that band the allocation under-counts
-//! and allocation + residual can sum to ~2v; the residual is a diagnostic
-//! outside the allocation) — every observed mutation still receives a
-//! fractional signature
+//! `(WH)[i,j] >= KL_EPS`. Exactly-zero reconstructions allocate exactly 0
+//! (the full cell moves to the unassigned residual). In the open band
+//! `(0, KL_EPS)` the ε-guard rescales the cell to `v·(WH)/KL_EPS`
+//! (audited P2-1: in that band the allocation under-counts and allocation +
+//! residual can approach `2v` at the band's upper edge; the residual is a
+//! diagnostic outside the allocation) — every observed mutation still
+//! receives a fractional signature
 //! even where the model *under*-reconstructs. The unassigned pseudo-signature
 //! `u[i,j] = max(v[i,j] − (WH)[i,j], 0)` is the residual diagnostic tracked
 //! alongside (STL semantics), *not* carved out of the allocation: it is the
@@ -916,7 +918,7 @@ mod tests {
         // Near-balanced large n (40 mutations off dead center of 15500,
         // z ~ 0.6): p in the non-significant mid range, finite.
         let r = tsb_test(7730.0, 7770.0, TsbTest::Binomial).unwrap();
-        // Numeric anchor: exact rational 0.7540876806589077 (R binom.test
+        // Numeric anchor: exact rational 0.754087680658908 (R binom.test
         // agrees to 1 ulp; Lanczos ln-Gamma at large arguments).
         assert!(
             (r.p_value - 0.754_087_680_658_908).abs() / 0.754_087_680_658_908 < 1e-9,

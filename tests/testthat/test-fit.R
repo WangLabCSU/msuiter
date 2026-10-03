@@ -347,7 +347,7 @@ test_that("connected and rescale gates raise structured errors", {
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = "yes"), "input")
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = NA), "input")
   expect_ms_error(ms_fit(fx$catalog, fx$sigs, rescale = c(TRUE, TRUE)), "input")
-
+})
 
 test_that("connected spec is order-insensitive (audited P1-1 regression)", {
   ch <- 24L
@@ -367,5 +367,4 @@ test_that("connected spec is order-insensitive (audited P1-1 regression)", {
   # (exposures (999, 0) instead of the fixed-component solution).
   expect_identical(fit12@exposures, fit21@exposures)
   expect_true(all(is.finite(fit21@exposures)))
-})
 })

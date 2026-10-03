@@ -90,7 +90,7 @@
       if (had_seed) assign(".Random.seed", old_seed, envir = globalenv()),
       add = TRUE
     )
-    set.seed(engine@seed)
+    set.seed(tryCatch(engine@seed, error = function(e) 1))
     block <- rep(seq_len(k), each = ceiling(m / k))[seq_len(m)]
     W <- matrix(1 / m, m, k)
     W[cbind(seq_len(m), block)] <- 1 / k
@@ -216,15 +216,20 @@ test_that("ms_extract rejects fit-mode third-party engines", {
   )
 })
 
-test_that("spec classes without a seed property fail the assembly clearly", {
+test_that("spec classes without a seed property warn and default to seed = 1", {
   msuiter_registry_reset()
-  # documented sharp edge (extending.Rmd section 1): the ms_extract assembly
-  # reads spec@seed for provenance; a third-party class that omits the
-  # property fails here, not at registration time
-  .register_extend_engine("tut_noseed", with_seed = FALSE,
-                          certified = "certified")
-  expect_error(
-    ms_extract(.make_extend_catalog(), 3, "tut_noseed"),
-    regexp = "seed"
+  # audited P2 fallback: the ms_extract assembly reads spec@seed for
+  # provenance; a third-party class that omits the property degrades to a
+  # registry warning plus the seed = 1 default instead of failing the
+  # assembly (the registration path already warns about such specs).
+  expect_warning(
+    .register_extend_engine("tut_noseed", with_seed = FALSE,
+                            certified = "certified"),
+    class = "msuiter_warning_registry"
   )
+  expect_warning(
+    fit <- ms_extract(.make_extend_catalog(), 3, "tut_noseed"),
+    class = "msuiter_warning_registry"
+  )
+  expect_identical(fit@seed, 1)
 })
