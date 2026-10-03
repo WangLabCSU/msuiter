@@ -268,9 +268,16 @@ pub fn bca_levels(
     if !accel.is_finite() || !point.is_finite() {
         return fallback();
     }
-    // Bias proportion with the interior clamp (module docs): boot values
-    // are ascending, so the strict-less count is a partition point.
+    // Bias proportion (module docs): boot values are ascending, so the
+    // strict-less count is a partition point.
     let n_less = boot_sorted.partition_point(|&b| b < point);
+    // Audited P1 (PI-frozen criterion row 3): boot all on ONE side of the
+    // point estimate (n_less == 0 or == B) means z0 = ±∞ — the h0 clamp
+    // below would keep the cell on the BCa path with a degenerate interval
+    // pinned at the boot extremes. Fall back to percentile + flag instead.
+    if n_less == 0 || n_less == boot_sorted.len() {
+        return fallback();
+    }
     let h0 = (n_less as f64) / (boot_sorted.len() as f64);
     let h0 = h0.clamp(H0_GUARD, 1.0 - H0_GUARD);
     let z0 = phi_inv(h0);
@@ -614,15 +621,17 @@ mod tests {
     }
 
     #[test]
-    fn bca_all_identical_boot_values_stays_finite_and_ordered() {
-        // All boot values identical and equal to the point: h0 = 0 (no
-        // strict-less), the H0_GUARD clamp keeps z0 finite (−5.62…), and
-        // with a = 0 the corrected levels are extreme-but-valid (the
-        // ordering guard holds), so the path stays BCa and the implied
-        // bounds collapse toward the single boot value — finite, ordered.
+    fn bca_all_identical_boot_values_falls_back_to_percentile() {
+        // All boot values identical and equal to the point: n_less = 0 (no
+        // strict-less) — audited P1 (PI-frozen criterion row 3): boot all
+        // on one side means z0 = ±∞ and the h0 clamp would keep the cell
+        // on the BCa path with a degenerate interval pinned at the boot
+        // extremes. The correct behavior is the percentile fallback +
+        // flag (the bounds still come out finite/ordered, but the caller
+        // sees the flag and reports the degraded face).
         let boot = [3.0f64; 40];
         let lv = bca_levels(3.0, &boot, 0.0, (0.025, 0.975), 1.0, true);
-        assert!(!lv.fallback, "z0 = {} is outside the band", phi_inv(1e-8));
+        assert!(lv.fallback, "all-one-side boot must fall back");
         assert!(lv.alpha_lower.is_finite() && lv.alpha_upper.is_finite());
         assert!(lv.alpha_lower <= lv.alpha_upper);
         assert!(lv.alpha_lower >= 0.0 && lv.alpha_upper <= 1.0);
