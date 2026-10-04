@@ -28,13 +28,17 @@
 //!
 //! # Stream layout (PCG64 canonical layout v1)
 //!
-//! `StreamId { replicate: 0, rank: family_band, fold: 0 }` with family
-//! bands 1/2/3 (signature / multinomial / NB) — replicate 0 and fold 0 are
-//! never used by bootstrap (rank 0, replicate = boot) or CV (fold ≥ 1)
-//! streams, and rank 0 stays reserved, so these null streams cannot
-//! collide with any other face's streams at the same master seed. The
-//! catalog families draw μ first, then the N draws, all from the one
-//! stream: the whole result is a bitwise function of `seed`.
+//! `StreamId { replicate: COMPARE_NULL_REPLICATE + family_band, rank:
+//! family_band, fold: 0 }` with family bands 1/2/3 (signature /
+//! multinomial / NB). The U-M4-01 audit found the first sketch's
+//! `replicate: 0` band colliding with the M3b MC calibration streams
+//! (replicate 0, rank = 1-based cell id), the thread probe and the
+//! consensus restarts — the nulls now live on an exclusive high
+//! replicate band (`u64::MAX − 4 + band`) that no real face can reach
+//! (bootstrap/MC/CV replicate counters are bounded by small budgets), so
+//! at one master seed the null keystreams are disjoint from every other
+//! face's. The catalog families draw μ first, then the N draws, all from
+//! the one stream: the whole result is a bitwise function of `seed`.
 //!
 //! # Threads / interrupt (contracts 6/7)
 //!
@@ -47,6 +51,13 @@
 use msuiter_engine::error::MsError;
 use msuiter_engine::resample::{dirichlet_uniform, multinomial, nb_sample};
 use msuiter_engine::rng::{MsRng, StreamId};
+
+/// The exclusive high replicate band of the null faces (audit fix): the
+/// family band (1..=3) is added to this base, so the null streams sit at
+/// `replicate ∈ {u64::MAX−3, MAX−2, MAX−1}` — unreachable by any real
+/// face's replicate counter (bootstrap replicates, MC replicates and CV
+/// seeds are all bounded by small user budgets).
+const COMPARE_NULL_REPLICATE: u64 = u64::MAX - 4;
 
 // The MC-SE tolerance for the null mean is frozen at the R face
 // (`ms_compare_defaults$mc_se_tol` = 0.01): the kernel reports the
@@ -171,7 +182,14 @@ pub fn compare_null(
         }
     }
 
-    let mut rng = MsRng::from_stream(seed, StreamId { replicate: 0, rank: family.band(), fold: 0 });
+    let mut rng = MsRng::from_stream(
+        seed,
+        StreamId {
+            replicate: COMPARE_NULL_REPLICATE + family.band(),
+            rank: family.band(),
+            fold: 0,
+        },
+    );
 
     // The catalog truth: drawn once per call from the uniform family and
     // held fixed across draws (memo §2 — the (m, N) null is marginal over
@@ -317,8 +335,10 @@ fn cosine(x: &[f64], y: &[f64]) -> f64 {
 
 /// R's `quantile(type = 7)` on an ascending slice: index `h = (n−1)·q`
 /// (1-based), linear interpolation between the floor and ceiling order
-/// statistics — bitwise-identical to the R convention for the same input
-/// order statistics.
+/// statistics. Same convention as R; the audit's cross-check measured
+/// disagreements of ≤ 2 ulp on arm64 (R's C implementation contracts
+/// through FMA), so parity is claimed at the convention level, not
+/// bitwise.
 fn quantile_type7(sorted: &[f64], q: f64) -> f64 {
     let n = sorted.len();
     let h = (n as f64 - 1.0) * q;
@@ -414,14 +434,22 @@ mod tests {
             acc_inner += x.iter().zip(y.iter()).map(|(&a, &b)| a * b).sum::<f64>();
             acc_norm2 += x.iter().map(|&a| a * a).sum::<f64>();
         }
-        // 4·MC-SE tolerances (SD of ⟨x,y⟩ ≈ 1/m·√2; of ‖x‖² ≈ small).
-        let se_inner = (2.0f64 / m as f64 / draws as f64).sqrt();
+        // 4·SE tolerances with the first-order moments of the uniform
+        // simplex: Var(⟨x,y⟩) = m·(E[x_i²y_i²] − E[x_iy_i]²) ≈ 4/m³ (the
+        // products concentrate because the components do), and
+        // Var(‖x‖²) = O(1/m³) likewise — the audit found the previous
+        // sketch's formulas ~80× too wide, which made the "exact moment"
+        // pins vacuous.
+        let se_inner = (4.0f64 / (m as f64).powi(3) / draws as f64).sqrt();
         assert!(
             (acc_inner / draws as f64 - 1.0 / m as f64).abs() < 4.0 * se_inner,
-            "E<x,y> anchor"
+            "E<x,y> anchor: |{} - {}| vs {}",
+            acc_inner / draws as f64,
+            1.0 / m as f64,
+            4.0 * se_inner
         );
         let want_norm2 = 2.0 / (m as f64 + 1.0);
-        let se_norm2 = (2.0f64 / (m as f64 + 1.0) / draws as f64).sqrt();
+        let se_norm2 = (8.0f64 / (m as f64).powi(3) / draws as f64).sqrt();
         assert!(
             (acc_norm2 / draws as f64 - want_norm2).abs() < 4.0 * se_norm2,
             "E||x||^2 anchor"

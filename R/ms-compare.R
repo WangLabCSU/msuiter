@@ -64,7 +64,17 @@
       qc <- sweep(Q, 2L, colMeans(Q), "-")
       np <- sqrt(colSums(pc * pc))
       nq <- sqrt(colSums(qc * qc))
-      crossprod(pc, qc) / outer(np, nq)
+      # A constant column carries no linear signal: centering leaves
+      # ~1-ulp float noise (colMeans accumulates in C), which the division
+      # would amplify into deterministic 1e-16 junk — the frozen contract
+      # is NaN (audit P2). Zero-variance detection at the machine-noise
+      # scale: the centered norm relative to the uncentered one.
+      rel <- np / pmax(sqrt(colSums(P * P)), .Machine$double.xmin)
+      relq <- nq / pmax(sqrt(colSums(Q * Q)), .Machine$double.xmin)
+      guard <- outer(rel < 1e-12, relq < 1e-12, "|")
+      out <- crossprod(pc, qc) / outer(np, nq)
+      out[guard] <- NA_real_
+      out
     },
     jsd = {
       out <- matrix(NA_real_, nrow = ncol(P), ncol = ncol(Q))
@@ -109,9 +119,18 @@
 }
 
 # The analytic anchors of the signature null (memo §2): exact moment
-# identities plus the large-m delta approximation. Test-layer anchors only.
+# identities plus the large-m delta approximation with the auditor-verified
+# second-order term — the U-M4-01 audit measured a systematic
+# delta-approximation bias of +1/(3m) (constant across m in {12, 48, 96},
+# 1e6-pair independent MC: m=96 mean 0.508686 vs 97/192 + 1/288 = 0.508681),
+# adopted here as the calibrated anchor. Test-layer anchors only.
 .ms_null_analytic <- function(m) {
-  list(E_inner = 1 / m, E_norm2 = 2 / (m + 1), delta_mean = (m + 1) / (2 * m))
+  list(
+    E_inner = 1 / m,
+    E_norm2 = 2 / (m + 1),
+    delta_mean = (m + 1) / (2 * m),
+    delta_mean_calibrated = (m + 1) / (2 * m) + 1 / (3 * m)
+  )
 }
 
 # ---------------------------------------------------------------------------

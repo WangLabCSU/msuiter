@@ -178,8 +178,15 @@ test_that("ms_select_k() selects the true rank on a separable grid 2:5", {
     sqrt(ev$cv_test_deviance[ev$k == 3L] / (48 * 9)),
     tolerance = 1e-12
   )
-  # diagnostic placeholders
-  expect_true(all(is.na(ev$wilcoxon_p_vs_prev)))
+  # diagnostic layer (real values since the U-M4-01 batch): the first
+  # grid row has no previous rank (NA); the rest carry finite p values on
+  # [0, 1]. DIAGNOSTIC ONLY — it never arbitrates.
+  expect_true(is.na(ev$wilcoxon_p_vs_prev[1L]))
+  expect_true(all(is.finite(ev$wilcoxon_p_vs_prev[-1L])))
+  expect_true(all(ev$wilcoxon_p_vs_prev[-1L] >= 0 &
+    ev$wilcoxon_p_vs_prev[-1L] <= 1))
+  # The per-rank median L2 residual column is populated for every rank.
+  expect_true(all(is.finite(ev$wilcoxon_l2_median_delta)))
 })
 
 test_that("the grid CV curve is identical to the per-rank calls (widest-call source)", {

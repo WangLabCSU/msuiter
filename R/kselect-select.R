@@ -83,7 +83,8 @@
 #   k_folds   effective fold count (the training MSErr denominator)
 #   cv        FALSE demotes every CV column to NA (memo section 3: layer 1
 #             absent)
-.ms_k_evidence_frame <- function(grid, res_by_k, full, n_cells, k_folds, cv = TRUE) {
+.ms_k_evidence_frame <- function(grid, res_by_k, full, n_cells, k_folds,
+                                 cv = TRUE, counts = NULL) {
   n <- length(grid)
   cv_te <- rep(NA_real_, n)
   cv_tr <- rep(NA_real_, n)
@@ -123,12 +124,31 @@
   avg <- rep(NA_real_, n)
   mn <- rep(NA_real_, n)
   per_sig <- vector("list", n)
+  wx_p <- rep(NA_real_, n)
+  wx_med <- rep(NA_real_, n)
+  prev_resid <- NULL
   for (i in seq_len(n)) {
     res <- res_by_k[[as.character(grid[i])]]
     avg[i] <- res$avg_stability
     stab <- res$stability_per_cluster
     mn[i] <- min(stab)
     per_sig[[i]] <- stab
+    # Layer-3 diagnostic (deliberate divergence, PI ruling 2026-09-30):
+    # paired signed-rank of the per-sample L2 refit residuals between the
+    # previous and the current grid rank, on the RAW consensus W and its
+    # RAW NNLS refit (the reconstruction is conserved, so the residual is
+    # well-defined). DIAGNOSTIC ONLY -- it never arbitrates.
+    if (!is.null(counts)) {
+      resid <- sqrt(colSums((counts - res$consensus_W %*% res$nnls_exposures)^2))
+      wx_med[i] <- stats::median(resid)
+      if (!is.null(prev_resid) && length(resid) == length(prev_resid)) {
+        d <- resid - prev_resid
+        wx_p[i] <- if (all(d == 0)) NA_real_ else
+          suppressWarnings(stats::wilcox.test(d, correct = FALSE,
+            exact = FALSE)$p.value)
+      }
+      prev_resid <- resid
+    }
   }
 
   ev <- data.frame(
@@ -148,10 +168,12 @@
   # (engine/cv.rs aggregates errors only): honest placeholder, documented.
   ev$n_seeds_converged <- NA_integer_
   ev$per_signature_stability <- per_sig
-  # Wilcoxon layer: diagnostic-only by PI ruling -- implementation skipped
-  # in this unit, the columns hold the contract's place.
-  ev$wilcoxon_p_vs_prev <- NA_real_
-  ev$wilcoxon_l2_median_delta <- NA_real_
+  # Wilcoxon layer: diagnostic-only by PI ruling -- real values when the
+  # per-rank fits are available, NA at the first rank (no previous fit).
+  ev$wilcoxon_p_vs_prev <- wx_p
+  # The median per-sample residual AT this rank (the "l2 median" of the
+  # schema); the paired delta against the previous rank is the p column.
+  ev$wilcoxon_l2_median_delta <- wx_med
   ev$veto_reason <- mapply(.ms_veto_reason, avg, mn, USE.NAMES = FALSE)
   ev$passes_veto <- !nzchar(ev$veto_reason)
   ev[, .ms_k_evidence_columns]
@@ -401,7 +423,8 @@ S7::method(ms_select_k, MsCatalog) <- function(catalog, k_grid, replicates = 8L,
     full = full,
     n_cells = nrow(counts) * ncol(counts),
     k_folds = as.integer(k_folds),
-    cv = cv
+    cv = cv,
+    counts = counts
   )
   ev <- .ms_k_arbitrate(ev, cv = cv, explicit = TRUE)
 
