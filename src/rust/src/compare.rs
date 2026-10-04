@@ -323,6 +323,109 @@ pub fn compare_null(
     })
 }
 
+/// The shape-conditional reconstruction-noise null (U-M7-pre upgrade
+/// arm; the memo's "entropy-matched Dirichlet(alpha*u)" materialized):
+/// given a reference profile u (share vector, length m) and a mutation
+/// burden N, each draw is `x ~ Multinomial(N, u)/N` and the statistic
+/// is `cos(x, u)` -- "could this deviation from the reference arise
+/// from sampling noise alone at this shape and burden?" The entropy
+/// semantics enter naturally (the shape through u, the noise scale
+/// through alpha_total = N, the continuous limit of the multinomial),
+/// so no alpha bisection is needed; flat references produce their own
+/// tighter nulls automatically.
+///
+/// Stream layout: `StreamId { replicate: 0, rank: 4, fold: 0 }` -- the
+/// exclusive high-band of the null faces keeps rank 4 unused for this
+/// family (bands 1/2/3 are the signature/catalog families).
+pub fn shape_null(
+    profile: &[f64],
+    burden: f64,
+    n_draws: usize,
+    quantiles: &[f64],
+    seed: u64,
+) -> Result<NullDraw, MsError> {
+    let m = profile.len();
+    if m < 2 {
+        return Err(MsError::new(
+            "argument",
+            format!("the shape null needs at least 2 channels, got {m}"),
+        )
+        .with_i(m as i64));
+    }
+    let total: f64 = profile.iter().sum();
+    if !total.is_finite() || total <= 0.0 {
+        return Err(MsError::new(
+            "na",
+            "profile must be a finite positive share vector",
+        ));
+    }
+    let u: Vec<f64> = profile.iter().map(|&v| v / total).collect();
+    if n_draws < 200 {
+        return Err(MsError::new(
+            "argument",
+            format!("null needs n_draws >= 200 for a stable MC, got {n_draws}"),
+        )
+        .with_i(n_draws as i64));
+    }
+    if !burden.is_finite() || burden < 1.0 {
+        return Err(MsError::new(
+            "argument",
+            format!("the shape null needs a finite burden >= 1, got {burden}"),
+        ));
+    }
+    if quantiles.is_empty() {
+        return Err(MsError::new("argument", "quantiles must be non-empty"));
+    }
+    for (k, &q) in quantiles.iter().enumerate() {
+        if !q.is_finite() || q <= 0.0 || q >= 1.0 {
+            return Err(MsError::new("argument", "quantiles must lie strictly in (0, 1)")
+                .with_i(k as i64 + 1));
+        }
+    }
+    let mut rng =
+        MsRng::from_stream(seed, StreamId { replicate: 0, rank: 4, fold: 0 });
+    let mut draws = Vec::with_capacity(n_draws);
+    let mut shares = vec![0.0f64; m];
+    for _ in 0..n_draws {
+        let counts = multinomial(&mut rng, &u, burden as u64);
+        for (i, &c) in counts.iter().enumerate() {
+            shares[i] = c as f64 / burden;
+        }
+        // u is a share vector with strictly positive entries and the
+        // multinomial conserves the burden, so both norms are > 0.
+        let c = cosine(&shares, &u);
+        if !c.is_finite() {
+            return Err(MsError::new("na", "null draw produced a non-finite cosine")
+                .with_i(draws.len() as i64 + 1));
+        }
+        draws.push(c);
+    }
+    let n = draws.len() as f64;
+    let mean = draws.iter().sum::<f64>() / n;
+    let var = draws.iter().map(|&c| (c - mean) * (c - mean)).sum::<f64>() / (n - 1.0);
+    let sd = var.sqrt();
+    let per = n_draws / MC_BATCHES;
+    let rem = n_draws % MC_BATCHES;
+    let mut batch_means = Vec::with_capacity(MC_BATCHES);
+    let mut start = 0usize;
+    for b in 0..MC_BATCHES {
+        let len = per + if b < rem { 1 } else { 0 };
+        batch_means.push(draws[start..start + len].iter().sum::<f64>() / len as f64);
+        start += len;
+    }
+    let b = MC_BATCHES as f64;
+    let bm_mean = batch_means.iter().sum::<f64>() / b;
+    let bm_var = batch_means
+        .iter()
+        .map(|&x| (x - bm_mean) * (x - bm_mean))
+        .sum::<f64>()
+        / (b - 1.0);
+    let mc_se = (bm_var / b).sqrt();
+    draws.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let quantile_values = quantiles.iter().map(|&q| quantile_type7(&draws, q)).collect();
+    Ok(NullDraw { mean, sd, mc_se, quantiles: quantile_values })
+}
+
 /// Cosine of two equal-length, finite vectors. Zero norms propagate as
 /// NaN — the caller converts them to structured errors (the uniform
 /// Dirichlet cannot produce one, but honesty is cheap here).
@@ -528,6 +631,75 @@ mod tests {
         )
         .unwrap();
         assert!(nb.mean < multi.mean);
+    }
+
+    #[test]
+    fn shape_null_runs_and_rises_with_burden() {
+        // A steep reference (SBS1-like): low entropy -> the conditional
+        // reconstruction null tightens toward 1 as the burden grows.
+        let mut u = vec![0.0f64; 96];
+        u[0] = 0.6;
+        u[40] = 0.4;
+        let q = [0.95f64];
+        let lo = shape_null(&u, 100.0, 2_000, &q, 13).unwrap();
+        let hi = shape_null(&u, 10_000.0, 2_000, &q, 13).unwrap();
+        assert!(hi.mean > lo.mean, "burden monotonicity");
+        assert!(hi.sd < lo.sd, "burden concentration");
+        // Validation errors: bad burden / quantiles / profile.
+        assert_eq!(shape_null(&u, 0.5, 2_000, &q, 1).unwrap_err().topic, "argument");
+        assert_eq!(shape_null(&u, 100.0, 100, &q, 1).unwrap_err().topic, "argument");
+        assert_eq!(shape_null(&u, 100.0, 2_000, &[], 1).unwrap_err().topic, "argument");
+        assert_eq!(shape_null(&[0.0; 96], 100.0, 2_000, &q, 1).unwrap_err().topic, "na");
+        assert_eq!(shape_null(&[1.0], 100.0, 2_000, &q, 1).unwrap_err().topic, "argument");
+        // Determinism.
+        let a = shape_null(&u, 1000.0, 2_000, &q, 5).unwrap();
+        let b = shape_null(&u, 1000.0, 2_000, &q, 5).unwrap();
+        assert_eq!(a.mean, b.mean);
+    }
+
+    #[test]
+    fn shape_null_is_directionally_below_the_catalog_null_on_uniform() {
+        // NOT the same law (the audited first draft assumed agreement):
+        // the catalog face draws its truth from Dirichlet(1..), which
+        // concentrates mass and boosts reconstruction cosines; the
+        // uniform-conditional null is the flattest possible profile.
+        // Direction (Medo's flatness narrative): uniform <= catalog.
+        let q = [0.95f64];
+        let u = vec![1.0f64; 96];
+        let shape = shape_null(&u, 1000.0, 4_000, &q, 21).unwrap();
+        let catalog = compare_null(
+            NullFamily::Catalog(crate::calibrate::GenerativeArm::Multinomial),
+            96,
+            1000.0,
+            4_000,
+            &q,
+            21,
+        )
+        .unwrap();
+        assert!(
+            shape.mean < catalog.mean,
+            "uniform shape null {} should sit below the concentrated-mu catalog null {}",
+            shape.mean,
+            catalog.mean
+        );
+        // Noise scaling in cosine space: for a uniform profile the
+        // deviation 1 - cos is the Pearson chi-square statistic over N,
+        // so 1 - cos and hence sd(cos) scale as 1/N -- sd(N)/sd(10N)
+        // ~= 10 (the audited first draft assumed the 1/sqrt(N) Gaussian
+        // rate; the chi-square concentration at m = 96 dominates).
+        // 20% window over 2k draws each.
+        let lo = shape_null(&u, 1000.0, 2_000, &q, 13).unwrap();
+        let hi = shape_null(&u, 10_000.0, 2_000, &q, 13).unwrap();
+        let ratio = lo.sd / hi.sd;
+        assert!(
+            (ratio - 10.0).abs() / 10.0 < 0.20,
+            "sd scaling {ratio} vs the chi-square 1/N rate (10)"
+        );
+        // Caller-passed counts are normalized to shares.
+        let mut counts_u = vec![50.0f64; 96];
+        counts_u[0] = 50.0;
+        let scaled = shape_null(&counts_u, 1000.0, 2_000, &q, 21).unwrap();
+        assert!(scaled.mean.is_finite());
     }
 
     #[test]

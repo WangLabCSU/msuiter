@@ -45,4 +45,6 @@ ms_match_solutions_rust <- function(estimated, reference, dim, thresholds) .Call
 
 ms_compare_null_rust <- function(family, m, burden, n_draws, quantiles, seed) .Call(wrap__ms_compare_null_rust, family, m, burden, n_draws, quantiles, seed)
 
+ms_compare_shape_null_rust <- function(profile, burden, n_draws, quantiles, seed) .Call(wrap__ms_compare_shape_null_rust, profile, burden, n_draws, quantiles, seed)
+
 # nolint end

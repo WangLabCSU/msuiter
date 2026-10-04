@@ -48,6 +48,8 @@
 
 * **ms_exposure_test() 差异挖掘面（L-F 收口，R/ms-embed.R）**：双组逐签名 Wilcoxon 秩和（musicatk 工作流语义）+ 全签名族 BH（与 ms_test_presence 同 p.adjust 口径）；all-tied 签名 NA 面（不伪造 p）；>2 组拒绝（成对拆分是调用方设计决策）；中位数双组对照列。
 
+* **形状条件化零分布升级臂（U-M7-pre，R/ms-compare.R + compare.rs + `ms_compare_shape_null_rust`）**：memo "熵匹配 Dirichlet(α·u)" 的具体化——draws = Multinomial(N,u)/N、统计量 cos(draw,u)，熵语义经形状 u 与噪声尺度 α_total=N 自然进入（无需二分）；散点图 `null_family = "shape_conditional"` 直读；与 catalog 面不同律经方向断言 + χ²/N 缩律（sd 比 ≈ 10 非 1/√N——首稿高斯假设被实测纠正）锚定。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。

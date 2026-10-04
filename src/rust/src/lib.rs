@@ -1685,6 +1685,55 @@ fn ms_compare_null_rust(
     })())
 }
 
+// U-M7-pre shape-conditional null face: the reconstruction-noise null
+// conditioned on a caller reference profile and burden (the memo's
+// "entropy-matched" upgrade arm materialized -- the shape enters through
+// u, the noise scale through alpha_total = N). Kernel: compare::shape_null.
+#[extendr]
+fn ms_compare_shape_null_rust(
+    profile: Robj,
+    burden: f64,
+    n_draws: i32,
+    quantiles: Robj,
+    seed: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if seed < 0 {
+            return Err(MsError::new("argument", format!("seed must be >= 0, got {seed}")));
+        }
+        if n_draws < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_draws must be >= 0, got {n_draws}"),
+            ));
+        }
+        let prof = profile
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "profile must be a double vector"))?;
+        let qs = quantiles
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "quantiles must be a double vector"))?;
+        let out = compare::shape_null(
+            &prof,
+            burden,
+            n_draws as usize,
+            &qs,
+            seed as u64,
+        )?;
+        let pairs = vec![
+            ("mean", Robj::from(out.mean)),
+            ("sd", Robj::from(out.sd)),
+            ("mc_se", Robj::from(out.mc_se)),
+            ("quantiles", Robj::from(out.quantiles)),
+            ("burden", Robj::from(burden)),
+            ("m", Robj::from(prof.len().min(i32::MAX as usize) as i32)),
+            ("n_draws", Robj::from(n_draws)),
+            ("seed", Robj::from(seed)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -1710,6 +1759,7 @@ extendr_module! {
     fn ms_calibration_grid_rust;
     fn ms_match_solutions_rust;
     fn ms_compare_null_rust;
+    fn ms_compare_shape_null_rust;
 }
 
 #[cfg(test)]

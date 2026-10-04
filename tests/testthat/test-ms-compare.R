@@ -319,6 +319,70 @@ test_that("per-pair null p + BH q ride the metrics list (L-F q 注记)", {
   expect_gt(pm[3, 4], diag(pm)[1])
 })
 
+test_that("the shape-conditional null face runs through the FFI wrapper", {
+  labels <- msuiter:::.ms_io_channel_tables()$SBS96
+  u <- c(0.6, rep(0.4 / 95, 95))
+  r <- msuiter:::.ms_compare_shape_null(u, burden = 3000,
+    n_draws = 2000L, quantiles = c(0.95), seed = 7)
+  expect_true(r$mean > 0.9) # steep profile reconstructs well at N=3000
+  expect_equal(r$burden, 3000)
+  # Flat profile: noisier null (lower mean).
+  flat <- rep(1 / 96, 96)
+  rf <- msuiter:::.ms_compare_shape_null(flat, burden = 3000,
+    n_draws = 2000L, quantiles = c(0.95), seed = 7)
+  expect_lt(rf$mean, r$mean)
+  # Deterministic.
+  r2 <- msuiter:::.ms_compare_shape_null(u, burden = 3000,
+    n_draws = 2000L, quantiles = c(0.95), seed = 7)
+  expect_identical(r$mean, r2$mean)
+  # Note: the conditional nulls are tight (cos near 1), so the frozen
+  # 0.01 MC-SE gate rarely fires here -- the shared gate code path is
+  # already pinned on the uniform face (m = 2 test).
+})
+
+test_that("the conditional p twin: exact reconstruction hits the floor", {
+  labels <- msuiter:::.ms_io_channel_tables()$SBS96
+  u <- rep(1 / 96, 96)
+  # cos(u, u) = 1 -> add-one floor.
+  p1 <- msuiter:::.ms_null_emp_pvalue_conditional(1.0, profile = u,
+    burden = 1000, n_draws = 500, seed = 1)
+  expect_identical(p1, 1 / 501)
+  # An unrelated orthogonal-ish vector sits mid-range.
+  set.seed(2)
+  v <- runif(96); v <- v / sqrt(sum(v^2))
+  un <- u / sqrt(sum(u^2))
+  obs <- sum(v * un)
+  p2 <- msuiter:::.ms_null_emp_pvalue_conditional(obs, profile = u,
+    burden = 1000, n_draws = 500, seed = 1)
+  expect_gt(p2, 0.05)
+})
+
+test_that("the scatter switches null families by argument", {
+  skip_if_not_installed("ggplot2")
+  labels <- msuiter:::.ms_io_channel_tables()$SBS96
+  set.seed(31)
+  s3 <- matrix(abs(rnorm(96 * 3)) + 0.01, 96, 3,
+    dimnames = list(labels, c("S1", "S2", "S3")))
+  s3 <- sweep(s3, 2, colSums(s3), "/")
+  sig <- s3
+  p1 <- plot_cosmic_scatter(sig[, 1], sig[, 2],
+    null_family = "shape_conditional", burden = 3000, null_n_draws = 1000)
+  built <- ggplot2::ggplot_build(p1)
+  ann <- unlist(lapply(built$data, function(d) {
+    if ("label" %in% names(d)) as.character(d$label) else NULL
+  }))
+  expect_true(any(grepl("shape-null p", ann)),
+    info = paste(ann, collapse = " | "))
+  expect_true(any(grepl("N = 3000", ann)))
+  # Uniform family still default.
+  p2 <- plot_cosmic_scatter(sig[, 1], sig[, 2])
+  built2 <- ggplot2::ggplot_build(p2)
+  ann2 <- unlist(lapply(built2$data, function(d) {
+    if ("label" %in% names(d)) as.character(d$label) else NULL
+  }))
+  expect_false(any(grepl("shape-null", ann2)))
+})
+
 test_that("the mc_se tolerance aborts through the direct null face", {
   # m = 2 makes the null wide enough that 200 draws breach the frozen
   # 0.01 batch-means tolerance (the D13 failure condition, end to end).

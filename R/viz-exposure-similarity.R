@@ -114,8 +114,11 @@ plot_similarity_heatmap <- function(similarity, high = "#B2182B") {
 #' @return A ggplot object.
 #' @export
 plot_cosmic_scatter <- function(estimated, reference, label = NULL,
-                                null_p = TRUE, null_n_draws = 5000L) {
+                                null_p = TRUE, null_n_draws = 5000L,
+                                null_family = c("uniform", "shape_conditional"),
+                                burden = 1000) {
   .ms_viz_require_ggplot()
+  null_family <- match.arg(null_family)
   pe <- .ms_viz_prep_profile(estimated, NULL, "share")
   pr <- .ms_viz_prep_profile(reference, NULL, "share")
   if (!identical(pe$labels, pr$labels)) {
@@ -141,10 +144,17 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL,
         c = "use e.g. 5000 draws"
       )
     }
-    pval <- .ms_null_emp_pvalue(cos, m = nrow(pe$matrix),
-      n_draws = as.integer(null_n_draws), seed = 1)
-    note <- sprintf("%s (null p = %.4g, %d draws)", note, pval,
-                    as.integer(null_n_draws))
+    if (null_family == "shape_conditional") {
+      pval <- .ms_null_emp_pvalue_conditional(cos, profile = pr$values,
+        burden = burden, n_draws = as.integer(null_n_draws), seed = 1)
+      note <- sprintf("%s (shape-null p = %.4g, %d draws, N = %g)", note,
+                      pval, as.integer(null_n_draws), burden)
+    } else {
+      pval <- .ms_null_emp_pvalue(cos, m = nrow(pe$matrix),
+        n_draws = as.integer(null_n_draws), seed = 1)
+      note <- sprintf("%s (null p = %.4g, %d draws)", note, pval,
+                      as.integer(null_n_draws))
+    }
   }
   df <- data.frame(reference = pr$values, estimated = pe$values)
   ttl <- if (is.null(label)) "" else paste0(label, " --  ")

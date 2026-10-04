@@ -9,7 +9,9 @@ plot_cosmic_scatter(
   reference,
   label = NULL,
   null_p = TRUE,
-  null_n_draws = 5000L
+  null_n_draws = 5000L,
+  null_family = c("uniform", "shape_conditional"),
+  burden = 1000
 )
 }
 \arguments{

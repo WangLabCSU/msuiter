@@ -155,6 +155,50 @@
   res
 }
 
+# The shape-conditional reconstruction-noise null (U-M7-pre upgrade
+# arm): conditioned on a reference profile u and a burden N -- the
+# memo's "entropy-matched" semantics materialized (shape through u,
+# noise scale through alpha_total = N). The MC-SE tolerance is the same
+# frozen 0.01 as the other null faces.
+.ms_compare_shape_null <- function(profile, burden, n_draws, quantiles, seed) {
+  res <- .msffi_check(ms_compare_shape_null_rust(
+    profile = as.numeric(profile), burden = burden, n_draws = n_draws,
+    quantiles = quantiles, seed = seed
+  ))
+  if (res$mc_se > .ms_compare_defaults$mc_se_tol) {
+    msuiter_abort(
+      "calibration",
+      "the shape-null Monte Carlo standard error exceeds the frozen tolerance",
+      i = sprintf("mc_se = %.4g", res$mc_se),
+      j = sprintf("tolerance: %.4g (ms_compare_defaults$mc_se_tol)",
+                  .ms_compare_defaults$mc_se_tol),
+      c = "raise n_draws"
+    )
+  }
+  res
+}
+
+# The conditional tail probability for one observed cosine: draws are
+# Multinomial(N, u)/N reconstructions of the GIVEN reference profile --
+# "could this deviation arise from sampling noise alone at this shape
+# and burden?" Add-one rule, the audited R-twin convention.
+.ms_null_emp_pvalue_conditional <- function(observed, profile, burden,
+                                            n_draws = 5000L, seed = 1) {
+  set.seed(seed)
+  total <- sum(profile)
+  u <- profile / total
+  n_hit <- 0L
+  for (r in seq_len(n_draws)) {
+    counts <- stats::rmultinom(1, size = burden, prob = u)
+    shares <- as.numeric(counts) / burden
+    nx <- sqrt(sum(shares^2))
+    nu <- sqrt(sum(u^2))
+    cos <- sum(shares * u) / (nx * nu)
+    if (cos >= observed) n_hit <- n_hit + 1L
+  }
+  (1 + n_hit) / (n_draws + 1)
+}
+
 # ---------------------------------------------------------------------------
 # Protocols (memo §3)
 # ---------------------------------------------------------------------------
