@@ -129,7 +129,7 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
   cos <- sum(pe$values * pr$values) /
     sqrt(sum(pe$values^2) * sum(pr$values^2))
   df <- data.frame(reference = pr$values, estimated = pe$values)
-  ttl <- if (is.null(label)) "" else paste0(label, " — ")
+  ttl <- if (is.null(label)) "" else paste0(label, " --  ")
   ggplot2::ggplot(df, ggplot2::aes(x = .data$reference, y = .data$estimated)) +
     ggplot2::geom_point(colour = "#2166AC", size = 1.6, alpha = 0.85) +
     ggplot2::geom_abline(slope = 1, intercept = 0, colour = "grey40",

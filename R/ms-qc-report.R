@@ -79,8 +79,8 @@ ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {
   counts <- catalog@counts
   labels <- as.character(catalog@channels$labels)
   n_channels <- nrow(counts)
-  gtx <- msuiter:::.ms_qc_gt_channels(labels)
-  ctx <- msuiter:::.ms_qc_ct_channels(labels)
+  gtx <- .ms_qc_gt_channels(labels)
+  ctx <- .ms_qc_ct_channels(labels)
   if (length(gtx) != 16L || length(ctx) != 16L) {
     msuiter_abort(
       "input",
@@ -165,7 +165,7 @@ ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {
         "exposure row labels must equal the signature column labels",
         i = "labels are the only legal matching key (never position)",
         j = sprintf("exposure rows: %s",
-                    msuiter_quote_trunc(head(rownames(exposures), 3L))),
+                    msuiter_quote_trunc(utils::head(rownames(exposures), 3L))),
         c = "pass the exposure matrix produced with this dictionary"
       )
     }

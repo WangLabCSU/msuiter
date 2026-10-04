@@ -82,7 +82,7 @@ ms_downsample <- function(catalog, depth = "min", seed = 1) {
     if (!live[j] || tj <= depth_val) {
       next
     }
-    out[, j] <- as.numeric(rmultinom(1L, size = depth_val,
+    out[, j] <- as.numeric(stats::rmultinom(1L, size = depth_val,
                                      prob = counts[, j] / tj))
   }
   kept <- sum(live & totals <= depth_val)

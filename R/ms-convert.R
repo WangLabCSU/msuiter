@@ -32,8 +32,8 @@
   tab <- utils::read.delim(path, sep = "\t", header = TRUE,
                            stringsAsFactors = FALSE)
   list(
-    `human-genome` = setNames(tab$genome, tab$label),
-    `human-exome` = setNames(tab$exome, tab$label)
+    `human-genome` = stats::setNames(tab$genome, tab$label),
+    `human-exome` = stats::setNames(tab$exome, tab$label)
   )
 })
 
@@ -119,7 +119,7 @@ ms_convert <- S7::new_generic(
       "input",
       sprintf("%s names must equal the SBS96 registry labels", arg_nm),
       i = "opportunities are matched by label, never by position",
-      j = sprintf("first names: %s", msuiter_quote_trunc(head(nm, 3L))),
+      j = sprintf("first names: %s", msuiter_quote_trunc(utils::head(nm, 3L))),
       c = "set names(opps) to the registry labels"
     )
   }
@@ -132,7 +132,7 @@ ms_convert <- S7::new_generic(
       c = "opportunity tables are strictly positive frequencies"
     )
   }
-  setNames(as.numeric(opps), as.character(labels))
+  stats::setNames(as.numeric(opps), as.character(labels))
 }
 
 # The kernel: divide, multiply, re-normalize; zero columns stay zero.
@@ -176,7 +176,7 @@ S7::method(ms_convert, S7::class_any) <- function(signatures,
       "signatures must carry the SBS96 registry rownames in canonical order",
       i = "the opportunity tables are matched by label, never by position",
       j = if (is.null(labels)) "rownames missing" else
-        sprintf("first rownames: %s", msuiter_quote_trunc(head(labels, 3L))),
+        sprintf("first rownames: %s", msuiter_quote_trunc(utils::head(labels, 3L))),
       c = "order the matrix by the registry labels"
     )
   }

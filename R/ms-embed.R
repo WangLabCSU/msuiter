@@ -134,7 +134,7 @@ ms_embed <- function(exposures, method = c("umap", "kmeans"),
 #' @return A ggplot object.
 #' @export
 plot_embedding <- function(embedding) {
-  msuiter:::.ms_viz_require_ggplot()
+  .ms_viz_require_ggplot()
   if (!is.data.frame(embedding) ||
       !all(c("embed_1", "embed_2") %in% names(embedding))) {
     msuiter_abort(
@@ -149,7 +149,7 @@ plot_embedding <- function(embedding) {
                                                y = .data$embed_2)) +
     ggplot2::geom_point(size = 1.8, alpha = 0.85, colour = "#2166AC") +
     ggplot2::labs(x = "Embedding 1", y = "Embedding 2") +
-    msuiter:::.ms_viz_theme()
+    .ms_viz_theme()
   if ("cluster" %in% names(embedding) && !all(is.na(embedding$cluster))) {
     p <- p + ggplot2::aes(colour = factor(.data$cluster)) +
       ggplot2::labs(colour = "cluster")

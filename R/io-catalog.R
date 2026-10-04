@@ -1,15 +1,15 @@
 # io-catalog.R: catalog/signature file interop, first format (U-M4-02;
-# design memo docs/devlog/2026-10-04-M4-02-design-memo.md §2).
+# design memo docs/devlog/2026-10-04-M4-02-design-memo.md section 2).
 #
-# COSMIC txt — the layout of the bundled upstream reference files
+# COSMIC txt --  the layout of the bundled upstream reference files
 # (inst/reference/refdb/COSMIC_v3.6/*.txt): TSV, first header column
 # "Type", one row per channel label in the CANONICAL registry order, one
 # column per signature (probabilities) or sample (counts). The interop
 # first rule is enforced on both faces: labels must equal the canonical
-# registry order exactly — no silent reordering, no silent subsets.
+# registry order exactly --  no silent reordering, no silent subsets.
 #
 # Deferred formats (SigProfiler txt / WTSI long) are recorded in the memo
-# §0: no upstream specimen was verifiable in this batch — unverified
+# section 0: no upstream specimen was verifiable in this batch --  unverified
 # layouts do not ship.
 
 # The registry tables reachable from this face, with their R-side label
@@ -87,7 +87,7 @@
 #' @param x An [MsCatalog] or [MsSignature].
 #' @param format `"cosmic"` (the bundled reference layout, first header
 #'   column "Type") or `"sigprofiler"` (first header column
-#'   "MutationType"; verified against upstream specimens — memo §4).
+#'   "MutationType"; verified against upstream specimens --  memo section 4).
 #'   WTSI long format is deferred (no verifiable upstream specimen).
 #' @param file Output path; `NULL` returns the assembled data.frame
 #'   instead of writing.
@@ -103,7 +103,7 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
       i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
       j = paste0("received: ", msuiter_quote_trunc(format),
                  "; verified: ", paste(.ms_io_formats, collapse = ", ")),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §2/§4"
+      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md sections 2/4"
     )
   }
   if (S7::S7_inherits(x, MsCatalog)) {
@@ -175,7 +175,7 @@ ms_import <- function(file, format = "cosmic",
       i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
       j = paste0("received: ", msuiter_quote_trunc(format),
                  "; verified: ", paste(.ms_io_formats, collapse = ", ")),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §2/§4"
+      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md sections 2/4"
     )
   }
   kind <- match.arg(kind)
@@ -230,7 +230,7 @@ ms_import <- function(file, format = "cosmic",
   }
   # signatures: the probability face. The legal empty exposure (k x 0,
   # rownames = signature labels) rides along; the catalog summary carries
-  # the import provenance (memo §2): file path + the sha256 of the exact
+  # the import provenance (memo section 2): file path + the sha256 of the exact
   # file bytes, in the declared build field alongside the label-set hash.
   file_hash <- .ms_io_file_sha256(file)
   sig_cols <- colnames(mat)
