@@ -96,7 +96,7 @@
 
 ### M7 · Benchmark 完备 + 论文（8–10 周）
 
-- [ ] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结
+- [ ] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/2 个 PI 裁决点）
 - [ ] 竞品容器 harness（仅 bench/）；钉硬件 bench 全表；`ms_benchmark()` 端到端
 - [ ] 论文草稿（headline 依 G0 结果定 A/B）+ renv/Docker/seed 一键复现 + bioRxiv 同挂
 - [ ] pkgdown 全站 + MSU↔函数映射表 + CITATION + 性能锚定文档
