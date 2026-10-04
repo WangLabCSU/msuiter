@@ -55,6 +55,7 @@ Collate:
     'viz-palette.R'
     'viz-profile.R'
     'viz-exposure-similarity.R'
+    'ms-cluster.R'
     'viz-kselect.R'
     'viz-bootstrap.R'
     'ms-embed.R'

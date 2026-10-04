@@ -78,7 +78,7 @@
 **目录管理**：COSMIC v3.2–3.6 版本化 ✅、器官 RefSig T1–T4 层级 🔶v1.x、暴露签名面板（Kucab/SIGNAL）🔶v1.x、connected 组（SPA/MuSiCal 清单差异显式化）✅、背景强制（SBS1/5）✅、病因/伪迹子群 ✅、父/子签名策略 ✅。
 **不确定性（MSU-Fit）**：bootstrap CI（支撑条件）✅、χ²₁ LRT p/q ✅、Fisher 内点 ✅、conformal（Mondrian by TMB）🔶v1.x、贝叶斯后验 ⏳、**覆盖率校准协议** ✅（M3b）。
 **每突变分配**：比例分配 + unassigned 残差伪签名 ✅ v0.2、贝叶斯分配 ⏳。
-**相似度/匹配（校准相似度库，`ms_compare()`，框架组件）**：cosine（零校准：签名/目录双零分布面 `ms_compare_null_rust`，type-7 分位 + 冻结 MC-SE 容差）/correlation/JSD/Hellinger ✅（U-M4-01）、Hungarian 一对一（主）+ Islam 贪心 + Jiang 活性三协议 ✅（U-M4-01；Jiang 要求 k_est=k_ref 真值字典拟合口径）、熵匹配 Dirichlet 零分布 ✅（U-M7-pre 形状条件化面 `ms_compare_shape_null_rust`：Multinomial(N,u)/N 重构噪声条件化于参考形状与负荷——alpha_total=N 连续极限，无需熵二分；散点图 null_family = "shape_conditional" 直读）、签名聚类 🔶。
+**相似度/匹配（校准相似度库，`ms_compare()`，框架组件）**：cosine（零校准：签名/目录双零分布面 `ms_compare_null_rust`，type-7 分位 + 冻结 MC-SE 容差）/correlation/JSD/Hellinger ✅（U-M4-01）、Hungarian 一对一（主）+ Islam 贪心 + Jiang 活性三协议 ✅（U-M4-01；Jiang 要求 k_est=k_ref 真值字典拟合口径）、熵匹配 Dirichlet 零分布 ✅（U-M7-pre 形状条件化面 `ms_compare_shape_null_rust`：Multinomial(N,u)/N 重构噪声条件化于参考形状与负荷——alpha_total=N 连续极限，无需熵二分；散点图 null_family = "shape_conditional" 直读）、签名聚类 ✅（ms_cluster_signatures：阈值图连通分量，确定性无 RNG，medoid + 尺寸表；阈值默认 0.90 Islam 线）。
 **de novo→目录分解（签名注释）**：MuSiCal match 语义 + 平坦清理 ✅ v0.2。
 **特殊模式**：panel/ctDNA 低计数（MSU-LowCount）🔶 v1.0、RNA 模式 ⏳v1.x、单细胞池化 ⏳。
 
