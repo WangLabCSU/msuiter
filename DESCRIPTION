@@ -54,6 +54,7 @@ Collate:
     'viz-palette.R'
     'viz-profile.R'
     'viz-exposure-similarity.R'
+    'ms-embed.R'
     'msuiter-package.R'
     'extendr-wrappers.R'
     'ffi-probes.R'

@@ -32,6 +32,8 @@
 
 * **viz 首批 8 图型（U-M4-03，R/viz-*.R + 设计备忘 2026-10-04-M4-03-viz-memo.md）**：plot_catalog_profile / plot_signature_catalog / plot_reference_comparison / plot_reconstruction_panel / plot_exposure_stacked / plot_exposure_heatmap / plot_similarity_heatmap / plot_cosmic_scatter——COSMIC 6 类调色板逐字节取自已核实的 sigProfilerPlotting.py 源码（L2895–2902；research/04 旧笔记色序笔误已修正记录）、规范序强制（复用注册表校验，viz 不静默重排）、ggplot2 4.0 兼容（scale_fill_identity；I() in aes 已移除）、矢量一等（返回 ggplot 对象）；DBS78/ID83 简化单色（palette 冻结 M7）。exposure UMAP 与全集图型 ⏳ 后批。
 
+* **ms_embed() + plot_embedding()（U-M4-03 余项，R/ms-embed.R）**：样本暴露空间嵌入——UMAP（uwot，Suggests）或确定性 kmeans（stats 恒可用）；share 变换默认（单纯形几何）；seed 一等参数（同版本逐位、跨版本诚实声明不保证）；kmeans 组恢复在 3 组人工 fixture 上钉测；plot_embedding 按 cluster 着色。差异挖掘面 ⏳ 后批。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
