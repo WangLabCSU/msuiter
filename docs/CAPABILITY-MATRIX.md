@@ -37,7 +37,7 @@
 | RNA-SBS192（非嘧啶归一化，12 ref>alt × 16 侧翼） | COSMIC v3.4+/TRACERx | `ms_tally(mode="rna_sbs")` | — | RNA profile | ⏳v1.x（随 RNA 工作流） |
 | 多目录一体对象（musica 式）+ 目录 IR（无损粗粒化 fine→coarse；细粒化需变异级重算） | musicatk 概念 | MsCatalog 族 | ✅ | — | M1s/M1c |
 | 目录模拟器：基因组真实放置、场景生成器、NB 校准采样 | SigProfilerSimulator/SynSig/Jiang | `ms_simulate()` | ✅ | 场景示意 | M7（内核 M1s） |
-| 格式互操作：SigProfiler txt/COSMIC txt/WTSI 长格式/MP 矩阵/sigminer RDS/ICAMS 语义 | 互操作矩阵（research 07 §1.19） | `ms_import/ms_export` | ✅ | — | M4 |
+| 格式互操作：COSMIC txt + SigProfiler txt ✅（[V] 双格式，tests fixture 锚）、signatures 导入 ✅；WTSI 长格式 ⏳（无上游实样）、MP 矩阵/sigminer RDS/ICAMS 语义 ⏳ | 互操作矩阵（research 07 §1.19） | `ms_import/ms_export` | 🔶 双格式 | — | M4（余 ⏳） |
 
 ## L-C 签名识别（de novo 提取）——对等引擎矩阵
 
@@ -93,7 +93,7 @@
 | 组间比较：Wilcoxon 基线 + DM 混合模型（MSU-Infer）+ CoDA | Morrill 2025 复现+扩展 | 🔶 v1.0 起 | 森林图/箱线+检验注记 |
 | 生存/临床关联（不确定性传播） | 多重插补 + Cox | ⏳ v1.x | KM/森林图 |
 | 复合判定：HRD 报告（WGS-only 契约）、PRRDetect、MSI/MMR、组织起源 | HRDetect 系数/Koh 2025 | HRD ✅ v1.0；其余 ⏳ | HRD 报告页 |
-| exposure 嵌入（UMAP/kmeans）+ 差异挖掘 | musicatk 思想 | 🔶 M4 | 嵌入散点/聚类图 |
+| exposure 嵌入（UMAP/kmeans）✅（ms_embed/plot_embedding，U-M4-03 余项）+ 差异挖掘 ⏳ | musicatk 思想 | 🔶 嵌入 | 嵌入散点/聚类图 |
 
 ## L-F 基本可视化（ggplot2 原生；COSMIC 风格规范：规范序强制、官方调色板、类组分隔、双轴、矢量输出）
 
@@ -148,7 +148,7 @@
 | `ms_benchmark()` | L3 | mlr3 式基准网格；non-certified 引擎显式 warning | M0 骨架/M7 完备 |
 | `ms_sitrep()` | L3 | 环境/依赖/refdb/线程诊断 | M0 |
 | `ms_qc_report()` `ms_downsample()` `ms_convert()` `ms_update_refdb()` | L2 | QC 报告、深度下采样、机会转换、参考库更新 | M0 骨架起（`ms_update_refdb()`）/M4 |
-| `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | 格式互操作、allele-specific CN / SV 输入、目录模拟器 | 见 L-A/L-B/L-G |
+| `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | 格式互操作、allele-specific CN / SV 输入、目录模拟器（ms_simulate 变异计数层第一版：multinomial/poisson/nb 三臂，VCF 级放置 ⏳M7） | M1c（CN/SV）/M4（互操作）/M7-pre（simulate） |
 | `ms_stratify_hypermutants()` | L2 | 超突变者分层（分类+排除 de novo+强制 refit） | M1c |
 | `ms_atlas_fit()` `ms_hrd_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | 应用工作流 | 见 L-G |
 | `ms_nmf()` `ms_ard()` `ms_sparse()` `ms_lda()` `ms_correlated()` `ms_tensor()` `ms_supervised()` `ms_hdp()` `ms_bayes()` | L3 | 引擎工厂（S7 对象一等公民，字符串为糖；L-C/L-D 状态列为准） | 见 L-C |
