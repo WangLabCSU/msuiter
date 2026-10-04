@@ -49,6 +49,7 @@ Collate:
     'ms-compare.R'
     'ms-downsample.R'
     'io-catalog.R'
+    'ms-qc-report.R'
     'msuiter-package.R'
     'extendr-wrappers.R'
     'ffi-probes.R'

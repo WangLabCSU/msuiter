@@ -4,23 +4,27 @@
 \alias{ms_import}
 \title{Import a file into a catalog or signature set}
 \usage{
-ms_import(file, format = "cosmic", kind = "catalog", channel_table = NULL)
+ms_import(
+  file,
+  format = "cosmic",
+  kind = c("catalog", "signatures"),
+  channel_table = NULL
+)
 }
 \arguments{
 \item{file}{Input path.}
 
-\item{format}{Only `"cosmic"` in this batch.}
+\item{format}{`"cosmic"` or `"sigprofiler"` (see [ms_export()]).}
 
-\item{kind}{Only `"catalog"` in this batch: signature-set import is
-deferred because the MsSignature validator's exposure face cannot
-carry a legal zero-column matrix (colnames() is NULL at 0 columns) —
-an audited validator change lands first.}
+\item{kind}{`"catalog"` (integer counts) or `"signatures"`
+(probabilities; the zero-column exposure face, validator-revised
+U-M4-02).}
 
 \item{channel_table}{Optional registry table name pinning the label
 order (SBS96/SBS192/SBS384/SBS1536/DBS78); inferred when omitted.}
 }
 \value{
-An [MsCatalog].
+An [MsCatalog] or an [MsSignature].
 }
 \description{
 Reads a `cosmic`-format TSV ("Type" first header column) and returns an

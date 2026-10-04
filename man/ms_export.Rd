@@ -9,8 +9,10 @@ ms_export(x, format = "cosmic", file = NULL)
 \arguments{
 \item{x}{An [MsCatalog] or [MsSignature].}
 
-\item{format}{Only `"cosmic"` in this batch (see the design memo §0 for
-the deferred formats).}
+\item{format}{`"cosmic"` (the bundled reference layout, first header
+column "Type") or `"sigprofiler"` (first header column
+"MutationType"; verified against upstream specimens — memo §4).
+WTSI long format is deferred (no verifiable upstream specimen).}
 
 \item{file}{Output path; `NULL` returns the assembled data.frame
 instead of writing.}

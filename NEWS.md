@@ -22,6 +22,12 @@
 * **ms_downsample()（R/ms-downsample.R）**：公共深度下采样——语义锚定 M3b sanity harness 同款多项律（`Multinomial(depth, counts_j/total_j)`，base R rmultinom 固定种子按样本列序，逐位可复现）；`depth = "min"` 取活样本最小总量；浅样本原样保留、死样本保持零列；provenance 追加 downsample 记录。有放回近似的诚实声明 + 多元超几何升级臂入设计备忘。
 * **COSMIC txt 互操作首批（R/io-catalog.R）**：`ms_export()` / `ms_import(format = "cosmic")`——布局锚 = 捆绑 COSMIC v3.6 上游文件（`Type` 首列 + 规范通道序）；两侧都强制标签 == 注册表规范序（无静默重排/子集）；通道表按行数+标签集唯一推断或显式 pin；目录侧整数控入校验。SigProfiler txt / WTSI 长格式与 signatures 导入面**推迟**（夜间窗口未取得上游 [V] 样例；MsSignature 校验器无法容纳 0 列暴露——均记录于设计备忘 §0/§2）。
 
+## M4 · QC 报告初版 + SigProfiler 互操作（U-M4-02/02b 日间批）
+
+* **SigProfiler txt 解禁实装（[V] 三重上游锚，设计备忘 §4）**：真实样例（SigProfilerAssignment de-novo SBS96 输出，sha256 固定进 tests fixtures）行序==注册表（R identical 实证）；ICAMS 转换器源码核实（MutationType 表头 + 括号标签）；SigProfilerPlotting reference formats 384/96/78 逐位一致。`ms_export/ms_import` format∈{cosmic, sigprofiler}；**signatures 导入面解禁**——MsSignature validator 修订放行 k×0 合法空暴露面（0 列矩阵 colnames 恒 NULL 的 base R 事实显式豁免，标签协议不变）。
+* **ms_qc_report() 初版（R/ms-qc-report.R，设计备忘 2026-10-04-M4-02b-qc-memo.md）**：逐样本负荷分布（total/log10/burden_class）+ 机制级伪迹哨兵（gt_share = C>A 通道份额——注册表嘧啶归一化下 oxoG 的 G>T 视图；ct_share = C>T——FFPE 脱胺）+ 给定拟合时的 COSMIC 伪迹签名暴露份额（名册 19 条：SBS27/43/45–60/95，COSMIC SBS 索引页 2026-10-04 实时核实、测试字面钉死；签名名按数值词干匹配）。qc_flag 初版常数（artifact ≥0.05 伪迹份额 或 gt ≥0.30；watch = ct ≥0.40 或 low 负荷）——**我方声明 divergence，Degasperi amber/red 忠实复刻 ⏳v1.x**（逐位阈值未公开，[V] 纪律不声称）。
+* **WTSI 长格式维持推迟**：两窗口均未取得上游实样文件（ICAMS 无 WTSI 面、PCAWG WTSI 矩阵在 portal 会话后、本地 Nik-lab 矩阵为 COSMIC 方言）——不可验证即不交付。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
