@@ -150,10 +150,10 @@ ms_simulate <- function(signatures, exposures, arm = "multinomial",
   }
   rownames(counts) <- labels
   samples <- colnames(exposures)
-  colnames(counts) <- samples
   if (is.null(samples)) {
     samples <- paste0("sim", seq_len(n))
   }
+  colnames(counts) <- samples
   ms_catalog(
     counts = counts,
     channels = list(name = table_nm, labels = as.character(labels)),
