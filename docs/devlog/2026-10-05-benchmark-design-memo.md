@@ -46,10 +46,24 @@ ms_benchmark(grid, engines = NULL, seed = 1, ...)
 - 【工程】：网格完整性（cells = scenarios × engines 全笛卡尔）；错误隔离（单 cell 失败 → 该 cell error 行 + 网格继续）；MsBenchmark validator 全绿。
 - CI sanity bound：TMB{1000,10000}×k3×2 引擎×多臂 < 5 分钟。
 
-## §5 开放裁决点（实现前须 PI 表态）
+## §5 开放裁决点（默认路径已细化——PI 回归后"采纳默认"即开工）
 
-1. **评估引擎集合**：v0.2 期自有引擎（NMF/ARD/Sparse）互评，还是含竞品适配器（sigminer 已有；MuSiCal/SigProfilerAssignment 适配器 = M7 独立单元）？建议：先自有互评，竞品容器随 M7。
-2. **评分的 exposure 对齐语义**：de novo 提取的签名无 1:1 真值对齐——对齐经 ms_compare Hungarian（一对一）后 L1 只在配对上算，还是最佳贪心？建议：Hungarian 配对 L1（与主指标同源）。
+### 裁决点 1：评估引擎集合 → **默认路径 D1：三阶段扩展**
+
+- **阶段 1（实现即含）**：自有 certified 引擎互评——NMF / ARD / Sparse（注册表 certified 三态现成，non-certified warning 语义已定）。竞品容器**不在**网格驱动器首版。
+- **阶段 2（M7 本体）**：sigminer 适配器入格（bench/xval 已有互证先例，容器 = 引擎注册表 + required_pkgs 门）。
+- **阶段 3（M7 完备门）**：MuSiCal / SigProfilerAssignment 容器（Python 桥 = 独立单元，需 basilisk/reticulate 裁决——届时另立备忘）。
+- 可执行默认：`ms_benchmark(engines = NULL)` = 全 certified；`engines = c("nmf", "ard", "sparse")` 为 sanity bound 标准集；适配器引擎以注册表 certified=TRUE 进入（D17 语义不变）。
+- **回滚成本**：零（阶段间纯增量）。
+
+### 裁决点 2：exposure 对齐语义 → **默认路径 D2：Hungarian 配对 L1（同源主指标）**
+
+- de novo 提取与真值无 1:1 对齐——L1/cosine 的 exposure 误差只在 Hungarian 一对一配对成功的 (估计, 真值) 对上计算（与 P/R/F1 主指标同一 `ms_compare(protocol = "hungarian")` 运行导出，零额外计算）；未配对估计签名不入 L1 均值（其 FP 身份已被主指标惩罚——双重计惩罚即重复计数）。
+- absolute 口径 = 配对对的暴露差绝对值之和 / 负荷；compositional 口径 = 份额化后同式。两口径都报（.metric 后缀 `_abs` / `_comp`）。
+-贪心 max-cosine 对齐的 L1 = 鲁棒性附录（阈值扫同款），不进主表。
+- **回滚成本**：低（评分函数单一出口，语义切换 = 换一个内部函数）。
+
+PI 确认格式（一键）：`D1+D2 采纳` / 对任一条给出替代——两路径均已细化为实现即用的规格，无二次设计依赖。
 
 ## §6 依赖
 
