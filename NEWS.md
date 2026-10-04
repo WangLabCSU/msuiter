@@ -40,6 +40,8 @@
 
 * **plot_k_cv_curve() + plot_k_stability()（K 选择证据可视化，L-F ✅ M2/M4 行收口）**：ms_select_k() 的 memo-3 证据表直读——CV 误差曲线（argmin 高亮 + selected 套环 + veto 红蓝着色）与共识稳定性双线（avg/min + 上游 veto 阈值参考线 0.80/0.20）；schema 守卫结构化；真实 ms_select_k 小网格往返渲染。
 
+* **bootstrap CI/stability 图（L-F ✅ M3b/M4 行收口，R/viz-bootstrap.R）**：plot_boot_ci（逐签名误差条 + 合同标题 95% CI/boots）+ plot_boot_stability（稳定性柱 + 0.95 地板线——M3b 复合清零规则的 stability 条款）；plot_boot_distribution 为诚实拒绝面（draws 不落 MsFit——M7 升级臂记录）；点拟合守卫。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
