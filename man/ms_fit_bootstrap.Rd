@@ -47,8 +47,8 @@ seed, same output -- bit-identically.}
 
 \item{bca}{Single logical (default `FALSE`): additionally compute the
 **BCa interval** (bias-corrected and accelerated; Hall 1988) from the
-SAME replicates -- zero extra resampling. `z0 = Phi^{-1}(#{boot <
-point}/B)` corrects median bias and the acceleration comes from the
+SAME replicates -- zero extra resampling. `z0 = Phi^\{-1\}(#\{boot <
+point\}/B)` corrects median bias and the acceleration comes from the
 fixed-active-set analytic jackknife (one LDL^T per sample, not a
 per-mutation refit). Cells whose correction is below the MC noise of
 the bounds (`|z0| < 0.1` and `|a| < 0.05`), past the acceleration

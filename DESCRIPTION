@@ -13,6 +13,7 @@ Depends: R (>= 4.3)
 Imports: S7,
     rlang
 Suggests: BSgenome.Hsapiens.UCSC.hg19,
+    ggplot2,
     knitr,
     rmarkdown,
     sigminer,
@@ -39,6 +40,9 @@ Collate:
     'engines-nmf.R'
     'extract.R'
     'fit.R'
+    'calibrate.R'
+    'calibrate-plot.R'
+    'calibrate-real.R'
     'kselect-select.R'
     'classes-benchmark.R'
     'msuiter-package.R'

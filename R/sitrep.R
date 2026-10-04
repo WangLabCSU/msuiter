@@ -50,8 +50,10 @@ ms_sitrep <- function() {
   not_yet_available <- c(
     "COSMIC on-demand update (tools::R_user_dir cache; planned for M4)",
     paste(
-      "likelihood-based fitting methods (ms_fit() methods shipped in M3a;",
-      "MSU-Fit calibration statistics planned for M3b)"
+      "MSU-Fit calibration bench result tables (the calibration experiment",
+      "face -- ms_calibration_grid()/ms_calibration_verdict()/",
+      "plot_calibration_curve()/ms_calibration_sanity() -- shipped in M3b;",
+      "the frozen-protocol coverage tables land with the paper bench)"
     )
   )
 
