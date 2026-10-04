@@ -234,7 +234,9 @@ test_that("ms_compare end-to-end: MsComparison assembly and metadata", {
   comp <- ms_compare(fx$est, fx$ref, protocol = c("hungarian", "islam"),
     null_n = 2000L, seed = 5)
   expect_is_ms(comp, "MsComparison")
-  expect_named(comp@metrics, "cosine")
+  # metrics: the requested metric + the per-pair p/BH matrices
+  # (the L-F q 注记 table face).
+  expect_named(comp@metrics, c("cosine", "p_null", "q_bh"))
   expect_identical(dim(comp@metrics$cosine), c(6L, 3L))
   expect_identical(colnames(comp@metrics$cosine)[1], "t1") # kept from input
   expect_identical(dimnames(comp@metrics$cosine)[[1]][1], "t1")
@@ -250,7 +252,8 @@ test_that("ms_compare end-to-end: MsComparison assembly and metadata", {
   # Multi-metric requests all land in the metrics list.
   comp2 <- ms_compare(fx$est, fx$ref, metric = c("cosine", "hellinger"),
     protocol = "islam", null_n = 2000L)
-  expect_named(comp2@metrics, c("cosine", "hellinger"))
+  expect_named(comp2@metrics,
+    c("cosine", "hellinger", "p_null", "q_bh"))
   # MsSignature convenience extraction reaches the same machinery.
   sig_lab <- fx$est
   dimnames(sig_lab) <- list(sprintf("C%02d", 1:96), paste0("s", 1:6))
@@ -288,6 +291,32 @@ test_that("error paths are structured msuiter_error_* conditions", {
       exposures_est = matrix(1, 6, 2)),
     "input"
   )
+})
+
+test_that("per-pair null p + BH q ride the metrics list (L-F q 注记)", {
+  labels <- msuiter:::.ms_io_channel_tables()$SBS96
+  set.seed(31)
+  est <- matrix(abs(rnorm(96 * 3)) + 0.01, 96, 3,
+    dimnames = list(labels, c("E1", "E2", "E3")))
+  est <- sweep(est, 2, colSums(est), "/")
+  ref <- cbind(est, matrix(abs(rnorm(96)) + 0.01, 96, 1))
+  ref <- sweep(ref, 2, colSums(ref), "/")
+  colnames(ref)[4] <- "R1"
+  comp <- ms_compare(est, ref, protocol = "islam", null_n_draws = 500)
+  pm <- comp@metrics$p_null
+  qm <- comp@metrics$q_bh
+  expect_identical(dim(pm), c(3L, 4L))
+  expect_identical(dimnames(pm), dimnames(comp@metrics$cosine))
+  # The add-one floor: the exact-copy diagonal sits at 1/501.
+  expect_true(all(diag(pm) == 1 / 501))
+  # BH direction: q >= p everywhere (the audited first draft asserted
+  # the reverse).
+  expect_true(all(qm >= pm | is.na(pm)))
+  # And q is exactly p.adjust(BH) over the flattened grid.
+  expect_identical(as.vector(qm),
+    stats::p.adjust(as.vector(pm), method = "BH"))
+  # An unrelated pair carries a visibly larger p than the diagonal.
+  expect_gt(pm[3, 4], diag(pm)[1])
 })
 
 test_that("the mc_se tolerance aborts through the direct null face", {

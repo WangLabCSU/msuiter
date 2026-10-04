@@ -44,6 +44,8 @@
 
 * **散点图零分布 p 注记（L-F 收口，R/ms-compare.R + viz）**：plot_cosmic_scatter(null_p = TRUE) 注记经验签名零分布尾概率——uniform-Dirichlet 族 R 孪生采样器（审计已独立对拍 Rust 核同律）+ add-one 规则（永不返 0，5000 draws 默认）；cos=1 钉在下限 1/(n+1)；跨对比 FDR q ⏳ 待多对比表视图。
 
+* **ms_compare 逐对比 p_null/q_bh 矩阵（L-F q 注记全收口）**：每 (est, ref) 对的经验签名零分布尾概率（add-one MC，per-pair seed 偏移）+ 全格 BH 校正（p.adjust 逐位一致钉测）；q≥p 方向、对角加一下限、无关对大 p 全数字断言。散点图注记与表视图共用同一零分布族。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。

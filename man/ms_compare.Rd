@@ -17,7 +17,8 @@ ms_compare(
   burden = NULL,
   null_n = .ms_compare_defaults$null_n,
   null_quantiles = .ms_compare_defaults$null_quantiles,
-  seed = 1L
+  seed = 1L,
+  null_n_draws = 2000L
 )
 }
 \arguments{

@@ -393,6 +393,9 @@
 #' @param null_quantiles quantiles reported for each null, in (0, 1).
 #' @param seed master seed of the null Monte Carlo (PCG64 layout v1;
 #'   identical seeds are bitwise-reproducible).
+#' @param null_n_draws Draws per pairwise empirical null p (>= 200;
+#'   default 2000) -- the add-one tail estimate reported in the
+#'   `p_null`/`q_bh` metric matrices.
 #'
 #' @return An [MsComparison].
 #'
@@ -408,7 +411,7 @@ ms_compare <- S7::new_generic(
            catalogs = NULL, signatures_est = NULL, burden = NULL,
            null_n = .ms_compare_defaults$null_n,
            null_quantiles = .ms_compare_defaults$null_quantiles,
-           seed = 1L)
+           seed = 1L, null_n_draws = 2000L)
     S7::S7_dispatch()
 )
 
@@ -417,7 +420,7 @@ ms_compare <- S7::new_generic(
 .ms_compare_assemble <- function(P, Q, metric, protocol, thresholds,
                                  exposures_est, exposures_ref, catalogs,
                                  signatures_est, burden, null_n,
-                                 null_quantiles, seed) {
+                                 null_quantiles, seed, null_n_draws = 2000L) {
   # --- input gates (structured, before any null draws burn work) ----------
   for (nm in c("estimated", "reference")) {
     x <- if (nm == "estimated") P else Q
@@ -546,6 +549,30 @@ ms_compare <- S7::new_generic(
     jiang <- NULL
   }
 
+  # --- per-pair empirical null p + BH (the L-F "q 值注记" table face)
+  # Every (est, ref) pair gets an add-one empirical tail probability
+  # under the frozen signature-null family, then BH across ALL pairs
+  # (the conservative whole-grid view). Same sampler as the scatter
+  # annotation (the audited R twin of the Rust kernel law).
+  if (!is.null(metrics$cosine)) {
+    cm <- metrics$cosine
+    pmat <- matrix(NA_real_, nrow(cm), ncol(cm),
+                   dimnames = dimnames(cm))
+    for (i in seq_len(nrow(cm))) {
+      for (j in seq_len(ncol(cm))) {
+        v <- cm[i, j]
+        if (is.finite(v)) {
+          pmat[i, j] <- .ms_null_emp_pvalue(v, m = m, n_draws = null_n_draws,
+                                            seed = seed + i - 1L)
+        }
+      }
+    }
+    qbh <- matrix(stats::p.adjust(as.vector(pmat), method = "BH"),
+                  nrow(cm), ncol(cm), dimnames = dimnames(cm))
+    metrics$p_null <- pmat
+    metrics$q_bh <- qbh
+  }
+
   # --- nulls (signature family always; catalog family when a burden exists)
   if (is.null(burden)) {
     truth_n <- if (!is.null(catalogs)) colSums(catalogs) else {
@@ -595,10 +622,11 @@ S7::method(ms_compare, S7::class_any) <- function(
     catalogs = NULL, signatures_est = NULL, burden = NULL,
     null_n = .ms_compare_defaults$null_n,
     null_quantiles = .ms_compare_defaults$null_quantiles,
-    seed = 1L) {
+    seed = 1L, null_n_draws = 2000L) {
   est <- if (S7::S7_inherits(estimated, MsSignature)) estimated@signatures else estimated
   ref <- if (S7::S7_inherits(reference, MsSignature)) reference@signatures else reference
   .ms_compare_assemble(est, ref, metric, protocol, thresholds,
                        exposures_est, exposures_ref, catalogs,
-                       signatures_est, burden, null_n, null_quantiles, seed)
+                       signatures_est, burden, null_n, null_quantiles, seed,
+                       null_n_draws)
 }
