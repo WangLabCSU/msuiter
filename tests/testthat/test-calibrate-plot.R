@@ -60,6 +60,23 @@ test_that("failing cells add the red cross marker; se = FALSE drops the bars", {
   expect_match(p9799$labels$subtitle, "0\\.970, 0\\.990", fixed = FALSE)
 })
 
+test_that("se = FALSE accepts a hand-built table without any se column", {
+  # The P2-1 regression scenario: with se = FALSE the se column is not a
+  # required column at all (hand-built tables need not carry it).
+  skip_if_not_installed("ggplot2")
+  df <- .ms_plot_df()
+  df$se <- NULL
+  expect_false("se" %in% names(df))
+  p <- plot_calibration_curve(df, se = FALSE)
+  expect_s3_class(p, "ggplot")
+  geom_classes <- vapply(p$layers, function(l) class(l$geom)[1L],
+    character(1L), USE.NAMES = FALSE)
+  expect_false("GeomErrorbar" %in% geom_classes)
+  expect_true("GeomRect" %in% geom_classes)
+  # With se = TRUE the same table must still abort on the missing column.
+  expect_ms_error(plot_calibration_curve(df), "input")
+})
+
 test_that("the plot renders a real tiny grid and ggsave writes a non-empty PNG", {
   skip_if_not_installed("ggplot2")
   sigs <- matrix(0, nrow = 8, ncol = 2)
