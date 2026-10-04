@@ -48,9 +48,29 @@ msuiter_validate_signature <- function(self) {
   sigs <- self@signatures
   msuiter_check_signature_matrix(sigs, "signatures", "signature")
   exp1 <- self@exposures
-  msuiter_check_signature_matrix(exp1, "exposures", "signature")
+  # The legal empty exposure face (imports, signature-only objects): a
+  # k x 0 matrix whose rownames carry the signature labels. base R makes
+  # colnames() NULL at 0 columns no matter what was assigned, so the
+  # colnames requirement is waived in exactly that case (audited U-M4-02
+  # revision — the import face needs this).
+  zero_col_exp <- is.matrix(exp1) && is.numeric(exp1) && ncol(exp1) == 0L
+  if (zero_col_exp) {
+    if (is.null(rownames(exp1)) || anyDuplicated(rownames(exp1)) != 0L) {
+      msuiter_abort(
+        "signature",
+        "empty exposures must still carry unique signature row labels",
+        i = "labels are the only legal matching key (never position)",
+        j = paste0("rownames missing: ", is.null(rownames(exp1))),
+        c = "set the matrix rownames before construction"
+      )
+    }
+  } else {
+    msuiter_check_signature_matrix(exp1, "exposures", "signature")
+  }
 
-  # Label agreement between signatures and exposures (by label, element-wise).
+  # Label agreement between signatures and exposures (by label,
+  # element-wise). The empty face must agree too — its rows ARE the
+  # signature labels.
   if (!identical(colnames(sigs), rownames(exp1))) {
     offenders <- colnames(sigs)[!colnames(sigs) %in% rownames(exp1)]
     msuiter_abort(

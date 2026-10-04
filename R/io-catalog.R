@@ -22,6 +22,9 @@
 
 # Resolve the canonical label vector for a matrix: the label set must
 # equal exactly one registry table, in order. Returns the table name.
+.ms_io_formats <- c("cosmic", "sigprofiler")
+.ms_io_header_col <- c(cosmic = "Type", sigprofiler = "MutationType")
+
 .ms_io_resolve_table <- function(labels, channel_table = NULL) {
   tables <- .ms_io_channel_tables()
   if (!is.null(channel_table)) {
@@ -73,8 +76,10 @@
 #' registry order).
 #'
 #' @param x An [MsCatalog] or [MsSignature].
-#' @param format Only `"cosmic"` in this batch (see the design memo §0 for
-#'   the deferred formats).
+#' @param format `"cosmic"` (the bundled reference layout, first header
+#'   column "Type") or `"sigprofiler"` (first header column
+#'   "MutationType"; verified against upstream specimens — memo §4).
+#'   WTSI long format is deferred (no verifiable upstream specimen).
 #' @param file Output path; `NULL` returns the assembled data.frame
 #'   instead of writing.
 #'
@@ -82,13 +87,14 @@
 #'
 #' @export
 ms_export <- function(x, format = "cosmic", file = NULL) {
-  if (!identical(format, "cosmic")) {
+  if (!format %in% .ms_io_formats) {
     msuiter_abort(
       "option",
-      "format must be \"cosmic\" in this batch",
-      i = "SigProfiler txt and WTSI long formats are deferred pending [V] verification",
-      j = paste0("received: ", msuiter_quote_trunc(format)),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §0"
+      "format must be one of the verified formats",
+      i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
+      j = paste0("received: ", msuiter_quote_trunc(format),
+                 "; verified: ", paste(.ms_io_formats, collapse = ", ")),
+      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §2/§4"
     )
   }
   if (S7::S7_inherits(x, MsCatalog)) {
@@ -111,7 +117,8 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
     cols <- if (S7::S7_inherits(x, MsCatalog)) x@samples else
       paste0("col", seq_len(ncol(mat)))
   }
-  out <- data.frame(Type = rownames(mat), stringsAsFactors = FALSE)
+  out <- data.frame(..hdr.. = rownames(mat), stringsAsFactors = FALSE)
+  names(out)[1L] <- .ms_io_header_col[[format]]
   for (j in seq_len(ncol(mat))) {
     out[[cols[j]]] <- mat[, j]
   }
@@ -132,80 +139,100 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
 #' match against the registry, or pinned via `channel_table`.
 #'
 #' @param file Input path.
-#' @param format Only `"cosmic"` in this batch.
-#' @param kind Only `"catalog"` in this batch: signature-set import is
-#'   deferred because the MsSignature validator's exposure face cannot
-#'   carry a legal zero-column matrix (colnames() is NULL at 0 columns) —
-#'   an audited validator change lands first.
+#' @param format `"cosmic"` or `"sigprofiler"` (see [ms_export()]).
+#' @param kind `"catalog"` (integer counts) or `"signatures"`
+#'   (probabilities; the zero-column exposure face, validator-revised
+#'   U-M4-02).
 #' @param channel_table Optional registry table name pinning the label
 #'   order (SBS96/SBS192/SBS384/SBS1536/DBS78); inferred when omitted.
 #'
-#' @return An [MsCatalog].
+#' @return An [MsCatalog] or an [MsSignature].
 #'
 #' @export
-ms_import <- function(file, format = "cosmic", kind = "catalog",
+ms_import <- function(file, format = "cosmic",
+                      kind = c("catalog", "signatures"),
                       channel_table = NULL) {
-  if (!identical(format, "cosmic")) {
+  if (!format %in% .ms_io_formats) {
     msuiter_abort(
       "option",
-      "format must be \"cosmic\" in this batch",
-      i = "SigProfiler txt and WTSI long formats are deferred pending [V] verification",
-      j = paste0("received: ", msuiter_quote_trunc(format)),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §0"
+      "format must be one of the verified formats",
+      i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
+      j = paste0("received: ", msuiter_quote_trunc(format),
+                 "; verified: ", paste(.ms_io_formats, collapse = ", ")),
+      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md §2/§4"
     )
   }
-  if (!identical(kind, "catalog")) {
-    msuiter_abort(
-      "option",
-      "kind must be \"catalog\" in this batch",
-      i = "signature-set import is deferred: the MsSignature validator's exposure face cannot carry a legal zero-column matrix (colnames() is NULL at 0 columns)",
-      j = paste0("received: ", msuiter_quote_trunc(kind)),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md section 2"
-    )
-  }
+  kind <- match.arg(kind)
   if (!is.character(file) || length(file) != 1L || is.na(file) || !nzchar(file) ||
       !file.exists(file)) {
     msuiter_abort(
       "input",
       "file must be a path to an existing file",
-      i = "ms_import() reads a cosmic-format TSV from disk",
+      i = "ms_import() reads a catalog/signature TSV from disk",
       j = paste0("received: ", msuiter_quote_trunc(file)),
       c = "pass the TSV path returned by ms_export()"
     )
   }
   tab <- utils::read.delim(file, sep = "\t", header = TRUE,
                            check.names = FALSE, stringsAsFactors = FALSE)
-  if (ncol(tab) < 2L || !identical(names(tab)[1L], "Type")) {
+  want_hdr <- .ms_io_header_col[[format]]
+  if (ncol(tab) < 2L || !identical(names(tab)[1L], want_hdr)) {
     msuiter_abort(
       "input",
-      "cosmic-format files need a \"Type\" first header column",
-      i = "the layout anchor is the bundled COSMIC v3.6 reference file",
+      sprintf("%s-format files need a \"%s\" first header column", format, want_hdr),
+      i = if (format == "cosmic") "the layout anchor is the bundled COSMIC v3.6 reference file"
+          else "the layout anchor is the pinned SigProfilerAssignment specimen (tests fixture)",
       j = paste0("received header: ", msuiter_quote_trunc(names(tab))),
-      c = "pass a file written by ms_export(format = \"cosmic\")"
+      c = paste0("pass a file written by ms_export(format = \"", format, "\")")
     )
   }
-  labels <- tab$Type
+  labels <- tab[[1L]]
   table_nm <- .ms_io_resolve_table(labels, channel_table = channel_table)
   mat <- as.matrix(tab[, -1L, drop = FALSE])
   rownames(mat) <- labels
-  if (any(!is.finite(mat)) || any(mat < 0) || any(mat != floor(mat))) {
-    msuiter_abort(
-      "input",
-      "catalog import needs finite non-negative whole-number counts",
-      i = "a catalog is integer mutation counts",
-      j = sprintf("offending entries: %d",
-                  sum(!is.finite(mat) | mat < 0 | mat != floor(mat))),
-      c = "signature-probability files wait for the signatures import face"
+  if (kind == "catalog") {
+    if (any(!is.finite(mat)) || any(mat < 0) || any(mat != floor(mat))) {
+      msuiter_abort(
+        "input",
+        "catalog import needs finite non-negative whole-number counts",
+        i = "a catalog is integer mutation counts",
+        j = sprintf("offending entries: %d",
+                    sum(!is.finite(mat) | mat < 0 | mat != floor(mat))),
+        c = "import probabilities with kind = \"signatures\""
+      )
+    }
+    samples <- colnames(mat)
+    if (is.null(samples)) {
+      samples <- paste0("sample", seq_len(ncol(mat)))
+    }
+    return(ms_catalog(
+      counts = mat,
+      channels = list(name = table_nm, labels = labels),
+      samples = samples,
+      provenance = list(genome = "imported", format = format, file = file)
+    ))
+  }
+  # signatures: the probability face. The legal empty exposure (k x 0,
+  # rownames = signature labels) rides along; the catalog summary pins the
+  # import (n_samples = 0 — no exposures exist).
+  sig_cols <- colnames(mat)
+  if (is.null(sig_cols)) {
+    sig_cols <- paste0("signature", seq_len(ncol(mat)))
+  }
+  colnames(mat) <- sig_cols
+  exposures <- matrix(0, nrow = ncol(mat), ncol = 0L,
+    dimnames = list(sig_cols, character(0L)))
+  ms_signature(
+    signatures = mat,
+    exposures = exposures,
+    stability = list(),
+    k_evidence = data.frame(k = integer(0L), cv = numeric(0L)),
+    engine = "imported",
+    seed = 0,
+    catalog_summary = list(
+      n_channels = nrow(mat), n_samples = 0L, channel_name = table_nm,
+      channel_hash = msuiter_hash_labels(as.character(labels)),
+      build = "imported"
     )
-  }
-  samples <- colnames(mat)
-  if (is.null(samples)) {
-    samples <- paste0("sample", seq_len(ncol(mat)))
-  }
-  ms_catalog(
-    counts = mat,
-    channels = list(name = table_nm, labels = labels),
-    samples = samples,
-    provenance = list(genome = "imported", format = "cosmic", file = file)
   )
 }
