@@ -147,7 +147,7 @@ plot_calibration_curve <- function(calibration_df, window = NULL, se = TRUE) {
   if (se) {
     p <- p + ggplot2::geom_errorbar(
       ggplot2::aes(
-        ymin = .data$mean_coverage - .data$se,
+        ymin = pmax(0, .data$mean_coverage - .data$se),
         ymax = pmin(1, .data$mean_coverage + .data$se)
       ),
       width = 0.04, colour = "grey45"
