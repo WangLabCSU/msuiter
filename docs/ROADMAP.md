@@ -79,13 +79,13 @@
 
 ### M3b · MSU-Fit 校准统计（6 周；**G2 门须在此期间达成**）
 
-- [ ] estimand 三层落地：presence LRT / support-conditional 绝对 exposure CI（BCa 或分层 calibrated-percentile）/ 清零复合覆盖率
-- [ ] 多项 + NB 双生成模型校准；coverage × N × Shannon 曲线；Fisher 内点区间；真实数据降采样 sanity 协议
-- [ ] **G0 先导实验结果写入叙事决策**（Framing A vs B）
+- [x] estimand 三层落地：presence LRT / support-conditional 绝对 exposure CI（BCa）/ 清零复合覆盖率（U-M3b-01/02/03；198-cell 校准网格全落判据窗——池化零分布 P0 修复后；分层 calibrated-percentile 升级臂记录于 M3b 设计备忘；G2 门未达成——co-author 未锁定，GB/NC 上限主动接受）
+- [x] 多项 + NB 双生成模型校准；coverage × N × Shannon 曲线；Fisher 内点区间；真实数据降采样 sanity 协议（U-M3b-02/04/05/06：calibrate.rs + ms_calibration_grid/verdict/plot/sanity 全链，终审+确认轮审计闭环 cf0751e）
+- [ ] **G0 先导实验结果写入叙事决策**（Framing A vs B）——阻塞于作者 COSMIC v3.6 目录文件（G0_CATALOG_PATH）
 
 ### M4 · 相似度校准库 + viz（3 周）
 
-- [ ] **校准相似度库（`ms_compare()`，框架组件）**：多度量 + 解析/经验零分布 + Hungarian 主指标/Islam 贪心/Jiang 活性三协议参考实现（金标准测试）
+- [x] **校准相似度库（`ms_compare()`，框架组件）**：多度量 + 解析/经验零分布 + Hungarian 主指标/Islam 贪心/Jiang 活性三协议参考实现（金标准测试）（U-M4-01，ca69806+cd67c71；对抗审计 P1 流带碰撞+P2×6 全修——校准锚 +1/(3m)、type-7 ≤2ulp、correlation 守卫；Islam 双口径对标正身 = PI 裁决项记 memo §8；bench/jiang 对标待办）
 - [ ] 样本 QC 报告 `ms_qc_report()`（负荷分布/伪迹贡献初版）+ `ms_downsample()`；格式互操作 `ms_import/ms_export`（首批：SigProfiler txt、COSMIC txt、WTSI 长格式）
 - [ ] viz 首批 8 图型（COSMIC 调色板、规范序、矢量）+ exposure 嵌入（UMAP）初版 + `ms_convert()` 机会转换（exome/panel 机会一等公民）
 
