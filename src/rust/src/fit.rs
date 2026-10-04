@@ -1363,7 +1363,8 @@ pub fn bootstrap(
         // misfit dictionary is NOT totals[j], so this is a real rescale that
         // puts the boots on the point fit's count scale. Zeros stay zero; a
         // zero-sum column stays all-zero; percentile order per column is
-        // unchanged by the shared positive factor.
+        // unchanged by each boot's own positive factor (the factors differ
+        // across boots when boot column sums vary — audited precision).
         let exposures = rescale_to_totals(&exposures, &totals, n)?;
         Ok((exposures, support, converged))
     };
