@@ -71,7 +71,7 @@
 - [x] `ms_fit()`：nnls / likelihood_bidirectional（MuSiCal 语义，数值协议等价）/ lrt（U-M3a-02/03/04；bootstrap/presence/assign/TSB/rescale/connected 全链交付）
 - [x] `ms_fit_bootstrap()`（Rust 并行）+ `ms_test_presence()`（NB χ²₁ LRT + BH）（U-M3a-03；池化零分布 P0 修复后校准矩阵全落窗 n=1..16）
 
-**v0.2 验收（发布）**：Jiang 协议（活性>0 匹配 + Combined Score）对标进入第一梯队合理区间；refdb v1 已交付（U-M3a-06：COSMIC v3.6 BSD-2 镜像 pin ff61b0f 逐字节校验捆绑 + precedence/schema_version/manifest 治理 + build_independent 声明，全离线测试）。
+**v0.2 验收（发布）**：Jiang 协议对标证据已交付（bench/jiang，4b3c8b4：multinomial 臂 PASS——CS min 2.72 ≥ 2.3 且汇总 specificity 0.864 ≥ 0.85；nb8 应力臂 CS 过 2.41 / spec 0.743 未过——κ=8 应力值 vs bbaf042 逐工具校准的归因 + 两个 PI 选项已写入 result.md，**待 PI 认可判据**）；refdb v1 已交付（U-M3a-06：COSMIC v3.6 BSD-2 镜像 pin ff61b0f 逐字节校验捆绑 + precedence/schema_version/manifest 治理 + build_independent 声明，全离线测试）。
 
 ---
 

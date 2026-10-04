@@ -34,6 +34,8 @@
 
 * **ms_embed() + plot_embedding()（U-M4-03 余项，R/ms-embed.R）**：样本暴露空间嵌入——UMAP（uwot，Suggests）或确定性 kmeans（stats 恒可用）；share 变换默认（单纯形几何）；seed 一等参数（同版本逐位、跨版本诚实声明不保证）；kmeans 组恢复在 3 组人工 fixture 上钉测；plot_embedding 按 cluster 着色。差异挖掘面 ⏳ 后批。
 
+* **bench/jiang 对标（v0.2 验收门证据，4b3c8b4）**：Jiang 2025 拟合协议（bbaf042）——8 条 COSMIC v3.6 参考签名（含 v3.6 拆分名 17a/40a）× 3 活跃/5 decoy × 负荷 {300–10000} × multinomial/NB(κ=8) 双臂 × 30 replicate；参考约束 NNLS refit 双面（真 raw zero_threshold=0 + 管线 1% 清理——审计式发现：默认清理使 raw 口径成空操作）；ms_compare(protocol='jiang') 直读。multinomial 臂过门（CS min 2.72 / 汇总 spec 0.864）；nb8 臂 CS 过（2.41）spec 未过（0.743）——归因与 PI 选项入 result.md。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
