@@ -50,6 +50,7 @@ Collate:
     'ms-downsample.R'
     'io-catalog.R'
     'ms-qc-report.R'
+    'ms-convert.R'
     'msuiter-package.R'
     'extendr-wrappers.R'
     'ffi-probes.R'

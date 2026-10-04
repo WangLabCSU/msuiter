@@ -28,6 +28,8 @@
 * **ms_qc_report() 初版（R/ms-qc-report.R，设计备忘 2026-10-04-M4-02b-qc-memo.md）**：逐样本负荷分布（total/log10/burden_class）+ 机制级伪迹哨兵（gt_share = C>A 通道份额——注册表嘧啶归一化下 oxoG 的 G>T 视图；ct_share = C>T——FFPE 脱胺）+ 给定拟合时的 COSMIC 伪迹签名暴露份额（名册 19 条：SBS27/43/45–60/95，COSMIC SBS 索引页 2026-10-04 实时核实、测试字面钉死；签名名按数值词干匹配）。qc_flag 初版常数（artifact ≥0.05 伪迹份额 或 gt ≥0.30；watch = ct ≥0.40 或 low 负荷）——**我方声明 divergence，Degasperi amber/red 忠实复刻 ⏳v1.x**（逐位阈值未公开，[V] 纪律不声称）。
 * **WTSI 长格式维持推迟**：两窗口均未取得上游实样文件（ICAMS 无 WTSI 面、PCAWG WTSI 矩阵在 portal 会话后、本地 Nik-lab 矩阵为 COSMIC 方言）——不可验证即不交付。
 
+* **ms_convert() 机会转换（U-M4-02c，R/ms-convert.R + 设计备忘 2026-10-04-M4-02c-convert-memo.md）**：sigfit convert_signatures 语义（sig/opp_from·opp_to 逐列重归一）——human-genome/human-exome 内置表（COSMIC v2/v3 频数，经 sigminer 源码 [V]，data-raw+inst/extdata 双处固定、标签序为注册表序）+ 自定义机会向量（panel 口）；MsSignature 方法签名转换/暴露原样；genome→genome 恒等、与 sigminer sig_convert 双侧一致 ≤1e-12、往返可逆 1e-8、零列不产 NaN。"似然内机会"（sigfit per-sample 语义）记 ⏳v1.x。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
