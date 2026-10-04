@@ -344,14 +344,21 @@ pub fn multinomial_bootstrap(
 /// catalog totals at 10⁵–10⁶ (M3b memo §1.3), so 10¹² is six-plus orders
 /// of headroom; the cap exists because the Poisson inversion's expected
 /// walk cost is `O(√rate)` and the goldens only certify the regime below.
-pub const NB_MEAN_MAX: f64 = 1e12;
+/// Support ceilings for NB sampling (audited P2): the Poisson mode
+/// inversion accumulates `mode·ln(rate)−rate−lnΓ(mode+1)` in f64 —
+/// catastrophic cancellation grows with rate (measured: center-mass
+/// distortion ≈1e-11 at rate 1e6, ≈0.4% at 1e12, ~0.16 at 1e15). The
+/// ceilings keep that error ≲1e-9; the calibration grid tops out at
+/// μ ≤ 1e6 (6 orders of margin). Raising a ceiling requires re-pinning
+/// the distortion measurement.
+pub const NB_MEAN_MAX: f64 = 1e9;
 
 /// Upper bound of the supported finite `size` and of the internal Poisson
 /// rate of one NB draw (asserted inside the sampler). `+inf` is handled
 /// separately as the exact Poisson arm; a pathological `(mean, size)`
 /// combination whose mixed rate escapes the regime is the programming
 /// -error contract (panic), not a runtime data path.
-pub const NB_RATE_MAX: f64 = 1e15;
+pub const NB_RATE_MAX: f64 = 1e12;
 
 /// Validate one `size` parameter: NaN (`"na"`), non-positive
 /// (`"argument"`) or a finite value above [`NB_RATE_MAX`] (`"argument"`);

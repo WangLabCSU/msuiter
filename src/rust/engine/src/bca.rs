@@ -95,12 +95,13 @@
 //! The z₀ / level-correction / type-7 arithmetic was cross-checked against
 //! R (`pnorm`/`qnorm`/`quantile(type=7)`) on the literature case — the
 //! mean of `n = 12` Exp(1) draws (skew ≈ 1.77, jackknife `a = 0.085`) with
-//! a `B = 200` fixed-seed boot sample: the hand formula lands within
-//! 3e-4 *relative* of `boot::boot.ci(type = "bca")` on the same data (the
-//! residual is the quantile-interpolation scheme: `boot` interpolates on
-//! the `(R+1)·α` grid, this interval is type-7 by contract — the same
-//! grid the percentile face uses). Exact goldens from the R hand formula
-//! are pinned in this module's tests.
+//! a `B = 200` fixed-seed boot sample: the hand formula is the
+//! bit-exact anchor (audited), pinned in this module's tests.
+//! `boot::boot.ci(type = "bca")` agrees only qualitatively on the same
+//! data (bounds differ ~1e-2–2e-1 *relative*: `boot` interpolates on the
+//! `(R+1)·α` order-statistic grid vs type-7 here, and B = 200 puts the
+//! 0.9914 corrected level between the 199th/200th order statistics — an
+//! earlier draft claiming ~3e-4 was not reproducible, audited).
 //!
 //! # Determinism
 //!

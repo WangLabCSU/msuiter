@@ -29,6 +29,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+mod calibrate;
 mod condition;
 mod extract;
 mod fit;
@@ -898,6 +899,150 @@ fn ms_test_presence_rust(counts: Robj, signatures: Robj, nb_size: f64, n_threads
 }
 
 // ---------------------------------------------------------------------------
+// U-M3b-03: calibration Monte Carlo driver (`ms_calibration_grid_rust`).
+// The pure core lives in `calibrate.rs` (grid simulation over the M3b
+// design-memo protocol: N × share cells × two generative arms, production
+// fit + bootstrap CI face, estimand-② coverage + estimand-③ compound
+// zeroing tally, PI window verdict). DIAGNOSTIC-layer bench face per the
+// task ruling — this is NOT a user `ms_*` API: the grid driver exists for
+// the M3b calibration bench, its result tables enter package data through
+// the bench, never through this wire. Layout contract identical to the fit
+// faces: R passes t(sigs) (k×m column-major = row-major m×k truth
+// dictionary).
+// ---------------------------------------------------------------------------
+
+#[extendr]
+#[allow(clippy::too_many_arguments)] // FFI face: the frozen grid protocol is the signature
+fn ms_calibration_grid_rust(
+    signatures: Robj,
+    n_grid: Vec<i32>,
+    shares: Vec<f64>,
+    n_samples: i32,
+    n_reps: i32,
+    n_boot: i32,
+    nb_size: f64,
+    bca: bool,
+    arm: String,
+    seed: i32,
+    window_lo: f64,
+    window_hi: f64,
+    n_threads: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        // Argument guards (contract 4): explicit, error-not-panic; the
+        // core re-validates every matrix cell, share and scalar domain.
+        if n_samples < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_samples must be >= 1, got {n_samples}"),
+            )
+            .with_i(n_samples as i64));
+        }
+        if n_reps < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_reps must be >= 1, got {n_reps}"),
+            )
+            .with_i(n_reps as i64));
+        }
+        if n_boot < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_boot must be >= 1, got {n_boot}"),
+            )
+            .with_i(n_boot as i64));
+        }
+        if seed < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("seed must be >= 0, got {seed}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        let mut n_grid_sz: Vec<usize> = Vec::with_capacity(n_grid.len());
+        for (pos, &sz) in n_grid.iter().enumerate() {
+            if sz < 1 {
+                return Err(MsError::new(
+                    "argument",
+                    format!("every n_grid entry must be >= 1, got {sz}"),
+                )
+                .with_i(pos as i64 + 1));
+            }
+            n_grid_sz.push(sz as usize);
+        }
+        let arm = calibrate::GenerativeArm::parse(&arm)?;
+        // Layout contract (fit.rs module docs, the transposition trap):
+        // R passes t(sigs) — a k×m column-major flat buffer IS the
+        // row-major m×k truth dictionary; zero marshalling here.
+        let (k, m, sigs_data) =
+            with_matrix_f64(&signatures, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        // Contract 7: parallel BETWEEN (cell, replicate) units; the
+        // boundary hook is polled on THIS (main) thread only and workers
+        // see only the in-call cancellation flag (calibrate.rs module docs).
+        let cancelled = AtomicBool::new(false);
+        let mut boundary = || unsafe { R_CheckUserInterrupt() };
+        let agg = calibrate::calibration_grid(
+            &sigs_data,
+            &n_grid_sz,
+            &shares,
+            m,
+            n_samples as usize,
+            k,
+            nb_size,
+            n_boot as usize,
+            bca,
+            arm,
+            n_reps as usize,
+            seed as u64,
+            n_threads as usize,
+            &cancelled,
+            &mut boundary,
+        )?;
+        let verdict =
+            calibrate::calibration_verdict(&agg, (window_lo, window_hi))?;
+        let tally_f64 = |xs: &[u64]| {
+            xs.iter()
+                .map(|&x| x as f64)
+                .collect::<Vec<f64>>()
+        };
+        let pairs = vec![
+            ("mean_coverage", Robj::from(agg.iter().map(|a| a.mean_coverage).collect::<Vec<f64>>())),
+            ("se", Robj::from(agg.iter().map(|a| a.se).collect::<Vec<f64>>())),
+            (
+                "n_reps",
+                Robj::from(agg.first().map_or(0i32, |a| a.n_reps.min(i32::MAX as usize) as i32)),
+            ),
+            ("n_grid", Robj::from(n_grid)),
+            ("shares", Robj::from(shares)),
+            ("arm", Robj::from(arm.as_str())),
+            ("bca", Robj::from(bca)),
+            ("n_boot", Robj::from(n_boot)),
+            ("nb_size", Robj::from(nb_size)),
+            ("seed", Robj::from(seed)),
+            ("true_zero", Robj::from(tally_f64(&agg.iter().map(|a| a.true_zero).collect::<Vec<u64>>()))),
+            ("false_keep", Robj::from(tally_f64(&agg.iter().map(|a| a.false_keep).collect::<Vec<u64>>()))),
+            ("false_zero", Robj::from(tally_f64(&agg.iter().map(|a| a.false_zero).collect::<Vec<u64>>()))),
+            ("kept_covered", Robj::from(tally_f64(&agg.iter().map(|a| a.kept_covered).collect::<Vec<u64>>()))),
+            ("kept_missed", Robj::from(tally_f64(&agg.iter().map(|a| a.kept_missed).collect::<Vec<u64>>()))),
+            ("window_lo", Robj::from(window_lo)),
+            ("window_hi", Robj::from(window_hi)),
+            ("all_in_window", Robj::from(verdict.all_in_window)),
+            ("per_cell_in", Robj::from(verdict.per_cell_in)),
+            (
+                "failing_cells",
+                Robj::from(verdict.failing_cells.iter().map(|&i| i as i32).collect::<Vec<i32>>()),
+            ),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+// ---------------------------------------------------------------------------
 // M2 pipeline plan slot (FFI wiring of U-M1c-02): GMM hypermutant
 // stratification kernel (`ms_stratify_rust`, FFI-internal name — the
 // user-facing API stays `ms_stratify_hypermutants()` in R/stratify.R). The
@@ -1400,6 +1545,7 @@ extendr_module! {
     fn ms_fit_rust;
     fn ms_fit_bootstrap_rust;
     fn ms_test_presence_rust;
+    fn ms_calibration_grid_rust;
     fn ms_match_solutions_rust;
 }
 
