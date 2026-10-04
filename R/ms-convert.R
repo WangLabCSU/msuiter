@@ -61,7 +61,7 @@
 #' @references
 #' \itemize{
 #'   \item{Opportunity tables: COSMIC signature database v2/v3; sigfit
-#'     `convert_signatures` (doi:10.1186/s13059-022-02664-5).}
+#'     `convert_signatures` (bioRxiv 2021 (doi:10.1101/372896)).}
 #' }
 #'
 #' @export
@@ -94,6 +94,7 @@ ms_convert <- S7::new_generic(
       msuiter_abort(
         "input",
         sprintf("%s matrix must have exactly one frequency column", arg_nm),
+        i = "the opportunity is a single 96-vector, not per-signature",
         j = paste0("received: ", ncol(opps), " columns"),
         c = "repeat the column yourself for per-signature opportunities"
       )

@@ -116,4 +116,14 @@ test_that("error paths are structured", {
   # Exposure rows != signature columns.
   expect_ms_error(ms_qc_report(cat1, signatures = sigs,
     exposures = matrix(1, 3, 4)), "input")
+  # The label protocol: mislabeled exposure rows are rejected even when
+  # the shapes all match (audit P2-4c — positional misassignment).
+  expo_mis <- matrix(1, 2, 4, dimnames = list(c("b", "a"),
+    c("oxoG_like", "ffpe_like", "balanced", "dead")))
+  expect_ms_error(ms_qc_report(cat1, signatures = sigs,
+    exposures = expo_mis), "input")
+  # The strand_bias_p placeholder column is in the contract (memo §3).
+  rep1 <- ms_qc_report(cat1)
+  expect_true("strand_bias_p" %in% names(rep1))
+  expect_true(all(is.na(rep1$strand_bias_p)))
 })

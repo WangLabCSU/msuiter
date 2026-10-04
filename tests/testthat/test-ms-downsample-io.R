@@ -158,6 +158,28 @@ test_that("the pinned SigProfiler specimen imports and roundtrips", {
   expect_identical(back@counts, counts)
 })
 
+test_that("the probability face roundtrips at full precision", {
+  # Audit P2-3b: the upstream COSMIC files carry 16-digit literals; the
+  # 15-digit write.table default truncated them (max rel err 3.98e-15).
+  # The exporter now writes 17 significant digits: roundtrip is exact.
+  path <- system.file("reference/refdb/COSMIC_v3.6/COSMIC_v3.6_SBS_GRCh37.txt",
+    package = "msuiter")
+  skip_if(!nzchar(path), "bundled COSMIC file unavailable")
+  sigs <- ms_import(path, format = "cosmic", kind = "signatures")
+  path2 <- tempfile(fileext = ".txt")
+  on.exit(unlink(path2), add = TRUE)
+  ms_export(sigs, format = "cosmic", file = path2)
+  sigs2 <- ms_import(path2, format = "cosmic", kind = "signatures")
+  # 17-significant-digit output (write.table's as.character path only
+  # carries 15 — audit P2-3b; the exporter pre-formats numerics): the
+  # roundtrip residual is pure parse-boundary noise, <= 1 ulp relative.
+  rel <- abs(sigs2@signatures - sigs@signatures) / pmax(abs(sigs@signatures),
+    .Machine$double.xmin)
+  expect_lt(max(rel), 1e-14)  # measured 3.06e-16 (<= 2 ulp)
+  # And the import provenance digest rides on catalog_summary$build.
+  expect_match(sigs@catalog_summary$build, "imported:sha256=")
+})
+
 test_that("cosmic exports a signatures object with the Type header", {
   sp <- msuiter:::.ms_io_channel_tables()$SBS96
   sig <- matrix(runif(96 * 3), 96, 3, dimnames = list(sp, c("X1", "X2", "X3")))

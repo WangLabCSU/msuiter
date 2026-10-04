@@ -18,10 +18,10 @@
 | SV 输入：BEDPE、SV VCF、caller 输出 | 链→类推导 | `ms_sv()` | ✅ | SV profile | M1c(v0.2) |
 | 参考基因组：BSgenome 兼容 + 2bit 快路径；GRCh37/38、T2T、mm9/10/39、rn6/7、自定义 | SPMG 预编码字节串思想 | `genome =` 参数 | ✅ 2bit 推荐 | — | M0/M1s |
 | 注解缓存：转录链（GENCODE）、复制时序（Repli-seq 箱）、染色质/元件、mappability、callable BED | MP/TensorSignatures 数据管线 | 注解层（入 MsCatalog provenance） | ✅ | — | M1s–M4 |
-| 样本 QC：负荷分布、污染、性别核对 | 领域实践（ICAMS/SigProfiler QC） | `ms_qc_report()` | ✅ | QC 仪表页 | M4 |
-| 伪迹检测与清除：FFPE/oxoG 检出、Excerno 式过滤、amber/red 分级 | Degasperi 2022；Excerno | 伪迹签名拟合 + 过滤器注册表 | ✅ | 伪迹贡献图 | M4（amber/red 拟合层级 ⏳v1.x） |
+| 样本 QC：负荷分布 + 机制级伪迹哨兵（初版交付 U-M4-02b；污染/性别核对 ⏳、Degasperi amber/red 忠实复刻 ⏳v1.x） | 领域实践（ICAMS/SigProfiler QC） | `ms_qc_report()` | ✅ 初版 | QC 仪表页 | M4 |
+| 伪迹检测与清除：FFPE/oxoG 机制哨兵 + COSMIC 伪迹签名暴露份额（初版交付 U-M4-02b）、Excerno 式过滤 ⏳、amber/red 分级 ⏳v1.x | Degasperi 2022；Excerno | 伪迹签名拟合 + 过滤器注册表 | 🔶 初版 | 伪迹贡献图 | M4（amber/red 拟合层级 ⏳v1.x） |
 | 超突变者分层：GMM cutoff + 排除 de novo + 强制 refit | SigProfiler | `ms_stratify_hypermutants()` | ✅ | 负荷分布 + cutoff 图 | M1c(v0.2) |
-| 机会归一化：基因组/外显子/panel 机会向量；exome↔genome 转换 | sigfit 似然内机会；sig_convert | `ms_convert()` + 似然内机会 | ✅ | 机会分布图 | M4 |
+| 机会归一化：exome↔genome 转换器 + 自定义机会向量 ✅（U-M4-02c；似然内机会 ⏳v1.x、panel 内置表 ⏳无 [V] 锚） | sigfit 似然内机会；sig_convert | `ms_convert()` + 似然内机会 | 🔶 初版 | 机会分布图 | M4 |
 | 深度下采样/公共深度 | SigProfiler | `ms_downsample()` | ✅ | — | M4 |
 
 ## L-B 目录表征

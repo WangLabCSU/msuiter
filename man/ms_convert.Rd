@@ -33,6 +33,6 @@ opportunity vectors are accepted for panel targets.
 \references{
 \itemize{
   \item{Opportunity tables: COSMIC signature database v2/v3; sigfit
-    `convert_signatures` (doi:10.1186/s13059-022-02664-5).}
+    `convert_signatures` (bioRxiv 2021 (doi:10.1101/372896)).}
 }
 }

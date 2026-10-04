@@ -47,7 +47,7 @@
 #' (total, log10, burden class), mechanism-level artifact sentinels
 #' (G>T share as the oxoG sentinel, C>T share as the FFPE deamination
 #' sentinel) and, when a fitted exposure matrix is supplied, the share of
-#' exposure carried by the 20 COSMIC artifact signatures. The Degasperi
+#' exposure carried by the 19 COSMIC artifact signatures (SBS27, SBS43, SBS45–60, SBS95). The Degasperi
 #' amber/red tiering is not implemented (v1.x); `qc_flag` applies our
 #' declared initial-version constants.
 #'
@@ -62,8 +62,8 @@
 #' @references
 #' COSMIC artifact roster: cancer.sanger.ac.uk/cosmic/signatures/SBS
 #' (SBS27, SBS43, SBS45–60, SBS95). oxoG sentinel: Costello et al., NAR
-#' 2013 (doi:10.1093/nar/gkt085). FFPE sentinel: Guo et al., Nat Commun
-#' 2022 (doi:10.1038/s41467-022-32721-0).
+#' 2013 (doi:10.1093/nar/gks1443). FFPE sentinel: Guo et al., Nat Commun
+#' 2022 (doi:10.1038/s41467-022-32041-5).
 #'
 #' @export
 ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {
@@ -111,6 +111,9 @@ ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {
     burden_class = burden_class,
     gt_share = gt_share,
     ct_share = ct_share,
+    # The TSB strand-bias sentinel needs the SBS192 catalog face — the
+    # memo §3 contract holds its place as NA in this batch.
+    strand_bias_p = rep(NA_real_, ncol(counts)),
     stringsAsFactors = FALSE
   )
 
@@ -149,6 +152,20 @@ ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {
         i = "exposures are matched to signatures by label/position",
         j = sprintf("exposures rows: %d; signatures: %d",
                     nrow(exposures), ncol(signatures)),
+        c = "pass the exposure matrix produced with this dictionary"
+      )
+    }
+    # The label protocol: exposure rows carry the signature labels —
+    # positional acceptance of mislabeled rows would silently misassign
+    # artifact shares.
+    if (!is.null(rownames(exposures)) && !is.null(colnames(signatures)) &&
+        !identical(rownames(exposures), colnames(signatures))) {
+      msuiter_abort(
+        "input",
+        "exposure row labels must equal the signature column labels",
+        i = "labels are the only legal matching key (never position)",
+        j = sprintf("exposure rows: %s",
+                    msuiter_quote_trunc(head(rownames(exposures), 3L))),
         c = "pass the exposure matrix produced with this dictionary"
       )
     }

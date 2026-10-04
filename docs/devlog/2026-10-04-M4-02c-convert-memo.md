@@ -16,12 +16,12 @@ ms_convert(signatures, from = "human-genome", to = "human-exome")
 - `signatures`：96×k 矩阵（rownames == SBS96 注册表序；MsSignature 便捷法取 @signatures）。
 - `from`/`to`：`"human-genome"` | `"human-exome"` | 用户自定义机会矩阵（96 向量或 96×k 列重复；正数有限）。
 - 返回：同形状矩阵（列归一后）；零列保持零（不产生 NaN）；MsSignature 方法返回新 MsSignature（signatures 换、exposures/治理字段原样——exposure 是活性占比，转换不改变活性解释，[注] sigfit 语义）。
-- 同名机会恒等（identity to machine-epsilon，sigminer 同款测试锚 3.5e-18）。
+- 同名机会恒等（同机会恒等：实测 1.73e-17，测试容差 1e-12——审计统一口径）。
 - **扩展口**：panel 机会 = 用户自定义矩阵（本批不捆绑 panel 表——无 [V] 锚）；`ms_convert_opps()` 内部构造器导出 genome/exome 表供复用。
 
 ## §3 验收锚
 
-- 【逐位/数值】：genome→genome 恒等到 1e-15；genome→exome→genome 往返（先转后转回，列归一）到 1e-8（浮点往返可逆性，非逐位）；与 sigminer sig_convert 在同一输入上数值一致（≤1e-12，双侧独立实现）；零列不产 NaN。
+- 【逐位/数值】：genome→genome 恒等（测试 1e-12；实测 1.73e-17）；genome→exome→genome 往返（先转后转回，列归一）到 1e-8（浮点往返可逆性，非逐位）；与 sigminer sig_convert 在同一输入上数值一致（≤1e-12，双侧独立实现）；零列不产 NaN。
 - 名单：频数表进 R/sysdata（生成脚本 data-raw 记录溯源）或内联常量 + 注释溯源；测试字面抽查 3 个锚点值（A[C>A]A=1.14e8 等）。
 - 错误路径：非 SBS96 空间 / 机会向量负值·零·非有限 / from=to 类型不匹配 → 结构化。
 

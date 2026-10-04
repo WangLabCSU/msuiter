@@ -23,13 +23,13 @@ Builds the M4 first-version QC table: per-sample mutation burden
 (total, log10, burden class), mechanism-level artifact sentinels
 (G>T share as the oxoG sentinel, C>T share as the FFPE deamination
 sentinel) and, when a fitted exposure matrix is supplied, the share of
-exposure carried by the 20 COSMIC artifact signatures. The Degasperi
+exposure carried by the 19 COSMIC artifact signatures (SBS27, SBS43, SBS45–60, SBS95). The Degasperi
 amber/red tiering is not implemented (v1.x); `qc_flag` applies our
 declared initial-version constants.
 }
 \references{
 COSMIC artifact roster: cancer.sanger.ac.uk/cosmic/signatures/SBS
 (SBS27, SBS43, SBS45–60, SBS95). oxoG sentinel: Costello et al., NAR
-2013 (doi:10.1093/nar/gkt085). FFPE sentinel: Guo et al., Nat Commun
-2022 (doi:10.1038/s41467-022-32721-0).
+2013 (doi:10.1093/nar/gks1443). FFPE sentinel: Guo et al., Nat Commun
+2022 (doi:10.1038/s41467-022-32041-5).
 }

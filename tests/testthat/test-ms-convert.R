@@ -114,4 +114,16 @@ test_that("custom opportunity vectors work and error paths are structured", {
   expect_ms_error(ms_convert(shuffled, from = "human-genome",
     to = "human-exome"), "input")
   expect_ms_error(ms_convert("junk"), "input")
+  # The multi-column opportunity matrix is a structured input error
+  # (audit P2-7: the abort was missing its i bullet and crashed).
+  expect_ms_error(ms_convert(sig, from = matrix(1, 96, 2),
+    to = "human-exome"), "input")
+  # A mixed-signature column is rejected? No: the kernel does not gate
+  # signature negativity (the opportunity vector is the gated input) —
+  # documented at the audit P3 level, asserted here as the honest
+  # contract: finite output for finite input.
+  sig_neg <- sig; sig_neg[1, 1] <- -0.001
+  out_neg <- ms_convert(sig_neg, from = "human-genome",
+    to = "human-exome")
+  expect_true(all(is.finite(out_neg)))
 })

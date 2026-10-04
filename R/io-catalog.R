@@ -67,6 +67,15 @@
   )
 }
 
+# sha256 of a file's exact bytes (the import provenance digest); reuses
+# the fit face's FIPS 180-4 implementation.
+.ms_io_file_sha256 <- function(file) {
+  tryCatch({
+    bytes <- readBin(file, "raw", file.size(file))
+    .ms_fit_sha256(bytes)
+  }, error = function(e) NULL)
+}
+
 #' Export a catalog or signature set in a file format
 #'
 #' Writes the channel x column matrix of an [MsCatalog] (counts) or
@@ -125,6 +134,13 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
   if (is.null(file)) {
     out
   } else {
+    # 17 significant digits: write.table encodes numerics through
+    # as.character (15 digits), which truncated the upstream COSMIC
+    # 16-digit literals at max rel err 3.98e-15 (audit P2-3b). Pre-format
+    # the numeric columns explicitly, then write as characters.
+    num <- vapply(out, is.numeric, logical(1L))
+    out[num] <- lapply(out[num], function(v) format(v, digits = 17L,
+                                                    trim = TRUE))
     utils::write.table(out, file = file, sep = "\t", quote = FALSE,
                        row.names = FALSE)
     invisible(file)
@@ -213,8 +229,10 @@ ms_import <- function(file, format = "cosmic",
     ))
   }
   # signatures: the probability face. The legal empty exposure (k x 0,
-  # rownames = signature labels) rides along; the catalog summary pins the
-  # import (n_samples = 0 — no exposures exist).
+  # rownames = signature labels) rides along; the catalog summary carries
+  # the import provenance (memo §2): file path + the sha256 of the exact
+  # file bytes, in the declared build field alongside the label-set hash.
+  file_hash <- .ms_io_file_sha256(file)
   sig_cols <- colnames(mat)
   if (is.null(sig_cols)) {
     sig_cols <- paste0("signature", seq_len(ncol(mat)))
@@ -232,7 +250,8 @@ ms_import <- function(file, format = "cosmic",
     catalog_summary = list(
       n_channels = nrow(mat), n_samples = 0L, channel_name = table_nm,
       channel_hash = msuiter_hash_labels(as.character(labels)),
-      build = "imported"
+      build = if (is.null(file_hash)) "imported" else
+        paste0("imported:sha256=", file_hash)
     )
   )
 }
