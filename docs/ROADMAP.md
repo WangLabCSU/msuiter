@@ -86,7 +86,8 @@
 ### M4 · 相似度校准库 + viz（3 周）
 
 - [x] **校准相似度库（`ms_compare()`，框架组件）**：多度量 + 解析/经验零分布 + Hungarian 主指标/Islam 贪心/Jiang 活性三协议参考实现（金标准测试）（U-M4-01，ca69806+cd67c71；对抗审计 P1 流带碰撞+P2×6 全修——校准锚 +1/(3m)、type-7 ≤2ulp、correlation 守卫；Islam 双口径对标正身 = PI 裁决项记 memo §8；bench/jiang 对标待办）
-- [ ] 样本 QC 报告 `ms_qc_report()`（负荷分布/伪迹贡献初版）+ `ms_downsample()`；格式互操作 `ms_import/ms_export`（首批：SigProfiler txt、COSMIC txt、WTSI 长格式）
+- [x] 样本 QC 报告 `ms_qc_report()`（负荷分布/伪迹贡献初版——机制哨兵 gt/ct + COSMIC 伪迹名册 19 条份额；amber/red 忠实复刻 ⏳v1.x）+ `ms_downsample()`（U-M4-02/02b，5f832cb+eeea14c 审计闭环）
+- [x] 格式互操作 `ms_import/ms_export`（首批：COSMIC txt ✅、SigProfiler txt ✅（[V] 三重锚+真实样例 sha256 固定）、signatures 导入面 ✅（validator 0 列暴露修订）；WTSI 长格式 ⏳ 无上游实样，[V] 纪律推迟）；`ms_convert()` exome↔genome 机会转换 ✅（U-M4-02c，6e30982+eeea14c；似然内机会 ⏳v1.x）
 - [ ] viz 首批 8 图型（COSMIC 调色板、规范序、矢量）+ exposure 嵌入（UMAP）初版 + `ms_convert()` 机会转换（exome/panel 机会一等公民）
 
 ### M6s · HRD 工作流（3 周；范围安全契约生效）
