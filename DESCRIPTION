@@ -44,6 +44,8 @@ Collate:
     'calibrate-plot.R'
     'calibrate-real.R'
     'ms-compare.R'
+    'ms-downsample.R'
+    'io-catalog.R'
     'kselect-select.R'
     'classes-benchmark.R'
     'classes-compare.R'

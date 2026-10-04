@@ -17,6 +17,11 @@
 
 * **ms_compare() 校准相似度库（R/ms-compare.R + R/classes-compare.R + `ms_compare_null_rust` 核面）**：四度量（cosine/correlation/JSD(sqrt, bits)/Hellinger，share 列归一、零列 NaN）+ 双零分布族（签名零分布 = 均匀 Dirichlet 对，engine 新原语 `dirichlet_uniform`；目录零分布 = 真值在负荷 N 的多项/NB 重构——cosine 的"按通道数×负荷"零校准；type-7 经验分位与 R quantile(type=7) 同序统计量逐位、冻结 MC-SE 容差 0.01 在 R 面强制为 `msuiter_error_calibration`）+ 三匹配协议（Hungarian 一对一主指标 = `match_solutions` 零改动装配；Islam 贪心逐位；Jiang 活性>0 + scaled Manhattan + Combined Score + specificity，冻结 k_est=k_ref 真值字典拟合口径，重构旗引用 bbaf042 的 0.969 线）。解析锚（E⟨x,y⟩=1/m、E‖x‖²=2/(m+1)、delta 均值 (m+1)/(2m)）与 burden 单调性进测试层。`MsComparison` S7 容器 + print/format。设计备忘 docs/devlog/2026-10-04-M4-01-design-memo.md；entropy-matched Dirichlet 零分布记为升级臂。
 
+## M4 · 数据工具首批（U-M4-02 子批）
+
+* **ms_downsample()（R/ms-downsample.R）**：公共深度下采样——语义锚定 M3b sanity harness 同款多项律（`Multinomial(depth, counts_j/total_j)`，base R rmultinom 固定种子按样本列序，逐位可复现）；`depth = "min"` 取活样本最小总量；浅样本原样保留、死样本保持零列；provenance 追加 downsample 记录。有放回近似的诚实声明 + 多元超几何升级臂入设计备忘。
+* **COSMIC txt 互操作首批（R/io-catalog.R）**：`ms_export()` / `ms_import(format = "cosmic")`——布局锚 = 捆绑 COSMIC v3.6 上游文件（`Type` 首列 + 规范通道序）；两侧都强制标签 == 注册表规范序（无静默重排/子集）；通道表按行数+标签集唯一推断或显式 pin；目录侧整数控入校验。SigProfiler txt / WTSI 长格式与 signatures 导入面**推迟**（夜间窗口未取得上游 [V] 样例；MsSignature 校验器无法容纳 0 列暴露——均记录于设计备忘 §0/§2）。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
