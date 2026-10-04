@@ -30,6 +30,7 @@ use std::fs::File;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 mod calibrate;
+mod compare;
 mod condition;
 mod extract;
 mod fit;
@@ -1524,6 +1525,64 @@ fn ms_match_solutions_rust(estimated: Robj, reference: Robj, dim: i32, threshold
 
 // Generates the R registration entry point
 
+// ---------------------------------------------------------------------------
+// U-M4-01 null-distribution face: the memo §5 `ms_compare_null_rust` —
+// the frozen null families behind `ms_compare()`'s zero-calibrated cosine
+// (docs/devlog/2026-10-04-M4-01-design-memo.md §2/§5). The kernel
+// (compare.rs) reports mean/sd/mc_se/quantiles; the frozen MC-SE
+// tolerance is enforced at the R face.
+// ---------------------------------------------------------------------------
+
+#[extendr]
+fn ms_compare_null_rust(
+    family: String,
+    m: i32,
+    burden: f64,
+    n_draws: i32,
+    quantiles: Robj,
+    seed: i32,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if m < 0 {
+            return Err(
+                MsError::new("argument", format!("m must be >= 0, got {m}")).with_i(m as i64)
+            );
+        }
+        if seed < 0 {
+            return Err(MsError::new("argument", format!("seed must be >= 0, got {seed}")));
+        }
+        let qs = quantiles
+            .as_real_vector()
+            .ok_or_else(|| MsError::new("argument", "quantiles must be a double vector"))?;
+        if n_draws < 0 {
+            return Err(
+                MsError::new("argument", format!("n_draws must be >= 0, got {n_draws}"))
+            );
+        }
+        let fam = compare::NullFamily::parse(&family)?;
+        let out = compare::compare_null(
+            fam,
+            m as usize,
+            burden,
+            n_draws as usize,
+            &qs,
+            seed as u64,
+        )?;
+        let pairs = vec![
+            ("mean", Robj::from(out.mean)),
+            ("sd", Robj::from(out.sd)),
+            ("mc_se", Robj::from(out.mc_se)),
+            ("quantiles", Robj::from(out.quantiles)),
+            ("family", Robj::from(family)),
+            ("m", Robj::from(m)),
+            ("burden", Robj::from(burden)),
+            ("n_draws", Robj::from(n_draws)),
+            ("seed", Robj::from(seed)),
+        ];
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
 // Generates the R registration entry point (`R_init_msuiter_extendr`,
 // forwarded by `src/entrypoint.c`) and the wrapper metadata consumed by
 // the `document` binary.
@@ -1547,6 +1606,7 @@ extendr_module! {
     fn ms_test_presence_rust;
     fn ms_calibration_grid_rust;
     fn ms_match_solutions_rust;
+    fn ms_compare_null_rust;
 }
 
 #[cfg(test)]

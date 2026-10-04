@@ -64,9 +64,7 @@ sample per replicate).}
 fit face (mSigAct `nbinom.size`; default 8, the SBS96 anchor). Only
 used by the likelihood methods internally; see [ms_fit()].}
 
-\item{arm}{Single string: the generative model -- the kernel echoes
-    the arm tag verbatim (for a non-Poisson NB arm the kappa value lives
-    in the caller's bench record, not in the echo) --
+\item{arm}{Single string: the generative model --
 `"multinomial"` (default; the total-conserving MAIN arm, the
 calibration-declaration carrier), `"poisson"` (the exact negative-
 binomial limit) or `"nb:<size>"` (the Jiang per-channel overdispersion

@@ -41,4 +41,6 @@ ms_calibration_grid_rust <- function(signatures, n_grid, shares, n_samples, n_re
 
 ms_match_solutions_rust <- function(estimated, reference, dim, thresholds) .Call(wrap__ms_match_solutions_rust, estimated, reference, dim, thresholds)
 
+ms_compare_null_rust <- function(family, m, burden, n_draws, quantiles, seed) .Call(wrap__ms_compare_null_rust, family, m, burden, n_draws, quantiles, seed)
+
 # nolint end

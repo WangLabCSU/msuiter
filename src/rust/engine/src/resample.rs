@@ -233,6 +233,34 @@ pub fn multinomial(rng: &mut MsRng, p: &[f64], n: u64) -> Vec<u64> {
     counts
 }
 
+/// One `Dirichlet(1, …, 1)` draw over `m` categories by normalized
+/// i.i.d. `Exp(1)` variates (the standard identity
+/// `Gamma(1) = Exp(1) = −ln U`, drawn via [`gamma_variate`] at
+/// `shape = 1`). Every component is strictly positive — the
+/// Marsaglia–Tsang path enforces `w > 0` hence `v = w³ > 0`, and even
+/// the `u = 0` acceptance (probability 2⁻⁵³ per draw) returns `d·v > 0`
+/// — so the normalized vector is always well-defined. The draw consumes
+/// a data-dependent but unbounded word count, exactly like the NB arm.
+///
+/// This is the U-M4-01 signature-null primitive (design memo
+/// 2026-10-04-M4-01-design-memo.md §2): two independent draws give the
+/// "unrelated signatures at channel count m" null. The entropy-matched
+/// `Dirichlet(α·u)` variant needs `shape ≠ 1` gamma draws and is the
+/// recorded upgrade arm, deliberately not this face.
+///
+/// # Panics
+///
+/// `m == 0` (a Dirichlet over zero categories has no law).
+pub fn dirichlet_uniform(rng: &mut MsRng, m: usize) -> Vec<f64> {
+    assert!(m >= 1, "dirichlet_uniform: m must be at least 1");
+    let mut x: Vec<f64> = (0..m).map(|_| gamma_variate(rng, 1.0)).collect();
+    let s: f64 = x.iter().sum();
+    for v in &mut x {
+        *v /= s;
+    }
+    x
+}
+
 /// Validate the `(p, n)` input contract of [`multinomial`] as structured
 /// errors (FFI contract 5). The FFI shell can run this before entering the
 /// panic-contract primitive.
@@ -897,6 +925,67 @@ mod tests {
         // A different master seed must not reproduce the same rows.
         let e = multinomial_bootstrap(0xFEED + 1, &p, 333, 5).unwrap();
         assert_ne!(c, e);
+    }
+
+    // ==================================================================
+    // U-M4-01: dirichlet_uniform (the signature-null primitive)
+    // ==================================================================
+
+    #[test]
+    fn dirichlet_draws_are_positive_and_sum_to_one() {
+        for m in [2usize, 5, 96] {
+            let mut rng = MsRng::from_stream(11, StreamId::ZERO);
+            for _ in 0..200 {
+                let x = dirichlet_uniform(&mut rng, m);
+                assert_eq!(x.len(), m);
+                for &v in &x {
+                    assert!(v > 0.0 && v.is_finite(), "component {v} not in (0, ∞)");
+                }
+                let s: f64 = x.iter().sum();
+                assert!((s - 1.0).abs() < 1e-12, "sum {s} != 1");
+            }
+        }
+    }
+
+    #[test]
+    fn dirichlet_components_average_the_uniform_mean() {
+        // E[x_i] = 1/m exactly; 4·SD of the mean (SD ≈ √((m-1)/(m²(m+1))))
+        // is a comfortable tolerance at 2·10⁴ draws.
+        for m in [5usize, 96] {
+            let mut rng = MsRng::from_stream(23, StreamId { replicate: 7, rank: 0, fold: 0 });
+            let draws = 20_000;
+            let mut acc = vec![0.0; m];
+            for _ in 0..draws {
+                for (i, v) in dirichlet_uniform(&mut rng, m).iter().enumerate() {
+                    acc[i] += v;
+                }
+            }
+            let mean1 = acc[0] / draws as f64;
+            let want = 1.0 / m as f64;
+            let sd = ((m as f64 - 1.0) / ((m as f64).powi(2) * (m as f64 + 1.0))).sqrt();
+            assert!(
+                (mean1 - want).abs() < 4.0 * sd / (draws as f64).sqrt(),
+                "m={m} mean {mean1} vs {want}"
+            );
+        }
+    }
+
+    #[test]
+    fn dirichlet_same_seed_is_bit_identical_and_panic_guarded() {
+        let a = {
+            let mut rng = MsRng::from_stream(99, StreamId { replicate: 1, rank: 3, fold: 0 });
+            dirichlet_uniform(&mut rng, 12)
+        };
+        let b = {
+            let mut rng = MsRng::from_stream(99, StreamId { replicate: 1, rank: 3, fold: 0 });
+            dirichlet_uniform(&mut rng, 12)
+        };
+        assert_eq!(a, b);
+        assert!(std::panic::catch_unwind(|| {
+            let mut rng = MsRng::from_stream(99, StreamId::ZERO);
+            dirichlet_uniform(&mut rng, 0)
+        })
+        .is_err());
     }
 
     // ==================================================================
