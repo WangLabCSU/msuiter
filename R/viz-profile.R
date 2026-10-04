@@ -45,6 +45,7 @@ plot_catalog_profile <- function(matrix, column = 1L,
   )
   p <- ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$value,
                                         fill = .data$color)) +
+    ggplot2::scale_fill_identity() +
     ggplot2::geom_col(width = 0.85) +
     ggplot2::scale_x_continuous(
       breaks = seq_along(prep$labels),
@@ -60,7 +61,12 @@ plot_catalog_profile <- function(matrix, column = 1L,
     ggplot2::theme(legend.position = "none")
   if (prep$table == "SBS96") {
     # The six class-separation lines: after each 16-channel block.
-    bounds <- seq(16L, 80L, by = 16L) + 0.5
+    # The registry is 5'-flank blocked (A/C/G/T x 24 channels each): the
+    # visually honest separators are the three flank boundaries. (The
+    # audited first draft drew 5 lines at 16-channel offsets, which
+    # lands on no real boundary in this order — the class identity is
+    # carried by the bar colors themselves.)
+    bounds <- c(24.5, 48.5, 72.5)
     p <- p + ggplot2::geom_vline(xintercept = bounds, colour = "grey40",
                                  linewidth = 0.3)
   }
@@ -145,33 +151,31 @@ plot_reference_comparison <- function(estimated, reference,
   }
   df <- rbind(
     data.frame(channel = pe$labels, x = seq_along(pe$labels) - 0.21,
-               value = pe$values, which = "estimated"),
+               value = pe$values, which = "estimated", alpha = 1),
     data.frame(channel = pe$labels, x = seq_along(pe$labels) + 0.21,
-               value = pr$values, which = "reference")
+               value = pr$values, which = "reference", alpha = 0.45)
   )
   pal <- if (pe$table == "SBS96") .ms_viz_channel_colors(pe$labels) else
     rep(.ms_viz_mono_color, length(pe$labels))
   df$color <- rep(pal, 2L)
+  # ONE paint per group (the audited first draft painted everything
+  # opaque, then re-painted the reference at 45% — the blend stayed
+  # fully saturated).
   ggplot2::ggplot(df, ggplot2::aes(x = .data$x, y = .data$value,
                                    fill = .data$color)) +
-    ggplot2::geom_col(width = 0.4) +
+    ggplot2::scale_fill_identity() +
+    ggplot2::geom_col(ggplot2::aes(alpha = .data$alpha), width = 0.4) +
+    ggplot2::scale_alpha_identity() +
     ggplot2::scale_x_continuous(breaks = seq_along(pe$labels),
                                 labels = pe$axis_labels,
                                 expand = c(0.01, 0)) +
     ggplot2::labs(x = NULL,
                   y = if (mode == "share") "Fraction of mutations" else "Mutations") +
-    ggplot2::annotate("text", x = 2, y = max(df$value) * 0.95,
+    ggplot2::annotate("text", x = 4, y = max(df$value) * 0.95,
                       label = "dark: estimated | light: reference",
                       hjust = 0, size = 3, colour = "grey30") +
     .ms_viz_theme() +
-    ggplot2::theme(legend.position = "none") +
-    # Reference drawn lighter via alpha through a duplicated layer trick:
-    # simplest honest encoding is alpha on the second half.
-    ggplot2::geom_col(
-      data = subset(df, which == "reference"),
-      ggplot2::aes(x = .data$x, y = .data$value, fill = .data$color),
-      width = 0.4, alpha = 0.45
-    ) + ggplot2::scale_fill_identity()
+    ggplot2::theme(legend.position = "none") + ggplot2::scale_fill_identity()
 }
 
 #' Original vs reconstruction with a per-channel residual strip
@@ -213,10 +217,9 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
   }
   fitted <- as.numeric(ps$matrix %*% exposures)
   if (mode == "share") {
-    total <- sum(pc$values)
-    if (total > 0) fitted <- fitted / total * sum(pc$values) / 1 # scale-preserving:
-    # share mode rescales the reconstruction to the observed total share
-    # (sum 1); counts mode compares raw.
+    # Both sides are shares (prep normalized the observed column; the
+    # reconstruction of share-signatures at share-exposures sums to 1 up
+    # to float noise) — normalize the fitted side onto the same scale.
     fitted <- fitted / sum(fitted)
   }
   residual <- pc$values - fitted
@@ -240,6 +243,7 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
       ggplot2::aes(fill = .data$color, alpha = .data$which),
       width = 0.4
     ) +
+    ggplot2::scale_fill_identity() +
     ggplot2::geom_col(
       data = subset(df, which == "residual"),
       ggplot2::aes(colour = .data$value >= 0), width = 0.8
@@ -320,7 +324,9 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
   # The COSMIC axis label: the 5'-flank + 3'-flank context ("A__T" style
   # for SBS96: flank5 + flank3 around the bracketed substitution).
   axis_labels <- if (table_nm == "SBS96") {
-    paste0(substr(labels, 1, 1), " ", substr(labels, 6, 6))
+    # "A[C>A]A": 5' flank at 1, 3' flank at 7 (the audited first draft
+    # read character 6 — the closing bracket).
+    paste0(substr(labels, 1, 1), " ", substr(labels, 7, 7))
   } else {
     labels
   }
@@ -366,6 +372,9 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
   }
   msuiter_abort(
     "input",
-    "columns must be indices or (when the matrix has colnames) names"
+    "columns must be indices or (when the matrix has colnames) names",
+    i = "the column argument takes integer indices or colnames",
+    j = paste0("received: ", msuiter_quote_trunc(columns)),
+    c = "pass an index in [1, ncol] or the colname strings"
   )
 }

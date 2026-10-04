@@ -27,8 +27,9 @@ row. kmeans is bitwise deterministic for a given input regardless.}
 \item{clusters}{kmeans clusters (default 3); ignored by UMAP.}
 }
 \value{
-A data.frame: sample, embed_1, embed_2 (UMAP) or the first
-  two kmeans centers' loadings, cluster.
+A data.frame: sample, embed_1, embed_2 (UMAP coordinates, or
+  for kmeans the sample's loadings on the first two signature axes —
+  a deterministic projection, not an embedding), cluster.
 }
 \description{
 Projects the samples of an exposure matrix to 2-D (UMAP via uwot, or

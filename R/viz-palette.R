@@ -16,7 +16,9 @@
     msuiter_abort(
       "package",
       "ggplot2 is required for the visualization faces",
-      i = "viz is a Suggests dependency; install.packages(\"ggplot2\")",
+      i = "viz is a Suggests dependency",
+      j = "ggplot2 namespace unavailable",
+      c = "install.packages(\"ggplot2\") and retry",
       call = call
     )
   }
@@ -45,7 +47,7 @@
 
 # Canonical-order guard shared with the interop face: the viz faces
 # refuse to reorder silently.
-.ms_viz_check_table <- function(labels, tables = c("SBS96", "DBS78", "ID83")) {
+.ms_viz_check_table <- function(labels, tables = c("SBS96", "DBS78")) {
   registry <- get("channel_tables", envir = asNamespace("msuiter"))
   for (nm in tables) {
     if (identical(as.character(labels), registry[[nm]]$labels)) {

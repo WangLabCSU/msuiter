@@ -78,7 +78,8 @@ plot_similarity_heatmap <- function(similarity, high = "#B2182B") {
       "input",
       "similarity must be a numeric matrix",
       i = "pass ms_compare(...)@metrics$cosine or an equivalent named matrix",
-      j = paste0("received: ", class(similarity)[1L])
+      j = paste0("received: ", class(similarity)[1L]),
+      c = "the heatmap tiles the k_est x k_ref similarity grid"
     )
   }
   est <- rownames(similarity)
@@ -120,7 +121,9 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
     msuiter_abort(
       "input",
       "estimated and reference must share the canonical channel order",
-      j = sprintf("rows: %d vs %d", length(pe$labels), length(pr$labels))
+      i = "the scatter pairs channels positionally in one space",
+      j = sprintf("rows: %d vs %d", length(pe$labels), length(pr$labels)),
+      c = "order both matrices by the same registry labels"
     )
   }
   cos <- sum(pe$values * pr$values) /
@@ -152,7 +155,9 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
     msuiter_abort(
       "input",
       "exposures must be a numeric k x n matrix (or an MsSignature)",
-      j = paste0("received: ", class(exposures)[1L])
+      i = "the exposure faces read one column per sample",
+      j = paste0("received: ", class(exposures)[1L]),
+      c = "pass the fit/refit exposure matrix"
     )
   }
   sigs <- rownames(exposures)

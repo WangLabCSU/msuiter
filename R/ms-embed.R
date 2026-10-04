@@ -11,7 +11,9 @@
 # (documented honesty: cross-version reproducibility is NOT claimed —
 # uwot does not promise it either). kmeans is the deterministic
 # alternative (stats::kmeans with centers = the row of a seed argument;
-# nstart fixed) when uwot is absent or the user asks.
+# nstart fixed) when uwot is absent or the user asks. The kmeans face
+# reports the samples' loadings on the first two signature axes (a
+# deterministic projection), not a nonlinear embedding.
 #
 # The face returns the tidy embedding table; the scatter is a thin
 # ggplot over it (the viz batch semantics).
@@ -33,8 +35,9 @@
 #'   row. kmeans is bitwise deterministic for a given input regardless.
 #' @param clusters kmeans clusters (default 3); ignored by UMAP.
 #'
-#' @return A data.frame: sample, embed_1, embed_2 (UMAP) or the first
-#'   two kmeans centers' loadings, cluster.
+#' @return A data.frame: sample, embed_1, embed_2 (UMAP coordinates, or
+#'   for kmeans the sample's loadings on the first two signature axes —
+#'   a deterministic projection, not an embedding), cluster.
 #'
 #' @export
 ms_embed <- function(exposures, method = c("umap", "kmeans"),
@@ -80,13 +83,14 @@ ms_embed <- function(exposures, method = c("umap", "kmeans"),
       msuiter_abort(
         "package",
         "uwot is required for method = \"umap\"",
-        i = "install.packages(\"uwot\") or use method = \"kmeans\"",
-        j = "the embedding face degrades to kmeans without uwot only on request"
+        i = "uwot is a Suggests dependency of the embedding face",
+        j = "uwot namespace unavailable",
+        c = "install.packages(\"uwot\") or use method = \"kmeans\""
       )
     }
-    set.seed(seed)
-    emb <- uwot::umap(as.matrix(X), n_neighbors = min(15, max(2, ncol(X) - 1)),
-                      n_components = 2, verbose = FALSE)
+    emb <- uwot::umap(as.matrix(X),
+                      n_neighbors = min(15, max(2, min(nrow(X) - 1, ncol(X) - 1))),
+                      n_components = 2, verbose = FALSE, seed = seed)
     out <- data.frame(
       sample = samples,
       embed_1 = emb[, 1], embed_2 = emb[, 2],

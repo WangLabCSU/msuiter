@@ -41,6 +41,39 @@ test_that("the COSMIC SBS palette is pinned literally", {
   expect_identical(cc[96], "#ECC7C5") # T[T>G]T
 })
 
+test_that("the rendered fills ARE the palette (identity scale applied)", {
+  skip_if_no_ggplot()
+  sig <- .ms_viz_sig3()
+  p <- plot_catalog_profile(sig, column = "S1")
+  built <- ggplot2::ggplot_build(p)
+  fills <- unique(as.character(built$data[[1]]$fill))
+  expect_setequal(fills, unname(msuiter:::.ms_viz_sbs_palette))
+  # First channel A[C>A]A must carry the C>A color exactly.
+  expect_identical(as.character(built$data[[1]]$fill[1]), "#03BDEF")
+  # And the reconstruction panel too (the audited P1: two faces had
+  # computed colors that never reached the render).
+  labels <- .ms_viz_labels()
+  counts <- sig[, 1] * 500
+  pr <- plot_reconstruction_panel(counts, sig,
+    matrix(c(500, 0, 0), 3, 1, dimnames = list(c("S1", "S2", "S3"), "T1")),
+    mode = "count")
+  built2 <- ggplot2::ggplot_build(pr)
+  fills2 <- unique(as.character(built2$data[[1]]$fill))
+  expect_true(all(fills2 %in% c(unname(msuiter:::.ms_viz_sbs_palette),
+                                NA_character_)))
+})
+
+test_that("the DBS78 simplified face renders in the mono color", {
+  skip_if_no_ggplot()
+  dbs <- msuiter:::.ms_io_channel_tables()$DBS78
+  m <- matrix(abs(rnorm(78)) + 0.01, 78, 1, dimnames = list(dbs, "D1"))
+  m <- sweep(m, 2, colSums(m), "/")
+  p <- plot_catalog_profile(m)
+  expect_s3_class(p, "ggplot")
+  built <- ggplot2::ggplot_build(p)
+  expect_true(all(as.character(built$data[[1]]$fill) == "#4D4D4D"))
+})
+
 test_that("plot_catalog_profile renders the documented structure", {
   skip_if_no_ggplot()
   sig <- .ms_viz_sig3()
@@ -52,14 +85,21 @@ test_that("plot_catalog_profile renders the documented structure", {
     inherits(l$geom, "GeomBar"), logical(1L))))
   expect_true(any(vapply(p$layers, function(l)
     inherits(l$geom, "GeomVline"), logical(1L))))
-  # 5 class-separation lines (after each of the first five 16-blocks).
-  vlines <- vapply(p$layers, function(l) {
-    if (inherits(l$geom, "GeomVline")) length(l$data$xintercept) else 0L
-  }, integer(1L))
-  expect_identical(sum(vlines), 5L)
+  # 3 flank-boundary lines (the registry is 5'-flank blocked: A/C/G/T
+  # x 24 channels — the audited first draft drew 5 class lines that
+  # landed on no real boundary in this order).
+  vlines <- unlist(lapply(p$layers, function(l) {
+    if (inherits(l$geom, "GeomVline")) l$data$xintercept else numeric(0)
+  }), use.names = FALSE)
+  expect_setequal(vlines, c(24.5, 48.5, 72.5))
   # count mode renders too.
   p2 <- plot_catalog_profile(sig, column = 2, mode = "count")
   expect_s3_class(p2, "ggplot")
+  # Axis labels are flank pairs ("A A" for A[C>A]A): the audited first
+  # draft read the closing bracket. Verify through the built scale.
+  built <- ggplot2::ggplot_build(p)
+  xl <- as.character(unique(built$layout$panel_params[[1]]$x$get_labels()))
+  expect_identical(xl[1], "A A")
 })
 
 test_that("profile faces accept vectors, MsSignature, and reject bad order", {
@@ -74,10 +114,14 @@ test_that("profile faces accept vectors, MsSignature, and reject bad order", {
   expect_ms_error(plot_signature_catalog(shuffled), "input")
   expect_ms_error(plot_reference_comparison(sig[sample(96), 1], sig[, 2]),
     "input")
-  # non-SBS96 space rejected
+  # non-registry spaces rejected (ID83 has no registry table — the
+  # supported list is SBS96/DBS78 only, audited P2)
   labels8 <- sprintf("CH%02d", 1:8)
   expect_ms_error(plot_catalog_profile(matrix(1, 8, 1,
     dimnames = list(labels8, "X"))), "input")
+  id83 <- sprintf("1:Del:C:%d", 0:82)
+  expect_ms_error(plot_catalog_profile(matrix(1, 83, 1,
+    dimnames = list(id83, "X"))), "input")
 })
 
 test_that("reconstruction residuals are hand-derived exact", {
@@ -126,6 +170,18 @@ test_that("exposure and similarity faces render with the contract columns", {
   # signature_order missing names rejected.
   expect_ms_error(plot_exposure_stacked(expo, signature_order = c("S1", "S9")),
     "input")
+})
+
+test_that("reference comparison paints the reference lighter (single layer)", {
+  skip_if_no_ggplot()
+  sig <- .ms_viz_sig3()
+  p <- plot_reference_comparison(sig[, 1], sig[, 2])
+  built <- ggplot2::ggplot_build(p)
+  d <- built$data[[1]]
+  expect_true("alpha" %in% names(d))
+  alphas <- sort(unique(d$alpha))
+  expect_true(1 %in% alphas)
+  expect_true(any(alphas < 0.9)) # the 0.45 reference group survives
 })
 
 test_that("the COSMIC scatter annotates the hand-derived cosine", {

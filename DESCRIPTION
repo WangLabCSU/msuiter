@@ -14,6 +14,7 @@ Imports: S7,
     rlang
 Suggests: BSgenome.Hsapiens.UCSC.hg19,
     ggplot2,
+    uwot,
     knitr,
     rmarkdown,
     sigminer,
