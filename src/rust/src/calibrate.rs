@@ -368,6 +368,7 @@ fn run_calibration_rep(job: &CellJob, rep: usize, cancelled: &AtomicBool) -> Res
         boot_seed,
         1, // units are the grid's parallelism: the inner bootstrap is sequential
         job.bca,
+        false,
         cancelled,
         &mut no_poll,
     )?;

@@ -56,6 +56,10 @@ the catalog null is skipped when neither is available.}
 
 \item{seed}{master seed of the null Monte Carlo (PCG64 layout v1;
 identical seeds are bitwise-reproducible).}
+
+\item{null_n_draws}{Draws per pairwise empirical null p (>= 200;
+default 2000) -- the add-one tail estimate reported in the
+`p_null`/`q_bh` metric matrices.}
 }
 \value{
 An [MsComparison].

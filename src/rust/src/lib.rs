@@ -820,6 +820,7 @@ fn ms_fit_bootstrap_rust(
             seed as u64,
             n_threads as usize,
             bca,
+            false,
             &cancelled,
             &mut boundary,
         )?;
@@ -857,6 +858,107 @@ fn ms_fit_bootstrap_rust(
             pairs.push(("bca_upper", Robj::from(bca_upper)));
             pairs.push(("bca_fallback", Robj::from(bca_fallback)));
         }
+        Ok(Robj::from(List::from_pairs(pairs)))
+    })())
+}
+
+// U-M7-pre draws face: the same bootstrap run, returning the RAW boot
+// exposure cube alongside every summary member of ms_fit_bootstrap_rust
+// (one run serves both the interval face and the histogram face; the
+// frozen ms_fit_bootstrap_rust wire format is untouched). The cube is
+// row-major (k*n) x n_boot with BOOT-major rows: draws[b * k*n + a*n + j].
+#[extendr]
+#[allow(clippy::too_many_arguments)]
+fn ms_bootstrap_draws_rust(
+    counts: Robj,
+    signatures: Robj,
+    method: String,
+    n_boot: i32,
+    nb_size: f64,
+    zero_threshold: f64,
+    seed: i32,
+    n_threads: i32,
+    bca: bool,
+) -> Robj {
+    condition::kernel_result_to_robj((|| -> Result<Robj, MsError> {
+        if n_boot < 1 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_boot must be >= 1, got {n_boot}"),
+            )
+            .with_i(n_boot as i64));
+        }
+        if seed < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("seed must be >= 0, got {seed}"),
+            ));
+        }
+        if n_threads < 0 {
+            return Err(MsError::new(
+                "argument",
+                format!("n_threads must be >= 0 (0 = rayon default), got {n_threads}"),
+            ));
+        }
+        let method = fit::FitMethod::parse(&method)?;
+        let (n, m, counts_data) =
+            with_matrix_f64(&counts, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        let (k, m2, sigs_data) =
+            with_matrix_f64(&signatures, |nrow, ncol, data| Ok((nrow, ncol, data.to_vec())))?;
+        if m2 != m {
+            return Err(MsError::new(
+                "argument",
+                format!(
+                    "signatures and counts must share the channel dimension: counts has {m}, signatures have {m2}"
+                ),
+            )
+            .with_i(m as i64)
+            .with_j(m2 as i64));
+        }
+        let cancelled = AtomicBool::new(false);
+        let mut boundary = || unsafe { R_CheckUserInterrupt() };
+        let out = fit::bootstrap(
+            &counts_data,
+            &sigs_data,
+            m,
+            n,
+            k,
+            method,
+            n_boot as usize,
+            nb_size,
+            zero_threshold,
+            seed as u64,
+            n_threads as usize,
+            bca,
+            true,
+            &cancelled,
+            &mut boundary,
+        )?;
+        let draws = out.draws.as_ref().ok_or_else(|| {
+            MsError::new("internal", "bootstrap returned no draws despite collect_draws")
+        })?;
+        // Boot-major rows: n_boot x (k*n).
+        let draws_mat = extendr_api::wrapper::RMatrix::new_matrix(
+            n_boot as usize,
+            k * n,
+            |r, c| draws[r * k * n + c],
+        );
+        let kk = k;
+        let nn = n;
+        let col_major_f64 =
+            |grid: &[f64]| extendr_api::wrapper::RMatrix::new_matrix(kk, nn, |r, c| grid[r * nn + c]);
+        let pairs = vec![
+            ("draws", Robj::from(draws_mat)),
+            ("ci_lower", Robj::from(col_major_f64(&out.ci_lower))),
+            ("ci_upper", Robj::from(col_major_f64(&out.ci_upper))),
+            ("support_stability", Robj::from(col_major_f64(&out.support_stability))),
+            ("n_boot", Robj::from(out.n_boot.min(i32::MAX as usize) as i32)),
+            ("method", Robj::from(method.as_str())),
+            ("converged", Robj::from(out.converged)),
+            ("k", Robj::from(k as i32)),
+            ("n", Robj::from(n as i32)),
+            ("seed", Robj::from(seed)),
+        ];
         Ok(Robj::from(List::from_pairs(pairs)))
     })())
 }
@@ -1603,6 +1705,7 @@ extendr_module! {
     fn ms_sparse_rust;
     fn ms_fit_rust;
     fn ms_fit_bootstrap_rust;
+    fn ms_bootstrap_draws_rust;
     fn ms_test_presence_rust;
     fn ms_calibration_grid_rust;
     fn ms_match_solutions_rust;

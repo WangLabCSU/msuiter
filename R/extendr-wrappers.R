@@ -35,6 +35,8 @@ ms_fit_rust <- function(counts, signatures, method, nb_size, tol, max_iter, zero
 
 ms_fit_bootstrap_rust <- function(counts, signatures, method, n_boot, nb_size, zero_threshold, seed, n_threads, bca) .Call(wrap__ms_fit_bootstrap_rust, counts, signatures, method, n_boot, nb_size, zero_threshold, seed, n_threads, bca)
 
+ms_bootstrap_draws_rust <- function(counts, signatures, method, n_boot, nb_size, zero_threshold, seed, n_threads, bca) .Call(wrap__ms_bootstrap_draws_rust, counts, signatures, method, n_boot, nb_size, zero_threshold, seed, n_threads, bca)
+
 ms_test_presence_rust <- function(counts, signatures, nb_size, n_threads) .Call(wrap__ms_test_presence_rust, counts, signatures, nb_size, n_threads)
 
 ms_calibration_grid_rust <- function(signatures, n_grid, shares, n_samples, n_reps, n_boot, nb_size, bca, arm, seed, window_lo, window_hi, n_threads) .Call(wrap__ms_calibration_grid_rust, signatures, n_grid, shares, n_samples, n_reps, n_boot, nb_size, bca, arm, seed, window_lo, window_hi, n_threads)

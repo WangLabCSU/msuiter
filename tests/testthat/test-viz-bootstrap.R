@@ -52,12 +52,30 @@ test_that("the stability face renders with the 0.95 floor line", {
   expect_true(all(built$data[[1]]$y >= 0 & built$data[[1]]$y <= 1))
 })
 
-test_that("the honest-scope and point-fit guards are structured", {
+test_that("the histogram face reads the draws cube; guards are structured", {
   skip_if_not_installed("ggplot2")
   fx <- .ms_bt_fixture()
-  # The distribution histogram is an M7 upgrade arm: the draws are not
-  # stored on the MsFit.
-  expect_ms_error(plot_boot_distribution(fx$boot), "option")
+  # U-M7-pre: the draws face unlocked the real histogram.
+  boot_d <- ms_fit_bootstrap(fx$catalog, fx$sigs, method = "nnls",
+    n_boot = 40, seed = 1, return_draws = TRUE)
+  p <- plot_boot_distribution(boot_d)
+  expect_s3_class(p, "ggplot")
+  # ggplot2 renders histograms as GeomBar/GeomRect (no GeomHistogram).
+  expect_true(any(vapply(p$layers, function(l)
+    inherits(l$geom, "GeomBar"), logical(1L))))
+  # The draws cube reproduces the CI attributes: quantile(type = 7)
+  # parity within 2 ulp (R's FMA contraction -- the compare.rs type-7
+  # audit finding, same situation).
+  d <- attr(boot_d@exposures, "boot_draws")
+  ci_lo <- attr(boot_d@exposures, "ci_lower")
+  ci_hi <- attr(boot_d@exposures, "ci_upper")
+  for (a in seq_len(nrow(d))) {
+    q <- unname(quantile(d[a, 1, ], probs = c(0.025, 0.975), type = 7))
+    expect_lt(abs(q[1] - ci_lo[a, 1]), 1e-9)
+    expect_lt(abs(q[2] - ci_hi[a, 1]), 1e-9)
+  }
+  # Without return_draws the attribute is absent -> structured error.
+  expect_ms_error(plot_boot_distribution(fx$boot), "input")
   # A point fit (no CI attributes) is rejected.
   point <- ms_fit(fx$catalog, fx$sigs, method = "nnls")
   expect_ms_error(plot_boot_ci(point), "input")

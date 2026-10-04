@@ -589,7 +589,8 @@ ms_fit_bootstrap <- S7::new_generic(
   "ms_fit_bootstrap",
   "catalog",
   function(catalog, signatures, method = "nnls", n_boot = 200, seed = 1,
-           nb_size = 8, zero_threshold = 0.01, n_threads = NULL, bca = FALSE)
+           nb_size = 8, zero_threshold = 0.01, n_threads = NULL,
+           bca = FALSE, return_draws = FALSE)
     S7::S7_dispatch()
 )
 
@@ -600,7 +601,8 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
                                                     seed = 1, nb_size = 8,
                                                     zero_threshold = 0.01,
                                                     n_threads = NULL,
-                                                    bca = FALSE) {
+                                                    bca = FALSE,
+                                                    return_draws = FALSE) {
   prep <- .ms_fit_prepare_dictionary(catalog, signatures)
   .ms_fit_gate_fit_args(method, nb_size, zero_threshold)
   .ms_fit_gate_boot(n_boot, seed)
@@ -619,8 +621,17 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
   # Point fit (the ms_fit face; identical grids) + the bootstrap CI.
   point <- .ms_fit_rust(prep$counts, prep$signatures, method, nb_size,
     .ms_fit_defaults$eps, .ms_fit_defaults$max_iter, zero_threshold)
-  boot <- .ms_fit_bootstrap_rust(prep$counts, prep$signatures, method, n_boot,
-    nb_size, zero_threshold, seed, n_threads_resolved, bca)
+  if (isTRUE(return_draws)) {
+    boot <- .ms_bootstrap_draws_rust(prep$counts, prep$signatures, method,
+      n_boot, nb_size, zero_threshold, seed, n_threads_resolved, bca)
+    draws_flat <- boot$draws
+    boot$n_boot <- boot$n_boot # unchanged; the list members below are
+    # identical to the interval face's wire format.
+  } else {
+    boot <- .ms_fit_bootstrap_rust(prep$counts, prep$signatures, method,
+      n_boot, nb_size, zero_threshold, seed, n_threads_resolved, bca)
+    draws_flat <- NULL
+  }
 
   # --- assembly: the ms_fit conventions + CI attributes --------------------
   samples <- catalog@samples
@@ -648,6 +659,22 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
     attr(exposures, "bca_upper") <- labelled(boot$bca_upper)
     attr(exposures, "bca_fallback") <- labelled(boot$bca_fallback)
     attr(exposures, "ci_method") <- "bca"
+  }
+  if (!is.null(draws_flat)) {
+    # Boot-major rows (n_boot x k*n), each boot a ROW-MAJOR k x n block
+    # (a*n + j linear). R's array() fills dim 1 fastest, so the faithful
+    # reshape is [n, k, n_boot] then aperm to [k, n, n_boot] -- a plain
+    # array(flat, c(k, n, n_boot)) would transpose (a, j) (audited fix:
+    # the first draft misread the layout, quantile parity failed).
+    # draws_flat arrives as an (n_boot x k*n) R MATRIX -- column-major
+    # flattening would read it down the columns; t() restores the
+    # boot-major row order before the reshape.
+    draws_arr <- aperm(array(as.numeric(t(draws_flat)),
+      dim = c(length(samples), length(prep$labels), n_boot)),
+      perm = c(2L, 1L, 3L))
+    dimnames(draws_arr) <- list(prep$labels, samples,
+      boot = seq_len(n_boot))
+    attr(exposures, "boot_draws") <- draws_arr
   }
 
   n_samples <- length(samples)
@@ -704,7 +731,8 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
                                                         seed = 1, nb_size = 8,
                                                         zero_threshold = 0.01,
                                                         n_threads = NULL,
-                                                        bca = FALSE) {
+                                                        bca = FALSE,
+                                                        return_draws = FALSE) {
   msuiter_abort(
     "input",
     "catalog must be an MsCatalog object",
@@ -859,6 +887,31 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
   }
   n_threads <- .ms_resolve_threads(threads)
   .msffi_check(ms_fit_bootstrap_rust(
+    t(counts), t(signatures), method, as.integer(n_boot), as.numeric(nb_size),
+    as.numeric(zero_threshold), as.integer(seed), n_threads, bca
+  ))
+}
+
+# The U-M7-pre draws face (ms_bootstrap_draws_rust): same guards, the
+# boot-major draws matrix rides on the identical summary members.
+.ms_bootstrap_draws_rust <- function(counts, signatures, method, n_boot, nb_size,
+                                     zero_threshold, seed, threads = NULL,
+                                     bca = FALSE) {
+  counts <- .ms_validate_matrix(counts, "counts")
+  signatures <- .ms_validate_matrix(signatures, "signatures")
+  .ms_fit_gate_method(method)
+  .ms_fit_gate_nb_size(nb_size)
+  .ms_fit_gate_zero_threshold(zero_threshold)
+  if (!is.logical(bca) || length(bca) != 1L || is.na(bca)) {
+    msuiter_abort(
+      "input",
+      "bca must be a single TRUE or FALSE",
+      j = paste0("received: ", msuiter_quote_trunc(bca)),
+      c = "leave the default FALSE for the percentile interval only"
+    )
+  }
+  n_threads <- .ms_resolve_threads(threads)
+  .msffi_check(ms_bootstrap_draws_rust(
     t(counts), t(signatures), method, as.integer(n_boot), as.numeric(nb_size),
     as.numeric(zero_threshold), as.integer(seed), n_threads, bca
   ))

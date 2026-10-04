@@ -81,28 +81,73 @@ plot_boot_ci <- function(fit, sample = 1L, show_zero = FALSE) {
 
 #' Bootstrap exposure distributions for one sample
 #'
-#' The percentile-CI construction reads the sorted boot draws; this face
-#' re-derives the draws' distribution shape from what the MsFit carries
-#' (estimate + CI + stability). NOTE (honest scope): the full bootstrap
-#' distribution is not stored on the MsFit (only the CI endpoints and
-#' the stability), so this face renders the interval annotation, not a
-#' histogram. A distribution histogram needs a re-run with the draws
-#' returned -- recorded as an M7 upgrade arm.
+#' Per-signature histograms of the RAW boot draws for one sample, with
+#' the point estimate and the CI bounds marked. Requires the fit to
+#' carry the draws cube (re-run [ms_fit_bootstrap()] with
+#' `return_draws = TRUE`); without it the CI endpoints are the only
+#' stored summary and the structured error says so.
 #'
 #' @inheritParams plot_boot_ci
+#' @param bins Histogram bin count per signature (default 30).
 #'
 #' @return A ggplot object.
 #'
 #' @export
-plot_boot_distribution <- function(fit, sample = 1L) {
+plot_boot_distribution <- function(fit, sample = 1L, bins = 30L) {
   .ms_viz_require_ggplot()
-  msuiter_abort(
-    "option",
-    "the bootstrap distribution histogram is not implemented",
-    i = "ms_fit_bootstrap() stores CI endpoints and stability, not the draws",
-    j = "returning the draws is an M7 upgrade arm (ffi-surface budget)",
-    c = "use plot_boot_ci() for the interval face"
-  )
+  if (!S7::S7_inherits(fit, MsFit)) {
+    msuiter_abort(
+      "input",
+      "fit must be an MsFit produced by ms_fit_bootstrap(return_draws = TRUE)",
+      i = "the histogram face reads the boot_draws attribute",
+      j = paste0("received: ", class(fit)[1L]),
+      c = "re-run ms_fit_bootstrap(..., return_draws = TRUE)"
+    )
+  }
+  draws <- attr(fit@exposures, "boot_draws")
+  if (is.null(draws)) {
+    msuiter_abort(
+      "input",
+      "the MsFit carries no boot_draws attribute",
+      i = "the raw draws are only stored when ms_fit_bootstrap() was called with return_draws = TRUE",
+      j = "boot_draws absent",
+      c = "re-run ms_fit_bootstrap(..., return_draws = TRUE)"
+    )
+  }
+  idx <- .ms_viz_resolve_sample(fit@exposures, sample)
+  sigs <- rownames(fit@exposures)
+  if (is.null(sigs)) sigs <- paste0("sig", seq_len(nrow(fit@exposures)))
+  ci_lo <- attr(fit@exposures, "ci_lower")
+  ci_hi <- attr(fit@exposures, "ci_upper")
+  est <- fit@exposures[, idx]
+  long <- do.call(rbind, lapply(seq_len(nrow(draws)), function(a) {
+    data.frame(
+      signature = sigs[a],
+      value = as.numeric(draws[a, idx, ]),
+      estimate = unname(est[a]),
+      lo = unname(ci_lo[a, idx]),
+      hi = unname(ci_hi[a, idx]),
+      stringsAsFactors = FALSE
+    )
+  }))
+  long$signature <- factor(long$signature, levels = sigs[order(-est)])
+  ggplot2::ggplot(long, ggplot2::aes(x = .data$value)) +
+    ggplot2::geom_histogram(bins = bins, fill = "#2166AC",
+                            colour = "white", linewidth = 0.2) +
+    ggplot2::geom_vline(ggplot2::aes(xintercept = .data$estimate),
+                        linewidth = 0.6) +
+    ggplot2::geom_vline(ggplot2::aes(xintercept = .data$lo),
+                        linetype = "dashed", colour = "grey40",
+                        linewidth = 0.4) +
+    ggplot2::geom_vline(ggplot2::aes(xintercept = .data$hi),
+                        linetype = "dashed", colour = "grey40",
+                        linewidth = 0.4) +
+    ggplot2::facet_wrap(~signature, scales = "free_x") +
+    ggplot2::labs(x = "Boot exposure (mutations)", y = "Replicates",
+                  title = paste0("Bootstrap distributions: ",
+                                 .ms_viz_sample_name(fit@exposures, idx))) +
+    .ms_viz_theme() +
+    ggplot2::theme(strip.text = ggplot2::element_text(face = "bold"))
 }
 
 #' Bootstrap stability bar face

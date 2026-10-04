@@ -1159,6 +1159,13 @@ pub struct BootstrapOutput {
     /// `bca = true` — the percentile grids above are unchanged either way
     /// (compatibility-first wire decision).
     pub bca: Option<BcaInterval>,
+    /// The raw boot exposure cube (U-M7-pre draws face): `Some` iff the
+    /// caller passed `collect_draws = true` — boot-major flat layout,
+    /// `draws[b * k * n + a * n + j]` = boot `b`'s exposure at
+    /// (signature `a`, sample `j`), post-zeroing and post-rescale (the
+    /// exact values the percentile/BCa reductions read). `k * n *
+    /// n_boot` elements.
+    pub draws: Option<Vec<f64>>,
 }
 
 /// BCa interval grids of [`BootstrapOutput::bca`] (row-major k×n, same
@@ -1240,6 +1247,7 @@ pub fn bootstrap(
     seed: u64,
     n_threads: usize,
     bca: bool,
+    collect_draws: bool,
     cancelled: &AtomicBool,
     check_user_interrupt: &mut dyn FnMut(),
 ) -> Result<BootstrapOutput, MsError> {
@@ -1256,6 +1264,23 @@ pub fn bootstrap(
     )?;
     if n_boot == 0 {
         return Err(MsError::new("argument", "n_boot must be >= 1"));
+    }
+    if collect_draws {
+        // Checked arithmetic: the guard itself must not overflow on
+        // absurd grids (usize::MAX-scale n_boot in the test).
+        let total = (k as u64)
+            .checked_mul(n as u64)
+            .and_then(|v| v.checked_mul(n_boot as u64));
+        let too_big = match total {
+            Some(v) => v > 20_000_000,
+            None => true,
+        };
+        if too_big {
+            return Err(MsError::new(
+                "argument",
+                "collect_draws would materialize more than 2e7 doubles (k*n*n_boot); reduce n_boot or request draws through the dedicated face with a smaller grid",
+            ));
+        }
     }
     // Per-sample mutation totals N_j: the resample budget of sample j.
     // They must stay in the exactly-representable integer domain (each
@@ -1385,6 +1410,18 @@ pub fn bootstrap(
         upper: vec![0.0f64; k * n],
         fallback: vec![0i32; k * n],
     });
+    // The draws cube: one flat pass over the per-boot exposures
+    // (boot-major), collected BEFORE the per-cell reductions so the CI
+    // faces and the histogram face read the same numbers.
+    let draws = if collect_draws {
+        let mut d = vec![0.0f64; n_boot * k * n];
+        for (b, row) in per_boot.iter().enumerate() {
+            d[b * k * n..(b + 1) * k * n].copy_from_slice(&row.0);
+        }
+        Some(d)
+    } else {
+        None
+    };
     let mut col = vec![0.0f64; n_boot];
     for a in 0..k {
         for j in 0..n {
@@ -1420,6 +1457,7 @@ pub fn bootstrap(
         n_boot,
         converged,
         bca: bca_out,
+        draws,
     })
 }
 
@@ -2812,10 +2850,16 @@ mod tests {
         let g = |x: &[f64], y: &[f64]| {
             x.len() == y.len() && x.iter().zip(y.iter()).all(|(p, q)| p.to_bits() == q.to_bits())
         };
+        let draws_same = match (&a.draws, &b.draws) {
+            (None, None) => true,
+            (Some(x), Some(y)) => g(x, y),
+            _ => false,
+        };
         g(&a.ci_lower, &b.ci_lower)
             && g(&a.ci_upper, &b.ci_upper)
             && g(&a.support_stability, &b.support_stability)
             && a.n_boot == b.n_boot
+            && draws_same
     }
 
     #[test]
@@ -2825,7 +2869,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.0, seed, threads,
-                false, &cancelled, &mut no_poll,
+                false, false, &cancelled, &mut no_poll,
             )
             .unwrap()
         };
@@ -2845,6 +2889,61 @@ mod tests {
     }
 
     #[test]
+    fn bootstrap_draws_reproduce_the_ci_and_stay_deterministic() {
+        // U-M7-pre draws face: with collect_draws the returned cube must
+        // (a) reproduce every CI bound through the same type-7 percentile
+        // kernel (bitwise -- same numbers, same reduction), (b) be
+        // deterministic across threads, (c) stay None without the flag.
+        let (counts, sigs, _h, m, n, k) = boot_fixture();
+        let run = |collect: bool| {
+            let cancelled = AtomicBool::new(false);
+            bootstrap(
+                &counts, &sigs, m, n, k, FitMethod::Nnls, 23, NB_SIZE_SBS96, 0.0, 7, 1, false,
+                collect, &cancelled, &mut no_poll,
+            )
+            .unwrap()
+        };
+        let with = run(true);
+        let draws = with.draws.as_ref().unwrap();
+        assert_eq!(draws.len(), 23 * k * n);
+        let mut col = vec![0.0f64; 23];
+        for a in 0..k {
+            for j in 0..n {
+                for b in 0..23 {
+                    col[b] = draws[b * k * n + a * n + j];
+                }
+                col.sort_by(f64::total_cmp);
+                assert_eq!(
+                    percentile_sorted(&col, BOOTSTRAP_CI_LEVELS.0),
+                    with.ci_lower[a * n + j],
+                    "ci_lower must be the draws' own percentile at ({a},{j})"
+                );
+                assert_eq!(
+                    percentile_sorted(&col, BOOTSTRAP_CI_LEVELS.1),
+                    with.ci_upper[a * n + j],
+                    "ci_upper must be the draws' own percentile at ({a},{j})"
+                );
+            }
+        }
+        // Determinism: two collected runs are bit-identical, threads or not.
+        let again = run(true);
+        assert!(same_boot_bits(&with, &again));
+        // Without the flag the cube stays None and the summaries match.
+        let without = run(false);
+        assert!(without.draws.is_none());
+        assert_eq!(with.ci_lower, without.ci_lower);
+        assert_eq!(with.ci_upper, without.ci_upper);
+        // The memory guard: a tiny grid trips the structured error.
+        let cancelled = AtomicBool::new(false);
+        let err = bootstrap(
+            &counts, &sigs, m, n, k, FitMethod::Nnls, usize::MAX / (k * n).max(1) + 1, NB_SIZE_SBS96,
+            0.0, 7, 1, false, true, &cancelled, &mut no_poll,
+        )
+        .unwrap_err();
+        assert_eq!(err.topic, "argument");
+    }
+
+    #[test]
     fn bootstrap_stream_layout_matches_the_canonical_resample_stream() {
         // n_boot = 1 must equal a hand-driven resample + a plain fit: the
         // boot's single canonical stream StreamId { replicate: 0, rank: 0,
@@ -2857,7 +2956,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 1, NB_SIZE_SBS96, 0.0, 42, 1,
-            false, &cancelled, &mut no_poll,
+            false, false, &cancelled, &mut no_poll,
         )
         .unwrap();
         let mut rng = MsRng::from_stream(42, StreamId { replicate: 0, rank: 0, fold: 0 });
@@ -2894,7 +2993,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, 2, 1, 2, FitMethod::Nnls, 9, NB_SIZE_SBS96, 0.01, 7, 2,
-            false, &cancelled, &mut no_poll,
+            false, false, &cancelled, &mut no_poll,
         )
         .unwrap();
         assert_eq!(out.n_boot, 9);
@@ -2913,7 +3012,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             let out = bootstrap(
                 &counts, &sigs, m, n, k, method, 5, NB_SIZE_SBS96, 0.01, 9, 2,
-                false, &cancelled, &mut no_poll,
+                false, false, &cancelled, &mut no_poll,
             )
             .unwrap();
             assert!(out.converged, "{method:?} boots must converge");
@@ -2975,7 +3074,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             let out = bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, n_boot, NB_SIZE_SBS96, 0.0, 77, 2,
-                false, &cancelled, &mut no_poll,
+                false, false, &cancelled, &mut no_poll,
             )
             .unwrap();
             for (idx, &truth) in h_true.iter().enumerate() {
@@ -3047,7 +3146,7 @@ mod tests {
         .unwrap();
         let boot = bootstrap(
             &counts, &sigs, m, n, 1, FitMethod::Nnls, 200, NB_SIZE_SBS96, 0.01, 77, 2,
-            false, &cancelled, &mut no_poll,
+            false, false, &cancelled, &mut no_poll,
         )
         .unwrap();
 
@@ -3077,7 +3176,7 @@ mod tests {
         let cancelled = AtomicBool::new(true);
         let err = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 2,
-            false, &cancelled, &mut no_poll,
+            false, false, &cancelled, &mut no_poll,
         )
         .unwrap_err();
         assert_eq!(err.topic, "interrupted");
@@ -3087,7 +3186,7 @@ mod tests {
         let mut chunks = 0usize;
         let err = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1, false,
-            &cancelled,
+            false, &cancelled,
             &mut || {
                 chunks += 1;
                 if chunks == 1 {
@@ -3104,7 +3203,7 @@ mod tests {
         let mut polls = 0usize;
         bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 8, NB_SIZE_SBS96, 0.0, 3, 1, false,
-            &cancelled, &mut || polls += 1,
+            false, &cancelled, &mut || polls += 1,
         )
         .unwrap();
         assert_eq!(polls, 4);
@@ -3116,7 +3215,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let mk_boot = |n_boot: usize, nb: f64, c: &[f64]| {
             bootstrap(
-                c, &sigs, m, n, k, FitMethod::Nnls, n_boot, nb, 0.0, 1, 1, false, &cancelled,
+                c, &sigs, m, n, k, FitMethod::Nnls, n_boot, nb, 0.0, 1, 1, false, false, &cancelled,
                 &mut no_poll,
             )
         };
@@ -3171,7 +3270,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, 13, NB_SIZE_SBS96, 0.01, 5, 1, bca,
-                &cancelled, &mut no_poll,
+                false, &cancelled, &mut no_poll,
             )
             .unwrap()
         };
@@ -3192,6 +3291,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 41, NB_SIZE_SBS96, 0.01, 5, 2, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
@@ -3222,6 +3322,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 60, NB_SIZE_SBS96, 0.01, 5, 1, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
@@ -3261,6 +3362,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, 2, 1, 2, FitMethod::Nnls, 9, NB_SIZE_SBS96, 0.01, 7, 1, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
@@ -3283,7 +3385,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             bootstrap(
                 &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.01, 11, threads,
-                true, &cancelled, &mut no_poll,
+                true, false, &cancelled, &mut no_poll,
             )
             .unwrap()
         };
@@ -3294,6 +3396,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let c = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 17, NB_SIZE_SBS96, 0.01, 12, 1, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
@@ -3307,6 +3410,7 @@ mod tests {
             let cancelled = AtomicBool::new(false);
             let out = bootstrap(
                 &counts, &sigs, m, n, k, method, 15, NB_SIZE_SBS96, 0.01, 9, 2, true,
+                false,
                 &cancelled, &mut no_poll,
             )
             .unwrap();
@@ -3331,6 +3435,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, m, n, k, FitMethod::Nnls, 25, NB_SIZE_SBS96, 0.01, 5, 1, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
@@ -3367,6 +3472,7 @@ mod tests {
         let cancelled = AtomicBool::new(false);
         let out = bootstrap(
             &counts, &sigs, 2, 2, 2, FitMethod::Nnls, 7, NB_SIZE_SBS96, 0.01, 7, 1, true,
+            false,
             &cancelled, &mut no_poll,
         )
         .unwrap();
