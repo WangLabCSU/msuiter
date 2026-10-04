@@ -30,6 +30,8 @@
 
 * **ms_convert() 机会转换（U-M4-02c，R/ms-convert.R + 设计备忘 2026-10-04-M4-02c-convert-memo.md）**：sigfit convert_signatures 语义（sig/opp_from·opp_to 逐列重归一）——human-genome/human-exome 内置表（COSMIC v2/v3 频数，经 sigminer 源码 [V]，data-raw+inst/extdata 双处固定、标签序为注册表序）+ 自定义机会向量（panel 口）；MsSignature 方法签名转换/暴露原样；genome→genome 恒等、与 sigminer sig_convert 双侧一致 ≤1e-12、往返可逆 1e-8、零列不产 NaN。"似然内机会"（sigfit per-sample 语义）记 ⏳v1.x。
 
+* **viz 首批 8 图型（U-M4-03，R/viz-*.R + 设计备忘 2026-10-04-M4-03-viz-memo.md）**：plot_catalog_profile / plot_signature_catalog / plot_reference_comparison / plot_reconstruction_panel / plot_exposure_stacked / plot_exposure_heatmap / plot_similarity_heatmap / plot_cosmic_scatter——COSMIC 6 类调色板逐字节取自已核实的 sigProfilerPlotting.py 源码（L2895–2902；research/04 旧笔记色序笔误已修正记录）、规范序强制（复用注册表校验，viz 不静默重排）、ggplot2 4.0 兼容（scale_fill_identity；I() in aes 已移除）、矢量一等（返回 ggplot 对象）；DBS78/ID83 简化单色（palette 冻结 M7）。exposure UMAP 与全集图型 ⏳ 后批。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
