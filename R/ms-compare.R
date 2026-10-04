@@ -319,6 +319,43 @@
   sum(x * y) / (nx * ny)
 }
 
+# The empirical signature-null tail probability for one observed
+# cosine: p = (1 + #{null >= observed}) / (n + 1) over n fresh
+# Dirichlet(1..1) pairs (the add-one rule -- an unbiased-ish tail
+# estimate that never returns 0). D13: estimation object = the empirical
+# tail fraction; generative model = the frozen uniform family; failure
+# mode = none (the add-one rule is always defined); precision scales as
+# 1/sqrt(n) and is reported through n_draws.
+.ms_null_emp_pvalue <- function(observed, m, n_draws = 5000L, seed = 1) {
+  if (!is.numeric(observed) || length(observed) != 1L || !is.finite(observed)) {
+    msuiter_abort(
+      "input",
+      "observed must be a single finite cosine",
+      i = "the null p-value annotates one pairwise comparison",
+      j = paste0("received: ", msuiter_quote_trunc(observed)),
+      c = "pass the cosine between one estimated and one reference signature"
+    )
+  }
+  if (!is.numeric(n_draws) || length(n_draws) != 1L || n_draws < 200L ||
+      n_draws != floor(n_draws)) {
+    msuiter_abort(
+      "input",
+      "n_draws must be a single whole number >= 200",
+      j = paste0("received: ", msuiter_quote_trunc(n_draws)),
+      c = "the add-one tail estimate needs a usable denominator"
+    )
+  }
+  set.seed(seed)
+  # 2 draws per replicate: one pair per row.
+  x <- matrix(stats::rgamma(2 * n_draws * m, shape = 1), nrow = n_draws,
+              ncol = 2L * m)
+  x <- x / rowSums(x)
+  a <- x[, seq_len(m), drop = FALSE]
+  b <- x[, m + seq_len(m), drop = FALSE]
+  cosines <- rowSums(a * b) / sqrt(rowSums(a^2) * rowSums(b^2))
+  (1 + sum(cosines >= observed)) / (n_draws + 1)
+}
+
 # ---------------------------------------------------------------------------
 # The entry point
 # ---------------------------------------------------------------------------

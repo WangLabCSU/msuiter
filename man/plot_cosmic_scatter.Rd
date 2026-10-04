@@ -4,7 +4,13 @@
 \alias{plot_cosmic_scatter}
 \title{Estimate vs COSMIC reference scatter}
 \usage{
-plot_cosmic_scatter(estimated, reference, label = NULL)
+plot_cosmic_scatter(
+  estimated,
+  reference,
+  label = NULL,
+  null_p = TRUE,
+  null_n_draws = 5000L
+)
 }
 \arguments{
 \item{estimated}{m x 1 (or named vector) in canonical order.}

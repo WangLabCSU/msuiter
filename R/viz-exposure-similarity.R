@@ -113,7 +113,8 @@ plot_similarity_heatmap <- function(similarity, high = "#B2182B") {
 #'
 #' @return A ggplot object.
 #' @export
-plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
+plot_cosmic_scatter <- function(estimated, reference, label = NULL,
+                                null_p = TRUE, null_n_draws = 5000L) {
   .ms_viz_require_ggplot()
   pe <- .ms_viz_prep_profile(estimated, NULL, "share")
   pr <- .ms_viz_prep_profile(reference, NULL, "share")
@@ -128,6 +129,23 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
   }
   cos <- sum(pe$values * pr$values) /
     sqrt(sum(pe$values^2) * sum(pr$values^2))
+  note <- sprintf("cosine = %.3f", cos)
+  if (isTRUE(null_p)) {
+    if (!is.numeric(null_n_draws) || length(null_n_draws) != 1L ||
+        is.na(null_n_draws) || null_n_draws < 200) {
+      msuiter_abort(
+        "input",
+        "null_n_draws must be a single number >= 200",
+        i = "the null annotation runs an add-one Monte Carlo",
+        j = paste0("received: ", msuiter_quote_trunc(null_n_draws)),
+        c = "use e.g. 5000 draws"
+      )
+    }
+    pval <- .ms_null_emp_pvalue(cos, m = nrow(pe$matrix),
+      n_draws = as.integer(null_n_draws), seed = 1)
+    note <- sprintf("%s (null p = %.4g, %d draws)", note, pval,
+                    as.integer(null_n_draws))
+  }
   df <- data.frame(reference = pr$values, estimated = pe$values)
   ttl <- if (is.null(label)) "" else paste0(label, " --  ")
   ggplot2::ggplot(df, ggplot2::aes(x = .data$reference, y = .data$estimated)) +
@@ -135,7 +153,7 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL) {
     ggplot2::geom_abline(slope = 1, intercept = 0, colour = "grey40",
                          linewidth = 0.4, linetype = "dashed") +
     ggplot2::annotate("text", x = Inf, y = -Inf, hjust = 1.05, vjust = -0.5,
-                      label = sprintf("cosine = %.3f", cos), size = 3.2,
+                      label = note, size = 3.2,
                       colour = "grey20") +
     ggplot2::labs(x = "Reference share", y = "Estimated share",
                   title = trimws(paste0(ttl, "channel-level comparison"))) +

@@ -102,7 +102,7 @@
 | 目录/谱图：SBS6/24/96/192/384/1536、DBS78、ID83(89)、CN48、SV32、RNA-SBS192——样本目录 + 签名谱 + 参考谱 | ✅ 首批 8 图 M4，全集 M7 | M4/M7 |
 | 原始 vs 重构对比面板（逐通道残差） | ✅ M4 | M4 |
 | exposure：堆叠柱、热图、riverplot | ✅ M4 | M4 |
-| 相似度：cosine 热图、vs COSMIC 点图（cosine 注记 ✅；q 值注记 ⏳ 零分布 p 值面待接） | ✅ M4 | M4 |
+| 相似度：cosine 热图、vs COSMIC 点图（cosine + 零分布经验 p 注记 ✅——uniform-Dirichlet 族 add-one MC，单对比；跨对比 FDR q 值 ⏳ 待多对比表视图） | ✅ M4 | M4 |
 | K 选择证据：CV 误差曲线 + 稳定性双线 + veto 线（U-M4-03 余项，ms_select_k 证据表直读） | ✅ M2/M4 | M4 |
 | bootstrap：CI 误差条 + 稳定性柱（U-M4-03 余项）+ 覆盖率曲线（M3b 面）；分布直方图 ⏳M7（draws 不落 MsFit——升级臂） | ✅ M3b/M4 | M4 |
 | 链偏倚/TSB 图、rainfall、损伤分离轨迹、RT 剖面 | 🔶（TSB v0.2，其余 v1.x） | 分期 |

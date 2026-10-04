@@ -201,6 +201,35 @@ test_that("the COSMIC scatter annotates the hand-derived cosine", {
     info = paste(ann_text, collapse = " | "))
 })
 
+test_that("the null p-value annotation carries the add-one floor and off state", {
+  skip_if_not_installed("ggplot2")
+  sig <- .ms_viz_sig3()
+  # Identical signatures: cosine 1 hits the add-one floor (1/(n+1)).
+  p1 <- plot_cosmic_scatter(sig[, 1], sig[, 1], null_n_draws = 2000)
+  built <- ggplot2::ggplot_build(p1)
+  ann <- unlist(lapply(built$data, function(d) {
+    if ("label" %in% names(d)) as.character(d$label) else NULL
+  }))
+  expect_true(any(grepl("null p = 0.000499", ann, fixed = TRUE)),
+    info = paste(ann, collapse = " | "))
+  expect_true(any(grepl("2000 draws", ann)))
+  # The off switch renders the plain annotation.
+  p2 <- plot_cosmic_scatter(sig[, 1], sig[, 2], null_p = FALSE)
+  built2 <- ggplot2::ggplot_build(p2)
+  ann2 <- unlist(lapply(built2$data, function(d) {
+    if ("label" %in% names(d)) as.character(d$label) else NULL
+  }))
+  expect_false(any(grepl("null p", ann2)))
+  expect_true(any(grepl("cosine", ann2)))
+  # Bad draw counts are structured.
+  expect_ms_error(plot_cosmic_scatter(sig[, 1], sig[, 2],
+    null_n_draws = 10), "input")
+  # The helper itself: the add-one rule never returns 0.
+  pmin <- msuiter:::.ms_null_emp_pvalue(1.0, m = 96, n_draws = 500,
+    seed = 3)
+  expect_identical(pmin, 1 / 501)
+})
+
 test_that("real COSMIC signatures render and ggsave writes a non-empty PNG", {
   skip_if_no_ggplot()
   path <- system.file("reference/refdb/COSMIC_v3.6/COSMIC_v3.6_SBS_GRCh37.txt",
