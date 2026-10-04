@@ -124,6 +124,111 @@ ms_embed <- function(exposures, method = c("umap", "kmeans"),
   }
 }
 
+#' Test per-signature exposure differences between sample groups
+#'
+#' The differential-mining half of the embed face (musicatk-style
+#' workflow): for each signature, a two-sample Wilcoxon rank-sum test
+#' compares the exposures across two groups of samples, with
+#' Benjamini-Hochberg correction across the signature family (the same
+#' `p.adjust` semantics as ms_test_presence). More than two groups are
+#' rejected -- pairwise splits are the caller's design decision, not an
+#' implicit default.
+#'
+#' @param exposures A k x n exposure matrix (rows = signatures), or an
+#'   [MsSignature].
+#' @param groups A character/factor vector of length n with exactly two
+#'   levels; the sample order must match the exposure columns.
+#' @param alpha The family-wise alpha for `pass_bh` (frozen default
+#'   0.05, the presence-test convention).
+#'
+#' @return A data.frame: signature, median_group1, median_group2,
+#'   statistic, p_raw, p_bh, pass_bh.
+#'
+#' @references musicatk (Bioconductor) exposure-differentiation
+#'   workflow; BH correction semantics per ms_test_presence.
+#'
+#' @export
+ms_exposure_test <- function(exposures, groups, alpha = 0.05) {
+  if (S7::S7_inherits(exposures, MsSignature)) {
+    exposures <- exposures@exposures
+  }
+  exposures <- as.matrix(exposures)
+  if (!is.numeric(exposures) || !is.matrix(exposures)) {
+    msuiter_abort(
+      "input",
+      "exposures must be a numeric k x n matrix (or an MsSignature)",
+      i = "ms_exposure_test() compares per-signature exposures across groups",
+      j = paste0("received: ", class(exposures)[1L]),
+      c = "pass the fit/refit exposure matrix"
+    )
+  }
+  if (!is.character(groups) && !is.factor(groups)) {
+    msuiter_abort(
+      "input",
+      "groups must be a character vector or factor over the samples",
+      i = "the test splits the exposure columns into two groups",
+      j = paste0("received: ", class(groups)[1L]),
+      c = "pass one group label per sample column"
+    )
+  }
+  groups <- as.character(groups)
+  if (length(groups) != ncol(exposures)) {
+    msuiter_abort(
+      "input",
+      "groups must have one label per exposure column",
+      i = "the sample order of groups matches the exposure columns",
+      j = sprintf("groups: %d; exposure columns: %d", length(groups),
+                  ncol(exposures)),
+      c = "align the labels with the matrix columns"
+    )
+  }
+  levels <- sort(unique(groups))
+  if (length(levels) != 2L) {
+    msuiter_abort(
+      "input",
+      "exactly two groups are required",
+      i = "pairwise splits of multi-group designs are the caller's decision",
+      j = sprintf("received %d levels: %s", length(levels),
+                  msuiter_quote_trunc(levels)),
+      c = "subset to the two groups you want compared"
+    )
+  }
+  if (!is.numeric(alpha) || length(alpha) != 1L || is.na(alpha) ||
+      !is.finite(alpha) || alpha <= 0 || alpha >= 1) {
+    msuiter_abort(
+      "input",
+      "alpha must be a single number in (0, 1)",
+      i = "the family-wise alpha gates pass_bh",
+      j = paste0("received: ", msuiter_quote_trunc(alpha)),
+      c = "the frozen convention is 0.05"
+    )
+  }
+  sigs <- rownames(exposures)
+  if (is.null(sigs)) sigs <- paste0("sig", seq_len(nrow(exposures)))
+  g1 <- groups == levels[1]
+  g2 <- groups == levels[2]
+  rows <- lapply(seq_len(nrow(exposures)), function(a) {
+    x <- exposures[a, g1]
+    y <- exposures[a, g2]
+    # A signature that is all-zero on both sides (or all-tied) has no
+    # evidence: NA rather than a fake p (the presence-test NA face).
+    if (all(x == y)) {
+      return(data.frame(signature = sigs[a],
+        median_group1 = stats::median(x), median_group2 = stats::median(y),
+        statistic = NA_real_, p_raw = NA_real_, stringsAsFactors = FALSE))
+    }
+    wt <- stats::wilcox.test(x, y, exact = FALSE, correct = FALSE)
+    data.frame(signature = sigs[a],
+      median_group1 = stats::median(x), median_group2 = stats::median(y),
+      statistic = unname(wt$statistic), p_raw = wt$p.value,
+      stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows)
+  out$p_bh <- stats::p.adjust(out$p_raw, method = "BH")
+  out$pass_bh <- !is.na(out$p_bh) & out$p_bh <= alpha
+  out
+}
+
 #' Scatter the sample embedding
 #'
 #' ggplot scatter of an [ms_embed()] table; colours by cluster when

@@ -4,22 +4,22 @@
 \alias{plot_boot_distribution}
 \title{Bootstrap exposure distributions for one sample}
 \usage{
-plot_boot_distribution(fit, sample = 1L)
+plot_boot_distribution(fit, sample = 1L, bins = 30L)
 }
 \arguments{
 \item{fit}{An [MsFit] produced by [ms_fit_bootstrap()].}
 
 \item{sample}{Sample name or index (one column).}
+
+\item{bins}{Histogram bin count per signature (default 30).}
 }
 \value{
 A ggplot object.
 }
 \description{
-The percentile-CI construction reads the sorted boot draws; this face
-re-derives the draws' distribution shape from what the MsFit carries
-(estimate + CI + stability). NOTE (honest scope): the full bootstrap
-distribution is not stored on the MsFit (only the CI endpoints and
-the stability), so this face renders the interval annotation, not a
-histogram. A distribution histogram needs a re-run with the draws
-returned -- recorded as an M7 upgrade arm.
+Per-signature histograms of the RAW boot draws for one sample, with
+the point estimate and the CI bounds marked. Requires the fit to
+carry the draws cube (re-run [ms_fit_bootstrap()] with
+`return_draws = TRUE`); without it the CI endpoints are the only
+stored summary and the structured error says so.
 }

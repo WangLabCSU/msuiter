@@ -13,7 +13,8 @@ ms_fit_bootstrap(
   nb_size = 8,
   zero_threshold = 0.01,
   n_threads = NULL,
-  bca = FALSE
+  bca = FALSE,
+  return_draws = FALSE
 )
 }
 \arguments{

@@ -93,7 +93,7 @@
 | 组间比较：Wilcoxon 基线 + DM 混合模型（MSU-Infer）+ CoDA | Morrill 2025 复现+扩展 | 🔶 v1.0 起 | 森林图/箱线+检验注记 |
 | 生存/临床关联（不确定性传播） | 多重插补 + Cox | ⏳ v1.x | KM/森林图 |
 | 复合判定：HRD 报告（WGS-only 契约）、PRRDetect、MSI/MMR、组织起源 | HRDetect 系数/Koh 2025 | HRD ✅ v1.0；其余 ⏳ | HRD 报告页 |
-| exposure 嵌入（UMAP/kmeans）✅（ms_embed/plot_embedding，U-M4-03 余项）+ 差异挖掘 ⏳ | musicatk 思想 | 🔶 嵌入 | 嵌入散点/聚类图 |
+| exposure 嵌入（UMAP/kmeans）✅ + 差异挖掘 ✅（ms_exposure_test：双组 Wilcoxon + BH，all-tied NA 面） | musicatk 思想 | ✅ M4 | 嵌入散点/聚类图 |
 
 ## L-F 基本可视化（ggplot2 原生；COSMIC 风格规范：规范序强制、官方调色板、类组分隔、双轴、矢量输出）
 
