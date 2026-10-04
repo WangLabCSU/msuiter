@@ -43,7 +43,7 @@
       c = "pass the table returned by ms_calibration_grid()"
     )
   }
-  required <- c("n", "share", "mean_coverage", "se", "pass_window")
+  required <- c("n", "share", "mean_coverage", "pass_window")
   if (needs_se) required <- c(required, "se")
   missing <- setdiff(required, names(calibration_df))
   if (length(missing) > 0L) {

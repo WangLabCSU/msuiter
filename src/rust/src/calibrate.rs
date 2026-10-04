@@ -329,6 +329,16 @@ fn run_calibration_rep(job: &CellJob, rep: usize, cancelled: &AtomicBool) -> Res
     }
 
     // --- production fit face + CI ---------------------------------------
+    // Point fit: the frozen legacy `fit` entry (rescale = FALSE,
+    // bit-identical to pre-U-M3a-05 — the ffi-surface row's frozen
+    // protocol for this face). No cross-scale exposure here: the inputs
+    // are raw synthetic counts, so the likelihood fit already returns
+    // count-scale exposures (column sums equal the sample totals up to
+    // FIT_EPS) — the very scale the boots are rescaled onto by
+    // [`fit::rescale_to_totals`] (divisor = each boot's own exposure
+    // column sum, target = the original sample totals). The coverage and
+    // point_in_ci tallies therefore compare like with like; on this path
+    // a point-side rescale would be an identity to within FIT_EPS.
     let point = fit::fit(
         &counts,
         job.sigs,

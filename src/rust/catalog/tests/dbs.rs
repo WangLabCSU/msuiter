@@ -127,17 +127,17 @@ fn golden_dbs78() {
         (b"AA", b"GG", 73, "TT>CC"), // -> TT>CC
         (b"GT", b"AA", 8, "AC>TT"),  // -> AC>TT
     ];
-    for (ref2, alt2, idx, label) in golden {
+    for &(ref2, alt2, idx, label) in golden {
         assert_eq!(
             assign_dbs78(ref2, alt2).unwrap(),
-            *idx,
+            idx,
             "ref={:?} alt={:?}",
-            String::from_utf8_lossy(*ref2),
-            String::from_utf8_lossy(*alt2)
+            String::from_utf8_lossy(ref2),
+            String::from_utf8_lossy(alt2)
         );
-        assert_eq!(dbs78_label(*idx).unwrap(), *label);
+        assert_eq!(dbs78_label(idx).unwrap(), label);
         // The label must also sit at that position in the canonical table.
-        assert_eq!(DBS78_CHANNELS[*idx], *label);
+        assert_eq!(DBS78_CHANNELS[idx], label);
     }
 }
 
