@@ -341,16 +341,16 @@ pub fn multinomial_bootstrap(
 
 /// Upper bound of the supported per-channel mean regime for
 /// [`nb_sample`] / [`nb_sample_size_scan`]. The 2026 calibration grid caps
-/// catalog totals at 10⁵–10⁶ (M3b memo §1.3), so 10¹² is six-plus orders
+/// catalog totals at 10⁵–10⁶ (M3b memo §1.3), so 10⁹ is three-plus orders
 /// of headroom; the cap exists because the Poisson inversion's expected
 /// walk cost is `O(√rate)` and the goldens only certify the regime below.
 /// Support ceilings for NB sampling (audited P2): the Poisson mode
 /// inversion accumulates `mode·ln(rate)−rate−lnΓ(mode+1)` in f64 —
 /// catastrophic cancellation grows with rate (measured: center-mass
 /// distortion ≈1e-11 at rate 1e6, ≈0.4% at 1e12, ~0.16 at 1e15). The
-/// ceilings keep that error ≲1e-9; the calibration grid tops out at
-/// μ ≤ 1e6 (6 orders of margin). Raising a ceiling requires re-pinning
-/// the distortion measurement.
+/// calibration grid (μ ≤ 1e6) keeps that error ≲1e-9; the ceilings bound
+/// it at ~0.4% — raising a ceiling requires re-pinning the distortion
+/// measurement.
 pub const NB_MEAN_MAX: f64 = 1e9;
 
 /// Upper bound of the supported finite `size` and of the internal Poisson

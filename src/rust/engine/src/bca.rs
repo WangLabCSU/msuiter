@@ -439,7 +439,8 @@ mod tests {
     /// Exp(1) draws — a right-skewed statistic where the percentile
     /// interval is visibly wrong and BCa is the fix. Data and the B = 200
     /// boot sample are a FROZEN R fixture (set.seed(4242) /
-    /// set.seed(777), R 4.5.2); θ̂ = 0.89616666666666667 and the
+    /// round(rexp(12), 4) + set.seed(777) / replicate(200, ...), R 4.5.2);
+    /// θ̂ = 0.89616666666666667 and the
     /// observation-level jackknife acceleration a = 0.085022443718641275
     /// are R-computed on the same data.
     const EXP_THETA: f64 = 0.896_166_666_666_666_7;
