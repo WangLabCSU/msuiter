@@ -11,7 +11,7 @@ ms_export(x, format = "cosmic", file = NULL)
 
 \item{format}{`"cosmic"` (the bundled reference layout, first header
 column "Type") or `"sigprofiler"` (first header column
-"MutationType"; verified against upstream specimens — memo §4).
+"MutationType"; verified against upstream specimens --  memo section 4).
 WTSI long format is deferred (no verifiable upstream specimen).}
 
 \item{file}{Output path; `NULL` returns the assembled data.frame

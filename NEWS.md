@@ -36,6 +36,8 @@
 
 * **bench/jiang 对标（v0.2 验收门证据，4b3c8b4）**：Jiang 2025 拟合协议（bbaf042）——8 条 COSMIC v3.6 参考签名（含 v3.6 拆分名 17a/40a）× 3 活跃/5 decoy × 负荷 {300–10000} × multinomial/NB(κ=8) 双臂 × 30 replicate；参考约束 NNLS refit 双面（真 raw zero_threshold=0 + 管线 1% 清理——审计式发现：默认清理使 raw 口径成空操作）；ms_compare(protocol='jiang') 直读。multinomial 臂过门（CS min 2.72 / 汇总 spec 0.864）；nb8 臂 CS 过（2.41）spec 未过（0.743）——归因与 PI 选项入 result.md。
 
+* **ms_simulate() 第一版（M7 前置，R/ms-simulate.R + 设计备忘 2026-10-05-simulate-memo.md）**：字典+暴露 → 合成目录——multinomial（恰 N，M3b sanity 同律）/poisson/nb（gamma-Poisson，Var=μ+μ²/κ）三臂；份额/计数暴露自动判定；SBS96/DBS78 双空间；seed 逐位。NB 每通道方差律与 Poisson 单位色散进测试（400 replicate 中位数锚）。基因组真实放置（VCF 级）⏳ M7 全集。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。
