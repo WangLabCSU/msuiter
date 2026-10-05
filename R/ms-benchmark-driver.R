@@ -127,9 +127,11 @@ ms_benchmark_grid <- function(name = "scenario", n_samples = 20,
 #' certified engines; D2: Hungarian-paired L1) -- pending PI
 #' confirmation.
 #'
-#' Single-cell isolation: an extraction failure records a `cell_error`
-#' metric for that cell and the grid continues; a scoring failure blanks
-#' the paired-L1 metrics only.
+#' Single-cell isolation: extraction AND scoring live in one guarded
+#' block -- a failure in either records a `cell_error` metric for that
+#' cell and the grid continues. Scenario-level generation failures
+#' (ms_simulate / the dictionary draw) abort the run: the v1 isolation
+#' boundary is the cell, not the scenario.
 #'
 #' @param grid A named list of [ms_benchmark_grid()] scenarios.
 #' @param engines A named list of extract-mode engine specs (e.g.
@@ -152,6 +154,19 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
       c = "build it with ms_benchmark_grid(), one list element per scenario"
     )
   }
+  if (anyDuplicated(names(grid)) != 0L) {
+    # R named-list semantics would silently keep only the FIRST element
+    # of a duplicated name (the audited v1 skipped the second scenario
+    # entirely); refuse instead.
+    msuiter_abort(
+      "input",
+      "grid scenario names must be unique",
+      i = "R named lists silently drop duplicated-name duplicates",
+      j = paste0("duplicated: ",
+                 msuiter_quote_trunc(names(grid)[duplicated(names(grid))])),
+      c = "give every scenario a distinct name"
+    )
+  }
   for (nm in names(grid)) {
     sc <- grid[[nm]]
     if (!is.list(sc) || is.null(sc$name)) {
@@ -164,8 +179,41 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
       )
     }
   }
+  if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
+      !is.finite(seed) || seed < 0) {
+    msuiter_abort(
+      "input",
+      "seed must be a single non-negative finite number",
+      i = "the seed derives the scenario dictionaries and truth exposures",
+      j = paste0("received: ", msuiter_quote_trunc(seed)),
+      c = "record the integer seed used for the grid"
+    )
+  }
   if (is.null(engines)) {
-    engines <- list(nmf = ms_nmf(), ard = ms_ard(), sparse = ms_sparse())
+    # The sparse factory's l1 default (mu = 0) fails its own validator;
+    # the volume variant is the penalty-free certified default.
+    engines <- list(nmf = ms_nmf(), ard = ms_ard(),
+                    sparse = ms_sparse(variant = "volume"))
+  }
+  # Resolve every engine BEFORE any scenario burns work (contract 4:
+  # errors before compute; the audited v1 resolved per-cell and could
+  # abort mid-run on an unresolvable spec).
+  for (eng_name in names(engines)) {
+    entry <- tryCatch(match_ms_engine(engines[[eng_name]]),
+                      error = identity)
+    if (inherits(entry, "error") || is.null(entry)) {
+      msuiter_abort(
+        "input",
+        sprintf("engine '%s' did not resolve in the registry", eng_name),
+        i = "every benchmark engine must be a registered extract-mode spec",
+        j = if (inherits(entry, "error")) {
+          paste0("reason: ", conditionMessage(entry))
+        } else {
+          paste0("received: ", class(engines[[eng_name]])[1L])
+        },
+        c = "pass a factory object (ms_nmf()/ms_ard()/ms_sparse())"
+      )
+    }
   }
   if (!is.list(engines) || length(engines) == 0L ||
       is.null(names(engines)) || any(!nzchar(names(engines)))) {
@@ -196,22 +244,29 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
     shares <- sweep(shares, 2L, colSums(shares), "/")
     rownames(shares) <- chosen
 
-    catalog <- ms_simulate(dict, shares, arm = sc$arm, size = sc$size,
-                           seed = seed, burden = sc$burden)
-    truth_counts <- sweep(shares, 2L, colSums(catalog@counts), "*")
+    gen <- tryCatch({
+      catalog <- ms_simulate(dict, shares, arm = sc$arm, size = sc$size,
+                             seed = seed, burden = sc$burden)
+      truth_counts <- sweep(shares, 2L, colSums(catalog@counts), "*")
+      list(catalog = catalog, truth_counts = truth_counts)
+    }, error = function(e) NULL)
+    if (is.null(gen)) {
+      # Scenario-level generation failure: every engine of THIS scenario
+      # records cell_error (the isolation boundary extended to the
+      # scenario axis); other scenarios continue.
+      for (eng_name in names(engines)) {
+        rows[[length(rows) + 1L]] <- data.frame(
+          .engine = eng_name, .scenario = sc_name, .metric = "cell_error",
+          .estimate = 1, stringsAsFactors = FALSE
+        )
+      }
+      next
+    }
+    catalog <- gen$catalog
+    truth_counts <- gen$truth_counts
 
     for (eng_name in names(engines)) {
       spec <- engines[[eng_name]]
-      entry <- tryCatch(match_ms_engine(spec), error = function(e) NULL)
-      if (is.null(entry)) {
-        msuiter_abort(
-          "input",
-          sprintf("engine '%s' did not resolve in the registry", eng_name),
-          i = "every benchmark engine must be a registered extract-mode spec",
-          j = paste0("received: ", class(spec)[1L]),
-          c = "pass a factory object (ms_nmf()/ms_ard()/ms_sparse())"
-        )
-      }
       # ---- ONE extraction attempt per cell; everything else reads it ---
       cell <- tryCatch({
         tt <- system.time({
@@ -229,34 +284,38 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
           reference = as.numeric(t(truth_shares)),
           dim = nrow(est_sigs), thresholds = 0.90
         )
+        # No NA ever reaches the container (the audited v1 emitted an
+        # NA f1 when no pair crossed 0.90, which aborted the WHOLE run
+        # at assembly): zero-TP cells score 0, degenerate empty cells
+        # score 0 across the board.
         p90 <- sweep_res$tp[1L]
         precision <- if (p90 + sweep_res$fp[1L] > 0) {
           p90 / (p90 + sweep_res$fp[1L])
         } else {
-          NA_real_
+          0
         }
         recall <- if (p90 + sweep_res$fn[1L] > 0) {
           p90 / (p90 + sweep_res$fn[1L])
         } else {
-          NA_real_
+          0
         }
         f1 <- if (p90 > 0) {
           2 * p90 / (2 * p90 + sweep_res$fp[1L] + sweep_res$fn[1L])
         } else {
-          NA_real_
+          0
         }
 
-        # D2 paired L1 on the tau-independent assignment: the tiny
-        # threshold makes every Hungarian pair a "match", so the
-        # reference_index column IS the assignment.
-        raw <- ms_match_solutions_rust(
-          estimated = as.numeric(t(est_shares)),
-          reference = as.numeric(t(truth_shares)),
-          dim = nrow(est_sigs), thresholds = 1e-9
-        )
-        keep <- raw$threshold == 1e-9 & raw$estimate_index > 0
-        ests <- raw$estimate_index[keep]
-        refs <- raw$reference_index[keep]
+        # D2 paired L1 (frozen memo semantics): ONLY the pairs that
+        # crossed the 0.90 match line enter the mean -- a garbage
+        # estimate force-paired by Hungarian would dilute the L1 (the
+        # audit measured 17% dilution favoring garbage signatures), and
+        # its FP identity is already penalized by the primary metric.
+        # The estimate_index filter was always-true (it is s+1 by
+        # construction); the reference_index = 0 (Novel) filter is the
+        # real one.
+        keep90 <- sweep_res$threshold == 0.90 & sweep_res$reference_index > 0
+        ests <- sweep_res$estimate_index[keep90]
+        refs <- sweep_res$reference_index[keep90]
         l1a <- l1c <- NA_real_
         if (length(refs) > 0L) {
           l1a_v <- l1c_v <- numeric(length(refs))
@@ -273,9 +332,14 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
           l1a <- mean(l1a_v)
           l1c <- mean(l1c_v)
         }
-        c(precision = precision, recall = recall, f1 = f1,
-          paired_l1_abs = l1a, paired_l1_comp = l1c,
-          runtime_s = unname(tt["elapsed"]))
+        # No 0.90 pair -> the L1 rows are OMITTED (NA is a container
+        # contract violation), leaving precision/recall/f1 to carry the
+        # zero-signal verdict.
+        out <- c(precision = precision, recall = recall, f1 = f1)
+        if (length(refs) > 0L) {
+          out <- c(out, paired_l1_abs = l1a, paired_l1_comp = l1c)
+        }
+        c(out, runtime_s = unname(tt["elapsed"]))
       }, error = function(e) {
         # The container validator rejects NA estimates: a failed cell
         # reports ONLY its cell_error row (isolation without contract

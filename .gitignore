@@ -47,3 +47,6 @@ docs/site/
 
 # sigminer runtime artifacts
 /bench/xval-m2/sigminer-auto/
+
+# NMF engine test artifacts
+/tests/testthat/NMF_*/
