@@ -104,3 +104,7 @@ for the PI: accept CS as the primary gate (both arms pass), or
 recalibrate the NB arm per-tool per bbaf042's philosophy before
 claiming the specificity half.
 
+
+## PI adjudication (2026-10-05): Option A adopted
+
+CS is the PRIMARY gate: both arms pass (multinomial min 2.72, nb8 min 2.41, both >= 2.3). Specificity is reported as a diagnostic column with the kappa = 8 stress attribution on record. bench/jiang CLOSED.

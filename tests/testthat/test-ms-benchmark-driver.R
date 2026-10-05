@@ -50,7 +50,7 @@ test_that("the driver runs a tiny cell with the full metric schema", {
   # No error row on the easy cell.
   expect_false("cell_error" %in% metrics)
   # The provisional echo rides in settings.
-  expect_match(bm@settings$defaults, "PROVISIONAL")
+  expect_match(bm@settings$defaults, "CONFIRMED", fixed = TRUE)
   expect_match(bm@settings$defaults, "D1 stage 1 + D2", fixed = TRUE)
 })
 

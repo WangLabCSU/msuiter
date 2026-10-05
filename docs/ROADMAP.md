@@ -48,7 +48,7 @@
 - [x] `ms_variants/ms_tally/ms_extract`（单方法）+ `print/format`（U-M1s-09/10/11/12；工作流文法三环贯通）
 - [x] KL 数值协议等价对拍：vs R NMF brunet（固定平台一次性实验，容差 1e-10）（U-M1s-14 PASS：‖ΔW‖F/‖W‖F ≈ 1e-15，tools/kl-crosscheck 一键复现）
 
-**验收（v0.1 发布）**：目录生成 ≥50× SPMG（钉硬件 bench；CI 只 sanity bound <5s）；NMF ≥100× R NMF；夹具全绿；r-universe 可安装。
+**验收（v0.1 发布）**：~~目录生成 ≥50× SPMG；NMF ≥100× R NMF~~ → **方案 A 口径（PI 裁决 2026-10-05）**：原倍数写于未实测基线（brunet 即 C 内核、SPMG 干净输入即向量化）；按实测 C 基线重校准——目录 2.6× SPMG（3.73s，<5s ✓）、NMF 2.3× R NMF brunet（C 核）、NNLS 1.8× scipy，原 50×/100×/10× 修辞移至朴素 R/Python 实现口径（全管线 dense 臂 SPMG 46s 口径 50× 或成立，钉硬件 bench 时复核）。夹具全绿；r-universe 可安装。**M1s 14/14 ✅ 关闭。**
 
 ---
 
@@ -96,7 +96,7 @@
 
 ### M7 · Benchmark 完备 + 论文（8–10 周）
 
-- [ ] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/2 个 PI 裁决点）
+- [ ] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/PI 裁决 D1+D2 采纳（TP-only）2026-10-05——驱动器 v1 已交付）
 - [ ] 竞品容器 harness（仅 bench/）；钉硬件 bench 全表；`ms_benchmark()` 端到端
 - [ ] 论文草稿（headline 依 G0 结果定 A/B）+ renv/Docker/seed 一键复现 + bioRxiv 同挂
 - [ ] pkgdown 全站 + MSU↔函数映射表 + CITATION + 性能锚定文档

@@ -38,7 +38,11 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 
 ## Development
 
-**Dev install**: [rustup](https://rustup.rs) (MSRV 1.71) + R ≥ 4.3 with [rextendr](https://extendr.github.io/rextendr/) — then `devtools::load_all()` is all you need; the Rust workspace under `src/rust/` compiles automatically. This is a **developer preview**: there is no CRAN installation yet (distribution targets r-universe + GitHub Releases first, CRAN at v1.0).
+**Install (v0.1)**: from GitHub with rustc >= 1.71 —
+`remotes::install_github("<org>/msuiter")` (the source build compiles the vendored Rust core offline; CRAN-style `R CMD INSTALL` works from the release tarball). r-universe binaries: enable the repo at `<org>.r-universe.dev`, then
+`install.packages("msuiter", repos = c("https://<org>.r-universe.dev", "https://cloud.r-project.org"))`. No CRAN yet (v1.0 target).
+
+**Dev install**: [rustup](https://rustup.rs) (MSRV 1.71) + R >= 4.3 with [rextendr](https://extendr.github.io/rextendr/) — then `devtools::load_all()` is all you need; the Rust workspace under `src/rust/` compiles automatically.
 
 Governance and history: architecture decisions live in [docs/adr/](docs/adr/) (ADRs, including the vendor-budget and twobit-reader choices), unit-level engineering records in [docs/devlog/](docs/devlog/). Before opening a PR, run the local acceptance battery in [CONTRIBUTING.md](CONTRIBUTING.md) and fill the PR checklist (FFI-surface declaration, fixture/golden rationale, MSRV pins, dependency discipline).
 

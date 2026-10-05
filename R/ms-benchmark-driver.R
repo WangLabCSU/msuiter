@@ -1,6 +1,6 @@
 # ms-benchmark-driver.R: the M7 grid driver first version (design memo
 # docs/devlog/2026-10-05-benchmark-design-memo.md, D1 stage 1 + D2
-# defaults -- PROVISIONAL pending PI confirmation).
+# defaults -- PI-confirmed 2026-10-05).
 #
 # Scope (v1, honestly bounded):
 #   * calibration-layer scenarios only (ms_simulate direct drive) -- the
@@ -361,7 +361,7 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
     settings = list(
       seed = seed, scenarios = names(grid),
       engines = names(engines),
-      defaults = "PROVISIONAL: D1 stage 1 + D2, pending PI confirmation",
+      defaults = "CONFIRMED: D1 stage 1 + D2 + TP-only (PI 2026-10-05)",
       memo = "docs/devlog/2026-10-05-benchmark-design-memo.md"
     )
   )

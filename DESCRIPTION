@@ -1,7 +1,7 @@
 Type: Package
 Package: msuiter
 Title: Mutational Signature Analysis with a Rust Compute Core
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: person("Shixiang", "Wang", email = "wangshx@csu.edu.cn", role = c("aut", "cre", "cph"))
 Description: Tally, extract and fit mutational signatures across modalities
     (SBS, DBS, indel and beyond). Numerical kernels live in a Rust workspace

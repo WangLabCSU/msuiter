@@ -1,11 +1,8 @@
-# msuiter release workflow — 建议稿（DRAFT，未启用）
+# msuiter release workflow — 启用（2026-10-05，PI 裁决①方案 A 后执行发布链）
 #
-# 状态：发布工程预备批产物（v0.1-checklist §3）。启用流程：
-#   1. 等 M1s 验收门口径裁决关闭（docs/release/v0.1-checklist.md §7）；
-#   2. 版本 bump 0.1.0 + NEWS 收尾（checklist §2）；
-#   3. 本文件移入 `.github/workflows/release.yml`（勿保留 docs/release/ 副本），
-#      并确认 actions 版本与 dependabot 覆盖一致（同 ci.yml 既有约定）；
-#   4. 打 annotated tag `v0.1.0` 于 main（干净树，checklist §6）→ push tag 触发。
+# 启用记录：M1s 14/14 关闭（方案 A 口径）；版本 bump 0.1.0；本文件自
+# docs/release/release.yml-draft.yml 移入。触发 = annotated tag `v0.1.0`
+# push（打 tag 于 main 干净树）。
 #
 # 设计（对齐 .github/workflows/ci.yml U-M0-07 约定）：
 #   - vendor.tar.xz 单一生成点：仅 build-source 作业跑 `tools/vendor.sh`，
