@@ -201,6 +201,19 @@ test_that("the COSMIC scatter annotates the hand-derived cosine", {
     info = paste(ann_text, collapse = " | "))
 })
 
+test_that("the riverplot face renders with the ggalluvial layers", {
+  skip_if_not_installed("ggalluvial")
+  expo <- matrix(runif(3 * 5), 3, 5, dimnames = list(c("S1", "S2", "S3"),
+    paste0("T", 1:5)))
+  p <- plot_exposure_riverplot(expo)
+  expect_s3_class(p, "ggplot")
+  # ggalluvial registers GeomStratum/GeomFlow (stat alluvium drives them).
+  built <- ggplot2::ggplot_build(p)
+  expect_true(nrow(built$data[[1]]) > 0)
+  # Bad input still structured.
+  expect_ms_error(plot_exposure_riverplot("junk"), "input")
+})
+
 test_that("the null p-value annotation carries the add-one floor and off state", {
   skip_if_not_installed("ggplot2")
   sig <- .ms_viz_sig3()

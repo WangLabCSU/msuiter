@@ -29,7 +29,9 @@ certified engines; D2: Hungarian-paired L1) -- pending PI
 confirmation.
 }
 \details{
-Single-cell isolation: an extraction failure records a `cell_error`
-metric for that cell and the grid continues; a scoring failure blanks
-the paired-L1 metrics only.
+Single-cell isolation: extraction AND scoring live in one guarded
+block -- a failure in either records a `cell_error` metric for that
+cell and the grid continues. Scenario-level generation failures
+(ms_simulate / the dictionary draw) abort the run: the v1 isolation
+boundary is the cell, not the scenario.
 }

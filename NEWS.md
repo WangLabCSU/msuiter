@@ -59,6 +59,8 @@
 
 * **ms_run_benchmark() 网格驱动器第一版（M7 本体开工，R/ms-benchmark-driver.R，D1 阶段 1 + D2 PROVISIONAL）**：ms_benchmark_grid() 场景构造器（校准层 ms_simulate 直驱：TMB/样本数/活跃签名数/生成臂，字典 = 捆绑 COSMIC v3.6 seeded 抽取）；驱动循环 = 场景×certified 引擎（nmf/ard/sparse 默认）全笛卡尔，单 cell tryCatch 隔离（失败仅记 cell_error=1 行——容器 NA 契约保持）；评分 = Hungarian P/R/F1 @0.90 + D2 配对 L1（absolute/compositional，tau 无关指派经 1e-9 阈值导出）+ runtime。seed 逐位确定性（runtime 除外）；命名注记：M0 构造器保留 ms_benchmark()，驱动器 = ms_run_benchmark()（合并为泛型 = M7 polish 决策）。
 
+* **plot_exposure_riverplot()（L-F exposure 行收口，R/viz-exposure-similarity.R）**：ggalluvial 冲积图（样本×签名份额流，PI 许可 Suggests 2026-10-05）；堆叠柱/热图/riverplot 三面齐。
+
 ## M3b · MSU-Fit 校准统计（收口三件：U-M3b-04/05/06）
 
 * **校准实验面（U-M3b-04，R/calibrate.R）**：`ms_calibration_grid()` 经 `ms_calibration_grid_rust` 核面装配 M3b 蒙特卡洛校准网格——逐 (N × share) cell 的 mean_coverage / se / n_reps / pass_window 与 estimand-③ 复合清零混淆 tally；`ms_calibration_verdict()` 为核侧判据窗 verdict 的纯 R 孪生（含端点窗、1-based failing_cells，测试钉位逐位相等）。R 面契约：n_grid 正整数严格递增、share∈[0,1]、arm 三形合法名、window 两点 [0,1] 有序；全部 msuiter_error_* 错误协议；seed 确定性 + threads∈{1,N} identical 贯通 R 面。

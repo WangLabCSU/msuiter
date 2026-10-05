@@ -170,6 +170,44 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL,
     .ms_viz_theme()
 }
 
+#' Exposure riverplot (samples x signature flow)
+#'
+#' An alluvial view of the exposure share table: one axis of samples,
+#' one of signatures, ribbons weighted by exposure share. Requires the
+#' ggalluvial Suggests dependency.
+#'
+#' @inheritParams plot_exposure_stacked
+#'
+#' @return A ggplot object.
+#' @export
+plot_exposure_riverplot <- function(exposures, mode = c("share", "count"),
+                                    signature_order = NULL) {
+  .ms_viz_require_ggplot()
+  if (!requireNamespace("ggalluvial", quietly = TRUE)) {
+    msuiter_abort(
+      "package",
+      "ggalluvial is required for the riverplot face",
+      i = "ggalluvial is a Suggests dependency (PI-licensed 2026-10-05)",
+      j = "ggalluvial namespace unavailable",
+      c = "install.packages(\"ggalluvial\") or use plot_exposure_stacked()"
+    )
+  }
+  mode <- match.arg(mode)
+  prep <- .ms_viz_prep_exposure(exposures, mode, signature_order)
+  ggplot2::ggplot(
+    prep$long,
+    ggplot2::aes(x = .data$sample, y = .data$value,
+                 fill = .data$signature, stratum = .data$signature,
+                 alluvium = .data$signature)
+  ) +
+    ggalluvial::geom_flow(stat = "alluvium", alpha = 0.55) +
+    ggalluvial::geom_stratum(width = 0.45) +
+    ggplot2::labs(x = NULL,
+                  y = if (mode == "share") "Exposure share" else "Exposure (mutations)",
+                  fill = NULL) +
+    .ms_viz_theme()
+}
+
 # ---------------------------------------------------------------------------
 # Internal: exposure prep shared by the two exposure faces.
 # ---------------------------------------------------------------------------
