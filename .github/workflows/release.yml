@@ -103,7 +103,9 @@ jobs:
       - name: Build binary package
         shell: bash
         run: |
-          R CMD INSTALL --build "pkg/$(ls pkg/msuiter_*.tar.gz)" -l . --no-docs --no-multiarch
+          # $(ls pkg/...) already carries the pkg/ prefix (the audited
+          # draft double-prefixed it: pkg/pkg/... -> "no packages specified").
+          R CMD INSTALL --build "$(ls pkg/msuiter_*.tar.gz)" -l . --no-docs --no-multiarch
           # 产物：macOS .tgz / Windows .zip / Linux .tgz（平台后缀见 R 文档）
 
       - name: Smoke-load binary
