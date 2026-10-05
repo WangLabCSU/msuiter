@@ -38,7 +38,9 @@ tar -cJf /tmp/vendor.tar.xz vendor && stat -f%z /tmp/vendor.tar.xz   # xz -6 默
 
 当前生效基线 = 上表末行；`tools/vendor.sh --check` 的内置常量随之更新（xz 口径仍保留 ±0.1% 版本容差带）。
 
-**预算判断**：vendor.tar.xz 当前 ≈ 1.86 MB（U-M1s-09 后），加全包源码（src/rust 13 KB + R/ 侧 ~48 KB 量级）仍远低于 CRAN 5 MB 包体积指导线；后续新增依赖每 ~0.1 MB xz 增量需在本 ADR 追加记录，超出预算即触发依赖再收缩决策（ARCH §11 风险条目）。
+| 2026-10-05 | v0.1 发布门禁（release.yml 启用） | **基线重锚定至 MSRV 1.71 工具链**：审计发现 vendor 产物为 cargo 版本相对——本地 1.92 产出 17,238,305 B，release 门（MSRV 1.71）产出 **16,911,999 B**（差 326,306 B 为 cargo 打包行为差异，依赖集 33 项不变）。基线自此钉定发布门工具链；本地默认工具链跑 --check 会显示 DRIFT（by design），验证命令 = `rustup run 1.71.0 sh tools/vendor.sh --check` | −326,306 B | −4,633,600 B | **16,911,999 / 18,319,360 / 1,744,176** |
+
+**预算判断**：vendor.tar.xz 当前 ≈ 1.71 MB（MSRV 1.71 基线），加全包源码（src/rust 13 KB + R/ 侧 ~48 KB 量级）仍远低于 CRAN 5 MB 包体积指导线；后续新增依赖每 ~0.1 MB xz 增量需在本 ADR 追加记录，超出预算即触发依赖再收缩决策（ARCH §11 风险条目）。
 
 ## 3. Offline 与 CRAN 模式构建证明
 

@@ -14,9 +14,14 @@
 # the xz build (~0.01% across versions) — ±0.1% band.
 set -eu
 
-BASELINE_UNCOMPRESSED=17238305
-BASELINE_TAR=22952960
-BASELINE_XZ=1863616
+# Baselines are CARGO-VERSION-RELATIVE (audit 2026-10-05): the release
+# gate pins MSRV 1.71 (release.yml Install Rust step), so the baselines
+# are the 1.71 vendor output. Local default-toolchain runs (1.92) vendor
+# +326 KB and will show DRIFT by design -- regenerate with
+# `rustup run 1.71.0 sh tools/vendor.sh` to verify.
+BASELINE_UNCOMPRESSED=16911999
+BASELINE_TAR=18319360
+BASELINE_XZ=1744176
 TAR_TOL_PCT=0.5
 XZ_TOL_PCT=0.1
 
@@ -39,13 +44,27 @@ XZ=$(filesize /tmp/msuiter-vendor.tar.xz)
 
 rm -rf vendor /tmp/msuiter-vendor.tar
 echo "vendor uncompressed: ${UNCOMPRESSED} B (baseline ${BASELINE_UNCOMPRESSED} B)"
-echo "vendor tar:          ${TAR} B (baseline ${BASELINE_TAR} B)"
-echo "vendor tar.xz:       ${XZ} B (baseline ${BASELINE_XZ} B, ±${XZ_TOL_PCT}%)"
+
+# Platform note (audit 2026-10-05): tar/xz containers are ARCHIVE-FORMAT
+# relative (macOS bsdtar vs the Linux runner's GNU tar + xz settings);
+# the uncompressed byte sum is the platform-independent dependency-set
+# identity. tar/xz bands are enforced only on Linux (the release gate
+# platform); darwin checks the uncompressed exact match.
+OS_NAME=$(uname -s)
+if [ "$OS_NAME" = "Linux" ]; then
+  echo "vendor tar:          ${TAR} B (baseline ${BASELINE_TAR} B)"
+  echo "vendor tar.xz:       ${XZ} B (baseline ${BASELINE_XZ} B, ±${XZ_TOL_PCT}%)"
+else
+  echo "vendor tar:          ${TAR} B (darwin: tar/xz bands are enforced on the Linux release gate only)"
+  echo "vendor tar.xz:       ${XZ} B (darwin: tar/xz bands are enforced on the Linux release gate only)"
+fi
 
 if [ "${1:-}" = "--check" ]; then
   fail() { echo "vendor.sh: DRIFT DETECTED: $1" >&2; exit 1; }
   [ "$UNCOMPRESSED" -eq "$BASELINE_UNCOMPRESSED" ] || fail "uncompressed size drifted (dependency set changed? update ADR 0002)"
-  within_tol "$TAR" "$BASELINE_TAR" "$TAR_TOL_PCT" || fail "tar size outside ±${TAR_TOL_PCT}% band (archive-format variance or drift; update ADR 0002)"
-  within_tol "$XZ" "$BASELINE_XZ" "$XZ_TOL_PCT" || fail "xz size outside ±${XZ_TOL_PCT}% band (update ADR 0002)"
+  if [ "$OS_NAME" = "Linux" ]; then
+    [ "$TAR" -eq "$BASELINE_TAR" ] || fail "tar size drifted beyond the exact match (archive format or dependency drift; update ADR 0002)"
+    within_tol "$XZ" "$BASELINE_XZ" "$XZ_TOL_PCT" || fail "xz size outside ±${XZ_TOL_PCT}% band (update ADR 0002)"
+  fi
   echo "vendor.sh: --check OK (no drift vs ADR 0002)"
 fi
