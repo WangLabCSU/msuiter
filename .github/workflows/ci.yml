@@ -249,8 +249,12 @@ jobs:
         working-directory: src/rust
         run: cargo +1.71.0 build --workspace
 
+      # The extendr test binary links libR.so: the dynamic loader needs
+      # $R_HOME/lib at RUNTIME (CI round-2 audit: exit 127 without it).
       - name: cargo +1.71.0 test --workspace
         working-directory: src/rust
+        env:
+          LD_LIBRARY_PATH: ${{ env.R_HOME }}/lib
         run: cargo +1.71.0 test --workspace
 
   coverage:
