@@ -58,7 +58,11 @@ jobs:
           - {os: macos-latest,   r: 'oldrel-1'}
           - {os: windows-latest, r: 'oldrel-1'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
-          - {os: ubuntu-latest,  r: '4.3'}    # package floor (DESCRIPTION: R >= 4.3)
+          # Package floor: HARD dependencies only -- the Suggests chain
+          # (BSgenome.Hsapiens.UCSC.hg19, maftools, Biobase) no longer
+          # solves on the R-4.3 Bioc view (pak 404, CI audit 2026-10-06);
+          # the floor job proves Imports + core tests.
+          - {os: ubuntu-latest,  r: '4.3', dependencies: '"hard"'}
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
 
     steps:
@@ -88,8 +92,21 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      # Windows: the Rust lib must build for x86_64-pc-windows-gnu (R's
+      # Makevars force it); the gnu target std is not preinstalled on
+      # the runner (CI round-3 audit: E0463 in the vendored crossbeam).
+      # Same recipe as the release gate's windows binary job.
+      - name: Install Rust (MSRV + windows-gnu target)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+          rustup target add x86_64-pc-windows-gnu
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          dependencies: ${{ matrix.config.dependencies }}
           needs: check
           extra-packages: any::rcmdcheck
 
