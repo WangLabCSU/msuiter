@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install valgrind
         run: |
@@ -80,7 +80,7 @@ jobs:
       matrix:
         sanitizer: [address, undefined]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install nightly Rust (for -Z sanitizer flags)
         run: rustup toolchain install nightly --profile minimal
