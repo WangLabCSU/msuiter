@@ -22,7 +22,7 @@ test_that("SBS96 catalog is cell-identical to sigminer (label-aligned xval)", {
   # -- toy patch genome: one real hg19 window, verified ACGT-only ------------
   WIN_START <- 1000001L
   WIN_END <- 1050000L
-  seq1 <- strsplit(as.character(BSgenome::getSeq(Hsapiens, "chr1",
+  seq1 <- strsplit(as.character(getSeq(Hsapiens, "chr1",
     WIN_START, WIN_END)), "")[[1L]]
   skip_if_not(all(seq1 %in% c("A", "C", "G", "T")),
     message = "hg19 window contains non-ACGT bases")

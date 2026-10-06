@@ -553,6 +553,10 @@ S7::method(ms_fit, S7::class_any) <- function(catalog, signatures, method = "nnl
 #' @param n_threads NULL (resolve the `msuiter.threads` option, capped by
 #'   `_R_CHECK_LIMIT_CORES_`) or a single non-negative integer pool size;
 #'   0 means the rayon default.
+#' @param return_draws Single logical (default `FALSE`): attach the RAW
+#'   boot exposure cube as attribute `boot_draws` ([signature, sample,
+#'   boot]; post-zeroing/post-rescale) for the histogram face
+#'   [plot_boot_distribution()].
 #' @param bca Single logical (default `FALSE`): additionally compute the
 #'   **BCa interval** (bias-corrected and accelerated; Hall 1988) from the
 #'   SAME replicates -- zero extra resampling. `z0 = Phi^\{-1\}(#\{boot <

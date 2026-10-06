@@ -21,6 +21,18 @@ plot_cosmic_scatter(
 
 \item{label}{Optional title (e.g. the reference signature name); the
 cosine is annotated automatically.}
+
+\item{null_p}{Annotate the empirical signature-null tail probability
+(add-one Monte Carlo)? Default TRUE.}
+
+\item{null_n_draws}{Draws for the null p-value (>= 200; default 5000).}
+
+\item{null_family}{"uniform" (unrelated uniform-Dirichlet signatures,
+default) or "shape_conditional" (reconstruction noise conditioned
+on the reference profile at `burden`).}
+
+\item{burden}{Mutation burden for the shape-conditional null
+(default 1000).}
 }
 \value{
 A ggplot object.

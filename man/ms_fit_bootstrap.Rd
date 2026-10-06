@@ -59,6 +59,11 @@ explicit flag. When `TRUE`, the exposures carry `bca_lower`,
 `bca_upper`, `bca_fallback` (labelled matrices; fallback = 1) and
 `ci_method = "bca"` attributes, and the support table gains a
 `bca_fallback` column. The percentile attributes are unchanged.}
+
+\item{return_draws}{Single logical (default `FALSE`): attach the RAW
+boot exposure cube as attribute `boot_draws` ([signature, sample,
+boot]; post-zeroing/post-rescale) for the histogram face
+[plot_boot_distribution()].}
 }
 \value{
 An [MsFit] object with bootstrap CI attributes.

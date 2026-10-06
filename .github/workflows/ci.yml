@@ -309,16 +309,39 @@ jobs:
           needs: coverage
           extra-packages: any::covr
 
+      # Coverage is UPLOAD-ONLY (ARCHITECTURE §9: no gate on R coverage).
+      # covr's instrumentation can break individual tests without
+      # implying a package regression (the same suite passes in
+      # R-CMD-check on the same commit), so this step is
+      # continue-on-error; the failure artifact (Rout.fail tail) is
+      # echoed for diagnosability.
       - name: Generate R coverage (covr)
         shell: Rscript {0}
+        continue-on-error: true
         run: |
-          cov <- covr::package_coverage(
-            type = "all",
-            quiet = FALSE,
-            clean = FALSE
+          cov <- tryCatch(
+            covr::package_coverage(type = "all", quiet = FALSE,
+                                   clean = FALSE),
+            error = function(e) {
+              cat("covr coverage failed under instrumentation:",
+                  conditionMessage(e), "\n")
+              NULL
+            }
           )
+          if (is.null(cov)) {
+            quit(status = 1) # annotated by continue-on-error, non-gating
+          }
           print(cov)
           covr::to_cobertura(cov, filename = "cobertura.xml")
+      - name: Echo failed testthat output (diagnosability)
+        if: failure()
+        shell: bash
+        run: |
+          FAILFILE=$(find /tmp -name "testthat.Rout.fail" 2>/dev/null | head -1)
+          if [ -n "$FAILFILE" ]; then
+            echo "=== $FAILFILE (tail) ==="
+            tail -80 "$FAILFILE"
+          fi
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
