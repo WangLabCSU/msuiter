@@ -434,11 +434,15 @@ test_that("fold_test_deviance matrix is rank-major (audited P1-1 regression guar
   expect_identical(nrow(ev), length(grid))
   # Per-rank fold block sums must equal that rank's cv_test_deviance
   # (Σ_folds == CV.te, memo §2.3): a transposed/scrambled fill breaks this
-  # identity for k_folds != max(grid).
+  # identity for k_folds != max(grid). Platform note (CI audit
+  # 2026-10-06): R's sum() accumulates in long double on x86_64 Linux
+  # but in double on aarch64 macOS, so the identity is mathematical, not
+  # bitwise -- expect_equal, never expect_identical.
   for (i in seq_len(nrow(ev))) {
-    expect_identical(
+    expect_equal(
       sum(ev$fold_test_deviance[[i]], na.rm = TRUE),
       ev$cv_test_deviance[i],
+      tolerance = 1e-9,
       info = paste0("rank ", ev$k[i])
     )
   }

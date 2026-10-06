@@ -42,7 +42,11 @@ test_that("duplicate dictionaries: cosine 1 everywhere, floor p-values", {
   dimnames(E) <- list(labels, c("e1", "e2"))
   dimnames(R) <- list(labels, c("r1", "r2"))
   comp <- ms_compare(E, R, protocol = "islam", null_n_draws = 2000L)
-  expect_true(all(comp@metrics$cosine == 1))
+  # Duplicate columns: cosine is 1 up to BLAS rounding (x86_64 Linux
+  # BLAS may land at 1 - 1 ulp -- CI audit 2026-10-06), which still
+  # clears every Dirichlet draw, so the floor assertions stay exact.
+  expect_equal(comp@metrics$cosine, matrix(1, 2, 2,
+    dimnames = list(c("e1", "e2"), c("r1", "r2"))))
   # Every pair sits at the add-one floor.
   expect_true(all(comp@metrics$p_null == 1 / 2001))
   # BH over four floor p-values: all equal the floor.
