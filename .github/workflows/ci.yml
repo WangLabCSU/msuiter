@@ -233,7 +233,19 @@ jobs:
         with:
           r-version: release
           use-public-rspm: true
-      - name: Export R_HOME
+      # Windows: the link step needs R.lib (import library) which ships
+      # inside rtools' mingw-w64 tree shipped WITH R 4.6+ installs
+      # (RTOOLS45_HOME). setup-r exposes it via the R env; pass it to
+      # the linker through LIB + PATH (CI round-3 audit: LNK1181
+      # cannot open R.lib).
+      - name: Export R_HOME + LIB (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
+          echo "LIB=$RTOOLS45_HOME\x86_64-w64-mingw32.static.posix\lib;$(Rscript -e 'cat(R.home())')\bin\x64" >> "$GITHUB_ENV"
+      - name: Export R_HOME (unix)
+        if: runner.os != 'Windows'
         shell: bash
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
@@ -245,13 +257,31 @@ jobs:
           workspaces: src/rust
           key: msrv-1.71.0
 
+      # Windows: the extendr shell crate (msuiter) cannot link under a
+      # bare cargo (R.lib import library is not on the MSVC link path --
+      # CI round-3 audit: LNK1181). The Windows MSRV proof for the FULL
+      # workspace lives in the release gate (R Makevars build with
+      # cargo 1.71 succeeded there); here we prove the PURE-Rust crates
+      # (engine + catalog, no extendr).
+      - name: cargo +1.71.0 build (pure-Rust crates)
+        if: runner.os == 'Windows'
+        working-directory: src/rust
+        run: cargo +1.71.0 build -p msuiter-engine -p msuiter-catalog
+
+      - name: cargo +1.71.0 test (pure-Rust crates)
+        if: runner.os == 'Windows'
+        working-directory: src/rust
+        run: cargo +1.71.0 test -p msuiter-engine -p msuiter-catalog
+
       - name: cargo +1.71.0 build --workspace
+        if: runner.os != 'Windows'
         working-directory: src/rust
         run: cargo +1.71.0 build --workspace
 
       # The extendr test binary links libR.so: the dynamic loader needs
       # $R_HOME/lib at RUNTIME (CI round-2 audit: exit 127 without it).
       - name: cargo +1.71.0 test --workspace
+        if: runner.os != 'Windows'
         working-directory: src/rust
         env:
           LD_LIBRARY_PATH: ${{ env.R_HOME }}/lib
