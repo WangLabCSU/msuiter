@@ -16,7 +16,8 @@ import sys
 import time
 import traceback
 
-MODULES = ["test_sim", "test_coverage", "test_lrt", "test_provider", "test_adapter"]
+MODULES = ["test_sim", "test_coverage", "test_lrt", "test_provider", "test_adapter",
+           "test_seeds"]
 
 
 def main() -> int:

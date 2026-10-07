@@ -31,6 +31,12 @@ MASK64 = (1 << 64) - 1
 MASTER_SEED = 20260928  # 冻结（协议 §2.3）
 STREAM_VERSION = "g0/v1"
 
+# 工具边界种子域（2026-10-07 G0 docker 重跑根因）：容器侧 R
+# `as.integer(params$seed)` 溢出成 NA → sigfit/stl 整 cell FATAL。
+# Stan 的 seed 与 STL 的 randomSeed 同落 int32 域；u64 派生流
+# （numpy PCG64 数据流）不经此折叠。
+TOOL_SEED_CAP = 1 << 31
+
 
 def _splitmix64(x: int) -> int:
     """SplitMix64 finalizer：一个 64-bit 计数器 -> 均匀 64-bit 输出。"""
@@ -53,12 +59,21 @@ def derive_seed(*parts: Iterable) -> int:
     """由任意标签元组确定性地派生 64-bit 种子。
 
     例：derive_seed("main", 1000, 7) 为 (arm=main, N=1000, rep=7) 的
-    数据种子；derive_seed("sigfit", "main", 1000, 7) 为该 cell 喂给
-    sigfit 容器的种子。
+    数据种子；工具侧用 tool_seed（工具边界折叠后的 int32 值）。
     """
     label = STREAM_VERSION + "|" + "|".join(str(p) for p in parts)
     key = _fnv1a64(label)
     return _splitmix64(MASTER_SEED ^ key)
+
+
+def tool_seed(*parts: Iterable) -> int:
+    """工具边界种子：derive_seed 的确定性折叠，落 [0, 2^31)。
+
+    喂容器（params.json 的 seed / sample_seeds、Seeds.txt 逐工具列）
+    一律经此折叠；全 u64 值保留在数据流（make_rng）与 manifest 的
+    data_seed 列。折叠确定性：tool_seed = derive_seed % 2^31。
+    """
+    return derive_seed(*parts) % TOOL_SEED_CAP
 
 
 def make_rng(*parts) -> "np.random.Generator":
@@ -93,12 +108,14 @@ def write_seeds_manifest(path: Path, specs: Sequence[SeedSpec],
     with path.open("w", encoding="utf-8") as fh:
         fh.write(f"# G0 Seeds manifest | master_seed={MASTER_SEED} | "
                  f"derivation={STREAM_VERSION}: splitmix64(master ^ fnv1a64(label))\n")
+        fh.write("# tool seed columns = same derivation folded mod 2^31 "
+                 "(int32 seed domain of Stan/STL; data_seed stays u64)\n")
         if header_note:
             fh.write(f"# note: {header_note}\n")
         cols = ["arm", "N", "rep", "data_seed"] + [f"seed_{t}" for t in tool_names]
         fh.write("\t".join(cols) + "\n")
         for s in specs:
-            tool_seeds = [derive_seed(t, s.arm, s.n, s.rep) for t in tool_names]
+            tool_seeds = [tool_seed(t, s.arm, s.n, s.rep) for t in tool_names]
             fh.write("\t".join(str(v) for v in
                                (s.arm, s.n, s.rep, s.data_seed, *tool_seeds)) + "\n")
     return path

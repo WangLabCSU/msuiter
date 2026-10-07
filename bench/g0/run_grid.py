@@ -40,6 +40,27 @@ TOOL_IMAGE = {"sigfit": "g0-sigfit", "stl": "g0-stl"}
 TOOL_RUNNER = {"sigfit": "run_sigfit.R", "stl": "run_stl.R"}
 
 
+def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
+                     cat_mount: str | None = None) -> list[str]:
+    """容器 adapter 的 docker run 命令装配（adapter_protocol.md 契约）。
+
+    用户目录模式（cat_mount）：cell 输入目录与目录原文件各挂一个 ro
+    挂载，两者缺一不可（2026-10-07 sigfit FATAL 根因之一：cat_bind
+    组装后从未进 cmd，容器内 catalog.csv 失踪）。generated/mock 模式
+    的 catalog.csv 已复制进 in/，单一挂载即可。
+    """
+    cmd = ["docker", "run", "--rm"]
+    if cat_mount:
+        cmd += ["-v", f"{ind}:/work/in:ro",
+                "-v", f"{cat_mount}:/work/in/catalog.csv:ro"]
+    else:
+        cmd += ["-v", f"{ind}:/work/in"]
+    cmd += ["-v", f"{outd}:/work/out", image, "Rscript", f"/work/{runner}",
+            "--counts", "/work/in/counts.csv", "--catalog", "/work/in/catalog.csv",
+            "--params", "/work/in/params.json", "--outdir", "/work/out"]
+    return cmd
+
+
 def git_sha() -> str:
     """运行时捕获仓库 commit SHA（P2d：manifest 可溯源纪律）；
     非 git 环境/无 git 可执行文件时如实记 unknown。"""
@@ -167,9 +188,23 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
             ind, outd = cell_dir / "in", cell_dir / "out"
             # 输入装配（总是重写 counts；hash 变了才重建 cell 目录其余部分）
             counts_text = counts_path.read_text(encoding="utf-8")
+            params = {"tool": tool, "seed": seeds.tool_seed(tool, arm.name, n),
+                      "notes": "Tier-1 默认参数照用（协议 §2.3）"}
+            if tool != "sigfit":
+                params["nboot"] = 200                       # 冻结值
+            if args.adapter == "mock":
+                params["coverage_scale"] = args.coverage_scale
+            sample_seeds = {sample_id(arm.name, n, r):
+                            seeds.tool_seed(tool, arm.name, n, r)
+                            for r in range(arm.reps)}
+            params["sample_seeds"] = sample_seeds
+            # data_hash 覆盖 counts + 臂参数 + 重复数 + 工具参数（含种子）：
+            # 种子/参数漂移必须使陈旧 cell 输出失效（2026-10-07 陈旧缓存根因：
+            # 旧 hash 不含工具参数，换 provider 后仍命中 synthetic 时代旧区间）
             data_hash = hashlib.sha256(
                 (counts_text + json.dumps(arm.params, sort_keys=True)
-                 + str(arm.reps)).encode("utf-8")).hexdigest()[:16]
+                 + str(arm.reps)
+                 + json.dumps(params, sort_keys=True)).encode("utf-8")).hexdigest()[:16]
             if (ind / ".data_hash").exists() and \
                     (ind / ".data_hash").read_text(encoding="utf-8") != data_hash:
                 shutil.rmtree(cell_dir, ignore_errors=True)
@@ -177,16 +212,6 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
             outd.mkdir(parents=True, exist_ok=True)
             dest_counts = ind / "counts.csv"
             dest_counts.write_text(counts_text, encoding="utf-8")
-            params = {"tool": tool, "seed": seeds.derive_seed(tool, arm.name, n),
-                      "notes": "Tier-1 默认参数照用（协议 §2.3）"}
-            if tool != "sigfit":
-                params["nboot"] = 200                       # 冻结值
-            if args.adapter == "mock":
-                params["coverage_scale"] = args.coverage_scale
-            sample_seeds = {sample_id(arm.name, n, r):
-                            seeds.derive_seed(tool, arm.name, n, r)
-                            for r in range(arm.reps)}
-            params["sample_seeds"] = sample_seeds
             (ind / "params.json").write_text(json.dumps(params, indent=1),
                                              encoding="utf-8")
             # 目录装配：mock/生成目录复制；docker + 用户文件 → 单文件只读挂载
@@ -220,19 +245,8 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
                            str(ind / "params.json"), "--outdir", str(outd)]
                     subprocess.run(cmd, check=True, capture_output=True, text=True)
                 else:
-                    image = TOOL_IMAGE[tool]
-                    in_bind = f"{ind}:/work/in"
-                    cat_bind = (f"{cat_mount}:/work/in/catalog.csv:ro"
-                                if cat_mount else f"{ind}:/work/in:ro")
-                    if cat_mount:
-                        in_bind = f"{ind}:/work/in:ro"
-                    cmd = ["docker", "run", "--rm", "-v", in_bind,
-                           "-v", f"{outd}:/work/out", image, "Rscript",
-                           f"/work/{TOOL_RUNNER[tool]}",
-                           "--counts", "/work/in/counts.csv",
-                           "--catalog", "/work/in/catalog.csv",
-                           "--params", "/work/in/params.json",
-                           "--outdir", "/work/out"]
+                    cmd = build_docker_cmd(ind, outd, TOOL_IMAGE[tool],
+                                           TOOL_RUNNER[tool], cat_mount=cat_mount)
                     subprocess.run(cmd, check=True, capture_output=True, text=True)
                 status = "ok"
             except subprocess.CalledProcessError as e:
