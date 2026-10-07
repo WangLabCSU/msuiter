@@ -53,6 +53,8 @@ Collate:
     'io-catalog.R'
     'ms-qc-report.R'
     'ms-convert.R'
+    'hrd-reference.R'
+    'hrd-report.R'
     'viz-palette.R'
     'viz-profile.R'
     'viz-exposure-similarity.R'
