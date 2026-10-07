@@ -158,6 +158,17 @@ def main():
           "--as-cran" in str(rjob) and "--no-manual" in str(rjob))
     check("r-lib check action used", "r-lib/actions/check-r-package@v2"
           in uses_list(ci))
+    # The action's input is `error-on` (hyphen): an `error_on` key is
+    # silently dropped and the action defaults to the warning gate, which
+    # contradicts the stated error-level contract (CI audit 2026-10-07).
+    check("check action gate uses hyphenated error-on input",
+          "'error-on'" in str(rjob) and "error_on" not in str(rjob))
+    # The 4.3 floor arm installs dependencies: '"hard"' (Suggests skipped),
+    # yet R CMD build needs the declared VignetteBuilder -- knitr must be a
+    # CRAN-only extra or the build dies in loadVignetteBuilder() (audit
+    # 2026-10-07: 902 ms exit 1).
+    check("4.3 floor arm ships the vignette builder via extras",
+          "any::knitr" in str(rjob))
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a

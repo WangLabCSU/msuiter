@@ -124,23 +124,33 @@ jobs:
       # audit 2026-10-07: exit 1 in "Check whether pandoc needs to be
       # installed"). 'true' skips the probe and ships the pandoc the knitr
       # vignette needs.
+      # vignette's knitr builder: dependencies: '"hard"' no longer installs
+      # it, and R CMD build halts in loadVignetteBuilder() (902 ms exit 1,
+      # CI audit 2026-10-07). Installing knitr/rmarkdown explicitly -- as
+      # CRAN-only extras with their own Suggests-free resolution -- keeps the
+      # Bioc Suggests chain out of the solve while making the build work;
+      # tests stay skipped here (_R_CHECK_FORCE_SUGGESTS_=false off-CRAN).
       - uses: r-lib/actions/setup-r-dependencies@v2
         if: matrix.config.r == '4.3'
         with:
           needs: check
           dependencies: '"hard"'
           install-pandoc: true
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck, any::knitr, any::rmarkdown
 
       - uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran")'
-          # error-level gate only: --as-cran strictness depends on optional
-          # external tools not uniformly available across runner OSes
-          # (checkbashisms is in devscripts, absent on macos/windows runners)
-          # and flags every fresh submission ("New submission" NOTE). The hard
-          # gates live in the guards job and the scheduled valgrind workflow.
-          error_on: 'error'
+          # error-on (hyphenated) is the action's input name: an `error_on`
+          # key is silently ignored and the action defaults to error-on=
+          # "warning" (CI audit 2026-10-07: 4.3 floor arm died at the
+          # intended-to-be-informative warning gate). Error-level gate only:
+          # --as-cran strictness depends on optional external tools not
+          # uniformly available across runner OSes (checkbashisms is in
+          # devscripts, absent on macos/windows runners) and flags every
+          # fresh submission ("New submission" NOTE). The hard gates live in
+          # the guards job and the scheduled valgrind workflow.
+          error-on: 'error'
           upload-snapshots: true
 
   rust:
