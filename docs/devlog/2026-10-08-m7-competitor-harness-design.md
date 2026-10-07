@@ -55,7 +55,7 @@ recorded only from `docker image inspect` output of a verified mirror pull.
 | b | **SigProfiler (assignment)** | Python | **v1.1.5** | `gh api repos/SigProfilerSuite/SigProfilerAssignment/releases/latest` → tag `v1.1.5`, published 2026-07-29T09:00:29Z; `repos/AlexandrovLab/SigProfilerAssignment` redirects to the same canonical repo. README advertises PyPI, but this network's PyPI index has **no** distribution ("No matching distribution found", 2026-10-08) → pin provenance is the git tag; container installs `pip install git+<repo>@v1.1.5` | harness-built `m7-sigprofiler:spa-1.1.5` (mirror-pulled Python base) | PENDING-VERIFY | ready (after image build) |
 | c | **Signal** | R (Bioconductor) | **UNRESOLVED** | Registry probes on 2026-10-08: not in the CRAN index (`available.packages()` over `cloud.r-project.org`); not in the Bioconductor **3.22** index enumerated via `BiocManager::repositories()` (name search returns only unrelated packages, e.g. `SIGN@0.1.0`, legacy `signal@1.8-1`); `gh api repos/debruijn-lab/Signal` → 404; GitHub search finds no canonical repo. Selection is kept per the PI brief, but the exact package/version/image coordinates must be supplied by the PI before it can run. | — (none pinned) | PENDING-VERIFY | **pending-verify → refuses to run** |
 
-Notes on two recording decisions:
+Notes on three recording decisions:
 
 * **sigminer 2.3.1 vs the host source tree.** The verbatim ground-truth copy
   at `/Users/wsx/Documents/GitHub/sigminer` reads `Version: 2.3.3` in its
@@ -69,6 +69,18 @@ Notes on two recording decisions:
   the xval anchor — not the benchmark executor — because mixing a host-R
   process with VM-resident competitors would make wall/CPU attribution
   incomparable, violating the fair-comparison protocol below.
+* **Competitor (c) identity — HYPOTHESIS / UNVERIFIED.** The PI brief names
+  competitor (c) "Signal (R/Bioconductor)"; the registry probes above find no
+  such package on this network. The PI-controller hypothesis — recorded for
+  PI-side verification, **not adopted as fact** — is that the brief denotes
+  **signeR**, the Bayesian-NMF mutational-signature R package, which this
+  repository's own algorithm zoo already classifies as an Adapt-basis
+  baseline: `docs/research/07-algorithm-zoo.md:72` (Bayesian HMC/Gibbs NMF
+  posterior; "sigfit/signeR as benchmark comparison only") and `:87`
+  (Bayesian marginal-likelihood K selection; "signeR/BayesPowerNMF"). Zero
+  provenance is invented under this hypothesis: no version, index or digest
+  is claimed; the registry row stays UNRESOLVED/pending-verify and the
+  adapter keeps refusing. Full ruling: §10.2.
 
 ## 3. Single ground-truth principle
 
@@ -248,6 +260,99 @@ transcript is recorded in the RED commit message.
 See the RED commit body for transcripts: ci-selfcheck exit 0; G0 suite
 `42/42` green; M7 RED batch fails at the missing-implementation seam.
 
+### 9a. GREEN slice (2026-10-08, same day; no test file or assertion touched)
+
+Suites and gates (transcript tails as run under the worktree):
+
+- `cd bench/m7 && python3 -m tests.run_all` → `12/12 tests passed.` (exit 0).
+  Note: the brief's "4/4" refers to the four test modules; the runner's
+  terminal line counts the twelve test functions they carry.
+- `cd bench/g0 && python3 -m tests.run_all` → `45/45 tests passed.`
+- `python3 tools/ci-selfcheck.py` → `ci-selfcheck: PASS (all CI wiring
+  assertions hold)` (exit 0).
+- Cache non-reference gate: `grep -rn "g0/cache" bench/m7` → no output
+  (exit 1, zero matches). The G0 cache tree is never referenced by any M7
+  code path.
+- Mock smoke rehearsal `sh tools/smoke_rehearsal.sh`:
+  `[rehearsal] cells=4 master_rows=4 (measured ok) final_pass_cached=4`,
+  four per-cell attribution lines (`wall`/`cpu` per mock cell, `status=ok`),
+  `REHEARSAL-VERDICT: shard-vs-serial byte-equal; cache-hit final pass;
+  all measured seconds attributable`, `MOCK-REHEARSAL-OK` (exit 0).
+
+### 9b. Image-build campaign (deliverable 3) — mirror pulls and in-build evidence
+
+Base pulls through the §5 mirror (both `PULL-EXIT=0`, registry manifest
+digests recorded from the pull transcript):
+
+- `9f6c5in3dh5vszgdz0.xuanyuan.run/library/python:3.11-slim` →
+  `Digest: sha256:0dd364ba7e10242f07755449e3a3d0e35f9efd987952737b90def6709ab0c5ce`
+- `9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3` →
+  `Digest: sha256:732d15020af326da9e919c07f70ca32bf5d3e409220af32e0a4b6d0a89437309`
+
+Environmental evidence recorded verbatim (probed from inside the build
+network; no upstream bypass attempted):
+
+1. Debian `.deb` pool fetches through the intercepting proxy fail
+   intermittently with `502 Bad Gateway [IP: 198.18.0.44 80]` (three apt
+   attempts, a different package each time — random, not deterministic;
+   the mirror index fetch and most archives succeed).
+2. The `codeload.github.com/<repo>/archive/…` URL family is dead on this
+   network: from inside a build container all three forms, including the
+   canonical `/archive/<commit>.tar.gz`, return `HTTP Error 404: Not
+   Found`. The working container-side family is the API endpoint:
+   `200 application/x-gzip` for
+   `https://api.github.com/repos/SigProfilerSuite/SigProfilerAssignment/tarball/refs/tags/v1.1.5`
+   (serves `SigProfilerSuite-SigProfilerAssignment-v1.1.5-0-gff61b0f.tar.gz`;
+   tag verified via `git ls-remote --tags` → commit
+   `ff61b0f56d43c916582b7c505ce72364c883dfbd`). The SigProfiler image
+   therefore pins the tag through the API tarball endpoint — same artifact,
+   recorded provenance, no git binary and no apt step needed.
+3. The r-ver base's default repository stack lets `remotes` resolve some
+   hard Imports (e.g. `Rhtslib 2.2.0`) through the legacy Bioconductor
+   3.17 archive whose sources fail against this R:
+   `bgzf.c:38:10: fatal error: zlib.h: No such file or directory` →
+   `ERROR: compilation failed for package 'Rhtslib'`, cascading to
+   `dependencies 'ggpubr', 'maftools' are not available for package
+   'sigminer'`; and `nloptr` configure requires cmake (`CMAKE NOT FOUND`).
+   The SigMiner image therefore pins `options(repos = CRAN-only)` and
+   apt-installs `cmake` for the configure step.
+4. That override fixed *which* Rhtslib resolves, but exposed a second,
+   independent root cause: the r-ver base ships the zlib runtime without
+   the dev headers, so even the CRAN-resolved Rhtslib died again verbatim
+   `bgzf.c:38:10: fatal error: zlib.h: No such file or directory`
+   (observed 2026-10-08 rebuild 1 — the header provisioning
+   `zlib1g-dev libbz2-dev liblzma-dev` was added as a separate cached
+   apt layer). Rebuild 2 with that provisioning then failed on the next
+   missing header, verbatim
+   `hfile_libcurl.c:47:10: fatal error: curl/curl.h: No such file or
+   directory`, and additionally on an archive-resolution class the
+   CRAN-only override routes around: `cannot open URL
+   'https://cran.r-project.org/src/contrib/rbibutils_2.4.1.tar.gz'` and
+   `...gridBase_0.4-7.tar.gz` (pinned older Imports live only under
+   CRAN's `Archive/` subtree), cascading `Rdpack`/`reformulas`/`NMF`
+   unavailability into `sigminer`. The controller-set rebuild budget
+   (max 2 attempts per target) is exhausted and a third distinct
+   in-build defect class surfaced, so per the standing directive the
+   iteration stops here: the SigMiner entry keeps `PENDING-VERIFY` and
+   its cells stay AdapterUnavailable skips (image_gate refuses before
+   the daemon probe). A follow-up dispatch can provision `libcurl-dev`
+   and a repo stack that includes CRAN `Archive/` in one pass.
+
+Final build verdicts (captured from live `docker build` exit codes and
+`docker image inspect`; nothing below is invented — an unverified entry
+stays PENDING-VERIFY):
+
+- `m7-sigprofiler:spa-1.1.5` — BUILD-EXIT=0 (final bake includes the
+  orientation-corrected cell runner). `docker image inspect .Id` →
+  `sha256:7dba2f43ad3a3858ed1cfdedd278c9c2f52a665fd4c18ac91a482b74258bfbed`,
+  which is the value registry.py pins; each measured cell's manifest.json
+  carries the same digest, and the first attributed live run recorded
+  `4/4 cells ok|cached` with cache-hit on rerun.
+- `m7-sigminer:cr2.3.1` — BUILD-EXIT=1 on both budgeted rebuilds (defect
+  classes (3) and (4) verbatim above); registry entry stays
+  `image_digest=PENDING_VERIFY` and its docker-adapter cells are
+  AdapterUnavailable skips, never fabricated successes.
+
 ## 10. Open items for the GREEN dispatch
 
 1. Author the two harness Dockerfiles (`Dockerfile.sigminer`, mirror-pinned)
@@ -257,6 +362,24 @@ See the RED commit body for transcripts: ci-selfcheck exit 0; G0 suite
 2. PI input required for Signal: authoritative package coordinates (this
    network's Bioconductor index does not list it; see §2 probes). Until then
    its adapter must keep raising.
+
+   **HYPOTHESIS / UNVERIFIED — sign-eR ruling (recorded by the GREEN slice,
+   2026-10-08; zero invented provenance).** The brief's "Signal (R/
+   Bioconductor)" is hypothesised to denote **signeR**, the Bayesian-NMF
+   signature-extraction R package: this repository's algorithm zoo lists
+   signeR — never "Signal" — in the Adapt column of the extraction and
+   K-selection catalogs (`docs/research/07-algorithm-zoo.md:72`, `:87`).
+   Under this hypothesis, competitor (c) would be a fourth container cell
+   running a signeR release behind the same four-file guard, frozen thread
+   caps and documented-defaults fairness contract, with its posterior channel
+   measured like the others. The hypothesis is deliberately NOT adopted
+   anywhere executable: no version, index or image coordinates are claimed;
+   `competitors/registry.py` keeps `signal` at UNRESOLVED/pending-verify
+   with a refusal that forward-references this item, and
+   `competitors/signal_adapter.py` raises AdapterUnavailable unconditionally.
+   Closure requires PI confirmation (or correction); if confirmed, the pin
+   must be probed live exactly as the §2 rows a/b were — never inferred from
+   this paragraph.
 3. Implement `run_bench.py` + `tools/run_m7_bench.sh` (sharded driver), the
    three adapters, timings writer with the rusage sidecar, and the fairness
    attestation document; turn the RED batch green without touching the tests

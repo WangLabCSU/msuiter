@@ -1,0 +1,50 @@
+# U-M7-02 competitor image: SigProfilerAssignment git tag v1.1.5
+# (design memo §2b/§5/§10.1).
+#
+# NETWORK POLICY (memo §5, binding): the base pull spells the mirror host
+# explicitly — docker.io is served by 9f6c5in3dh5vszgdz0.xuanyuan.run.
+# Direct upstream pulls fail on this network (proxy 407) and are prohibited;
+# a 407 is recorded as environmental evidence, never routed around.
+#
+# Build (context = bench/m7/adapters):
+#   docker build -f Dockerfile.sigprofiler -t m7-sigprofiler:spa-1.1.5 .
+# After a verified build the harness captures `docker image inspect`
+# RepoDigests into competitors/registry.py (PENDING-VERIFY → sha256:...);
+# inventing a digest is prohibited (§5 ii).
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/library/python:3.11-slim
+
+ENV PIP_NO_CACHE_DIR=1
+# Pin provenance = the git tag v1.1.5 (this network's PyPI index carries no
+# SigProfilerAssignment distribution — memo §2b). The fetch is the GitHub
+# API tarball endpoint for that exact ref — the byte-identical auto-archive
+# of the tag (`git ls-remote --tags`: v1.1.5 → commit
+# ff61b0f56d43c916582b7c505ce72364c883dfbd). Recorded environmental
+# evidence (2026-10-08, probed from inside the build network): the
+# codeload.github.com /archive/ path is dead on this network — verbatim
+# "HTTP Error 404: Not Found" for all three URL forms including the
+# canonical /archive/<commit>.tar.gz — while
+#   200 application/x-gzip  https://api.github.com/repos/SigProfilerSuite/SigProfilerAssignment/tarball/refs/tags/v1.1.5
+#   200 text/html          https://pypi.org/simple/numpy/
+# Earlier three apt attempts died on the intercepting proxy 502-ing HTTP
+# .deb fetches ("502 Bad Gateway [IP: 198.18.0.44 80]", exit 100; a
+# different package each time); the tarball recipe needs no git binary, so
+# the apt step disappears entirely. §5 governs image pulls only; in-build
+# package fetches follow the G0-established idiom.
+RUN pip install \
+    https://api.github.com/repos/SigProfilerSuite/SigProfilerAssignment/tarball/refs/tags/v1.1.5
+
+# Build-time surface assert (G0 build-guard idiom): the documented
+# Analyzer.cosmic_fit entry point must exist or the image must not exist.
+RUN python3 -c '\
+from SigProfilerAssignment import Analyzer; \
+assert hasattr(Analyzer, "cosmic_fit"), "documented cosmic_fit missing"; \
+import inspect; \
+assert "samples" in inspect.signature(Analyzer.cosmic_fit).parameters, \
+    "cosmic_fit signature drifted from the documented (samples, output, ...)"'
+
+WORKDIR /work
+COPY m7_entry.py /work/
+COPY run_sigprofiler.py /work/
+# The harness always invokes python3 /work/m7_entry.py ... -- python3
+# /work/run_sigprofiler.py ... (adapters/docker_cmd.py ENTRY_SCRIPT).
+CMD ["python3", "/work/m7_entry.py"]

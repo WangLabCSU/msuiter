@@ -1,0 +1,67 @@
+# U-M7-02 competitor image: SigMiner CRAN 2.3.1 (design memo §2a/§5/§10.1).
+#
+# NETWORK POLICY (memo §5, binding): every base pull spells the mirror host
+# explicitly — docker.io is served by 9f6c5in3dh5vszgdz0.xuanyuan.run.
+# Direct upstream pulls fail on this network (proxy 407) and are prohibited;
+# a 407 is recorded as environmental evidence, never routed around.
+#
+# Build (context = bench/m7/adapters):
+#   docker build -f Dockerfile.sigminer -t m7-sigminer:cr2.3.1 .
+# After a verified build the harness captures `docker image inspect`
+# RepoDigests into competitors/registry.py (PENDING-VERIFY → sha256:...);
+# inventing a digest is prohibited (§5 ii).
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Second recorded build defect (verbatim, attempt 2, 2026-10-08): the CRAN
+# Rhtslib 2.2.x sources build their bundled BGZF/HTS code against system
+# headers and died with "bgzf.c:38:10: fatal error: zlib.h: No such file or
+# directory" on the r-ver base, which ships the runtime zlib1g but not the
+# -dev headers; the CRAN-only repos override fixed *which* Rhtslib resolves
+# (no more Bioconductor 3.17 archive), but the compile needs the headers.
+# zlib1g-dev plus the bz2/lzma headers the bundled HTSlib probes for are the
+# provisioning fix; a separate RUN keeps the (already proxy-survived) apt
+# layer above cached, minimizing the fresh .deb fetch surface (§9b 502s).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends zlib1g-dev libbz2-dev liblzma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# CRAN package installs follow the G0-established idiom (memo §8): §5 governs
+# image pulls, not in-build package fetches. The pin is the CRAN archive
+# version 2.3.1 (the exact artifact the host-library xval anchor cross-
+# validates against, memo §2a note). The repos option is overridden to
+# CRAN-only on purpose: the r-ver base's default repository stack lets
+# remotes resolve some Imports (Rhtslib 2.2.0) through the legacy
+# Bioconductor 3.17 archive, whose sources fail to compile against this
+# R (recorded 2026-10-08: "bgzf.c:38:10: fatal error: zlib.h: No such
+# file or directory / ERROR: compilation failed for package 'Rhtslib'");
+# the CRAN-maintained releases of the same Imports build cleanly. cmake is
+# apt-installed because nloptr's configure requires it ("CMAKE NOT FOUND",
+# same recorded attempt). remotes::install_version pulls the pinned source
+# from the CRAN archive; the build-time assert makes any drift fail loudly
+# — the G0 build-guard idiom.
+RUN Rscript -e '\
+  options(repos = c(CRAN = "https://cran.r-project.org")); \
+  install.packages("remotes", repos = "https://cloud.r-project.org", quiet = TRUE); \
+  # P3M serves binaries only (no src/contrib/Archive) — the pinned fetch
+  # names canonical CRAN explicitly; the mirror policy governs image pulls.
+  remotes::install_version("sigminer", version = "2.3.1", \
+                           repos = "https://cran.r-project.org", \
+                           install_dir = .libPaths()[1L], upgrade = "never"); \
+  v <- as.character(packageVersion("sigminer")); \
+  if (!identical(v, "2.3.1")) stop(sprintf("SigMiner pin drift: got %s, want 2.3.1", v)); \
+  for (fn in c("set.seed", "signature_extract", "fitsignatures", \
+                "signature_import", "signature_renorm")) { \
+    if (!exists(fn, mode = "function", where = asNamespace("sigminer"))) \
+      stop(paste0("documented sigminer export missing: ", fn)) }'
+
+WORKDIR /work
+COPY m7_entry.py /work/
+COPY run_sigminer.R /work/
+# The harness always invokes python3 /work/m7_entry.py ... -- Rscript
+# /work/run_sigminer.R ... (adapters/docker_cmd.py ENTRY_SCRIPT); CMD is
+# documentation of that shape only.
+CMD ["python3", "/work/m7_entry.py"]
