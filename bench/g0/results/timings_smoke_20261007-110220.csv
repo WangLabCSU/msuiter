@@ -1,0 +1,9 @@
+cell,tool,arm,n,seconds,status
+sigfit__main__N100,sigfit,main,100,0.0,cached
+sigfit__main__N1000,sigfit,main,1000,0.0,cached
+sigfit__comp_clock_only__N1000,sigfit,comp_clock_only,1000,0.0,cached
+sigfit__nb__N1000,sigfit,nb,1000,0.0,cached
+stl__main__N100,stl,main,100,0.0,cached
+stl__main__N1000,stl,main,1000,0.0,cached
+stl__comp_clock_only__N1000,stl,comp_clock_only,1000,0.0,cached
+stl__nb__N1000,stl,nb,1000,0.0,cached

@@ -21,6 +21,15 @@
    这与 tools/channel-reference 的保守姿态同一逻辑。
 
 本模块不包含、不嵌入、不派生任何 COSMIC 数值。
+
+PI 裁决补充（2026-10-06，解除"用户自备文件"歧义）：cosmic-file 的
+输入文件允许从**仓库内已捆绑的 COSMIC v3.6 参考**（refdb v1，
+inst/reference/refdb/COSMIC_v3.6/，sha256 pin ff61b0f，BSD-2 许可、
+许可与溯源治理在 A13/refdb 治理链内）本地派生——派生脚本
+tools/g0-derive-inputs.R 把两个文件写到 bench/g0/cache/（gitignore
+已覆盖），文件本体永不入库，D3 红线维持（"不入库"而非"不存在"）。
+签名名映射记录：SBS17a→SBS17、SBS40a→SBS40（v3.6 拆分名归并到
+TRUTH_NAMES 槽位）。
 """
 
 from __future__ import annotations
@@ -197,6 +206,18 @@ class CosmicFileProvider:
                 f"(set G0_SIGNATURES_PATH or pass an explicit path)")
         self.channel_labels = load_sbs96_labels()
         self.truth, self.catalog = self._load(path)
+        # The full F3 fitting catalog (G0_CATALOG_PATH, 101 signatures)
+        # feeds the truth-composition axis beyond the 5 truth slots
+        # (MMR/POLE groups etc., grid.COMPOSITIONS) — the audited first
+        # wiring left the provider's catalog at the 5-col truth file,
+        # which crashed the primary profile on SBS6 (PI adjudication
+        # derivation 2026-10-06).
+        catalog_path = os.environ.get("G0_CATALOG_PATH")
+        if catalog_path and Path(catalog_path).exists():
+            self._loading_full_catalog = True
+            _, full_catalog = self._load(Path(catalog_path))
+            self._loading_full_catalog = False
+            self.catalog = full_catalog
 
     @staticmethod
     def _read_rows(path: Path):
@@ -225,11 +246,14 @@ class CosmicFileProvider:
             if len(corner) != 1 or mat.shape[0] != len(sig_names):
                 raise ProviderError("malformed signature-major matrix")
         elif sum(1 for c in col0 if c in label_set) >= 90:
-            # 通道主序朝向：首列 = 通道，首行 = 签名名
+            # 通道主序朝向：首列 = 通道，首行 = 签名名。行列数可以不对称
+            #（通道 96 × 签名 101），切片须按 (rows, 1+96) 矩形读入后
+            #转置——首稿的 [r[1:1+96]] 切片在签名数 ≠ 通道数时丢列
+            #（PI 派生文件 101 签名实测触发，CI/本地双审 2026-10-06）。
             channel_labels = tuple(col0)
             sig_names = [c.strip() for c in first[1:]]
-            mat = np.array([[float(x) for x in r[1:1 + 96]] for r in rows[1:] if r],
-                           dtype=float).T          # 归一为 (n_sig, 96)
+            vals = [[float(x) for x in r[1:]] for r in rows[1:] if r]
+            mat = np.array(vals, dtype=float).T   # (m, n_sig)
         else:
             raise ProviderError(
                 "cannot locate a channel-label axis (neither header row nor "
@@ -247,10 +271,18 @@ class CosmicFileProvider:
                 raise ProviderError(f"signature '{name}' has non-positive/invalid channel sum")
             catalog[name] = vec / s
 
+        # The 5-slot TRUTH_NAMES check belongs to the truth-file load
+        # (G0_SIGNATURES_PATH, the first _load call). The full catalog
+        # (G0_CATALOG_PATH) uses v3.6 split names — SBS40 exists only as
+        # SBS40a/b/c there, so requiring the unsplit names here was a
+        # category error (PI derivation, 2026-10-06).
         missing = [k for k in TRUTH_NAMES if k not in catalog]
-        if missing:
+        if missing and not getattr(self, "_loading_full_catalog", False):
             raise ProviderError(f"truth signatures missing from file: {missing}")
-        truth = {k: catalog[k] for k in TRUTH_NAMES}
+        truth = {k: catalog[k] for k in TRUTH_NAMES
+                 if k in catalog} if getattr(
+            self, "_loading_full_catalog", False) else {
+            k: catalog[k] for k in TRUTH_NAMES}
         return truth, catalog
 
     def signature(self, name: str) -> np.ndarray:
