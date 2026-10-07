@@ -12,7 +12,11 @@ test_that("ms_sitrep prints a report and returns the sections invisibly", {
       "options", "not_yet_available")
   )
   expect_identical(out$package_version, as.character(utils::packageVersion("msuiter")))
-  expect_match(out$r_version, "^R version")
+  # R devel self-reports as "R Under development (unstable) (<date> r<n>)"
+  # instead of "R version 4.x.y ..." -- the sitrep section passes
+  # R.version.string through verbatim (honesty contract), so the assertion
+  # admits both shapes (r-lib devel arm, CI audit 2026-10-07).
+  expect_match(out$r_version, "^R (version|Under development)")
   expect_type(out$threads, "list")
   expect_identical(out$threads$effective, .ms_resolve_threads())
   # refdb v1 shipped (U-M3a-06): reported as bundled, not "not yet".
