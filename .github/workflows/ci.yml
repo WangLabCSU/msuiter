@@ -150,7 +150,12 @@ jobs:
           # devscripts, absent on macos/windows runners) and flags every
           # fresh submission ("New submission" NOTE). The hard gates live in
           # the guards job and the scheduled valgrind workflow.
-          error-on: 'error'
+          # action convention: inputs are RAW R expressions (cf. the `args`
+          # line above) -- the shipped default is the quoted string "warning",
+          # so the value here must carry its own quotes: '"error"'. A bare
+          # YAML 'error' renders as the R symbol (error) and dies with
+          # "object 'error' not found" (CI audit 2026-10-07, round 4).
+          error-on: '"error"'
           upload-snapshots: true
 
   rust:

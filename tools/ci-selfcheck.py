@@ -163,6 +163,11 @@ def main():
     # contradicts the stated error-level contract (CI audit 2026-10-07).
     check("check action gate uses hyphenated error-on input",
           "'error-on'" in str(rjob) and "error_on" not in str(rjob))
+    # The input is a RAW R expression (cf. `args`): the value must ship its
+    # own quotes ('"error"'), a bare symbol renders (error) and R aborts
+    # with "object 'error' not found" (CI audit 2026-10-07, round 4).
+    check("error-on value is a quoted R string literal",
+          "'error-on': '\"error\"'" in str(rjob))
     # The 4.3 floor arm installs dependencies: '"hard"' (Suggests skipped),
     # yet R CMD build needs the declared VignetteBuilder -- knitr must be a
     # CRAN-only extra or the build dies in loadVignetteBuilder() (audit
