@@ -163,12 +163,23 @@ def main():
     # contradicts the stated error-level contract (CI audit 2026-10-07).
     check("check action gate uses hyphenated error-on input",
           "'error-on'" in str(rjob) and "error_on" not in str(rjob))
+    # The input is a RAW R expression (cf. `args`): the value must ship its
+    # own quotes ('"error"'), a bare symbol renders (error) and R aborts
+    # with "object 'error' not found" (CI audit 2026-10-07, round 4).
+    check("error-on value is a quoted R string literal",
+          "'error-on': '\"error\"'" in str(rjob))
     # The 4.3 floor arm installs dependencies: '"hard"' (Suggests skipped),
     # yet R CMD build needs the declared VignetteBuilder -- knitr must be a
     # CRAN-only extra or the build dies in loadVignetteBuilder() (audit
     # 2026-10-07: 902 ms exit 1).
     check("4.3 floor arm ships the vignette builder via extras",
           "any::knitr" in str(rjob))
+    # Same hard-arm Suggests skip hits the check tests: the testthat runner
+    # hard-fails with "there is no package called 'testthat'" when
+    # dependencies: '"hard"' drops it (CI audit 2026-10-07, round 5).
+    # testthat + its test-side companions must ride in as CRAN-only extras.
+    check("4.3 floor arm ships the testthat runner deps via extras",
+          "any::testthat" in str(rjob) and "any::withr" in str(rjob))
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a

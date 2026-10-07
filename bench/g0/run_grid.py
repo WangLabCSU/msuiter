@@ -55,6 +55,12 @@ def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
     （"invalid characters for a local volume name"，同日二根因）。
     """
     cmd = ["docker", "run", "--rm"]
+    # 线程帽（2026-10-07 degraded 开台实诊）：cmdstanr 4 链独立进程 × 链内
+    # BLAS/OpenMP 默认全核线程 × 8 分片并行 = 数百线程争 10 核，冷机 20s 的
+    # cell 被拉爆至 15min+。采样语义零改动（链内本无并行语义），纯执行层封顶。
+    for cap in ("OMP_NUM_THREADS", "OMP_THREAD_LIMIT",
+                "STAN_OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
+        cmd += ["-e", f"{cap}=1"]
     ind, outd = Path(ind).resolve(), Path(outd).resolve()
     if cat_mount:
         cat_mount = Path(cat_mount).resolve()

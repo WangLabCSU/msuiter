@@ -122,6 +122,31 @@ def test_docker_cmd_single_mount_in_generated_catalog_mode():
     assert cmd[cmd.index("--catalog") + 1] == "/work/in/catalog.csv"
 
 
+def test_docker_cmd_caps_blas_threads():
+    """过订阅灾变（2026-10-07 degraded 开台实诊）：cmdstanr 4 链各自
+    进程，链内 BLAS/OpenMP 默认线程数 = 全核 → 8 分片 × 4 链 × 10 线程
+    = 320 线程争 10 核，单 cell 冷机 20s 被拉爆至 15min+。装配边界
+    注入线程封顶 =1（采样语义零改动，纯执行层），吞吐即回归。"""
+    # Arrange
+    ind, outd = Path("/work/cell/in"), Path("/work/cell/out")
+
+    # Act
+    cmd = run_grid.build_docker_cmd(ind, outd, "g0-sigfit", "run_sigfit.R")
+
+    # Assert：四个 env 帽全在位且值 1；STL 侧 R BLAS 同受 OMP 帽管辖
+    caps = {"OMP_NUM_THREADS", "OMP_THREAD_LIMIT", "STAN_OMP_NUM_THREADS",
+            "OPENBLAS_NUM_THREADS"}
+    envs = {}
+    for i, c in enumerate(cmd):
+        if c == "-e" and "=" in cmd[i + 1]:
+            k, _, v = cmd[i + 1].partition("=")
+            envs[k] = v
+    for cap in caps:
+        assert envs.get(cap) == "1", f"线程帽 {cap} 缺或值异: {envs.get(cap)!r}"
+    # 帽须在镜像名之前（docker run 语法边界：镜像名后为容器内 argv）
+    assert cmd.index("-e") < len(cmd) - cmd[::-1].index("g0-sigfit") - 1
+
+
 def test_docker_cmd_mount_sources_are_absolute():
     """相对 --cachedir 直进 docker -v 会被当命名卷（invalid characters for
     a local volume name，2026-10-07 smoke 二根因）——装配边界必须 resolve。"""

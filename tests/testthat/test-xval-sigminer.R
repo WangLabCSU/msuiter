@@ -12,8 +12,15 @@
 # without them pays nothing and the guard runs wherever they exist.
 
 test_that("SBS96 catalog is cell-identical to sigminer (label-aligned xval)", {
-  skip_if_not_installed("sigminer")
-  skip_if_not_installed("BSgenome.Hsapiens.UCSC.hg19")
+  # suppressWarnings: on the R devel Bioc view, probing these namespaces
+  # surfaces an upstream SummarizedExperiment import-collision notice
+  # (S4Arrays vs DelayedArray makeNindexFromArrayViewport) that --as-cran
+  # would escalate to a package WARN although the skip path is healthy
+  # (CI devel-arm audit 2026-10-07). Upstream noise, not our code.
+  suppressWarnings({
+    skip_if_not_installed("sigminer")
+    skip_if_not_installed("BSgenome.Hsapiens.UCSC.hg19")
+  })
   suppressPackageStartupMessages({
     library(sigminer)
     library(BSgenome.Hsapiens.UCSC.hg19)
