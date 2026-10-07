@@ -45,18 +45,22 @@ def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
     """容器 adapter 的 docker run 命令装配（adapter_protocol.md 契约）。
 
     用户目录模式（cat_mount）：cell 输入目录与目录原文件各挂一个 ro
-    挂载，两者缺一不可（2026-10-07 sigfit FATAL 根因之一：cat_bind
-    组装后从未进 cmd，容器内 catalog.csv 失踪）。generated/mock 模式
-    的 catalog.csv 已复制进 in/，单一挂载即可。
+    挂载，两者缺一不可（2026-10-07 sigfit FATAL 根因：cat_bind 组装后
+    从未进 cmd）。目录文件直挂 rootfs 独立路径 /work/catalog.csv——
+    叠挂在 cell 目录 bind 之内（/work/in/catalog.csv）在 Docker Desktop
+    virtiofs 驱动下 init 即失败（runc: error mounting … to rootfs，
+    smoke 全灭复现于 2026-10-07）。generated/mock 模式的 catalog.csv
+    已复制进 in/，单一挂载即可。
     """
     cmd = ["docker", "run", "--rm"]
     if cat_mount:
         cmd += ["-v", f"{ind}:/work/in:ro",
-                "-v", f"{cat_mount}:/work/in/catalog.csv:ro"]
+                "-v", f"{cat_mount}:/work/catalog.csv:ro"]
     else:
         cmd += ["-v", f"{ind}:/work/in"]
+    cat_dest = "/work/catalog.csv" if cat_mount else "/work/in/catalog.csv"
     cmd += ["-v", f"{outd}:/work/out", image, "Rscript", f"/work/{runner}",
-            "--counts", "/work/in/counts.csv", "--catalog", "/work/in/catalog.csv",
+            "--counts", "/work/in/counts.csv", "--catalog", cat_dest,
             "--params", "/work/in/params.json", "--outdir", "/work/out"]
     return cmd
 

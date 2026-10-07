@@ -104,10 +104,13 @@ def test_docker_cmd_carries_both_mounts_in_user_catalog_mode():
     cmd = run_grid.build_docker_cmd(ind, outd, "g0-sigfit", "run_sigfit.R",
                                     cat_mount=str(cat))
 
-    # Assert：两个挂载都在（回归根因：cat_bind 组装后从未进 cmd）
+    # Assert：两挂载齐全；目录文件直挂 rootfs 独立路径——叠挂在 cell 目录
+    # bind 之内会令 Docker Desktop virtiofs 驱动 init 失败（runc: error
+    # mounting … to rootfs，2026-10-07 smoke 全灭根因），D3 原样只读不变
     assert f"{ind}:/work/in:ro" in cmd
-    assert f"{cat}:/work/in/catalog.csv:ro" in cmd
-    assert sum("/work/in/catalog.csv:ro" in c for c in cmd) == 1
+    assert f"{cat}:/work/catalog.csv:ro" in cmd
+    assert sum("/work/catalog.csv:ro" in c for c in cmd) == 1
+    assert cmd[cmd.index("--catalog") + 1] == "/work/catalog.csv"
 
 
 def test_docker_cmd_single_mount_in_generated_catalog_mode():
@@ -116,3 +119,4 @@ def test_docker_cmd_single_mount_in_generated_catalog_mode():
     assert f"{ind}:/work/in" in cmd                       # generated 档 catalog.csv 在 in/ 内
     assert not any("catalog.csv:ro" in c for c in cmd)
     assert f"{outd}:/work/out" in cmd
+    assert cmd[cmd.index("--catalog") + 1] == "/work/in/catalog.csv"
