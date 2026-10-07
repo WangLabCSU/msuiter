@@ -239,3 +239,86 @@ test_that("aneuploidy consumes ploidy[1] and reports it as caller-provided", {
   expect_identical(.hrd_row(rep1, "S1", "ploidy_source"), "caller")
   expect_identical(.hrd_row(rep1, "S1", "aneuploidy_count"), 1L)
 })
+
+# --- composite hrd_score golden ------------------------------------------------
+# Provenance (adjudication memo section 4): the composite classifier is the
+# combined pLOH + aneuploidy HRD call of Cortes-Castro et al., Cancer Research
+# 2020 -- hrd_score is 1L if and only if BOTH normalised pLOH >= 0.4 AND the
+# autosome-level aneuploidy count >= 4. The two cut-offs are inclusive (a score
+# of exactly 0.4, or a count of exactly 4, still calls HRD-positive); this
+# block pins that inclusivity on both edges with dedicated boundary fixtures.
+#
+# TODO(paper): the numeric pin follows the adjudication memo's authoritative
+# cut-offs; the primary-source methods-section citation (exact DOI/volume/
+# pages, and the two thresholds as printed there) could not be re-verified
+# from inside the build sandbox (no network egress to NCBI/Publisher) and MUST
+# be confirmed against Cortes-Castro et al., Cancer Res 2020 at PR review.
+# The sub-scores below are produced by the verbatim SigMiner oracle in
+# helper-hrd.R, so the composite pin is anchored on already-fidelity-tested
+# parts and adds no new biological constants.
+test_that("hrd_score is the inclusive combined classifier: ploh>=0.4 AND aneuploidy>=4", {
+  # Arrange -- disjoint geometry so each sub-score is driven independently:
+  #   * chr1 carries the (LOH) segment -> drives ploh_fraction (chr1 has no arms)
+  #   * chr2..chr6 carry non-LOH whole-chrom gains -> drive aneuploidy_count
+  # chr_size = 1000 makes the pLOH fraction a hand-checkable count/1000.
+  composite_chr_size <- 1000
+  composite_ploidy <- 2
+  aneu_chroms <- paste0("chr", 2:6)
+  composite_arms <- do.call(rbind, lapply(aneu_chroms, function(ch) {
+    data.frame(chrom = ch, location = c("p", "q"),
+      arm_start = c(1L, 501L), arm_end = c(500L, 1000L),
+      stringsAsFactors = FALSE)
+  }))
+  # a whole-chromosome non-LOH gain (state 3/minor 2 -> folded minor 1: not LOH)
+  .gain <- function(ch, s) .make_hrd_segments(sample = s, chromosome = ch,
+    start = 1, end = 1000, state = 3, minor_cn = 2)
+  # a chr1 LOH segment (state 1/minor 0) whose closed length sets ploh = len/1000
+  .loh <- function(len, s) .make_hrd_segments(sample = s, chromosome = "chr1",
+    start = 1, end = len, state = 1, minor_cn = 0)
+  .fixture <- function(s, len, gchroms) do.call(rbind,
+    c(list(.loh(len, s)), lapply(gchroms, .gain, s = s)))
+
+  # four quadrants (both/pleh-only/aneu-only/neither) plus the two inclusive
+  # boundaries (exactly 0.4, exactly 4) and the two just-under edges (0.399, 3)
+  expected <- list(
+    BB  = list(ploh = 400 / composite_chr_size, aneu = 4L, score = 1L), # ploh==0.4 & aneu==4 (both inclusive)
+    HH  = list(ploh = 500 / composite_chr_size, aneu = 5L, score = 1L), # both comfortably above
+    Po  = list(ploh = 400 / composite_chr_size, aneu = 3L, score = 0L), # ploh ok, aneu 3 < 4
+    Ao  = list(ploh = 399 / composite_chr_size, aneu = 4L, score = 0L), # ploh 0.399 < 0.4, aneu ok
+    Nn  = list(ploh = 399 / composite_chr_size, aneu = 3L, score = 0L), # both below
+    Alo = list(ploh = 399 / composite_chr_size, aneu = 5L, score = 0L)  # ploh just under, aneu high
+  )
+  segs <- do.call(rbind, list(
+    .fixture("BB", 400, c("chr2", "chr3", "chr4", "chr5")),
+    .fixture("HH", 500, aneu_chroms),
+    .fixture("Po", 400, c("chr2", "chr3", "chr4")),
+    .fixture("Ao", 399, c("chr2", "chr3", "chr4", "chr5")),
+    .fixture("Nn", 399, c("chr2", "chr3", "chr4")),
+    .fixture("Alo", 399, aneu_chroms)
+  ))
+
+  # Act
+  rep1 <- as.data.frame(msuiter::ms_hrd_report(
+    segs, genome = "GRCh37", caller = "ascat", assay = "wgs",
+    chr_size = composite_chr_size, arms = composite_arms, ploidy = composite_ploidy
+  ))
+
+  # Assert -- sub-scores first (anchored on the fidelity-tested oracle path),
+  # then the composite rule, then the independent hand pin.
+  for (s in names(expected)) {
+    exp <- expected[[s]]
+    expect_equal(.hrd_row(rep1, s, "ploh_fraction"), exp$ploh,
+      info = paste0(s, " ploh_fraction"))
+    expect_identical(.hrd_row(rep1, s, "aneuploidy_count"), exp$aneu,
+      info = paste0(s, " aneuploidy_count"))
+    expect_identical(.hrd_row(rep1, s, "hrd_score"), exp$score,
+      info = paste0(s, " hrd_score"))
+  }
+  # the composite rule, replayed on the report's own reported sub-scores: it can
+  # only be 1L where BOTH cut-offs are met inclusively, nowhere else
+  reported <- data.frame(
+    ploh = rep1$ploh_fraction, aneu = rep1$aneuploidy_count,
+    score = rep1$hrd_score, stringsAsFactors = FALSE)
+  expect_identical(reported$score,
+    ifelse(reported$ploh >= 0.4 & reported$aneu >= 4L, 1L, 0L))
+})
