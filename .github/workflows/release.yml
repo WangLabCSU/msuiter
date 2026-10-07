@@ -32,7 +32,7 @@ jobs:
     outputs:
       tarball: ${{ steps.name.outputs.tarball }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # MSRV 钉定（ADR 0002 §4 证明语义）。runner 自带 rustup。
       - name: Install Rust (MSRV)
@@ -83,7 +83,7 @@ jobs:
             rust_targets: "x86_64-pc-windows-msvc x86_64-pc-windows-gnu"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust (MSRV + targets)
         shell: bash
@@ -138,7 +138,7 @@ jobs:
     needs: [build-source, build-binaries]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:

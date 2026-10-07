@@ -66,7 +66,7 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # guards job is dropped where Makevars expects it, so R CMD INSTALL
@@ -124,7 +124,7 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # extendr-api 0.9 build.rs unwraps R_HOME at build time: the bare
       # cargo jobs need R installed and R_HOME exported (CI audit
@@ -169,7 +169,7 @@ jobs:
   guards:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
       # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
@@ -241,7 +241,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # extendr-api 0.9 build.rs unwraps R_HOME at build time: the bare
       # cargo jobs need R installed and R_HOME exported (CI audit
@@ -309,7 +309,7 @@ jobs:
     # ARCHITECTURE §9). Rust coverage is not gated (also ARCHITECTURE §9).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain at MSRV
         run: |
