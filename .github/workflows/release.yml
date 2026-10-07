@@ -60,7 +60,7 @@ jobs:
           R CMD build . --no-manual --no-build-vignettes
           echo "tarball=$(ls msuiter_*.tar.gz)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: source-tarball
           path: ${{ steps.build.outputs.tarball }}
@@ -103,7 +103,7 @@ jobs:
       - name: Install Imports (S7, rlang)
         run: Rscript -e 'install.packages(c("S7", "rlang"), repos = "https://cloud.r-project.org")'
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: source-tarball
           path: pkg
@@ -128,7 +128,7 @@ jobs:
           stopifnot(all(c("ms_variants", "ms_tally", "ms_extract", "MsSignature")
                         %in% getNamespaceExports("msuiter")))
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.os }}
           path: msuiter_*.*
@@ -140,7 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
