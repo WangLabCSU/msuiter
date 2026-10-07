@@ -1,0 +1,9 @@
+# Byte-pinned shipped references -------------------------------------------------
+# R/refdb.R verifies sha256 digests over the EXACT shipped bytes (fail-closed).
+# Windows runners check out with core.autocrlf=true; without these `-text`
+# pins the .txt matrices are silently CRLF-rewritten and every refdb and
+# benchmark-driver test dies on a digest mismatch (CI audit 2026-10-07:
+# expected 282126c3..., got d2d4c473... == LF->CRLF rehash of
+# COSMIC_v3.6_SBS_GRCh37.txt). The .rds manifest is binary but shares the
+# same bundle and the same byte-pinning discipline.
+inst/reference/** -text

@@ -117,11 +117,19 @@ jobs:
           needs: check
           extra-packages: any::rcmdcheck
 
+      # install-pandoc must be explicit on the floor arm: the action's auto
+      # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
+      # dragging in the very Suggests this arm cannot solve -- and dies
+      # resolving BSgenome.Hsapiens.UCSC.hg19 before any install runs (CI
+      # audit 2026-10-07: exit 1 in "Check whether pandoc needs to be
+      # installed"). 'true' skips the probe and ships the pandoc the knitr
+      # vignette needs.
       - uses: r-lib/actions/setup-r-dependencies@v2
         if: matrix.config.r == '4.3'
         with:
           needs: check
           dependencies: '"hard"'
+          install-pandoc: true
           extra-packages: any::rcmdcheck
 
       - uses: r-lib/actions/check-r-package@v2

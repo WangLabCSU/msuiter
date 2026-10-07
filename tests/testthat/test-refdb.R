@@ -180,3 +180,42 @@ test_that("label drift against the manifest fails closed", {
     regexp = "disagrees with the manifest labels"
   )
 })
+
+# --------------------------------------------------------------------------
+# Byte-integrity release blocker: shipped reference files are verified by
+# .ms_refdb_load_bundle() against sha256 digests over the EXACT shipped
+# bytes (fail-closed, R/refdb.R). Windows runners check out with
+# core.autocrlf=true, so a .txt asset without a `-text` pin is silently
+# CRLF-converted and the whole refdb/benchmark suite turns red
+# (CI audit 2026-10-07: expected 282126c3..., got d2d4c473... == the
+# LF->CRLF rehash of COSMIC_v3.6_SBS_GRCh37.txt). This guard asks git
+# itself -- check-attr -- that eol normalisation is disabled for every
+# file under the byte-pinned bundle, so the defect can never regress in.
+
+test_that("byte-pinned reference assets are immune to git eol normalization", {
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  if (!file.exists(file.path(root, "DESCRIPTION")) ||
+      system2("git", c("-C", root, "rev-parse", "--git-dir"),
+              stdout = NULL, stderr = NULL) != 0L) {
+    skip("requires the source checkout (installed-package check context)")
+  }
+  txt <- list.files(file.path(root, "inst", "reference"), pattern = "[.]txt$",
+                    recursive = TRUE, full.names = TRUE)
+  expect_true(length(txt) >= 5L)
+  if (!all(startsWith(txt, root))) {
+    stop("inst/reference paths escaped the checkout root: ", paste0(txt, collapse = ", "))
+  }
+  rel <- substring(txt, nchar(root) + 2L)
+  out <- system2("git", c("-C", root, "check-attr", "text", "--", rel),
+                 stdout = TRUE, stderr = FALSE)
+  expect_identical(length(out), length(rel))
+  # git's tristate: `-text` is reported as `text: unset` (normalisation
+  # actively disabled); `unspecified` means .gitattributes is silent and
+  # core.autocrlf decides -- the exact release-blocker state.
+  bad <- rel[!grepl("text: *unset[[:space:]]*$", out)]
+  expect_false(length(bad) > 0L,
+                info = paste0(
+                  "inst/reference byte-pinned files lack a `-text` pin in ",
+                  ".gitattributes (autocrlf checkouts break the sha256 ",
+                  "fail-closed guard): ", paste0(bad, collapse = ", ")))
+})
