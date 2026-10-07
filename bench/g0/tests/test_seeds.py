@@ -120,3 +120,24 @@ def test_docker_cmd_single_mount_in_generated_catalog_mode():
     assert not any("catalog.csv:ro" in c for c in cmd)
     assert f"{outd}:/work/out" in cmd
     assert cmd[cmd.index("--catalog") + 1] == "/work/in/catalog.csv"
+
+
+def test_docker_cmd_mount_sources_are_absolute():
+    """相对 --cachedir 直进 docker -v 会被当命名卷（invalid characters for
+    a local volume name，2026-10-07 smoke 二根因）——装配边界必须 resolve。"""
+    # Arrange
+    import os
+    cwd = os.getcwd()
+    os.chdir(HERE)
+    try:
+        # Act
+        cmd = run_grid.build_docker_cmd(Path("relcell/in"), Path("relcell/out"),
+                                        "g0-stl", "run_stl.R")
+    finally:
+        os.chdir(cwd)
+    # Assert
+    sources = [cmd[i + 1] for i, c in enumerate(cmd) if c == "-v"]
+    assert len(sources) == 2
+    for s in sources:
+        src = s.split(":")[0]
+        assert src.startswith("/") and "relcell" in src, f"-v 源未绝对化: {s}"

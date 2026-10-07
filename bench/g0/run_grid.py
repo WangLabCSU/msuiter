@@ -51,9 +51,13 @@ def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
     virtiofs 驱动下 init 即失败（runc: error mounting … to rootfs，
     smoke 全灭复现于 2026-10-07）。generated/mock 模式的 catalog.csv
     已复制进 in/，单一挂载即可。
+    挂载源一律 resolve 为绝对路径：docker 把相对 -v 源当命名卷
+    （"invalid characters for a local volume name"，同日二根因）。
     """
     cmd = ["docker", "run", "--rm"]
+    ind, outd = Path(ind).resolve(), Path(outd).resolve()
     if cat_mount:
+        cat_mount = Path(cat_mount).resolve()
         cmd += ["-v", f"{ind}:/work/in:ro",
                 "-v", f"{cat_mount}:/work/catalog.csv:ro"]
     else:
