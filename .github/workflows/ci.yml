@@ -136,7 +136,14 @@ jobs:
           needs: check
           dependencies: '"hard"'
           install-pandoc: true
-          extra-packages: any::rcmdcheck, any::knitr, any::rmarkdown
+          # tests/* hard-fail at library(testthat) under the hard skip
+          # ("no package called 'testthat'", round 5); withr backs snapshot
+          # helpers; the vignette needs the plot/sanitize stack. CRAN-only
+          # extras keep the Bioc Suggests chain (BSgenome) out of the solve.
+          extra-packages: >-
+            any::rcmdcheck, any::knitr, any::rmarkdown,
+            any::testthat, any::withr, any::ggplot2,
+            any::ggalluvial, any::uwot
 
       - uses: r-lib/actions/check-r-package@v2
         with:

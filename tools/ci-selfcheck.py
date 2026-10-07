@@ -174,6 +174,12 @@ def main():
     # 2026-10-07: 902 ms exit 1).
     check("4.3 floor arm ships the vignette builder via extras",
           "any::knitr" in str(rjob))
+    # Same hard-arm Suggests skip hits the check tests: the testthat runner
+    # hard-fails with "there is no package called 'testthat'" when
+    # dependencies: '"hard"' drops it (CI audit 2026-10-07, round 5).
+    # testthat + its test-side companions must ride in as CRAN-only extras.
+    check("4.3 floor arm ships the testthat runner deps via extras",
+          "any::testthat" in str(rjob) and "any::withr" in str(rjob))
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a
