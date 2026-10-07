@@ -62,7 +62,7 @@ jobs:
           # (BSgenome.Hsapiens.UCSC.hg19, maftools, Biobase) no longer
           # solves on the R-4.3 Bioc view (pak 404, CI audit 2026-10-06);
           # the floor job proves Imports + core tests.
-          - {os: ubuntu-latest,  r: '4.3', dependencies: '"hard"'}
+          - {os: ubuntu-latest,  r: '4.3'}
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
 
     steps:
@@ -104,10 +104,24 @@ jobs:
           rustup default 1.71.0
           rustup target add x86_64-pc-windows-gnu
 
+      # Never pass an empty `dependencies` input: the action interpolates it
+      # into pak's R call and the empty string yields the broken expression
+      # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
+      # resolution, killing all 8 matrix arms (CI audit 2026-10-07). Split
+      # into two guarded steps so the input is physically absent unless set;
+      # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
+      # Bioc Suggests chain, round-3 audit).
       - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.config.r != '4.3'
         with:
-          dependencies: ${{ matrix.config.dependencies }}
           needs: check
+          extra-packages: any::rcmdcheck
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        if: matrix.config.r == '4.3'
+        with:
+          needs: check
+          dependencies: '"hard"'
           extra-packages: any::rcmdcheck
 
       - uses: r-lib/actions/check-r-package@v2
@@ -185,6 +199,12 @@ jobs:
 
       - name: RNG known-answer test (pure-stdlib Python vs Rust goldens)
         run: python3 tools/rng-kat.py
+
+      - name: "G0 harness test suite (bench/g0 — sim/coverage/lrt/provider/adapter/seeds)"
+        working-directory: bench/g0
+        run: |
+          python3 -m pip install --quiet numpy
+          python3 -m tests.run_all
 
       - name: CI selfcheck (workflow YAML + referenced paths + pins)
         run: python3 tools/ci-selfcheck.py
