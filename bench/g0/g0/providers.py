@@ -317,16 +317,13 @@ class CosmicFileProvider:
         """Split-name resolution for the frozen truth slots: SBS40 ->
         SBS40a (+SBS40b/c) and SBS17 -> SBS17a/b, equally weighted when
         the unsplit name is absent (v3.6 naming, PI derivation)."""
-        if name in ("SBS40", "SBS17"):
-            prefix = name
-            members = sorted(k for k in self.catalog
-                             if k.startswith(prefix)
-                             and k[len(prefix):].isdigit() is False
-                             and len(k) == len(prefix) + 1
-                             and k[len(prefix)].isalpha())
-            if members:
-                n = len(members)
-                return sum(self.catalog[k] for k in members) / n
+        # v3.6 split families: SBS7a-d, SBS10a-d, SBS17a-b, SBS40a-c.
+        members = sorted(k for k in self.catalog
+                         if k.startswith(name)
+                         and len(k) == len(name) + 1
+                         and k[len(name)].isalpha())
+        if members:
+            return sum(self.catalog[k] for k in members) / len(members)
         return None
 
     def _validate_channels(self, labels):
