@@ -160,7 +160,14 @@ class SyntheticProvider:
         self.channel_labels = load_sbs96_labels()
 
     def signature(self, name: str) -> np.ndarray:
-        """按名取归一化签名谱（组合轴真值装配用）。"""
+        """按名取归一化签名谱（组合轴真值装配用）。
+
+        v3.6 拆分名解析：SBS40 → SBS40a（+SBS40b/c 等权并分）、
+        SBS17 → SBS17a/b 等权并分（PI 派生裁决的映射记录，memo
+        providers 头注）。真值槽位经 _truth_signature 查询。"""
+        resolved = self._resolve_name(name)
+        if resolved is not None:
+            return resolved
         try:
             return self.catalog[name]
         except KeyError:
@@ -279,14 +286,25 @@ class CosmicFileProvider:
         missing = [k for k in TRUTH_NAMES if k not in catalog]
         if missing and not getattr(self, "_loading_full_catalog", False):
             raise ProviderError(f"truth signatures missing from file: {missing}")
-        truth = {k: catalog[k] for k in TRUTH_NAMES
-                 if k in catalog} if getattr(
-            self, "_loading_full_catalog", False) else {
-            k: catalog[k] for k in TRUTH_NAMES}
+        truth = {}
+        for k in TRUTH_NAMES:
+            if k in catalog:
+                truth[k] = catalog[k]
+            elif getattr(self, "_loading_full_catalog", False):
+                v = self._resolve_name(k) if hasattr(self, "catalog") else None
+                if v is not None:
+                    truth[k] = v / v.sum()
         return truth, catalog
 
     def signature(self, name: str) -> np.ndarray:
-        """按名取归一化签名谱（组合轴真值装配用）。"""
+        """按名取归一化签名谱（组合轴真值装配用）。
+
+        v3.6 拆分名解析：SBS40 → SBS40a（+SBS40b/c 等权并分）、
+        SBS17 → SBS17a/b 等权并分（PI 派生裁决的映射记录，memo
+        providers 头注）。真值槽位经 _truth_signature 查询。"""
+        resolved = self._resolve_name(name)
+        if resolved is not None:
+            return resolved
         try:
             return self.catalog[name]
         except KeyError:
@@ -294,6 +312,22 @@ class CosmicFileProvider:
                 f"signature '{name}' not present in the user catalog file — "
                 f"frozen composition axis (grid.COMPOSITIONS) requires it; "
                 f"F3 catalog = COSMIC v3.6 SBS96 GRCh37 full signature set") from None
+
+    def _resolve_name(self, name: str):
+        """Split-name resolution for the frozen truth slots: SBS40 ->
+        SBS40a (+SBS40b/c) and SBS17 -> SBS17a/b, equally weighted when
+        the unsplit name is absent (v3.6 naming, PI derivation)."""
+        if name in ("SBS40", "SBS17"):
+            prefix = name
+            members = sorted(k for k in self.catalog
+                             if k.startswith(prefix)
+                             and k[len(prefix):].isdigit() is False
+                             and len(k) == len(prefix) + 1
+                             and k[len(prefix)].isalpha())
+            if members:
+                n = len(members)
+                return sum(self.catalog[k] for k in members) / n
+        return None
 
     def _validate_channels(self, labels):
         if len(labels) != 96:

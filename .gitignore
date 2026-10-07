@@ -50,3 +50,6 @@ docs/site/
 
 # NMF engine test artifacts
 /tests/testthat/NMF_*/
+
+# G0 results are regenerated artifacts
+/bench/g0/results/
