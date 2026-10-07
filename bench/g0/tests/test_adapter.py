@@ -151,7 +151,9 @@ def test_adapter_files_conformance():
     sigfit_docker = (ad / "Dockerfile.sigfit").read_text(encoding="utf-8")
     stl_docker = (ad / "Dockerfile.stl").read_text(encoding="utf-8")
     assert "kgori/sigfit@v2.2.0" in sigfit_docker      # F2 冻结版本
-    assert "signature.tools.lib@v2.5.2" in stl_docker  # F2 冻结版本
+    # F2 冻结版本：STL 走 git clone 钉 tag（避开 remotes API 限流，见 Dockerfile 头注）
+    assert "Nik-Zainal-Group/signature.tools.lib" in stl_docker
+    assert "--branch v2.5.2" in stl_docker
     assert (ad / "adapter_protocol.md").exists()
     assert (ad / "run_sigfit.R").exists() and (ad / "run_stl.R").exists()
     assert (ad / "mock_runner.py").exists()
