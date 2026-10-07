@@ -53,13 +53,19 @@
 
 # Composite classifier cut-offs (adjudication section 4). hrd_score is 1L iff
 # the normalised pLOH fraction >= .HRD_PLOH_CUTOFF AND the autosome-level
-# aneuploidy count >= .HRD_ANEU_CUTOFF, both comparisons INCLUSIVE. Provenance:
-# the combined pLOH + aneuploidy HRD classifier of Cortes-Castro et al.,
-# Cancer Research 2020. TODO(paper): confirm the exact bibliographic record
-# (DOI/volume/pages) and that these two thresholds are printed verbatim in the
-# paper's methods; the numeric values here are the adjudication memo's
-# authoritative pin and are exercised only through the already-fidelity-tested
-# sub-scores.
+# aneuploidy count >= .HRD_ANEU_CUTOFF, both comparisons INCLUSIVE.
+# Provenance (audited 2026-10-07, local ground truth): the two sub-score
+# formulas were verified cell-for-cell against the SigMiner 2.3.1 CRAN
+# sources R/get_pLOH_score.R and R/get_Aneuploidy_score.R; neither file
+# carries ANY composite threshold -- SigMiner emits the raw scores only.
+# These cut-offs therefore derive from the study protocol of the
+# pLOH+aneuploidy HRD classifier (Cortes-Castro et al., Cancer Research
+# 2020, per the adjudication memo), not from a SigMiner default.
+# TODO(paper): pin the exact bibliographic record (DOI/volume/pages) and the
+# printed methods values before the manuscript cites them; the general web
+# search environment proved unreliable for this citation at audit time, so
+# the pin is carried as the adjudication memo's authoritative value and is
+# exercised only through the already-fidelity-tested sub-scores.
 .HRD_PLOH_CUTOFF <- 0.4
 .HRD_ANEU_CUTOFF <- 4L
 
