@@ -110,3 +110,107 @@ def test_gap_is_reported_when_runner_loses_its_provisioning():
 def test_verdict_json_round_trips_machine_readable():
     _, verdict = audit.run_audit()
     assert json.loads(json.dumps(verdict, sort_keys=True)) == verdict
+
+
+# -- group (N): witnessed-formals lint (RB-04(5)/RB-05(5)) -------------------------
+#
+# The r4 probe death (commandArgs(unused-argument)) is the fabricated-API
+# class: a call whose named argument does not exist in the formals the
+# pinned image's own R resolves that name to. The lint consumes the
+# committed harvest snapshot (formals_allowlist_slice3-r4.json: per called
+# name, the era-R-witnessed formals + resolving environment) and flags any
+# call into an allowlisted name carrying a named argument outside that
+# witness. Offline, zero container.
+
+PILOT = (Path(__file__).resolve().parents[1].parent / "results"
+         / "docker_m7_PILOT_20261008-200152")
+REHEARSAL = PILOT / "rehearsal_slice3-r4"
+ALLOWLIST_PATH = REHEARSAL / "formals_allowlist_slice3-r4.json"
+FIXED_RUNNER = REHEARSAL / "run_sigminer_fixed.R"
+
+
+def _al(**entries):
+    return {"schema": "m7-formals-allowlist-1", "entries": entries}
+
+
+def _ok(*formals):
+    return {"state": "ok", "formals": list(formals)}
+
+
+def test_lint_flags_named_argument_outside_witnessed_formals():
+    al = _al(f=_ok("a", "b"))
+    flags = audit.lint_called_formals("y <- f(a = 1, zzz = 2)\n", al)
+    assert [f["arg"] for f in flags] == ["zzz"]
+    assert flags[0]["name"] == "f"
+    assert flags[0]["line"] == 1
+
+
+def test_lint_accepts_witnessed_named_arguments():
+    al = _al(f=_ok("a", "b"))
+    assert audit.lint_called_formals("y <- f(a = 1, b = 2)\n", al) == []
+
+
+def test_lint_dots_witness_admits_any_named_argument():
+    al = _al(g=_ok("x", "..."))
+    assert audit.lint_called_formals("g(x = 1, whatever = 2)\n", al) == []
+
+
+def test_lint_ignores_named_arguments_inside_nested_calls():
+    al = _al(outer=_ok("a"))
+    flags = audit.lint_called_formals("x <- outer(inner(b = 1), z = 2)\n", al)
+    assert [f["arg"] for f in flags] == ["z"], "deep arg must not leak outward"
+
+
+def test_lint_ignores_strings_and_comments():
+    al = _al(f=_ok("a"))
+    text = ('# f(bad = 1)\n'
+            'y <- "f(bad2 = 1)"\n'
+            "z <- f(a = 1, q = 'x = 1')\n")
+    flags = audit.lint_called_formals(text, al)
+    assert [f["arg"] for f in flags] == ["q"]
+
+
+def test_lint_equality_is_not_read_as_named_argument():
+    al = _al(f=_ok("a"))
+    assert audit.lint_called_formals("f(a == 1)\n", al) == []
+
+
+def test_lint_skips_script_local_definitions():
+    text = "myFun <- function(q) q\ny <- myFun(qq = 3)\n"
+    assert audit.lint_called_formals(text, _al()) == []
+    al = _al(myFun=_ok("q"))
+    assert audit.lint_called_formals(text, al) == [], "local def is script-owned"
+
+
+def test_lint_ignores_non_witnessed_entries():
+    al = _al(zz={"state": "primitive"}, uu={"state": "unresolved"})
+    assert audit.lint_called_formals("zz(a = 1)\nuu(b = 2)\n", al) == []
+
+
+def test_allowlist_snapshot_carries_the_minimum_witness():
+    snapshot = json.loads(ALLOWLIST_PATH.read_text(encoding="utf-8"))
+    assert snapshot["schema"] == "m7-formals-allowlist-1"
+    entry = snapshot["entries"]["commandArgs"]
+    assert entry["state"] == "ok"
+    formals = entry["formals"]
+    formals = [formals] if isinstance(formals, str) else formals
+    assert formals == ["trailingOnly"], \
+        "era-R witness: commandArgs carries ONLY trailingOnly"
+
+
+def test_rehearsed_bytes_lint_clean_against_snapshot():
+    text = FIXED_RUNNER.read_text(encoding="utf-8")
+    snapshot = json.loads(ALLOWLIST_PATH.read_text(encoding="utf-8"))
+    assert audit.lint_called_formals(text, snapshot) == []
+
+
+def test_defect_injection_lint_fires_against_snapshot():
+    text = FIXED_RUNNER.read_text(encoding="utf-8")
+    snapshot = json.loads(ALLOWLIST_PATH.read_text(encoding="utf-8"))
+    bad = [ln.replace("trailingOnly = TRUE)",
+                      "trailingOnly = TRUE, removeDuplicates = FALSE)")
+           for ln in text.splitlines(keepends=True)]
+    assert sum("removeDuplicates" in ln for ln in bad) == 1
+    flags = audit.lint_called_formals("".join(bad), snapshot)
+    assert [(f["name"], f["arg"]) for f in flags] == [
+        ("commandArgs", "removeDuplicates")]

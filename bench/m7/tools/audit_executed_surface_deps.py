@@ -148,7 +148,166 @@ def missing_packages(*, r_packages: set, python_third_party: frozenset,
     return gaps
 
 
-# -- end-to-end audit -------------------------------------------------------------
+# -- witnessed-formals lint (RB-04(5)/RB-05(5), the fabricated-API class) --------
+#
+# The r4 probe death was commandArgs(trailingOnly = TRUE, removeDuplicates =
+# FALSE): a named argument that does not exist in the formals the pinned
+# image's own R resolves that name to. Declarative closure analysis cannot
+# see this class (it is not a package dependency at all). The lint pins it
+# offline: a call into an allowlisted name may only carry named arguments
+# present in the era-R-harvested witness snapshot (formals_allowlist_slice3-
+# r4.json); anything else is flagged. Qualified calls (ns::f) are skipped --
+# the witness speaks for search-path resolution, not for an explicit ns.
+
+_LINT_KEYWORDS = frozenset({"if", "for", "while", "function", "in", "next",
+                            "break", "repeat", "else"})
+_LINT_NAME = "[A-Za-z.][A-Za-z0-9._]*"
+_CALL_SCAN = re.compile("(?<![A-Za-z0-9._])(" + _LINT_NAME + ")"
+                        + "[ " + _B + "t" + _B + "n]*" + _B + "(")
+_SEGMENT_NAMED = re.compile("^[ " + _B + "t" + _B + "n]*(" + _LINT_NAME + ")"
+                            + "[ " + _B + "t" + _B + "n]*=" + "(?!=)")
+_LOCAL_DEF = re.compile("(?m)^[ " + _B + "t]*(" + _LINT_NAME + ")[ "
+                        + _B + "t]*(?:<<?-|=)[ " + _B + "t]*function"
+                        + "[ " + _B + "t]*" + _B + "(")
+_OPENERS = frozenset("([{")
+_CLOSERS = {")": "(", "]": "[", "}": "{"}
+
+
+def _mask_r_code(text: str) -> str:
+    """Same-length mask: string contents -> 'x', comments -> blanks.
+
+    Length/line alignment is preserved so every offset maps 1:1 back onto
+    the original text (line numbers, call-token positions). Implemented as a
+    character state machine, not regex, so it can not regress on the quoted
+    string/comment classes. _NL/_BS are chr-built: bare backslashes in
+    literals are this project's known edit-transport hazard."""
+    nl, bs, dq, sq = chr(10), _B, chr(34), chr(39)
+    out = []
+    state = "code"
+    i, n = 0, len(text)
+    while i < n:
+        ch = text[i]
+        if state == "code":
+            if ch == "#":
+                state = "comment"
+                out.append(" ")
+            elif ch == dq:
+                state = "dq"
+                out.append(ch)
+            elif ch == sq:
+                state = "sq"
+                out.append(ch)
+            else:
+                out.append(ch)
+        elif state == "comment":
+            if ch == nl:
+                state = "code"
+                out.append(ch)
+            else:
+                out.append(" ")
+        elif state == "dq":
+            if ch == nl:
+                out.append(ch)
+            elif ch == bs:
+                out.append("x")
+                if i + 1 < n:
+                    out.append(nl if text[i + 1] == nl else "x")
+                    i += 1
+            elif ch == dq:
+                state = "code"
+                out.append(ch)
+            else:
+                out.append("x")
+        else:                                        # sq
+            if ch == nl:
+                out.append(ch)
+            elif ch == sq:
+                if i + 1 < n and text[i + 1] == sq:
+                    out.append("xx")                 # doubled quote-escape
+                    i += 1
+                else:
+                    state = "code"
+                    out.append(ch)
+            else:
+                out.append("x")
+        i += 1
+    return "".join(out)
+
+
+def _formals_of(entry: dict) -> list:
+    formals = entry.get("formals")
+    if formals is None:
+        return []
+    if isinstance(formals, str):
+        return [formals]
+    return [str(f) for f in formals]
+
+
+def _top_level_args(body: str) -> list:
+    """Split a call body on commas at paren/bracket/brace depth zero."""
+    segs, depth, cur = [], 0, []
+    for ch in body:
+        if ch in _OPENERS:
+            depth += 1
+        elif ch in _CLOSERS:
+            depth -= 1
+        if ch == "," and depth == 0:
+            segs.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+    segs.append("".join(cur))
+    return segs
+
+
+def _matching_paren(masked: str, start: int) -> int:
+    """Offset of the ')' closing the '(' at `start`, or -1 (unbalanced)."""
+    depth = 0
+    for i in range(start, len(masked)):
+        ch = masked[i]
+        if ch in _OPENERS:
+            depth += 1
+        elif ch in _CLOSERS:
+            depth -= 1
+            if depth == 0:
+                return i
+    return -1
+
+
+def lint_called_formals(text: str, allowlist: dict, *,
+                        label: str = "<text>") -> list:
+    """Flags for calls whose named arguments escape the witnessed formals.
+
+    Only names present in the harvest snapshot with state 'ok' are checked;
+    primitive/unresolved witnesses are out of scope (the snapshot itself is
+    the witness), script-local function definitions are script-owned and
+    skipped, qualified calls are left to their explicit namespace."""
+    masked = _mask_r_code(text)
+    local_defs = frozenset(_LOCAL_DEF.findall(masked))
+    entries = allowlist.get("entries", allowlist)
+    flags = []
+    for m in _CALL_SCAN.finditer(masked):
+        name = m.group(1)
+        if (name in _LINT_KEYWORDS or name in local_defs
+                or ":" in name):
+            continue
+        entry = entries.get(name)
+        if not isinstance(entry, dict) or entry.get("state") != "ok":
+            continue
+        allowed = _formals_of(entry)
+        if "..." in allowed:
+            continue
+        opened = masked.find("(", m.end() - 1)
+        closed = _matching_paren(masked, opened)
+        if closed < 0:
+            continue
+        line_no = masked.count(chr(10), 0, m.start()) + 1
+        for seg in _top_level_args(masked[opened + 1:closed]):
+            nm = _SEGMENT_NAMED.match(seg)
+            if nm and nm.group(1) not in allowed:
+                flags.append({"file": label, "line": line_no, "name": name,
+                              "arg": nm.group(1), "allowed": sorted(allowed)})
+    return flags
 
 def run_audit() -> tuple:
     dockerfile = (ADAPTERS / "Dockerfile.sigminer").read_text(encoding="utf-8")
@@ -187,7 +346,27 @@ def run_audit() -> tuple:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", default=None, dest="json_path")
+    ap.add_argument("--lint", default=None, metavar="R-SCRIPT",
+                    help="lint one executed-surface R script's called "
+                         "name/named-arg pairs against --allowlist")
+    ap.add_argument("--allowlist", default=None, metavar="JSON",
+                    help="witnessed-formals harvest snapshot (entries.*)")
     args = ap.parse_args(argv)
+    if args.lint:
+        if not args.allowlist:
+            print("[audit] --lint requires --allowlist", file=sys.stderr)
+            return 2
+        allowlist = json.loads(Path(args.allowlist).read_text(encoding="utf-8"))
+        text = Path(args.lint).read_text(encoding="utf-8")
+        flags = lint_called_formals(text, allowlist, label=str(args.lint))
+        verdict = {"lint": "FABRICATED-ARGS" if flags else "CLEAN",
+                   "flags": flags}
+        for f in flags:
+            print(f"[lint] LINE {f['line']} call {f['name']}() carries named "
+                  f"argument {f['arg']!r}; witnessed formals: {f['allowed']}",
+                  file=sys.stderr)
+        print(json.dumps(verdict, sort_keys=True))
+        return 2 if flags else 0
     code, verdict = run_audit()
     for gap in verdict["gaps"]:
         print(f"[audit] GAP {gap['surface']} package {gap['package']!r} "

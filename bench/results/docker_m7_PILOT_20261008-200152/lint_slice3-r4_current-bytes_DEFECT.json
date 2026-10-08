@@ -1,0 +1,1 @@
+{"flags": [{"allowed": ["trailingOnly"], "arg": "removeDuplicates", "file": "adapters/run_sigminer.R", "line": 44, "name": "commandArgs"}], "lint": "FABRICATED-ARGS"}

@@ -1,0 +1,12 @@
+site: 95  main: 29  union: 124 
+sigminer site? TRUE  main? FALSE 
+jsonlite present? TRUE 
+lpSolve present? FALSE 
+--- name-pattern hits among installed (sync/chron family, lpSolve family) ---
+character(0)
+Warning: unable to access index for repository https://p3m.dev/cran/2024-04-23/src/contrib:
+  cannot open URL 'https://p3m.dev/cran/2024-04-23/src/contrib/PACKAGES'
+--- recursive DESCRIPTION deps NOT present: 0 ---
+ 
+--- site-library full list (R-side truth, display may dequote-mangle) ---
+abind, backports, Biobase, BiocGenerics, BiocManager, broom, car, carData, cli, colorspace, corrplot, cowplot, cpp11, data.table, Deriv, digest, DNAcopy, doBy, docopt, doParallel, dplyr, farver, foreach, forecast, Formula, fracdiff, furrr, future, generics, ggplot2, ggpubr, ggrepel, ggsci, ggsignif, globals, glue, gridBase, gridExtra, gtable, isoband, iterators, jsonlite, labeling, lifecycle, listenv, littler, lme4, lmtest, maftools, magrittr, MatrixModels, minqa, modelr, nloptr, NMF, numDeriv, parallelly, pbkrtest, pillar, pkgconfig, plyr, polynom, purrr, quantreg, R6, rbibutils, RColorBrewer, Rcpp, RcppArmadillo, RcppEigen, Rdpack, reformulas, registry, reshape2, Rhtslib, rlang, rngtools, rstatix, S7, scales, sigminer, SparseM, stringi, stringr, tibble, tidyr, tidyselect, timeDate, urca, utf8, vctrs, viridisLite, withr, zlibbioc, zoo 

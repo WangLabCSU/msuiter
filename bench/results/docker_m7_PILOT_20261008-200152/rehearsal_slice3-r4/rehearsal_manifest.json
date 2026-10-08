@@ -1,0 +1,79 @@
+{
+ "entries": [
+  {
+   "bytes": 415,
+   "file": "called_names.txt",
+   "role": "host-minted called-name tokens (mint_called_names.py over the 7f3067-proven bytes) consumed by the container-side harvester",
+   "sha256": "53d5a144906b6f20d39eafed63627271afb937ecf02405f2bb5bf0e3efcf9f05"
+  },
+  {
+   "bytes": 1345,
+   "file": "depinv_r4.log",
+   "role": "read-only dependency inventory of the pinned image: declared closure 0-missing; lpSolve/synchronicity absent (Suggests-only, the closure blind spot)",
+   "sha256": "476817c7b0944fdd0db930ccb259d75ba24350529ec79c3f17c20aac31e9c7ad"
+  },
+  {
+   "bytes": 3411,
+   "file": "excerpt3.py",
+   "role": "the documented line-selection rules used to trim the bulky logs; the trimmed files' headers bind the full-file sha256 of the unsanitised originals",
+   "sha256": "6c0899d13f146cac29eb48eb13bd7c5709f88996e2dd06a746c15bc316e92808"
+  },
+  {
+   "bytes": 5083,
+   "file": "formals_allowlist_slice3-r4.json",
+   "role": "witnessed-formals harvest snapshot from the pinned image's own R (4.3.3): per called name the era-resolved formals + environment; minimum witness commandArgs/{trailingOnly} from base",
+   "sha256": "cdfec59d0ed5fe6261d9c749bf127463dd3b3ae28b1471924d6c1615e7a02c8d"
+  },
+  {
+   "bytes": 1462,
+   "file": "harvest_formals.R",
+   "role": "container-side harvester (pure get()/formals()/where() lookups; zero regex in era R, zero hand-typed dependency literals)",
+   "sha256": "31fe45e69333653bf7b6dac53f9294090a7954ca2b424dbaad603a231858a133"
+  },
+  {
+   "bytes": 3985,
+   "file": "image_inspect_slice3-r4_live.json",
+   "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r4 at witness time (cache-only material; digest non-authoritative, the registry row stays slice3-r2 until the post-r5 ceremony)",
+   "sha256": "4898be69924ec1e057ec86a0335f7bc66d06edb868a8a218925a634d3c56e2e0"
+  },
+  {
+   "bytes": 1015,
+   "file": "mint_called_names.py",
+   "role": "host-side token minter lineage",
+   "sha256": "a6cc0f6ab3a268579f902ac8c50438e64fd1d0baad0b364451e3ea8ab4bc6aab"
+  },
+  {
+   "bytes": 282669,
+   "file": "runB_excerpt.log",
+   "role": "documented-rules excerpt of the full-argv diagnostic: the R auto-install storm (synchronicity et al. from the era mirror) and the lpSolve download 'SSL connect error' halt -- the class-(d) fairness hazard behind the RB-05(3.c) --network=none clause; full original on the controller host at /tmp/m7probe/runB.log",
+   "sha256": "f2a8ab8ad7abc434766fb7b4ce6bd237245f73441420a9bb2740fc6f611b5123"
+  },
+  {
+   "bytes": 5925,
+   "file": "run_sigminer_fixed.R",
+   "role": "the stage2-proven amended runner bytes (single-line L44 fix); sha256 7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084 is the r5 COPY/hash-pin designator",
+   "sha256": "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084"
+  },
+  {
+   "bytes": 270737,
+   "file": "stage2_excerpt.log",
+   "role": "documented-rules excerpt of the rc=0 end-to-end rehearsal (NMF 2-signature suggested solution, score 95.5, 4.185 mins, [run_sigminer] completion marker); full original on the controller host at /tmp/m7probe/stage2.log",
+   "sha256": "487d952512230c1ad0d97ca853eb76f121d51ae590a4f746fb6720cda07adfd3"
+  },
+  {
+   "bytes": 167,
+   "file": "../lint_slice3-r4_current-bytes_DEFECT.json",
+   "role": "offline lint verdict on the UNFIXED branch bytes: FABRICATED-ARGS (line 44 removeDuplicates vs witnessed {trailingOnly})",
+   "sha256": "1094f463af1bcf9c0c8f3f7b5783f7837c6984ee993f5ee6de38b79e467bbc66"
+  },
+  {
+   "bytes": 31,
+   "file": "../lint_slice3-r4_fixed-bytes_CLEAN.json",
+   "role": "offline lint verdict on the stage2-proven bytes: CLEAN",
+   "sha256": "66dc36233b1a40d6bdc62b682e334b27b9c3f21adc024f8b73da625c822e5b2f"
+  }
+ ],
+ "image": "msuiter-sigminer:slice3-r4",
+ "ruling": "RB-05(4.ii)",
+ "schema": "m7-rehearsal-manifest-1"
+}
