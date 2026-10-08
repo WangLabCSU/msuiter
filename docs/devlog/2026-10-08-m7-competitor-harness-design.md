@@ -778,9 +778,12 @@ next dispatch spends one build, not six:
 Five documented-export asserts and the exact-version pin remain the
 build's terminal gate, unchanged since dispatch — but the forensic
 adjudication below establishes the export list itself is defective for
-the pinned artifact, so the next slice's charter is the guard-contract
-correction (a NEW controller-authorized slice budget), not another
-build of this recipe. When that slice's build closes green, the flip
+the pinned artifact, AND the merged adapter shares the same call-site
+fiction (controller addendum, 9c.2), so the slice-3 charter EXPANDS
+from "guard-contract fix" to the full **adapter API realignment to the
+`sig_*` family (call sites + asserts + NMF sequence) under a NEW
+controller-authorized budget** — not another build of this recipe.
+When that slice's build closes green, the flip
 ceremony is fixed: live
 `docker image inspect --format '{{.Id}}'` on the tag → registry.py
 data-only flip (inspect line in the commit body) → gates 1-4 → smoke
@@ -856,6 +859,38 @@ follow-up slice's charter. (iii) *list sourced from a different
 lineage* — **plausible, unconfirmed**: the Dunedin suite (Steele 2022,
 cited in the package's own DESCRIPTION) is the best candidate; external
 verbatim evidence blocked by the network conditions above.
+
+**Controller addendum to the close-out (verbatim, physically
+re-verified by the controller before PR #11).**
+
+* Witnessed confirmation of the ledger: "I independently confirmed with
+  my own grep: local ground-truth NAMESPACE = `115` export() lines,
+  ALL FIVE guard names = `0` occurrences; real API present
+  (`sig_extract`, `sig_fit`, `sig_fit_bootstrap`, `sig_estimate`,
+  `bp_extract_signatures`). Your three-branch adjudication stands
+  confirmed."
+* New finding for the ledger (the file itself stays untouched — out of
+  scope this slice): "the same false premise infects the MERGED adapter
+  `bench/m7/adapters/run_sigminer.R` — header L17-18 'documented API',
+  assert loop L54, AND live call sites L76
+  `signature_extract(signature=list(counts=...))` / L87
+  `fitsignatures(de_novo_signatures=...)` which could never resolve
+  against CRAN sigminer. Record verbatim: the image-build guard was
+  not the only carrier; the green-slice adapter itself is
+  call-site-fictional, so even a green image+digest would NOT have
+  made sigminer cells scientifically executable — the frozen registry
+  PENDING-VERIFY gate is what contained this. Consequence: slice-3
+  charter EXPANDS from 'guard-contract fix' to 'adapter API realignment
+  to the `sig_*` family (call sites + asserts + NMF sequence) under new
+  controller-authorized budget'. No code change to `run_sigminer.R` in
+  this slice."
+* Lineage-lead correction, kept **UNCONFIRMED** (lead, not fact): the
+  DESCRIPTION-cited Steele 2022 DOI, as literally recorded in the
+  tarball, reads `10.1038/s41586-022-04738-6` — malformed against the
+  Nature Methods DOI pattern (`10.1038/s415xx-YYYY-N…`), so even the
+  citation string cannot anchor the external witness. `TODO(paper)`:
+  pin the correct DOI for the Steele et al 2022 SigMiner paper in
+  slice-3.
 
 ## 10. Open items for the GREEN dispatch
 
