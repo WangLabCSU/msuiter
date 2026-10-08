@@ -25,6 +25,8 @@ SigMiner API-contract pin (slice-3 realignment to the witnessed sig_* family):
   ⑪ test_sigminer_api_contract  verbatim NAMESPACE fixture + eradication gates
 Matrix-runner extensions (U-M7-03, arms×N×reps @ pinned seeds):
   ⑫ test_matrix_runner          N-point filter, dry-run plan, resample-verify
+Live image-probe (U-M7-03, controller ruling RB-01 -- pilot-catch witness):
+  (L) test_image_cell_argv        real cell argv, sidecar-schema-valid depth
 """
 
 from __future__ import annotations
@@ -44,7 +46,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_sigminer_api_contract",
            # U-M7-03: matrix-runner extensions (N-selection, dry-run plan,
            # seed-pinned resample-verify gate):
-           "test_matrix_runner"]
+           "test_matrix_runner",
+           # U-M7-03 RB-01: live cell-argv probe (pilot-catch witness):
+           "test_image_cell_argv"]
 
 
 def _collect(mod_name):
