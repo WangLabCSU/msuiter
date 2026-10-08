@@ -1086,6 +1086,80 @@ flip then follows the §9c.1 ceremony as its own gated step (the controller
 holds the data-only registry/test-pin flip commit until the live inspect
 bytes land in the report).
 
+### 9d.8 build9 GREEN — the verified-digest flip and the full green evidence chain
+
+**The green build (expedition 2/2, spent AT the green).** Client exit 0,
+zero FATAL/ERROR lines in /tmp/m7_sigminer_build9.log (268+ lines).
+Replay pacing (verbatim witnesses, log-line order): installer banner at
+0.266s -> 92 RESOLVE-via / full graph install ->
+
+    #9 1223.2 INSTALL sigminer       2.3.1 OK
+    #9 1223.9 ASSERT sigminer 2.3.1 exact + 115 witnessed exports present (9 core functions)
+    #9 DONE 1224.1s
+    #13 exporting layers 5.7s done
+    #13 exporting manifest list sha256:c2a52c71..0fb91157 done
+    #13 naming to docker.io/library/msuiter-sigminer:slice3-r2 done
+    #13 unpacking to ... 1.4s done -> #13 DONE 7.1s
+
+The dequoted guard (9d.7 fix) passed at the exact predicted terminal:
+115/115 witnessed exports + 9/9 core functions resolved, the hash tripwire
+silent (no drift die).
+
+**Live-inspect capture (the flip witness; controller hand is the source of
+record).** Controller verbatim: Id
+sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c04061006c7ec9f5d0fb91157,
+Size 1707456647, Created 2026-10-08T14:33:58.976726552Z. The agent's
+independent live capture of the same tag was byte-identical (independent
+double capture, zero fabrication); the build log's exported manifest-list
+hash equals the inspected Id, and the log's own
+'exporting manifest list sha256:c2a52c71..0fb91157 done' line corroborates.
+In-image scientific smoke by the controller hand: library(sigminer) loads,
+packageVersion 2.3.1, the two operator names resolve as functions. Key
+pins audited present in the built tree: Biobase 2.60.0, NMF 0.28,
+cowplot 1.2.0, ggplot2 4.0.3, DNAcopy, maftools.
+
+**Observation (recorded, no re-run).** The controller's INSTALL-OK tally on
+the build9 log reads 92 against build8's 96 — a count-only tally delta
+over a tree whose integrity is proven by the 115/115 ASSERT plus the full
+hard-dependency graph witnesses above; logged as an observation.
+
+**The ratchet paid for itself.** The preflight-gate discipline ratcheted
+from the build8 death (9d.7: pre-build probes must execute the SHIPPED
+bytes) is precisely what certified build9 before spending the final
+dollar: preflight_tail2.R evals the installer's own parse+dequote lines
+over the witnessed NAMESPACE bytes, host mode ran the full 115-name
+exists() resolve loop against the live installed namespace (misses=0,
+CORE_API 9/9), and the base-image mode certified the shipped dequote line
+under the build's own R 4.3.3 engine.
+
+**The flip (charter 5, data-only).** registry.py sigminer row moves
+PENDING-VERIFY -> the live-inspect digest verbatim (single-line literal,
+no reformatting) AND image_ref -> msuiter-sigminer:slice3-r2, the very
+tag the build named to: image_gate probes and run_container_cell exec
+BOTH consume image_ref, so the pair is one and the same build artifact —
+leaving the stale tag in place would have every cell re-die at the
+compose-time gate, which is exactly the gap the sentinel existed to hold
+shut. TDD: test_registry gains
+test_sigminer_entry_carries_the_build9_verified_digest pinning both data
+fields plus the surviving compose-time refusals — PENDING-VERIFY and
+malformed-shape digests still refuse pre-daemon (daemon-free variants),
+signal untouched at pending-verify. RED 56/57 -> GREEN 57/57; g0 45/45;
+ci-selfcheck PASS exit 0; zero builds spent on the flip node (python-side
+only), honoring the exhausted expedition budget.
+
+**Honest gap, recorded for a future ruling (no action here).** image_gate
+validates the digest SHAPE (sha256:+64) and the tag PRESENCE, never
+comparing the stored digest against what the local store reports for that
+tag; the flip ceremony therefore relies on the memo witness chain, not on
+a runtime cross-check. A digest-vs-inspect cross-compare (daemon-side or
+cached-record) is a candidate hardening, deliberately not undertaken in
+this data-only gated step.
+
+**Budget final state.** Expedition 2/2 spent at the green (build8 ruled
+instrumentation-class, one-use exception consumed on build9); no
+honest-partial close was needed; the campaign's no-exceptions-ever-again
+clause stands for any future image work.
+
 ## 10. Open items for the GREEN dispatch
 
 1. Author the two harness Dockerfiles (`Dockerfile.sigminer`, mirror-pinned)

@@ -14,6 +14,7 @@ the expected state of this batch):
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # bench/m7
@@ -21,10 +22,18 @@ import sys
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-from competitors import registry                     # noqa: E402  (RED seam)
+from competitors import docker_cmd, registry                  # noqa: E402  (RED seam)
 
 EXPECTED_NAMES = {"sigminer", "sigprofiler", "signal"}
 VALID_STATUSES = {"ready", "pending-verify"}
+
+# slice-3 flip witnesses (memo 9d.8). The build9 image: docker build exit 0,
+# tail assert passed ('ASSERT sigminer 2.3.1 exact + 115 witnessed exports
+# present (9 core functions)'), controller live-inspect capture is the source
+# of record — two independent live captures agreed byte-for-byte.
+SIGMINER_IMAGE_REF = "msuiter-sigminer:slice3-r2"
+SIGMINER_IMAGE_DIGEST = ("sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c"
+                         "04061006c7ec9f5d0fb91157")
 
 
 def test_registry_loads_exactly_the_three_competitors():
@@ -64,3 +73,37 @@ def test_registry_lookup_unknown_name_lists_available():
             f"error must list available names, got: {msg!r}"
     else:
         raise AssertionError("lookup() of an unknown name did not raise")
+
+
+def test_sigminer_entry_carries_the_build9_verified_digest():
+    """Data-only flip of the sentinel (charter 5 / memo §9c.1 ceremony): the
+    sigminer row moves from PENDING-VERIFY to the live-inspect bytes, and
+    image_ref to the very tag build9 was named to — image_gate probes and
+    run_container_cell exec BOTH consume image_ref, so the pair is one and
+    the same build artifact or the cell path re-opens the very gap the
+    sentinel existed to hold shut (compose-time, daemon-free)."""
+    spec = registry.load()["sigminer"]
+    assert spec.image_digest == SIGMINER_IMAGE_DIGEST, (
+        f"sigminer digest pin drifted from the build9 live-inspect capture: "
+        f"{spec.image_digest!r}")
+    assert spec.image_ref == SIGMINER_IMAGE_REF, (
+        f"sigminer image_ref must name the built+tagged artifact (gate and "
+        f"run consume this token): {spec.image_ref!r}")
+    # Refuse-to-run semantics SURVIVE the flip: an entry lacking a verified
+    # digest is refused at compose time — the provenance branch fires
+    # before the daemon is consulted, so these checks are daemon-free.
+    refused = dataclasses.replace(spec, image_digest=registry.PENDING_VERIFY)
+    reason = docker_cmd.image_gate(refused)
+    assert reason is not None and "PENDING-VERIFY" in reason, (
+        "a PENDING-VERIFY digest must still be refused pre-daemon: "
+        f"{reason!r}")
+    malformed = dataclasses.replace(spec, image_digest="sha256:0" * 4)
+    reason2 = docker_cmd.image_gate(malformed)
+    assert reason2 is not None and "provenance not captured" in reason2, (
+        "a malformed/mismatched-shape digest must still be refused "
+        f"pre-daemon: {reason2!r}")
+    # The unverified sibling keeps its sentinel state untouched by the flip.
+    signal = registry.load()["signal"]
+    assert signal.status == "pending-verify" and \
+        docker_cmd.image_gate(signal) is not None, (
+        "signal must remain pending-verify and compose-time refused")
