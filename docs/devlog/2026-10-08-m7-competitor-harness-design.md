@@ -437,6 +437,426 @@ python3 -m tests.run_all` → `45/45 tests passed.`;
 `python3 tools/ci-selfcheck.py` → `ci-selfcheck: PASS (all CI wiring
 assertions hold)` (exit 0).
 
+### 9c. Slice-2 image campaign (2026-10-08, follow-up dispatch): whole-tree Archive-aware closure
+
+Base: origin/main @ `bcc1f31` (verified descendant of the §9b-closure
+merge). Mission per §9b-closure's final paragraph: replace the two-
+hand-pinned provisioning with an install path that resolves EVERY
+transitive dependency of sigminer 2.3.1 through the CRAN contrib+Archive
+trees, keep the recorded build-time asserts, one budgeted build attempt
+plus at most two spares for NEW distinct defect classes.
+
+**Ground-truth probes (containers off the mirror-spelled base, scratch
+libs only; nothing installed into a real library).**
+
+* Probe 1 — installer API surface: this base R (4.3.3)
+  `install.packages` has NO `archiveurl` parameter, `remotes` is absent,
+  `tools::install.packages` is absent, `compareVersion` is string-
+  oriented, and the frozen `"pkg==ver"` spec is looked up VERBATIM AS A
+  PACKAGE NAME — verbatim: `package 'sigminer==2.3.1' is not available
+  for this version of R`. The §9b candidate direction
+  (`tools::install.packages(..., archiveurl = ...)`) is therefore dead
+  code here; the recorded result-gate semantics (a node counts as
+  provisioned only when the library's own DESCRIPTION reports the
+  version) become the design itself.
+* Probe 2 — fetch/install matrix: `Archive/<pkg>/<pkg>_<ver>.tar.gz`
+  (per-package dir) serves, the flat `Archive/<pkg>_<ver>.tar.gz` 404s
+  on this CRAN; the contrib PACKAGES `File` column is NA; local-tarball
+  `install.packages(tf, repos = NULL, type = "source")` installs and the
+  library reports the version.
+* Probe 3 — the master Archive index at `Archive/` exists (5,564,905 b,
+  28,121 directory tokens) and carries canonical spellings; it proves
+  that `maftools` and `Rhtslib` have NO directory on the Archive tree at
+  all — neither case, neither layout. The two hand-pins were never going
+  to cover the bioc-class Imports.
+* Probe 5 — the bioc-class source of record:
+  `https://bioconductor.org/packages/3.17/bioc/src/contrib/PACKAGES`
+  serves (2,188 rows) and HITS both `maftools` and `Rhtslib`. This is
+  the same release the recorded pre-hardening build compiled Rhtslib
+  from (defect #2 above — the `-dev` header layer provisions exactly
+  this class). Memo §5 governs image pulls; in-build package fetches
+  follow the §8 G0 idiom.
+* Probe 6 — the walk-failure class: the proxy flakiness (§9b item 1)
+  404s LIVE Archive directories on first touch; `Archive/viridisLite/`
+  (exact canonical case via the master index) lists 9 versions and its
+  tarball fetches after retries.
+* Probe 7 — `available.packages` on the bioc contrib dies on the
+  rds-first read — verbatim: `URL '.../PACKAGES.rds': status was 'SSL
+  connect error'` then `error reading from connection` — the server
+  serves no PACKAGES.rds. The installer therefore parses raw
+  PACKAGES(.gz) with its own DCF reader instead of trusting
+  available.packages.
+
+**Design (`bench/m7/adapters/install_sigminer.R`, COPY'd into the image —
+the quoted-`Rscript -e` one-liner and its swallowed-newline hazard class
+retired with it).** BFS over the transitive graph from the
+`sigminer==2.3.1` root; per node: contrib-db current + the constraint as
+fetch candidates (dual-repo PACKAGES db: CRAN first for era fidelity,
+bioc 3.17 last), four URL shapes per candidate
+(`contrib/P_V.tar.gz` → `Archive/P/P_V.tar.gz` → `Archive/P_V.tar.gz` →
+`bioc-contrib/P_V.tar.gz`), name-case candidates
+[db-canonical | master-index alias | as-written | lowercase |
+capitalized], MAX_TRY retries per URL, `rSatisfies` gate rejecting any
+tarball whose DESCRIPTION `Needs R` exceeds the base (live capture this
+campaign: `reject Deriv 4.3.5 (Needs-R exceeds base 4.3.3)` — the walk
+then accepts the 4.1-line release), the Archive per-package listing walk
+with master-index canonical discovery as last resort, then a topological
+install pass where EVERY success is result-gated on the library's own
+DESCRIPTION (via `install.packages`' return CODE — absence of an
+exception is not success, spare-1 lesson). Before anything installs, a
+**joint-consistency audit** (CONSIST) recomputes every hard-Imports
+constraint across the settled graph and repairs the unjustified side:
+per-node resolution soundness is necessary but not sufficient (the
+cowplot 1.2.0 / ggplot2 3.3.0 class, ledger below). The two belt-and-braces pins (rbibutils 2.4.1, gridBase
+0.4-7) are kept and re-probed through the same path; the recorded tail
+asserts (`packageVersion('sigminer')=='2.3.1'` exact + the five
+documented exports) are preserved verbatim.
+
+**Pre-flight.** `Rscript install_sigminer.R --dry-run` in the base
+container resolved the FULL graph — verbatim: `DRY-RUN graph complete: 92
+installable node(s): sigminer cli cowplot data.table dplyr furrr future
+ggplot2 ggpubr maftools magrittr nmf purrr rcpp rlang tidyr gtable scales
+generics glue lifecycle pillar r6 tibble tidyselect vctrs globals digest
+listenv parallelly isoband s7 withr ggrepel ggsci ggsignif gridextra
+polynom rstatix rcolorbrewer rhtslib dnacopy zlibbioc registry rngtools
+stringr gridbase colorspace foreach doparallel reshape2 biobase
+biocmanager cpp11 farver labeling viridislite utf8 pkgconfig broom
+corrplot car stringi iterators plyr biocgenerics backports cardata abind
+formula pbkrtest quantreg lme4 numderiv doby sparsem matrixmodels rdpack
+minqa nloptr reformulas rcppeigen deriv forecast modelr rbibutils
+fracdiff lmtest timedate urca zoo rcpparmadillo` — exit 0, no install.
+
+**Build ledger.** Attempt tails verbatim.
+
+* **attempt-1** — `/tmp/m7_sigminer_build4.log`, `BUILD-EXIT=1`,
+  installer FATAL at t≈2118 s on the `Biobase` node — verbatim:
+
+  ```
+  #9 2118.1 FATAL:node Biobase ( ): candidates [2.60.0] failed and no Archive listing usable — 2.60.0: unresolvable Biobase 2.60.0 (last: ERR:cannot open URL 'https://bioconductor.org/packages/3.17/bioc/src/contrib/biobase_2.60.0.tar.gz'); attempted: https://cran.r-project.org/src/contrib/Biobase_2.60.0.tar.gz -> ERR:cannot open URL '...Biobase_2.60.0.tar.gz' | https://cran.r-project.org/src/contrib/Archive/Biobase/Biobase_2.60.0.tar.gz -> ERR:... | https://cran.r-project.org/src/contrib/Archive/Biobase_2.60.0.tar.gz -> ERR:... | https://bioconductor.org/packages/3.17/bioc/src/contrib/Biobase_2.60.0.tar.gz -> ERR:... | https://cran.r-project.org/src/contrib/biobase_2.60.0.tar.gz -> ERR:... | https://cran.r-project.org/src/contrib/Archive/biobase/biobase_2.60.0.tar.gz -> ERR:... | https://cran.r-project.org/src/contrib/Archive/biobase_2.60.0.tar.gz -> ERR:... | https://bioconductor.org/packages/3.17/bioc/src/contrib/biobase_2.60.0.tar.gz -> ERR:...
+  ```
+
+  (The `ERR:...` elisions repeat the identical verbatim tail
+  `ERR:cannot open URL '<the shown URL>'` per shape — all eight shapes,
+  both spellings, every host.)
+
+* **Classification.** All eight URL shapes returned `cannot open URL`,
+  including the exact bioc URL that the host dry-run 4 had resolved
+  successfully ~30 min earlier. Probe 8 quantified the same endpoints
+  (`/tmp/m7_probe8.log`): `FLAKY Biobase_2.60.0.tar.gz ok=7 fail=3`,
+  `FLAKY DNAcopy_1.74.1.tar.gz ok=6 fail=4`,
+  `FLAKY zlibbioc_1.46.0.tar.gz ok=10 fail=0` — the §9b-item-1 recorded
+  intermittent-proxy class: the URLs are good, the transport is not. The
+  defect fixed here is the installer's own fragility to that recorded
+  class (3 tries per URL, no deferral → an unlucky flake streak kills
+  the build): an installer-side FATAL masquerading as an unresolvable
+  node.
+
+* **Hardening before spare-1.** `isTransientStatus` separates the
+  deterministic 404/403 class (break immediately) from the transient
+  class (SSL / timeout / 5xx / empty-reply / bare `cannot open URL`,
+  retried with linear backoff); the transient flag propagates onto
+  `resolveNode` failure records; the BFS defers transient node failures
+  and requeues them (`MAX_DEFER = 2` rounds); Archive pins get their own
+  deferral rounds (`PIN_ROUNDS = 3`); PACKAGES metadata fetches are
+  retried (≤3 whole refetches). Re-preflight on the host: dry-run 5 —
+  `DRY-RUN graph complete: 92 installable node(s)`, exit 0, zero DEFER
+  lines required.
+
+* **spare-1** — `/tmp/m7_sigminer_build5.log`, `BUILD-EXIT=1` — the
+  resolve phase went fully green (92 nodes, zero DEFER; every
+  recorded-class blocker proven passable, bioc layer included — 53
+  INSTALL-OK lines followed). The terminal record:
+
+  ```
+  #9 3738.8 INSTALL ggplot2        3.3.0 OK
+  #9 3739.2 FATAL:install failed for cowplot 1.2.0: OK (library reports (none))
+  #9 ERROR: process "/bin/sh -c Rscript /tmp/install_sigminer.R" did not complete successfully: exit code: 1
+  ```
+
+* **Classification (spare-1): NEW distinct class — joint hard-dep
+  inconsistency.** Host-side root-cause capture (outside the build, per
+  decisive-shot discipline): sigminer 2.3.1 imports `cowplot` **bare**
+  and `ggplot2 (>= 3.3.0)`, so the BFS settled cowplot at contrib-current
+  **1.2.0** (2025) while ggplot2 fell to the era-want candidate **3.3.0**
+  (a flaky-proxy artifact of the candidate order, not a policy). cowplot
+  1.2.0's own DESCRIPTION demands `Imports: ggplot2 (>= 3.5.2)` —
+  per-node resolutions were individually sound but not **jointly** sound.
+  `install.packages` (`repos=NULL`) enforces exactly this and reports the
+  failure through its **return code**, not an exception — the gate's
+  quiet-mode "no exception ⇒ OK" printed the dishonest `: OK` above.
+  Distinct from every recorded class (all prior fatals were resolve-phase
+  transport/metadata or apt/shell).
+
+* **Repair (three parts, `install_sigminer.R`).** (1) A
+  **joint-consistency audit** between BFS and install: constraints are
+  collected from every settled node's hard Imports; a violation repairs by
+  moving the UNJUSTIFIED side (a pin equal to some requester's explicit
+  want is era-sacred; an unconstrained contrib-default floats back
+  through the Archive until its imports agree), with the tie resolved by
+  raising the dependency to the tightest joint bound — bounded 3 rounds,
+  honest die with the verbatim violation otherwise. (2) install status is
+  now read from `install.packages`' **return code**, never from absence of
+  an exception. (3) A failed install is **replayed without quiet** so the
+  R CMD INSTALL error text reaches the build log (the record `quiet=TRUE`
+  buried). Verification before the final spare: forced-mutant host dry-run
+  (`/tmp/m7_dryrun_force.log`) pinned ggplot2 to the pathological 3.3.0
+  and the audit healed it verbatim — `CONSIST ggplot2 3.3.0 breaks
+  (ggplot2 >= 3.5.2) from cowplot — dep-justified=TRUE
+  demander-justified=TRUE` → `CONSIST raise ggplot2 3.3.0 -> 4.0.2
+  (joint bound >= 3.5.2)` → `CONSIST graph jointly consistent (round 2)`
+  → graph complete, exit 0; the natural-state dry-run 6 was already
+  jointly consistent (zero DEFER, zero CONSIST needed, exit 0); the
+  Archive fallback candidate `cowplot_1.1.1` DESCRIPTION was host-verified
+  jointly satisfiable (`Imports: ggplot2 (> 2.2.1)` + bare others,
+  `NeedsCompilation: no`).
+
+* **spare-2 (FINAL, 2/2)** — `/tmp/m7_sigminer_build6.log`,
+  `BUILD-EXIT=1` — the budget's last expedition attempt. The resolve
+  phase went fully green under the hardened installer: **111 RESOLVEs,
+  zero DEFER, zero CONSIST** (cowplot 1.2.0 paired naturally with
+  ggplot2 4.0.3 — the graph arrived jointly consistent, the audit had
+  nothing to repair), one Archive walk. The death was the very first
+  install node:
+
+  ```
+  #9 418.4   install failed cli 3.6.6 (STATUS:NA, library reports 3.6.6) — replaying visibly
+  #9 425.1 FATAL:install failed for cli 3.6.6: STATUS:NA (library reports 3.6.6)
+  BUILD-EXIT=1
+  ```
+
+  The visible replay — the spare-1 repair part (3) doing its job — is
+  the self-indictment: R CMD INSTALL ran the *same tarball* end-to-end
+  and succeeded while the gate judged it failed:
+
+  ```
+  #9 418.7 * installing *source* package ‘cli’ ...
+  #9 425.1 * DONE (cli)
+  #9 425.1 FATAL:install failed for cli 3.6.6: STATUS:NA (library reports 3.6.6)
+  ```
+
+* **Classification (spare-2): INSTRUMENTATION class — the diagnostic
+  layer itself, not the dependency graph.** The spare-1 repair part (2)
+  read `install.packages`' *return code* — but the deparse of
+  `tools::install.packages` (base R 4.3.3, host-captured) shows the
+  success path is `return(invisible())` — **NULL** — and a failed
+  `R CMD INSTALL` surfaces only as the warning
+  `installation of package %s had non-zero exit status` (the
+  `status > 0L` branch); the function has neither an exception path nor
+  a status return for the install itself. `as.integer(unlist(NULL))` →
+  `integer(0)` → the non-empty check failed → `STATUS:NA` false-reject
+  on a library-confirmed-good install. Both generations of the gate
+  read channels this R does not have; the warning is the real channel.
+  This class was discovered only at the death itself and is absent from
+  every recorded class at launch time, so its consumption of the final
+  spare is the ledger's honest accounting, not an overrun.
+
+* **Controller budget ruling (governs the build-budget domain; issued
+  2026-10-08 upon the spare-2 classification).** Key conditions
+  verbatim: *“(1) fix scope is ONLY the STATUS-capture path; first
+  establish ground truth with a host probe in the base image: what does
+  tools::install.packages (R 4.3.3) actually return for a known-good
+  install and a forced-fail install — build the truth table, then map
+  it (your quiet-mode trust heuristic returns, but as an explicit
+  table-driven verdict with the replay path as witness, never as
+  silent trust); (2) resolver, CONSIST audit, Archive logic, pins: ZERO
+  changes — any diff outside the status/verdict path voids the
+  exception and I will halt the campaign myself; (3) RATCHET: if
+  build7 dies by ANY signature that is not the status/verdict path
+  itself — network FATAL, unresolvable node, real compile failure,
+  audit non-convergence, DEFER — the campaign closes to the §9c
+  honest-partial ledger IMMEDIATELY, no further discussion, no further
+  exceptions, ever; (4) The ruling itself goes verbatim into §9c as
+  controller-approved instrumentation-exception 1-of-1.”*
+
+* **Truth table (condition 1) — captured host-side in the base image
+  before the build, against the real `tools::install.packages`:**
+
+  ```
+  PROBE expect=OK        m7knowngood  0.0.1 status=OK    library=0.0.1
+  PROBE expect=FAIL      m7forcebreak 0.0.1 status=WARN:installation of package ... had non-zero exit status library=NA
+  TRUTH-TABLE-DONE
+  ```
+
+  success = NULL return, no warning, library reports version → verdict
+  `OK`; failure = the `non-zero exit status` warning fires (no
+  exception ever) → verdict `WARN:<verbatim>`, and the library gate
+  independently reports `(none)`. The shipped gate maps exactly this
+  table — warning-capture handler (`grepl` fixed-match,
+  `invokeRestart("muffleWarning")`), explicit verdict strings, the
+  visible replay retained as witness, the library DESCRIPTION as final
+  say. Conformance to condition 2: `install_sigminer.R` (untracked-new
+  for this slice) received exactly one edit since build6 terminated —
+  the `installTarball` status/verdict block; resolver/CONSIST/Archive/
+  pins byte-identical, re-confirmed by buildkit's own cache key
+  (`COPY install_sigminer.R CACHED` while the pre-change layers replayed).
+
+* **build7 (controller-authorized instrumentation exception, 1-of-1,
+  one-way ratchet per the ruling above).** Launch had host-side
+  operational turbulence with zero expedition content, recorded for
+  honesty: the background task table mislabeled the wrapper command and
+  the first non-interactive launches died `BUILD-EXIT=127` (bare
+  `docker` off the non-login PATH — pinned
+  `/usr/local/bin/docker` thereafter), leaving two orphaned server-side
+  buildkit sessions (buildkit does not cancel on client kill) that the
+  single authorized client then rode via shared-cache step dedup. All
+  sessions carried byte-identical installer content (COPY cache hit),
+  so the artifact remains exactly the authorized recipe; the
+  wrapper-owned `BUILD-EXIT` line plus a post-hoc live-container
+  re-assert of the §9c tail (version + five exports, run outside the
+  build) are the verification witnesses, independent of which session
+  solved the step. Pre-authorized risk probe outside the build: base
+  image carries the Fortran toolchain (`/usr/bin/gfortran`, `FLIBS =
+  -lgfortran -lm`), provisioning the quantreg/car-chain compile class.
+  Terminal record (VERBATIM, from the wrapper-owned `/tmp/m7_sigminer_build7.log`,
+  CR-cleaned witness `/tmp/m7_build7_clean.txt`):
+
+  ```
+  #9 1115.3 INSTALL sigminer       2.3.1 OK
+  #9 1115.3 PIN rbibutils      2.4.1 already exact
+  #9 1115.3 PIN gridBase       0.4-7 already exact
+  #9 1116.4 FATAL:documented sigminer export missing: signature_extract
+  #9 ERROR: process "/bin/sh -c Rscript /tmp/install_sigminer.R" did not
+        complete successfully: exit code: 1
+  BUILD-EXIT=1
+  ```
+
+  Terminal state: the whole-tree install completed (`92` distinct
+  `INSTALL ... OK` nodes — `96` raw lines including `4` re-emission
+  duplicates of car/rstatix/ggpubr/sigminer from the orphan-session
+  ride), then the build-time documented-exports guard died `1.1 s`
+  after `INSTALL sigminer 2.3.1 OK`, at layer-time `1116.4 s`.
+  This death signature is the guard enforcing a documented-exports
+  contract, **not** the status/verdict path — the ruling's condition-3
+  ratchet therefore fired: campaign closed to the honest-partial
+  ledger, zero further builds, no guard edits in-slice (see 9c.2 for
+  the controller adjudication verbatim and the forensic fact-check).
+
+## 9c.1 Verdict record — budget exhaustion and the forward-leap ledger
+
+The dispatch budget is fully spent: recorded recipe 0/1 (retired
+non-viable on established contract facts, §9c pre-flight), attempt-1
+(build4) and spares-1/2 (build5/build6) consumed by three **distinct**
+defect classes discovered only at each death — transport-flake, joint
+hard-dep inconsistency, and the instrumentation/status-capture class —
+each root-caused and closed with host-side evidence, never by retry
+pounding. Registry stays `PENDING-VERIFY` (no digest was ever invented;
+`test_registry.py` was never touched outside its data values because
+the image did not yet exist).
+
+**The forward-leap ledger** — what the campaign proved passable, so the
+next dispatch spends one build, not six:
+
+1. **Resolve layer: complete.** 111/111 nodes resolve through
+   contrib → per-pkg Archive → flat Archive (+listing walk, master-
+   index canonicalization) → pinned bioc 3.17 contrib, with zero DEFER
+   and a naturally CONSIST-clean graph (build6). The flakiness class is
+   absorbed by retry/deferral (probe8: package-URL flakiness is
+   intermittent, not permanent; 502-class transient recovery observed
+   live in build7 at isoband, DEFER → re-queue → OK).
+2. **Install layer: full tree proven end-to-end.** build5 established
+   `53` nodes verbatim (the tidyverse/ggplot support spine —
+   cli/data.table/Rcpp/rlang/vctrs/purrr/future/furrr/tibble/dplyr/
+   ggplot2-family incl. isoband/farver/labeling/viridislite/scales/
+   utf8/pillar; the bioc load-bearing layer — DNAcopy/zlibbioc/
+   **Rhtslib 2.2.0, the named historical blocker**/maftools 2.16.0/
+   BiocManager/cpp11; the NMF support group; rbibutils 2.4.1 under the
+   recorded libcurl4-openssl-dev pin). **build7 closed the remainder:
+   `92` distinct `INSTALL ... OK` nodes — the complete installable
+   tree, the forecast chain (modelr/Deriv/fracdiff/lmtest/timeDate/
+   urca/zoo/RcppArmadillo), stringi (ICU), quantreg, ggpubr, and
+   sigminer 2.3.1 itself** (`INSTALL sigminer 2.3.1 OK` verbatim at
+   `#9 1115.3`). The installation science is DONE; what stopped the
+   build is the guard's export contract, adjudicated in 9c.2.
+3. **Compile surface: provisioned.** apt layer carries cmake + the
+   -dev quartet (zlib/bz2/lzma/curl-openssl); Fortran present
+   (`FLIBS=-lgfortran -lm`) for the car→quantreg chain.
+4. **The status/verdict gate now matches base-R reality** (truth table
+   above): it cannot again print the `: OK` lie (spare-1), and it
+   cannot again false-reject a library-confirmed install on a NULL
+   return (spare-2).
+
+Five documented-export asserts and the exact-version pin remain the
+build's terminal gate, unchanged since dispatch — but the forensic
+adjudication below establishes the export list itself is defective for
+the pinned artifact, so the next slice's charter is the guard-contract
+correction (a NEW controller-authorized slice budget), not another
+build of this recipe. When that slice's build closes green, the flip
+ceremony is fixed: live
+`docker image inspect --format '{{.Id}}'` on the tag → registry.py
+data-only flip (inspect line in the commit body) → gates 1-4 → smoke
+cell proves the adapter clears the image gate.
+
+## 9c.2 Ratchet close-out — controller adjudication and the zero-build fact-check
+
+**Controller adjudication (verbatim, effective at the build7 terminal):**
+"RATCHET TRIGGERED — controller adjudication, effective now. Your
+build7 verbatim terminal: `FATAL:documented sigminer export missing:
+signature_extract` / BUILD-EXIT=1 at layer-time 1116s, after ~96
+INSTALL-OK (the FULL installable tree completed — the installation
+science is DONE). This death signature is the build-guard enforcing a
+documented-exports contract on the installed sigminer 2.3.1 — it is
+NOT the status/verdict path; per my ruling's condition-3 this closes
+the campaign: ZERO further builds in slice-2, no guard edits in-slice,
+no discretion." Close-out lanes per the same dispatch: (a) this
+honest-partial ledger; (b) one zero-build host-side fact-check;
+(c) registry stays PENDING_VERIFY; (d) gates 1-3 green, push, report —
+the follow-up guard-contract correction is a NEW slice, not this one
+continuing.
+
+**The fact-check (zero build cost; host-side fetch of the exact
+Archive tarball the build log recorded).** Source:
+`https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz`,
+sha256 `b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b`,
+`4,153,108` bytes, unpacked host-side (never in any build).
+
+* **NAMESPACE verbatim:** `108` exports; **`0` of the `5` guard names**
+  (`set.seed`, `signature_extract`, `fitsignatures`, `signature_import`,
+  `signature_renorm`) present; the package's real API is the
+  `sig_*`/`bp_*` family (`sig_extract`, `sig_fit`, `sig_import`,
+  `sig_estimate`, `bp_extract_signatures`, …).
+* **Version sweep rules out a lineage drift inside CRAN:** `1.2.5` →
+  `0/5`; `0.1.11` (the 2021 paper-era release) → `0/5`, `sig_*` from
+  inception; local ground truth `2.3.3` → `0/5`; tree-wide greps for
+  all five names across the sources return zero; the local repo's
+  `git -S` pickaxe history for the names is empty.
+* **bioc excluded:** the pinned Bioconductor 3.17 contrib `PACKAGES`
+  index contains no `sigminer` package at all, so no bioc variant
+  could have supplied the names.
+* **Internal provenance of the defective list:** the guard mirrors
+  `run_sigminer.R` verbatim — its header comment claims "the documented
+  API of CRAN sigminer 2.3.1 (signature_extract / fitsignatures /
+  signature_import / signature_renorm / set.seed)" (lines 17-18), its
+  line 54 runs the same five-name assert loop, and its call sites
+  (`signature_extract(signature = list(counts = ...),` line 76;
+  `fitsignatures(de_novo_signatures = ...)` line 87) would equally not
+  resolve — the same false premise infects both files. That file is
+  GREEN-slice authorship, out of this slice's scope.
+* **External lineage candidate (UNCONFIRMED lead):** the package's own
+  DESCRIPTION quotes "Steele Christopher D., et al. (2022)
+  <DOI:10.1038/s41586-022-04738-6>" — the Dunedin SigMiner suite whose
+  published API uses the `signature_*` verb names — the most plausible
+  source of the confusion. Verbatim external confirmation was NOT
+  obtainable with this network's tooling (GitHub repo/raw fetches
+  returned `404` for the candidate org paths; the docs host
+  `sigminer.dunedin.scot` presents a TLS hostname-mismatch — its
+  certificate covers only `dunedin.scot`/`www.dunedin.scot`; the web
+  search provider returned unrelated results for every phrasing;
+  crossref fuzzy matching missed the paper). Recorded as a lead, not a
+  fact.
+
+**Adjudication of the three proposed branches:** (i) *package genuinely
+lacks `signature_extract`* — **TRUE and complete**: absent from every
+CRAN sigminer version ever published, tree-wide, with empty pickaxe
+history. (ii) *guard input list defective* — **TRUE by consequence**
+for the pinned artifact: the guard (and its `run_sigminer.R` source of
+provenance) asserts an API that exists in no sigminer version; the
+correct build-time export contract must name the `sig_*` family (or
+drop the export assert and keep the exact-version pin), which is the
+follow-up slice's charter. (iii) *list sourced from a different
+lineage* — **plausible, unconfirmed**: the Dunedin suite (Steele 2022,
+cited in the package's own DESCRIPTION) is the best candidate; external
+verbatim evidence blocked by the network conditions above.
+
 ## 10. Open items for the GREEN dispatch
 
 1. Author the two harness Dockerfiles (`Dockerfile.sigminer`, mirror-pinned)
