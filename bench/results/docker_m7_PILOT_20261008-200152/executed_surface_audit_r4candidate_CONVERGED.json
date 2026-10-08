@@ -1,0 +1,48 @@
+{
+ "gaps": [],
+ "provisioned": {
+  "apt": [
+   "ca-certificates",
+   "cmake",
+   "libbz2-dev",
+   "libcurl4-openssl-dev",
+   "liblzma-dev",
+   "python3",
+   "zlib1g-dev"
+  ],
+  "crane": [
+   "jsonlite"
+  ]
+ },
+ "python_closure": {
+  "m7_entry.py": [
+   "__future__",
+   "argparse",
+   "json",
+   "os",
+   "pathlib",
+   "subprocess",
+   "sys"
+  ]
+ },
+ "python_stdlib": [
+  "__future__",
+  "argparse",
+  "json",
+  "os",
+  "pathlib",
+  "subprocess",
+  "sys"
+ ],
+ "r_closure": {
+  "run_sigminer.R": [
+   "jsonlite",
+   "sigminer"
+  ]
+ },
+ "resolver_pinned": [
+  "sigminer"
+ ],
+ "third_party_python": [],
+ "verdict": "CONVERGED"
+}

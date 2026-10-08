@@ -90,6 +90,28 @@ RUN Rscript /tmp/install_sigminer.R
 WORKDIR /work
 COPY m7_entry.py /work/
 COPY run_sigminer.R /work/
+# RB-01 (2026-10-09): the pilot's exit-127 catch -- the cell protocol's own
+# measurement wrapper (m7_entry.py, ENTRY_SCRIPT in competitors/docker_cmd.py)
+# is python and the registry launches it via entrypoint="python3", but the
+# r-ver base carries no interpreter at all: no python3, no python on PATH.
+# Single-purpose delta per the controller's scope-frozen ruling: provision
+# exactly that interpreter and nothing else (no base move, no R pin move, no
+# layer reshuffle; appended last so every cached layer above stays warm).
+# Witness gate: tools/probe_sigminer_cell_argv.py must run the REAL cell argv
+# to sidecar-schema-valid depth GREEN against this image before the registry
+# flip; the RED witness vs slice3-r2 is committed next to the records.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
+# RB-03 (2026-10-09): convergence-gate closure -- the executed-surface audit
+# (tools/audit_executed_surface_deps.py, suite group (M)) found run_sigminer.R's
+# library(jsonlite) (single call site: fromJSON at L85) uncovered by the recipe;
+# the slice3-r3 witness died exactly there. Provisioned through the recipe's own
+# CRAN idiom (install_sigminer.R CRAN/CONTRIB host) with the build9 result-gate
+# discipline: the layer fails loudly unless the installed library's own
+# DESCRIPTION reports a version. Controller-ruled scope, one build, spent on the
+# COMPLETE audited closure -- never iteratively.
+RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org/src/contrib")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), "provisioned\\n")'
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
 # /work/run_sigminer.R ... (adapters/docker_cmd.py ENTRY_SCRIPT); CMD is
 # documentation of that shape only.

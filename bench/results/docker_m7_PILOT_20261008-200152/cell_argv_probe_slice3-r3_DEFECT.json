@@ -1,0 +1,11 @@
+{
+ "cell": "sigminer__main__N100",
+ "missing": [
+  "intervals.csv",
+  "errors.log",
+  "manifest.json"
+ ],
+ "run_rc": 1,
+ "status_tail": "fail: container run failed (exit 1): Error in library(jsonlite) : there is no package called \u2018jsonlite\u2019\nExecution halted\n",
+ "verdict": "DEFECT"
+}

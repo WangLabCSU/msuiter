@@ -130,3 +130,74 @@ over-subscription lesson (8-way shard fan-out under 8 GB) keeps shard fan-out ca
   BLOCKED pending the interpreter ruling, and will pass the same gate before Phase B.
 - Phase B (full matrix) stands by explicit controller instruction only; nothing here
   pre-authorizes it.
+
+## 7. The instrumentation ladder: pilot -> RED -> r3 -> deeper defect -> audit -> r4 (RB-01 re-death, RB-02 GO, RB-03)
+
+RB-01 (python3 provisioning, budget 1/1) was executed to its mandated boundary:
+the failing cell-argv probe was committed as the RED witness
+(`cell_argv_probe_slice3-r2_RED.json`, commit `1cb49d3`) BEFORE the single
+authorized build was spent; the r3 image (python3 layer, digest
+`sha256:db86e541...`, Id/Size 1749913171, Created 2026-10-08T20:58:14.870995334Z)
+built green but the re-probe DEFECTED one layer deeper:
+
+```
+fail: container run failed (exit 1): Error in library(jsonlite) :
+      there is no package called 'jsonlite'
+```
+
+python3 cleared the interpreter gate; `run_sigminer.R` then died on an R
+package the recipe never provisioned. Witness:
+`cell_argv_probe_slice3-r3_DEFECT.json` (verbatim sidecar tail; the r3 image
+stays local-only -- never flipped, never recorded as final anywhere, exactly
+as ruled). Per RB-01 the run STOPPED and reported rather than building again.
+
+RB-02 ruled Phase-B GO on the filed projection (frozen degraded profile,
+21 (arm,N) cells/tool x reps=100, master seed 20260928, <2h ceiling) with the
+hard ordering "Phase-B launches ONLY after the r3 probe flips GREEN".
+
+RB-03 ruled on the re-death (verbatim extracts):
+
+> r4 BUILD AUTHORIZED (one build; this unit's instrumentation ledger reads
+> 2/2 after it): combined scope-frozen delta = {python3 layer AS ALREADY
+> BUILT (cache-warm, no change) + ONE appended RUN provisioning jsonlite via
+> the recipe's existing CRAN-mirror install.packages idiom + result-gated
+> packageVersion assert on jsonlite ...} Zero other changes
+
+> CONVERGENCE GATE (mandatory, before spending the build, committed visible
+> on the branch like the RED probe): a static dependency-closure audit test
+> that parses the executed surface of BOTH /work scripts ... asserts the
+> discovered package closure is a subset of the image-recipe provisioned
+> set. It must be GREEN against the r4 recipe candidate pre-build. If the
+> closure audit surfaces any gap beyond {python3, jsonlite}, fold its
+> provisioning into the SAME r4 recipe before building -- the build is spent
+> once on the complete closure, never iteratively.
+
+> If the closure-gate GREEN + build succeeds but the probe STILL finds a gap
+> the audit did not predict -> STOP and report: third incident means the
+> executed-surface model itself is suspect and escalates to controller-side
+> strategy (no further incremental rulings)
+
+> On probe-GREEN: proceed straight through to the Phase-B full matrix per
+> RB-02 (no checkpoint)
+
+The gate is implemented as `tools/audit_executed_surface_deps.py` + suite
+group (M) (`test_executed_surface_audit.py`, registered in `run_all.py`).
+Each executed-surface file is parsed under the grammar of the interpreter
+that actually runs it (Rscript: `library/require/requireNamespace` + `::`/`:::`;
+python3: import/from classified against the live stdlib table), and the
+closure is asserted against the recipe's own provisioning surface (apt layer
+tokens, `install.packages` scalar AND vector forms, and the resolver's
+result-gated `packageVersion` targets). Escape-class regexes are assembled
+from `chr(92)` because this transport has demonstrably mangled backslash runs
+in transit -- the pattern is a behavioural object verified at import, not a
+byte hope.
+
+Pre-build verdict against the r4 recipe candidate (python3 + jsonlite layers,
+both uncommitted-to-image until the single authorized build): **CONVERGED,
+zero gaps** -- `executed_surface_audit_r4candidate_CONVERGED.json` here.
+R closure `{jsonlite, sigminer}` (sigminer rides the resolver pin, jsonlite
+the new CRAN layer with its build9-discipline result gate); executed-surface
+python is stdlib-pure; third-party python empty. Had any gap beyond
+{python3, jsonlite} appeared, its provisioning would have joined THIS recipe
+before the build, per the ruling. The r4 build itself is the unit's second
+and final instrumentation-class spend (ledger 2/2).
