@@ -1,0 +1,26 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__main__N100,sigminer,main,100,0.23,"fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: ""python3"": executable file not found in $PATH
+
+Run 'docker run --help' for more information
+",0.0
+sigminer__main__N1000,sigminer,main,1000,0.12,"fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: ""python3"": executable file not found in $PATH
+
+Run 'docker run --help' for more information
+",0.0
+sigminer__comp_mmr__N100,sigminer,comp_mmr,100,0.11,"fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: ""python3"": executable file not found in $PATH
+
+Run 'docker run --help' for more information
+",0.0
+sigminer__comp_mmr__N1000,sigminer,comp_mmr,1000,0.13,"fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: ""python3"": executable file not found in $PATH
+
+Run 'docker run --help' for more information
+",0.0
+sigminer__nb__N1000,sigminer,nb,1000,0.11,"fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: ""python3"": executable file not found in $PATH
+
+Run 'docker run --help' for more information
+",0.0
+sigprofiler__main__N100,sigprofiler,main,100,14.16,ok,13.934
+sigprofiler__main__N1000,sigprofiler,main,1000,13.31,ok,13.073
+sigprofiler__comp_mmr__N100,sigprofiler,comp_mmr,100,14.37,ok,14.141
+sigprofiler__comp_mmr__N1000,sigprofiler,comp_mmr,1000,13.12,ok,12.893
+sigprofiler__nb__N1000,sigprofiler,nb,1000,13.24,ok,13.02
