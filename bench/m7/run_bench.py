@@ -326,7 +326,8 @@ def write_seeds_manifest(path: Path, arms, competitor_names, args) -> None:
 
 def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
     """Fairness attestation (§4.5) — the harness-output/adjudication-gate
-    framing of the G0 judgment document. Scoring verdicts are later slices."""
+    framing of the G0 judgment document. The scoring-verdict half is appended
+    below by the scoring slice on the final (non-shard) pass."""
     tally = {}
     for r in rows:
         key = ("cached" if r["status"] == "cached"
@@ -367,9 +368,10 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
         "",
         "Honest footer: this is harness output serving as the adjudication gate.",
         "Authoritative competitor measurement is the docker-adapter run at the",
-        "frozen protocol; smoke/mock passes prove pipeline plumbing only. The",
-        "Hungarian P/R/F1 scoring verdict (ARCHITECTURE §8) is the later",
-        "U-M7-02/03 slice — this document attests fairness, not outcomes.",
+        "frozen protocol; smoke/mock passes prove pipeline plumbing only. This",
+        "half attests fairness, not outcomes; the Hungarian P/R/F1 scoring",
+        "verdict (U-M7-02 scoring slice, ARCHITECTURE §8) is appended below on",
+        "the final pass, produced by the scoring engine over the cachedir.",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -447,6 +449,14 @@ def main(argv=None) -> int:
         print(f"[adapter] FAILED cells: {failures[:5]}"
               f"{'...' if len(failures) > 5 else ''}", file=sys.stderr)
     print(f"[attestation] -> {jd.name}")
+    if args.shard_tag is None:            # final authoritative pass only
+        from scoring import run_products  # deferred import: pure consumer slice
+        bench, srep = run_products.emit(
+            cachedir=cachedir, outdir=outdir, profile=args.profile,
+            adapter=args.adapter, provider=args.provider,
+            provider_seed=args.provider_seed, ts=ts, judgment_path=jd)
+        print(f"[scoring] {bench.name}: {srep.cells_scored} cells scored, "
+              f"{len(srep.skipped)} skipped -> verdict appended to {jd.name}")
     # skip-not-skip: a required cell that came back SKIP fails the run —
     # a missing environment must be seen, never tallied as green.
     return 0 if not failures and not skips else 1

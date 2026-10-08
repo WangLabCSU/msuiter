@@ -14,6 +14,13 @@ Groups (task contract, docs/devlog/2026-10-08-m7-competitor-harness-design.md §
   ② test_adapters            refuse-to-run seam + frozen thread-cap injection
   ③ test_timings_schema      timings columns = G0 six-column prefix + cpu_seconds
   ④ test_output_contract     cache-hit guard + authoritative outdir file set
+Scoring slice (benchmark table + scoring verdicts, U-M7-02 follow-on):
+  ⑤ test_scoring_match       Hungarian assignment + frozen cosine tolerance
+  ⑥ test_scoring_metrics     P/R/F1 conventions + exposure-error semantics
+  ⑦ test_scoring_truth       seed-derived truth == frozen generator truth
+  ⑧ test_scoring_pipeline    closed-form fixture cells -> rows/skips/CSV
+  ⑨ test_scoring_judgment    preserved fairness half + appended verdict half
+  ⑩ test_scoring_determinism byte-reproducible benchmark CSV over one cachedir
 """
 
 from __future__ import annotations
@@ -24,7 +31,11 @@ import time
 import traceback
 
 MODULES = ["test_registry", "test_adapters", "test_timings_schema",
-           "test_output_contract"]
+           "test_output_contract",
+           # U-M7-02 scoring slice (benchmark table + scoring verdicts):
+           "test_scoring_match", "test_scoring_metrics", "test_scoring_truth",
+           "test_scoring_pipeline", "test_scoring_judgment",
+           "test_scoring_determinism"]
 
 
 def _collect(mod_name):

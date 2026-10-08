@@ -471,3 +471,49 @@ assertions hold)` (exit 0).
 4. Smoke rehearsal of the full orchestration with a mock-style local adapter
    (same as G0's mock idiom) proving shard-vs-serial byte-equality before any
    real competitor matrix is run.
+
+## 11. Addendum — the scoring slice (benchmark table + scoring verdicts)
+
+Dispatch U-M7-02 follow-on (same PR line, later commit): turn the harness
+from fairness attestation into the paper's benchmark-table generator. The
+fairness half is untouched in spirit and bytes; scoring is a pure consumer.
+
+**Module layout (bench/m7/scoring/).** `match.py` (Hungarian assignment +
+cosine kernel), `metrics.py` (P/R/F1 + exposure-error conventions),
+`truth.py` (seed-derived ground truth via read-only `g0.sim.truth_composition`),
+`cells.py` (cell discovery + prediction-table loading against the run path's
+own `GUARD_FILES`), `run_products.py` (the one score pass; CSV + verdict
+emission), `judgment.py` (the appended verdict half). Entry: `run_bench.py`
+gains exactly one call site on the final (non-`--shard-tag`) pass;
+`run_products.emit()` writes `benchmark_m7_<ts>.csv` into the authoritative
+outdir and appends the verdict sections to the judgment document.
+
+**Match-tolerance decision.** `MATCH_MIN_COSINE = 0.85` — the **midpoint** of
+the frozen 0.80–0.90 sweep band (ARCHITECTURE §8 / benchmark memo 2026-10-05
+§3). The primary table must fix one operating point so the headline number is
+never swept post-hoc; the sweep lives on as the robustness appendix. The band
+is a protocol fact, not a tuned value, so the midpoint is the least-chosen
+choice. TODO(paper): pin the citation for the band with its source ref.
+Below-tolerance pairs are *rejected* (gate, not weight) and fall out FP/FN.
+
+**Frozen measurement conventions** (each pinned by tests): per-cell P/R/F1 is
+the mean over samples; `arm_rollup`/`n_rollup` pool TP/FP/FN **then** derive
+(a low-N tail cannot outvote volume by averaging); exposure errors exist only
+on matched bounds — absent bounds read `na`, never a flattering zero; the
+call predicate is zero-threshold (tiny leakage on an absent signature is
+measured as FP on purpose, §8 semantics); only the `absolute` main estimand
+is scored and dropped rows are counted into `notes`; unscorable cells are
+*reported* skipped (skip-not-skip on the read side); cell-contract violations
+(crossed sample ids, duplicate call rows) raise `CellContractError`.
+
+**Determinism is a hard rule**: no RNG at score time; canonical row order,
+fixed 6-decimal rendering, ts is file-name metadata only. The same cachedir
+reproduces a byte-identical table (`test_scoring_determinism` is the standing
+gate; the dispatch demo saw sha256 equality across independent passes).
+
+**Verification record (commands actually run).** bench/m7 `python3 -m
+tests.run_all`: 48/48 (12 pre-existing + 36 new across ⑤–⑩); bench/g0 suite
+45/45 unchanged; `tools/ci-selfcheck.py` PASS exit 0; `grep -rn "g0/cache"
+bench/m7` empty; double-emission byte-identical demo cmp-exit 0. The mock
+smoke pass now ends with `[scoring] benchmark_m7_<ts>.csv: N cells scored, M
+skipped -> verdict appended` and exits 0.
