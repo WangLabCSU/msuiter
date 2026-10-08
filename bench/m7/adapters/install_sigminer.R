@@ -819,6 +819,16 @@ if (!identical(ns_hash, NS_SHA256))
 nsl <- readLines(nsf, warn = FALSE)
 contract <- sub("^export\\((.*)\\)$", "\\1",
                 nsl[grepl("^export\\(", nsl)])
+## build8 root cause 2026-10-08 (/tmp/m7_sigminer_build8.log: the tail
+## assert FATALed on the export name \"%>%\", quotes and all): the
+## NAMESPACE grammar quotes non-syntactic export names -- the witnessed
+## bytes carry exactly export("%>%") and export(":=") -- while exists()
+## looks up BINDING names, so the stanza quotes must come off before
+## resolution (host repro /tmp/m7_dl/repro_dequote.R: %in% and <- resolve
+## clean on baseenv, quote-embedded forms never resolve; the live host
+## sigminer namespace answers TRUE only to the clean operator names).
+## Plain names pass through both subs untouched.
+contract <- sub('^"(.*)"$', "\\1", sub("^`(.*)`$", "\\1", contract))
 if (length(contract) < 100L)
   die("witness NAMESPACE malformed: %d export() lines", length(contract))
 for (fn in contract)

@@ -1006,6 +1006,86 @@ Registry `sigminer` entry: `PENDING-VERIFY` — untouched, per charter 5 the
 flip is reserved for the live `docker image inspect .Id` on a green build
 (the §9c.1 flip ceremony stands unchanged).
 
+### 9d.7 build8 death — guard-quoting forensics, controller ruling, the preflight-gate discipline
+
+**Death (verbatim, log /tmp/m7_sigminer_build8.log, expedition attempt 1/2).**
+Full replay ran clean — hash tripwire passed (no drift die), 96 INSTALL-OK
+lines, 92 RESOLVE-via — then the new tail assert stopped the build:
+
+    #9 1284.7 INSTALL sigminer       2.3.1 OK
+    #9 1284.7 PIN rbibutils      2.4.1 already exact
+    #9 1284.7 PIN gridBase       0.4-7 already exact
+    #9 1285.3 FATAL:witnessed sigminer export missing: "%>%"
+    #9 ERROR: process "/bin/sh -c Rscript /tmp/install_sigminer.R" did not complete successfully: exit code: 1
+    ERROR: failed to build: failed to solve: ... exit code: 1
+
+**Forensics (agent, zero build cost).** The die site is the guard, not the
+artifact. The NAMESPACE grammar quotes non-syntactic export names and the
+witnessed bytes carry exactly two quoted stanzas — export("%>%") and
+export(":=") — so the stanza capture (install_sigminer.R L820) folded the
+grammar quotes INTO the lookup name, while exists() resolves BINDING names:
+a quote-embedded lookup can never resolve. The FATAL line itself is the
+proof — the %s wrap in die() adds no quotes, so the displayed "%>%"
+carries the folded-in double-quotes. Host repro /tmp/m7_dl/repro_dequote.R
+(exit 0): %in% and <- resolve clean on baseenv (TRUE) while their
+quote-embedded forms never do (FALSE); the live host sigminer namespace
+answers TRUE only to the clean operator names. Artifact exonerated:
+2.3.1 exact, 96 nodes install OK, namespace loads, and ALL 115 witnessed
+names resolve under clean lookup.
+
+**Controller ruling (verbatim, 2026-10-08, corroborated by the
+controller's own physical re-verification rather than agent attestation):**
+"RULING REAFFIRMED ... instrumentation-class CONFIRMED. Controller
+evidence: m7 suite re-run in your worktree = 56/56 PASS incl. your new
+operator-stanza unit; L831 dequote verified positioned before length-guard
+L832/exists-loop L834; witnessed bytes L8-9 = export("%>%")/export(":=")
+confirmed; host probe: clean := TRUE/quoted FALSE, clean %>% TRUE/quoted
+FALSE; preflight_tail2 re-invoked by me both modes — HOST: 'full-set
+exists() misses vs host ns (2.3.1): 0', CORE_API 9/9,
+PREFLIGHT-TAIL2-HOST-OK; CONTAINER (rocker/r-ver:4.3.3 via mirror, the
+build engine): quote-embedded remaining: 0, PREFLIGHT-TAIL2-CONTAINER-OK
+EXIT=0. Preflight gate SATISFIED by controller hand." Per the standing
+build-budget policy the one-use instrumentation-class exception is hereby
+spent on build9 (the authorized reserve).
+
+**Fix (rides with this ledger).** One normalization statement in the tail
+assert between the stanza parse and the resolve loop: each parsed name
+loses one pair of surrounding double-quotes or back-ticks before exists()
+resolution (verbatim expression in the installer's tail block; plain
+syntactic names pass through untouched). The witnessed fixture stays
+byte-pinned — dequoting belongs to the consuming guard, never to the
+witness.
+
+**Regression unit (TDD).** test_sigminer_api_contract gains
+test_guard_resolves_operator_stanzas_dequoted pinning (a) the two quoted
+stanzas verbatim inside the fixture, (b) the normalization strictly before
+the exists() loop, (c) the algorithm over the fixture bytes: 115 clean
+names, zero quote-embedded, operators and CORE_API present. RED 55/56
+(exactly the new unit) then GREEN 56/56; g0 frozen 45/45;
+tools/ci-selfcheck.py PASS exit 0; protected scope vs origin/main empty.
+
+**Preflight-gate discipline (campaign lesson, ratcheted).** build8's guard
+line executed for the FIRST time inside the build — the same blind-spot
+class that the slice-2 digest()/system2 pre-flight catches defused, one
+budget dollar more expensive. Standing rule: no build dollar without a
+host-side preflight that EXECUTES the shipped bytes, not a hand-rewritten
+mirror. /tmp/m7_dl/preflight_tail2.R pulls the installer's own parse and
+dequote statements out of install_sigminer.R, evaluates them over the
+witnessed NAMESPACE bytes, hashes via the shipped coreutils channel, and
+in host mode runs the full 115-name exists() resolve loop against the
+live installed namespace (misses=0 at 2.3.1, CORE_API 9/9). Both modes
+passed pre-launch; the controller re-invoked both hands independently.
+
+**Budget state at build9 launch.** build8 = 1/2 spent (instrumentation-
+class, ruled). build9 launches at 2/2 — BUDGET EXHAUSTED AT LAUNCH: any
+FATAL/ERROR ⇒ honest-partial close per dispatch (4), registry stays
+PENDING-VERIFY, no exceptions ever again. Expected green terminal: replay
+→ ASSERT sigminer 2.3.1 exact + 115 witnessed exports present (9 core
+functions) → naming/writing-image/exporting-layers → DONE; the digest
+flip then follows the §9c.1 ceremony as its own gated step (the controller
+holds the data-only registry/test-pin flip commit until the live inspect
+bytes land in the report).
+
 ## 10. Open items for the GREEN dispatch
 
 1. Author the two harness Dockerfiles (`Dockerfile.sigminer`, mirror-pinned)

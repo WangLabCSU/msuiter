@@ -188,3 +188,44 @@ def test_seed_flows_through_documented_parameter_only():
         assert prose not in RUNNER, (
             f"the fictional seed-entry-point claim ({prose!r}) must stay "
             f"dead — 0 occurrences in the witnessed NAMESPACE")
+
+
+def test_guard_resolves_operator_stanzas_dequoted():
+    """build8 death 2026-10-08 (log /tmp/m7_sigminer_build8.log, tail
+    FATAL 'witnessed sigminer export missing: \"%>%\"'). The NAMESPACE
+    grammar quotes non-syntactic export names — the witnessed bytes carry
+    exactly export("%>%") and export(":=") — and exists() looks up
+    BINDING names, so the stanza quotes must come off before resolution
+    (host repro /tmp/m7_dl/repro_dequote.R: %in% and <- resolve clean on
+    baseenv, the quote-embedded forms never resolve; the live host
+    sigminer namespace answers TRUE only to the clean operator names).
+    Pinned here so the guard parser can never regress into the quote trap.
+    """
+    # (a) witness shape: the two operator stanzas verbatim in the
+    #     byte-pinned fixture — the fixture MUST stay verbatim, the
+    #     dequote belongs to the consuming guard, not the witness.
+    raw = FIXTURE.read_text(encoding="utf-8").splitlines()
+    assert 'export("%>%")' in raw and 'export(":=")' in raw, (
+        "the witnessed NAMESPACE carries the pipe and assignment operator "
+        "stanzas — the fixture must stay verbatim")
+    # (b) the guard pipeline: parse -> DEQUOTE -> resolve, normalization
+    #     strictly before the exists() loop (anchor: its unique for-loop).
+    assert "sub('^\"(.*)\"$'," in INSTALLER and 'sub("^`(.*)`$",' in INSTALLER, (
+        "the tail assert must strip NAMESPACE quoting from the parsed "
+        "contract before exists() resolution (build8 root cause)")
+    i_norm = INSTALLER.find("sub('^\"(.*)\"$',")
+    i_loop = INSTALLER.find("for (fn in contract)")
+    assert 0 <= i_norm < i_loop, (
+        "the dequote normalization must sit BEFORE the exists() resolve loop")
+    # (c) the algorithm over the fixture bytes: all 115 clean, zero
+    #     quote-embedded, both operators present as real binding names.
+    contract = [re.sub(r"^export\((.*)\)$", r"\1", ln.strip())
+                for ln in raw if ln.strip().startswith("export(")]
+    assert len(contract) == FIXTURE_EXPORT_LINES, (
+        "fixture stanza count drifted from the witnessed 115")
+    fixed = [re.sub(r'^"(.*)"$', r"\1", re.sub(r"^`(.*)`$", r"\1", c))
+             for c in contract]
+    assert not any(f.startswith(('"', "`")) for f in fixed), (
+        "dequote left a quoted name — the exists() channel would FATAL again")
+    assert "%>%" in fixed and ":=" in fixed and set(CORE_API) <= set(fixed), (
+        "the resolved name set must cover the operators and the core family")
