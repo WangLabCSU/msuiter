@@ -21,6 +21,8 @@ Scoring slice (benchmark table + scoring verdicts, U-M7-02 follow-on):
   ⑧ test_scoring_pipeline    closed-form fixture cells -> rows/skips/CSV
   ⑨ test_scoring_judgment    preserved fairness half + appended verdict half
   ⑩ test_scoring_determinism byte-reproducible benchmark CSV over one cachedir
+SigMiner API-contract pin (slice-3 realignment to the witnessed sig_* family):
+  ⑪ test_sigminer_api_contract  verbatim NAMESPACE fixture + eradication gates
 """
 
 from __future__ import annotations
@@ -35,7 +37,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-02 scoring slice (benchmark table + scoring verdicts):
            "test_scoring_match", "test_scoring_metrics", "test_scoring_truth",
            "test_scoring_pipeline", "test_scoring_judgment",
-           "test_scoring_determinism"]
+           "test_scoring_determinism",
+           # slice-3: adapter API realignment contract (memo §9c.2/§9d):
+           "test_sigminer_api_contract"]
 
 
 def _collect(mod_name):

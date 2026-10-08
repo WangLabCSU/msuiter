@@ -48,8 +48,20 @@ REGISTRY: dict[str, CompetitorSpec] = {
         name="sigminer",
         runtime="R",
         version="2.3.1",
-        image_ref="m7-sigminer:cr2.3.1",
-        image_digest=PENDING_VERIFY,   # replaced only from docker image inspect
+        # slice-3 flip 2026-10-08 (memo 9d.8): build9 green -- docker build
+        # exit 0 (/tmp/m7_sigminer_build9.log): INSTALL sigminer 2.3.1 OK ->
+        # 'ASSERT sigminer 2.3.1 exact + 115 witnessed exports present
+        # (9 core functions)' -> naming to docker.io/library/msuiter-
+        # sigminer:slice3-r2 done -> unpacking done -> DONE 7.1s. Live
+        # inspect, controller capture = source of record (agent capture
+        # byte-identical): Id sha256:c2a52c719f6ed2f45184e4fd61dcec767596
+        # b82c04061006c7ec9f5d0fb91157, Size 1707456647, Created
+        # 2026-10-08T14:33:58.976726552Z. Image built at branch commit
+        # f3827bb (the guard-dequote fix; build8 had died at the pre-fix
+        # witnessed-export assert -- controller-ruled instrumentation-class,
+        # one-use exception spent on this build).
+        image_ref="msuiter-sigminer:slice3-r2",
+        image_digest="sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c04061006c7ec9f5d0fb91157",  # docker image inspect .Id, 2026-10-08 verified build
         status=STATUS_READY,
         entrypoint="python3",           # m7_entry.py measures the Rscript child
         runner_script="run_sigminer.R",

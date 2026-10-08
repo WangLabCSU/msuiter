@@ -77,9 +77,13 @@ RUN apt-get update \
 # itself. The seventh defect's belt-and-braces pins (rbibutils 2.4.1,
 # gridBase 0.4-7) are kept, result-gated through the same fetch path.
 #
-# The recorded build-time asserts are preserved verbatim in the script's
-# tail: packageVersion("sigminer")=="2.3.1" exact and the five documented
-# exports present — any drift stops the build loudly (G0 build-guard idiom).
+# The recorded build-time asserts are preserved in the script's tail:
+# packageVersion("sigminer")=="2.3.1" exact plus the WITNESSED NAMESPACE
+# contract (slice-3, memo §9c.2/§9d): the export set parsed from the
+# resolver's own downloaded tarball bytes behind a sha256 tripwire, with the
+# core bp_*/sig_* extraction family function-asserted — any drift stops the
+# build loudly (G0 build-guard idiom). The old five "documented exports"
+# were fiction (0/5 in the witness) and are retired with a ledger entry.
 COPY install_sigminer.R /tmp/install_sigminer.R
 RUN Rscript /tmp/install_sigminer.R
 

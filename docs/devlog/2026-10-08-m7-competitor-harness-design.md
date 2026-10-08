@@ -812,11 +812,18 @@ Archive tarball the build log recorded).** Source:
 sha256 `b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b`,
 `4,153,108` bytes, unpacked host-side (never in any build).
 
-* **NAMESPACE verbatim:** `108` exports; **`0` of the `5` guard names**
+* **NAMESPACE verbatim:** `115` `export()` stanzas (slice-3 erratum: this
+  line originally read `108` and listed `sig_import` among the real API —
+  both wrong; the full-tarball re-count on 2026-10-08 evening gives
+  `115` — the controller's independent local grep had already reported
+  `115` — and `sig_import` occurs `0` times in the witness; corrected
+  against the bytes, ledger-struck not silently rewritten);
+  **`0` of the `5` guard names**
   (`set.seed`, `signature_extract`, `fitsignatures`, `signature_import`,
   `signature_renorm`) present; the package's real API is the
-  `sig_*`/`bp_*` family (`sig_extract`, `sig_fit`, `sig_import`,
-  `sig_estimate`, `bp_extract_signatures`, …).
+  `sig_*`/`bp_*` family (`sig_extract`, `sig_fit`, `sig_fit_bootstrap`,
+  `sig_estimate`, `bp_extract_signatures`, …) — the names the slice-3
+  realignment drives.
 * **Version sweep rules out a lineage drift inside CRAN:** `1.2.5` →
   `0/5`; `0.1.11` (the 2021 paper-era release) → `0/5`, `sig_*` from
   inception; local ground truth `2.3.3` → `0/5`; tree-wide greps for
@@ -891,6 +898,267 @@ re-verified by the controller before PR #11).**
   citation string cannot anchor the external witness. `TODO(paper)`:
   pin the correct DOI for the Steele et al 2022 SigMiner paper in
   slice-3.
+
+## 9d. Slice-3 — adapter API realignment to the witnessed `sig_*`/`bp_*` family
+
+Dispatch (controller, post-PR-#11): base `origin/main = 00491db`; charter =
+(1) `run_sigminer.R` realignment killing the false premise, (2) build-guard
+fix to the real NAMESPACE contract, (3) TDD with zero weakening of the
+frozen 48/45, (4) expedition budget 2 max with controller-gated launch,
+(5) digest flip ONLY on green build (not yet reached), (6) `TODO(paper)`,
+(7) this ledger + gates + push proof.
+
+### 9d.1 Realigned call surface (charter 1)
+
+`run_sigminer.R` now drives the package's documented best-practice
+extraction chain — the one its own vignette teaches — at documented
+defaults: `bp_extract_signatures(catalog, seed = seed)` (the single
+forwarded argument; the package docstring calls `seed` "a random seed to
+make reproducible result", so §3's one-lever seed discipline is preserved
+and the fictional "package-documented seed entry point" claim is dead —
+the witnessed NAMESPACE carries that name 0 times) → `bp_get_sig_obj(e1,
+e1$suggested)` (the extraction result's own suggested rank, no threshold
+override) → `sig_exposure(obj, type = "absolute")`. Input orientation is
+the witnessed sample-by-component catalogue contract (the package's own
+`send_info("NOTE: the input should be a sample-by-component matrix.")`).
+The `--catalog` mount stays protocol-carried but is NOT consumed by the
+de-novo cell — reference matching is the scoring-side `get_sig_similarity`
+job (§4), never an extraction lever. Interval honesty follows the
+`run_sigprofiler.py` house convention: the chain reports point exposures
+and no bounds, so `lo95/hi95` are written as `NaN`, never masquerading as
+zero-width (the fictional chain had duplicated the estimate into both
+bounds — itself an honesty violation the realignment removes). Pin guard
+mirrors the build: exact `2.3.1` + `CORE_API` function presence.
+
+### 9d.2 Build-guard fix (charter 2)
+
+`install_sigminer.R`: the fictional five-name `DOCUMENTED_EXPORTS` gate is
+retired (with this ledger as its grave marker). The tail gate now reads
+the verbatim `export()` contract **out of the resolver's own downloaded
+tarball bytes** — `INSTALLED_TF` stashes each installed node's tarball,
+`untar(tf, files = "sigminer/NAMESPACE")` extracts the witness member, a
+sha256 tripwire (`NS_SHA256`, value recorded §9c.2) must match before any
+trust, then every witnessed export must resolve in the installed
+namespace and the `CORE_API` family must resolve *as functions*. No
+second copy of the list to drift, no refetch, no build-context change.
+
+Two latent defects caught by the pre-flight, both live on the build base
+(zero build dollars spent): base R **4.3.3 has no `digest()`** (that
+merge landed in 4.4.0; probe printed "could not find function digest") —
+the first hash implementation would have died in the build; and
+`system2(stdout=TRUE, stderr=TRUE)` returns an ATOMIC vector under
+Rscript (no `$status`), so the hash channel uses the deterministic
+file-redirect form returning the integer exit status. Pre-flight verdict
+on `r-ver:4.3.3`, witnessed tarball mounted read-only:
+`PREFLIGHT-TAIL-OK: 115 witnessed exports, hash verified, core covered`.
+
+### 9d.3 Runner API-form smoke (host-side, real package semantics)
+
+`preflight_runner.R` replicated the shipped chain against the
+host-installed sigminer (2.3.3 — FORM check; the cell pins 2.3.1 and the
+bytes are exercised by the budgeted build): 3-sample × 96-channel
+simulated catalogue from two planted profiles →
+`PREFLIGHT-RUNNER-OK: 3 samples x 2 signatures = 6 rows;
+labels[Sig1,Sig2]`, suggested rank `2` = the planted truth. The real
+chain runs end-to-end with exactly the shipped call shapes.
+
+### 9d.4 TDD evidence (charter 3)
+
+New module `tests/test_sigminer_api_contract.py` (registered in
+`run_all.py`, group ⑪), 7 units, contract fixture
+`tests/fixtures/sigminer_2.3.1_namespace_exports.txt` = the verbatim
+`export()` stanza of the witnessed NAMESPACE (sha256
+`2168cf32059f09c2e12cf3f82cb9befc9b15a58883c92fa3473c462671927948`,
+`115` lines; full-NAMESPACE-bytes hash `37744aee…6a90df` shared with the
+build guard). RED first, verbatim: `54/55 … FAILED:
+test_sigminer_api_contract.test_installer_guard_verifies_from_the_fetched_witness`
+with the five fiction-pinning units failing against the fictional chain
+(earlier RED state: `50/55`, 5 contract failures, old 48 green
+throughout). GREEN: `55/55 tests passed.` — old 48 zero-weakened (the
+frozen g0 `45/45` untouched: `45/45 tests passed.`), `ci-selfcheck:
+PASS (all CI wiring assertions hold)` exit 0. Units pin: fixture↔witness
+hash identity, fiction eradicated chain-wide (`run_sigminer.R` /
+`install_sigminer.R` / `sigminer_adapter.py`), every `sig_*`/`bp_*`
+runner call site witnessed, guard reads the fetched-bytes contract behind
+the hash tripwire, guard/runner `CORE_API` cannot drift apart, exact pins
+survive, NaN-never-zero-width intervals, seed flows only through the
+documented parameter.
+
+### 9d.5 `TODO(paper)` — attempt and honest negative result (charter 6)
+
+The malformed as-recorded citation `10.1038/s41586-022-04738-6` stays
+verbatim above (9c.2). Attempted pins this slice: crossref via the search
+backend returned only fuzzy-match noise; a remembered candidate DOI
+`10.1038/s41592-022-00995-8` died at the resolver with **404** (never
+written anywhere as fact); the crossref REST API answers but this network
+demonstrably rewrites identifiers at digit level (response bodies carry
+impossible DOI/journal-name mutations), so **no verifiable DOI witness is
+obtainable from this network** — any pinned value would be invented, which
+policy prohibits. `TODO(paper)` REMAINS OPEN with these negative results
+recorded; the malformed string's shape suggests it is itself an artifact
+of the same rewrite class applied upstream at publication time.
+
+### 9d.6 Budget and gate state at report time
+
+Expedition budget: `0/2` consumed — zero builds spent; controller gates
+the launch (dispatch: report TDD evidence + guard/fixture proposal first).
+Registry `sigminer` entry: `PENDING-VERIFY` — untouched, per charter 5 the
+flip is reserved for the live `docker image inspect .Id` on a green build
+(the §9c.1 flip ceremony stands unchanged).
+
+### 9d.7 build8 death — guard-quoting forensics, controller ruling, the preflight-gate discipline
+
+**Death (verbatim, log /tmp/m7_sigminer_build8.log, expedition attempt 1/2).**
+Full replay ran clean — hash tripwire passed (no drift die), 96 INSTALL-OK
+lines, 92 RESOLVE-via — then the new tail assert stopped the build:
+
+    #9 1284.7 INSTALL sigminer       2.3.1 OK
+    #9 1284.7 PIN rbibutils      2.4.1 already exact
+    #9 1284.7 PIN gridBase       0.4-7 already exact
+    #9 1285.3 FATAL:witnessed sigminer export missing: "%>%"
+    #9 ERROR: process "/bin/sh -c Rscript /tmp/install_sigminer.R" did not complete successfully: exit code: 1
+    ERROR: failed to build: failed to solve: ... exit code: 1
+
+**Forensics (agent, zero build cost).** The die site is the guard, not the
+artifact. The NAMESPACE grammar quotes non-syntactic export names and the
+witnessed bytes carry exactly two quoted stanzas — export("%>%") and
+export(":=") — so the stanza capture (install_sigminer.R L820) folded the
+grammar quotes INTO the lookup name, while exists() resolves BINDING names:
+a quote-embedded lookup can never resolve. The FATAL line itself is the
+proof — the %s wrap in die() adds no quotes, so the displayed "%>%"
+carries the folded-in double-quotes. Host repro /tmp/m7_dl/repro_dequote.R
+(exit 0): %in% and <- resolve clean on baseenv (TRUE) while their
+quote-embedded forms never do (FALSE); the live host sigminer namespace
+answers TRUE only to the clean operator names. Artifact exonerated:
+2.3.1 exact, 96 nodes install OK, namespace loads, and ALL 115 witnessed
+names resolve under clean lookup.
+
+**Controller ruling (verbatim, 2026-10-08, corroborated by the
+controller's own physical re-verification rather than agent attestation):**
+"RULING REAFFIRMED ... instrumentation-class CONFIRMED. Controller
+evidence: m7 suite re-run in your worktree = 56/56 PASS incl. your new
+operator-stanza unit; L831 dequote verified positioned before length-guard
+L832/exists-loop L834; witnessed bytes L8-9 = export("%>%")/export(":=")
+confirmed; host probe: clean := TRUE/quoted FALSE, clean %>% TRUE/quoted
+FALSE; preflight_tail2 re-invoked by me both modes — HOST: 'full-set
+exists() misses vs host ns (2.3.1): 0', CORE_API 9/9,
+PREFLIGHT-TAIL2-HOST-OK; CONTAINER (rocker/r-ver:4.3.3 via mirror, the
+build engine): quote-embedded remaining: 0, PREFLIGHT-TAIL2-CONTAINER-OK
+EXIT=0. Preflight gate SATISFIED by controller hand." Per the standing
+build-budget policy the one-use instrumentation-class exception is hereby
+spent on build9 (the authorized reserve).
+
+**Fix (rides with this ledger).** One normalization statement in the tail
+assert between the stanza parse and the resolve loop: each parsed name
+loses one pair of surrounding double-quotes or back-ticks before exists()
+resolution (verbatim expression in the installer's tail block; plain
+syntactic names pass through untouched). The witnessed fixture stays
+byte-pinned — dequoting belongs to the consuming guard, never to the
+witness.
+
+**Regression unit (TDD).** test_sigminer_api_contract gains
+test_guard_resolves_operator_stanzas_dequoted pinning (a) the two quoted
+stanzas verbatim inside the fixture, (b) the normalization strictly before
+the exists() loop, (c) the algorithm over the fixture bytes: 115 clean
+names, zero quote-embedded, operators and CORE_API present. RED 55/56
+(exactly the new unit) then GREEN 56/56; g0 frozen 45/45;
+tools/ci-selfcheck.py PASS exit 0; protected scope vs origin/main empty.
+
+**Preflight-gate discipline (campaign lesson, ratcheted).** build8's guard
+line executed for the FIRST time inside the build — the same blind-spot
+class that the slice-2 digest()/system2 pre-flight catches defused, one
+budget dollar more expensive. Standing rule: no build dollar without a
+host-side preflight that EXECUTES the shipped bytes, not a hand-rewritten
+mirror. /tmp/m7_dl/preflight_tail2.R pulls the installer's own parse and
+dequote statements out of install_sigminer.R, evaluates them over the
+witnessed NAMESPACE bytes, hashes via the shipped coreutils channel, and
+in host mode runs the full 115-name exists() resolve loop against the
+live installed namespace (misses=0 at 2.3.1, CORE_API 9/9). Both modes
+passed pre-launch; the controller re-invoked both hands independently.
+
+**Budget state at build9 launch.** build8 = 1/2 spent (instrumentation-
+class, ruled). build9 launches at 2/2 — BUDGET EXHAUSTED AT LAUNCH: any
+FATAL/ERROR ⇒ honest-partial close per dispatch (4), registry stays
+PENDING-VERIFY, no exceptions ever again. Expected green terminal: replay
+→ ASSERT sigminer 2.3.1 exact + 115 witnessed exports present (9 core
+functions) → naming/writing-image/exporting-layers → DONE; the digest
+flip then follows the §9c.1 ceremony as its own gated step (the controller
+holds the data-only registry/test-pin flip commit until the live inspect
+bytes land in the report).
+
+### 9d.8 build9 GREEN — the verified-digest flip and the full green evidence chain
+
+**The green build (expedition 2/2, spent AT the green).** Client exit 0,
+zero FATAL/ERROR lines in /tmp/m7_sigminer_build9.log (268+ lines).
+Replay pacing (verbatim witnesses, log-line order): installer banner at
+0.266s -> 92 RESOLVE-via / full graph install ->
+
+    #9 1223.2 INSTALL sigminer       2.3.1 OK
+    #9 1223.9 ASSERT sigminer 2.3.1 exact + 115 witnessed exports present (9 core functions)
+    #9 DONE 1224.1s
+    #13 exporting layers 5.7s done
+    #13 exporting manifest list sha256:c2a52c71..0fb91157 done
+    #13 naming to docker.io/library/msuiter-sigminer:slice3-r2 done
+    #13 unpacking to ... 1.4s done -> #13 DONE 7.1s
+
+The dequoted guard (9d.7 fix) passed at the exact predicted terminal:
+115/115 witnessed exports + 9/9 core functions resolved, the hash tripwire
+silent (no drift die).
+
+**Live-inspect capture (the flip witness; controller hand is the source of
+record).** Controller verbatim: Id
+sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c04061006c7ec9f5d0fb91157,
+Size 1707456647, Created 2026-10-08T14:33:58.976726552Z. The agent's
+independent live capture of the same tag was byte-identical (independent
+double capture, zero fabrication); the build log's exported manifest-list
+hash equals the inspected Id, and the log's own
+'exporting manifest list sha256:c2a52c71..0fb91157 done' line corroborates.
+In-image scientific smoke by the controller hand: library(sigminer) loads,
+packageVersion 2.3.1, the two operator names resolve as functions. Key
+pins audited present in the built tree: Biobase 2.60.0, NMF 0.28,
+cowplot 1.2.0, ggplot2 4.0.3, DNAcopy, maftools.
+
+**Observation (recorded, no re-run).** The controller's INSTALL-OK tally on
+the build9 log reads 92 against build8's 96 — a count-only tally delta
+over a tree whose integrity is proven by the 115/115 ASSERT plus the full
+hard-dependency graph witnesses above; logged as an observation.
+
+**The ratchet paid for itself.** The preflight-gate discipline ratcheted
+from the build8 death (9d.7: pre-build probes must execute the SHIPPED
+bytes) is precisely what certified build9 before spending the final
+dollar: preflight_tail2.R evals the installer's own parse+dequote lines
+over the witnessed NAMESPACE bytes, host mode ran the full 115-name
+exists() resolve loop against the live installed namespace (misses=0,
+CORE_API 9/9), and the base-image mode certified the shipped dequote line
+under the build's own R 4.3.3 engine.
+
+**The flip (charter 5, data-only).** registry.py sigminer row moves
+PENDING-VERIFY -> the live-inspect digest verbatim (single-line literal,
+no reformatting) AND image_ref -> msuiter-sigminer:slice3-r2, the very
+tag the build named to: image_gate probes and run_container_cell exec
+BOTH consume image_ref, so the pair is one and the same build artifact —
+leaving the stale tag in place would have every cell re-die at the
+compose-time gate, which is exactly the gap the sentinel existed to hold
+shut. TDD: test_registry gains
+test_sigminer_entry_carries_the_build9_verified_digest pinning both data
+fields plus the surviving compose-time refusals — PENDING-VERIFY and
+malformed-shape digests still refuse pre-daemon (daemon-free variants),
+signal untouched at pending-verify. RED 56/57 -> GREEN 57/57; g0 45/45;
+ci-selfcheck PASS exit 0; zero builds spent on the flip node (python-side
+only), honoring the exhausted expedition budget.
+
+**Honest gap, recorded for a future ruling (no action here).** image_gate
+validates the digest SHAPE (sha256:+64) and the tag PRESENCE, never
+comparing the stored digest against what the local store reports for that
+tag; the flip ceremony therefore relies on the memo witness chain, not on
+a runtime cross-check. A digest-vs-inspect cross-compare (daemon-side or
+cached-record) is a candidate hardening, deliberately not undertaken in
+this data-only gated step.
+
+**Budget final state.** Expedition 2/2 spent at the green (build8 ruled
+instrumentation-class, one-use exception consumed on build9); no
+honest-partial close was needed; the campaign's no-exceptions-ever-again
+clause stands for any future image work.
 
 ## 10. Open items for the GREEN dispatch
 
