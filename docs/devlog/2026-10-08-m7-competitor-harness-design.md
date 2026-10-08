@@ -259,6 +259,8 @@ transcript is recorded in the RED commit message.
 
 See the RED commit body for transcripts: ci-selfcheck exit 0; G0 suite
 `42/42` green; M7 RED batch fails at the missing-implementation seam.
+The 2026-10-08 sigminer-image closure dispatch records its own gate
+transcripts under §9b-closure below.
 
 ### 9a. GREEN slice (2026-10-08, same day; no test file or assertion touched)
 
@@ -348,10 +350,92 @@ stays PENDING-VERIFY):
   which is the value registry.py pins; each measured cell's manifest.json
   carries the same digest, and the first attributed live run recorded
   `4/4 cells ok|cached` with cache-hit on rerun.
-- `m7-sigminer:cr2.3.1` — BUILD-EXIT=1 on both budgeted rebuilds (defect
-  classes (3) and (4) verbatim above); registry entry stays
-  `image_digest=PENDING_VERIFY` and its docker-adapter cells are
-  AdapterUnavailable skips, never fabricated successes.
+- `m7-sigminer:cr2.3.1` — BUILD-EXIT=1 on every budgeted build (both
+  campaign rebuilds above and the 2026-10-08 closure dispatch below);
+  registry entry stays `image_digest=PENDING_VERIFY` and its docker-adapter
+  cells are AdapterUnavailable skips, never fabricated successes.
+
+#### 9b-closure. Closure dispatch (2026-10-08): the §9b-item-4 follow-up — three budgeted attempts, verbatim
+
+Mission: provision the curl dev headers and CRAN `Archive/` resolution
+"in one pass" per item 4's follow-up line. Budget ledger: 1
+recorded-recipe attempt + 2 spares for new distinct classes = 3 builds,
+all consumed. Base pull unchanged (mirror-spelled `FROM`, §5; resolved to
+the already-recorded `rocker/r-ver:4.3.3@sha256:732d15...`; no 407/502
+observed this dispatch).
+
+Attempt 1 (recorded recipe verbatim — `libcurl-dev` + the two Archive
+pins) died on a NEW class: the bare package name is virtual on the jammy
+base, verbatim:
+
+```
+#7 126.3 Package libcurl-dev is a virtual package provided by:
+#7 126.3   libcurl4-openssl-dev 7.81.0-1ubuntu1.29
+#7 126.3   libcurl4-nss-dev 7.81.0-1ubuntu1.29
+#7 126.3   libcurl4-gnutls-dev 7.81.0-1ubuntu1.29
+#7 126.3 E: Package 'libcurl-dev' has no installation candidate
+exit code: 100                                   (BUILD-EXIT=1)
+```
+
+Spare attempt 1 pinned the concrete openssl-backed provider
+(`libcurl4-openssl-dev`, matching the distro's runtime libcurl; TLS
+backend is irrelevant to the `curl/curl.h` consumer) and the build
+advanced into the Rscript step, which died inside the new `ensure.pin`
+version probe — the base R's `packageDescription()` returns a
+version-less empty listy (not NULL) for a not-installed package:
+
+```
+#8 21.66 Error in pd[["Version"]] : subscript out of bounds   (BUILD-EXIT=1)
+```
+
+The probe was tryCatch-hardened (both host-R NULL and base-R listy
+shapes read as "version absent"). Spare attempt 2 advanced deepest
+(~19 min of dependency compilation before the build guard failed it):
+both Archive pins surfaced only as `install.packages` **warnings**, so
+the error-gated ok-flag read TRUE, the Archive fallback silently never
+ran, and the era-pinned Import tree 404/SSL-failed through contrib-only
+fetches — verbatim:
+
+```
+#8 26.19 2: package ‘rbibutils==2.4.1’ is not available for this version of R
+#8 26.34 2: package ‘gridBase==0.4-7’ is not available for this version of R
+#8 144.9 trying URL 'https://cran.r-project.org/src/contrib/cli_3.6.6.tar.gz'
+#8 150.1 Error in download.file(url, destfile, method, mode = "wb", ...) :
+#8 150.1   cannot open URL 'https://cran.r-project.org/src/contrib/cli_3.6.6.tar.gz'
+#8 150.1   URL 'https://cran.r-project.org/src/contrib/cli_3.6.6.tar.gz': status was 'SSL connect error'
+#8 725.0   cannot open URL 'https://cran.r-project.org/src/contrib/dplyr_1.2.1.tar.gz'
+#8 762.6   cannot open URL 'https://cran.r-project.org/src/contrib/globals_0.19.1.tar.gz'
+#8 1158.2 ERROR: dependencies ‘cli’, ‘cowplot’, ‘dplyr’, ‘furrr’, ‘future’, ‘ggplot2’, ‘ggpubr’, ‘NMF’, ‘purrr’, ‘tidyr’ are not available for package ‘sigminer’                     (BUILD-EXIT=1)
+```
+
+Two root causes, both now recorded: (i) the `==version` spec **warns
+instead of raising** when the pin lives only under `Archive/`, so
+error-gated success is unsound — `ensure.pin` is now RESULT-gated:
+provisioning counts only when `packageDescription` reports the pinned
+version actually present in the library, else the build stops loudly;
+(ii) the Archive-only class is NOT limited to the two item-4 pins —
+remotes pins the whole era-consistent Import tree (cli 3.6.6, dplyr
+1.2.1, globals 0.19.1, …), whose tarballs are absent from plain contrib
+and whose fetches die with `status was 'SSL connect error'` through this
+proxy. The next slice therefore needs an Archive-aware install path for
+the ENTIRE tree — candidate direction:
+`tools::install.packages("sigminer==2.3.1", contriburl = .../src/contrib,
+archiveurl = .../src/contrib/Archive, dependencies = TRUE, type =
+"source")` replacing the remotes step, keeping the two explicit
+`ensure.pin` calls as belt-and-braces.
+
+Verdict: BUILD-EXIT=1, no image exists (`docker image inspect
+m7-sigminer:cr2.3.1` → `No such image`), registry entry stays
+PENDING_VERIFY, sigminer cells stay AdapterUnavailable skips — gate text
+verbatim: `image 'm7-sigminer:cr2.3.1' digest is 'PENDING-VERIFY' —
+provenance not captured from 'docker image inspect' (inventing digests
+is prohibited, memo §5 ii)`. No digest was invented this dispatch.
+
+Closure gates (as run on this branch): `cd bench/m7 &&
+python3 -m tests.run_all` → `12/12 tests passed.`; `cd bench/g0 &&
+python3 -m tests.run_all` → `45/45 tests passed.`;
+`python3 tools/ci-selfcheck.py` → `ci-selfcheck: PASS (all CI wiring
+assertions hold)` (exit 0).
 
 ## 10. Open items for the GREEN dispatch
 
