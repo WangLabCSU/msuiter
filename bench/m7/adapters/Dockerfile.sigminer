@@ -112,6 +112,44 @@ RUN apt-get update \
 # DESCRIPTION reports a version. Controller-ruled scope, one build, spent on the
 # COMPLETE audited closure -- never iteratively.
 RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), "provisioned\\n")'
+# RB-05 (2026-10-09), controller-instrumented class-(d) closure, ledger 1/1.
+# The r4 probe forensics (committed witnesses: cell_argv_probe_slice3-r4_
+# DEFECT.json, rehearse_manifest under bench/results/docker_m7_PILOT_20261008-
+# 200152/rehearsal_slice3-r4/) established three facts this delta answers:
+# (1) the committed run_sigminer.R L44 called commandArgs with a second,
+#     never-witnessed argument — era R 4.3.3 formals are {trailingOnly}
+#     alone (formals_allowlist_slice3-r4.json, harvested from this image's
+#     own R; controller host probe on R 4.5.2 agrees; the line's provenance
+#     stays an unverified inference);
+# (2) the frozen default extraction path hard-requires three Suggests-level
+#     packages the declared DESCRIPTION closure never promises:
+#     lpSolve (best_practice_helper.R lp.assign step), synchronicity
+#     (best_practice.R namespace load), matrixStats (the resampling step,
+#     found in the zero-build rehearsal loop and folded per RB-04(4) --
+#     the stage2 auto-install URLs witness its era version 1.3.0 verbatim);
+#     the runB witness shows R otherwise AUTO-INSTALLS them mid-measurement
+#     (network, nondeterministic, one SSL-death recorded);
+# (3) a green build that never executed its own measurement path is not
+#     admissible evidence (r4 built GREEN and probed DEFECT).
+# Layers below are the ruling's scope-frozen answer: byte-pinned COPY
+# assertion, era/version-gated bakes (literal repos, literal versions --
+# drift is a build death, never a silent float), and a network-none
+# self-witness replaying the zero-touch composed argv over the stage2-run
+# fixture bytes.
+RUN test "$(sha256sum /work/run_sigminer.R | cut -d' ' -f1)" = "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084" || (echo "[FATAL] run_sigminer.R bytes diverge from the stage2-proven rehearsal witness" >&2; exit 1)
+RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23", CRAN = "https://cran.r-project.org")); install.packages(c("lpSolve", "synchronicity"), dependencies = NA, quiet = TRUE); v1 <- packageVersion("lpSolve"); v2 <- packageVersion("synchronicity"); if (is.null(v1) || as.character(v1) != "5.6.20") quit(status = 1L); if (is.null(v2) || as.character(v2) != "1.3.10") quit(status = 1L); cat("[image] lpSolve ", as.character(v1), ", synchronicity ", as.character(v2), " provisioned\\n")'
+RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23")); install.packages("matrixStats", dependencies = NA, quiet = TRUE); v3 <- packageVersion("matrixStats"); if (is.null(v3) || as.character(v3) != "1.3.0") quit(status = 1L); cat("[image] matrixStats ", as.character(v3), " provisioned\\n")'
+COPY mini_cell/ /work/mini/in/
+COPY self_witness.sh /tmp/self_witness.sh
+# The four-file trust guard at container scope: intervals/errors/timing are
+# the container-side productions asserted here (plus the sidecar schema and
+# rc 0); manifest.json is host-side by contract (run_bench.py writes it) and
+# the matrix re-asserts the full four. Pre-baked rehearsal of THIS layer,
+# identical posture (network-none, deps mounted via R_LIBS_USER -- the
+# Linux search-path variable; R_LIB_USER is Windows-only and was the reason
+# the stage2 run self-healed via auto-install): selfwitness_prebake2 in the
+# pilot manifest, 0 auto-install lines, NMF suggested result 95.5 verbatim.
+RUN --network=none sh /tmp/self_witness.sh
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
 # /work/run_sigminer.R ... (adapters/docker_cmd.py ENTRY_SCRIPT); CMD is
 # documentation of that shape only.

@@ -1,0 +1,19 @@
+{
+ "caps": [
+  "OMP_NUM_THREADS",
+  "OMP_THREAD_LIMIT",
+  "R_LIMIT_THREADS",
+  "GOMAXPROCS",
+  "MSUITER_THREADS",
+  "STAN_OMP_NUM_THREADS",
+  "OPENBLAS_NUM_THREADS"
+ ],
+ "competitor": "sigminer",
+ "protocol": "documented defaults, zero overrides (memo \u00a73)",
+ "runner": "run_sigminer.R",
+ "sample_seeds": {
+  "main__N100__r0": 378370763
+ },
+ "seed": 1815578668,
+ "version": "2.3.1"
+}

@@ -41,7 +41,7 @@ suppressWarnings(suppressMessages({
   library(jsonlite)
 }))
 
-args <- commandArgs(trailingOnly = TRUE, removeDuplicates = FALSE)
+args <- commandArgs(trailingOnly = TRUE)
 getArg <- function(flag, default = NULL) {
   i <- which(args == flag)
   if (length(i) == 0L) default else args[[i[1L] + 1L]]
