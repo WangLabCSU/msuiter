@@ -18,9 +18,12 @@ import sys
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-from scoring import run_products                     # noqa: E402 (RED seam)
-from tests.test_scoring_pipeline import _build_fixture   # same fixture
+# The tests-package imports bind BEFORE scoring: scoring.truth prepends
+# bench/g0 to sys.path, which would otherwise let bench/g0/tests claim the
+# `tests` name in a fresh interpreter.
 from tests import scoring_fixtures as fx
+from tests.test_scoring_pipeline import _build_fixture                 # same fixture
+from scoring import run_products                                        # noqa: E402 (RED seam)
 
 
 def _sha(path: Path) -> str:
