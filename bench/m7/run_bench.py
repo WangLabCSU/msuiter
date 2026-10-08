@@ -87,6 +87,12 @@ def parse_args(argv=None) -> argparse.Namespace:
                     help="ignore cached cell outputs, re-invoke every cell")
     ap.add_argument("--shard-tag", default=None,
                     help="suffix for the timings file name (sharded driver)")
+    ap.add_argument("--n-list", default=None, dest="n_list",
+                    help="comma-separated N-point filter (pilot/shard "
+                         "selection; per-arm intersection, mirrors --arms)")
+    ap.add_argument("--dry-run", action="store_true", dest="dry_run",
+                    help="print the machine-readable matrix plan (JSON) and "
+                         "exit 0 without touching the filesystem")
     return ap.parse_args(argv)
 
 
@@ -120,6 +126,31 @@ def m7_seeds(competitor: str, arm: str, n: int, reps: int) -> tuple[int, dict]:
                % seeds.TOOL_SEED_CAP
                for r in range(reps)}
     return batch, samples
+
+
+def build_plan(args, competitor_names: list, specs: dict, arms) -> dict:
+    """The selected matrix as data (U-M7-03 --dry-run): the exact invocation
+    set a full pass would execute plus the frozen fairness/provenance context
+    (caps, master seed, tool namespace, image refs and digests). Pure
+    function — no filesystem, no subprocess; commit provenance is stamped by
+    the caller."""
+    cells = [{"tool": name, "arm": a.name, "n": n, "reps": a.reps}
+             for name in competitor_names
+             for a in arms for n in a.n_list]
+    return {
+        "profile": args.profile, "adapter": args.adapter,
+        "provider": args.provider, "provider_seed": args.provider_seed,
+        "competitors": list(competitor_names),
+        "caps": list(docker_cmd.THREAD_CAPS),
+        "master_seed": seeds.MASTER_SEED, "tool_namespace": M7_TOOL_NS,
+        "cells": cells, "invocations": len(cells),
+        "samples_total": sum(c["reps"] for c in cells),
+        "provenance": {name: {"version": specs[name].version,
+                              "image_ref": specs[name].image_ref,
+                              "image_digest": specs[name].image_digest,
+                              "status": specs[name].status}
+                       for name in competitor_names},
+    }
 
 
 def compute_data_hash(counts_text: str, arm, reps: int, params: dict,
@@ -224,7 +255,8 @@ def cell_identity(competitor: str, spec, args) -> dict:
             "image_digest": spec.image_digest, "entrypoint": spec.entrypoint,
             "runner_script": spec.runner_script,
             "caps": list(docker_cmd.THREAD_CAPS),
-            "adapter": args.adapter, "provider": args.provider}
+            "adapter": args.adapter, "provider": args.provider,
+            "provider_seed": args.provider_seed}
 
 
 def write_cell_manifest(out_dir: Path, manifest: dict) -> None:
@@ -393,9 +425,6 @@ def main(argv=None) -> int:
                 return 2
 
     outdir, cachedir = Path(args.outdir), Path(args.cachedir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    for sub in ("counts", "truth", "cells"):
-        (cachedir / sub).mkdir(parents=True, exist_ok=True)
 
     arms = grid.arms_for_profile(args.profile)
     if args.arms:
@@ -408,6 +437,34 @@ def main(argv=None) -> int:
     if args.reps:
         arms = [grid.ArmSpec(a.name, a.n_list, args.reps, a.params, a.judge)
                 for a in arms]
+    if args.n_list:
+        try:
+            want = {int(t) for t in args.n_list.split(",") if t.strip()}
+        except ValueError:
+            print(f"[grid] --n-list {args.n_list!r} must be comma-separated "
+                  f"integers", file=sys.stderr)
+            return 2
+        pruned = []
+        for a in arms:
+            kept = tuple(n for n in a.n_list if n in want)
+            if kept:
+                pruned.append(grid.ArmSpec(a.name, kept, a.reps, a.params,
+                                          a.judge))
+        if not pruned:
+            print(f"[grid] --n-list {args.n_list!r} matched no N point in "
+                  f"profile {args.profile!r}", file=sys.stderr)
+            return 2
+        arms = pruned
+
+    if args.dry_run:                    # plan-only seam: zero side effects
+        plan = build_plan(args, competitor_names, specs, arms)
+        plan["commit"] = git_sha()
+        print(json.dumps(plan, sort_keys=True, indent=1))
+        return 0
+
+    outdir.mkdir(parents=True, exist_ok=True)
+    for sub in ("counts", "truth", "cells"):
+        (cachedir / sub).mkdir(parents=True, exist_ok=True)
 
     write_seeds_manifest(outdir / "Seeds.txt", arms, competitor_names, args)
     print(f"[seeds] manifest -> {outdir / 'Seeds.txt'}")

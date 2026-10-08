@@ -23,6 +23,8 @@ Scoring slice (benchmark table + scoring verdicts, U-M7-02 follow-on):
   ⑩ test_scoring_determinism byte-reproducible benchmark CSV over one cachedir
 SigMiner API-contract pin (slice-3 realignment to the witnessed sig_* family):
   ⑪ test_sigminer_api_contract  verbatim NAMESPACE fixture + eradication gates
+Matrix-runner extensions (U-M7-03, arms×N×reps @ pinned seeds):
+  ⑫ test_matrix_runner          N-point filter, dry-run plan, resample-verify
 """
 
 from __future__ import annotations
@@ -39,7 +41,10 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_scoring_pipeline", "test_scoring_judgment",
            "test_scoring_determinism",
            # slice-3: adapter API realignment contract (memo §9c.2/§9d):
-           "test_sigminer_api_contract"]
+           "test_sigminer_api_contract",
+           # U-M7-03: matrix-runner extensions (N-selection, dry-run plan,
+           # seed-pinned resample-verify gate):
+           "test_matrix_runner"]
 
 
 def _collect(mod_name):
