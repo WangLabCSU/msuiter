@@ -22,9 +22,12 @@
 ## provisioned only when the library's own DESCRIPTION reports the version.
 ##
 ## Kept from the #9 hardened build: the packageVersion("sigminer")=="2.3.1"
-## exact assert, the five documented exports, and the two belt-and-braces
-## Archive pins (rbibutils 2.4.1, gridBase 0.4-7), now result-gated through
-## the same fetch/install path.
+## exact assert and the two belt-and-braces Archive pins (rbibutils 2.4.1,
+## gridBase 0.4-7), now result-gated through the same fetch/install path. The
+## old "five documented exports" assert was retired in slice-3: those five
+## names exist 0/5 in the witnessed 2.3.1 NAMESPACE (memo §9c.2 fact-check) —
+## the tail gate now verifies the WITNESSED export contract instead, straight
+## from the tarball bytes the resolver itself downloaded (§9d).
 ##
 ## Usage: Rscript install_sigminer.R [--dry-run]
 ## --dry-run resolves and downloads the FULL transitive graph and reports
@@ -51,8 +54,25 @@ MAX_TRY <- 3L
 BASE_R <- paste0(R.version$major, ".", R.version$minor)
 ROOT_PIN <- list(name = "sigminer", op = "==", ver = "2.3.1")
 EXTRA_PINS <- list(c("rbibutils", "2.4.1"), c("gridBase", "0.4-7"))
-DOCUMENTED_EXPORTS <- c("set.seed", "signature_extract", "fitsignatures",
-                        "signature_import", "signature_renorm")
+## slice-3 (memo §9c.2/§9d): the frozen recipe's five-name export contract
+## was fiction (0/5 in every published sigminer). The build gate is now the
+## WITNESSED NAMESPACE export set of the exact pinned artifact (read from
+## the resolver's own downloaded tarball at the tail) plus this
+## function-asserted real extraction/assignment family — the same names the
+## host-side contract fixture pins (tests/fixtures/
+## sigminer_2.3.1_namespace_exports.txt via tests/test_sigminer_api_contract.py).
+CORE_API <- c("bp_extract_signatures", "bp_get_sig_obj", "bp_get_stats",
+              "sig_extract", "sig_fit", "sig_fit_bootstrap", "sig_estimate",
+              "sig_exposure", "sig_names")
+## node-name -> tarball path: the tail assert reads the NAMESPACE witness
+## from the very bytes the resolver fetched (no refetch, no second copy).
+INSTALLED_TF <- list()
+## witnessed NAMESPACE bytes (sha256 of the 2.3.1 Archive tarball's
+## sigminer/NAMESPACE, recorded slice-2 §9c.2 from URL
+## https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz,
+## tarball sha256 b2836c76..1953b): a re-routed or swapped artifact stops
+## the build on the hash, not on trust.
+NS_SHA256 <- "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df"
 
 say <- function(...) cat(sprintf(...), "\n")
 die <- function(...) {
@@ -60,6 +80,22 @@ die <- function(...) {
   quit(save = "no", status = 1L)
 }
 `%||%` <- function(a, b) if (length(a) && !is.na(a)) a else b
+sha256File <- function(path) {
+  ## pre-flight 2026-10-08 slice-3, on the build base itself: base R 4.3.3
+  ## carries NO digest() (that merge landed in 4.4.0 — live probe: "could
+  ## not find function digest"), and the system2 stdout/stderr=TRUE list
+  ## form returned an atomic vector under Rscript (no $status to read).
+  ## The file-redirect form is the deterministic contract: integer exit
+  ## status, digest on stdout; sha256sum ships with coreutils on jammy.
+  o <- tempfile(); e <- tempfile()
+  st <- system2("sha256sum", c("--", path), stdout = o, stderr = e)
+  if (!identical(st, 0L))
+    die("sha256sum failed on witness bytes (status %s): %s", st,
+        paste0(readLines(e, warn = FALSE), collapse = " | "))
+  ln <- readLines(o, warn = FALSE)
+  if (!length(ln)) die("sha256sum printed no digest for %s", path)
+  strsplit(trimws(ln[[1L]]), " ")[[1L]][[1L]]
+}
 capitalize <- function(x) {
   s <- tolower(x)
   paste0(toupper(substring(s, 1, 1)), substring(s, 2))
@@ -691,6 +727,7 @@ installTarball <- function(entry) {
     die("install failed for %s %s: %s (library reports %s)",
         entry$name, entry$ver, st, got %||% "(none)")
   }
+  INSTALLED_TF[[entry$name]] <<- entry$tf
   say("INSTALL %-14s %s OK", entry$name, entry$ver)
 }
 
@@ -756,14 +793,39 @@ for (pin in EXTRA_PINS) {
   say("PIN %-14s %s provisioned via %s", p, v, f$url)
 }
 
-## ----------------------------------------------------------- recorded asserts
+## ------------------------------------------- witnessed-NAMESPACE tail asserts
+## slice-3 (memo §9c.2/§9d): the five "documented exports" the frozen recipe
+## asserted exist 0/5 in the witnessed 2.3.1 NAMESPACE — the gate is now the
+## verbatim export contract of the resolver's OWN downloaded bytes: every
+## export() name must resolve in the installed namespace, and the core
+## extraction/assignment family must resolve AS FUNCTIONS (G0 build-guard
+## idiom: any drift stops the build loudly).
 v <- verOf("sigminer")
 if (!identical(v, "2.3.1"))
   die("SigMiner pin drift: got %s, want 2.3.1", v %||% "(none)")
 ns <- tryCatch(asNamespace("sigminer"), error = function(e)
   die("sigminer namespace failed to load: %s", conditionMessage(e)))
-for (fn in DOCUMENTED_EXPORTS)
+tf <- INSTALLED_TF[["sigminer"]]
+if (is.null(tf) || !file.exists(tf))
+  die("witness tarball for sigminer 2.3.1 unavailable at assert time")
+exd <- tempfile("ns-x-"); dir.create(exd)
+untar(tf, exdir = exd, files = "sigminer/NAMESPACE")
+nsf <- file.path(exd, "sigminer", "NAMESPACE")
+if (!file.exists(nsf))
+  die("witness tarball carries no sigminer/NAMESPACE")
+ns_hash <- sha256File(nsf)
+if (!identical(ns_hash, NS_SHA256))
+  die("witness NAMESPACE hash drift: got %s want %s", ns_hash, NS_SHA256)
+nsl <- readLines(nsf, warn = FALSE)
+contract <- sub("^export\\((.*)\\)$", "\\1",
+                nsl[grepl("^export\\(", nsl)])
+if (length(contract) < 100L)
+  die("witness NAMESPACE malformed: %d export() lines", length(contract))
+for (fn in contract)
+  if (!exists(fn, where = ns))
+    die("witnessed sigminer export missing: %s", fn)
+for (fn in CORE_API)
   if (!exists(fn, mode = "function", where = ns))
-    die("documented sigminer export missing: %s", fn)
-say("ASSERT sigminer 2.3.1 exact + %d documented exports present",
-    length(DOCUMENTED_EXPORTS))
+    die("core sigminer function missing: %s", fn)
+say("ASSERT sigminer 2.3.1 exact + %d witnessed exports present (%d core functions)",
+    length(contract), length(CORE_API))

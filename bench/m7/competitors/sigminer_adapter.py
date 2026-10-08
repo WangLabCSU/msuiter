@@ -5,8 +5,12 @@ catalog.csv / params.json`` into the cell's ``in/``, the container mounts it
 read-only, and the parsed ``intervals.csv`` long table is the only thing
 that flows back. SigMiner runs at its package documented defaults — this
 slice records **zero** parameter overrides; the only lever touched is the
-package documented seed entry point (``sigminer::set.seed`` from
-``params.json``), so runs are reproducible rather than silently so.
+extraction entry point's documented ``seed`` parameter (the package's own
+docstring: "a random seed to make reproducible result"), forwarded verbatim
+from ``params.json`` (slice-3 memo §9d: the pre-slice claim of a package-
+documented seed entry point was fiction — the witnessed 2.3.1 NAMESPACE
+carries that name 0 times; the runner call sites are pinned against the
+witnessed export fixture by test_sigminer_api_contract).
 
 Skip-not-skip (memo §6): an absent image or an uncaptured digest raises
 ``AdapterUnavailable`` with the reason — never a generic crash, never a
