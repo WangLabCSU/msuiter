@@ -812,11 +812,18 @@ Archive tarball the build log recorded).** Source:
 sha256 `b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b`,
 `4,153,108` bytes, unpacked host-side (never in any build).
 
-* **NAMESPACE verbatim:** `108` exports; **`0` of the `5` guard names**
+* **NAMESPACE verbatim:** `115` `export()` stanzas (slice-3 erratum: this
+  line originally read `108` and listed `sig_import` among the real API —
+  both wrong; the full-tarball re-count on 2026-10-08 evening gives
+  `115` — the controller's independent local grep had already reported
+  `115` — and `sig_import` occurs `0` times in the witness; corrected
+  against the bytes, ledger-struck not silently rewritten);
+  **`0` of the `5` guard names**
   (`set.seed`, `signature_extract`, `fitsignatures`, `signature_import`,
   `signature_renorm`) present; the package's real API is the
-  `sig_*`/`bp_*` family (`sig_extract`, `sig_fit`, `sig_import`,
-  `sig_estimate`, `bp_extract_signatures`, …).
+  `sig_*`/`bp_*` family (`sig_extract`, `sig_fit`, `sig_fit_bootstrap`,
+  `sig_estimate`, `bp_extract_signatures`, …) — the names the slice-3
+  realignment drives.
 * **Version sweep rules out a lineage drift inside CRAN:** `1.2.5` →
   `0/5`; `0.1.11` (the 2021 paper-era release) → `0/5`, `sig_*` from
   inception; local ground truth `2.3.3` → `0/5`; tree-wide greps for
@@ -891,6 +898,113 @@ re-verified by the controller before PR #11).**
   citation string cannot anchor the external witness. `TODO(paper)`:
   pin the correct DOI for the Steele et al 2022 SigMiner paper in
   slice-3.
+
+## 9d. Slice-3 — adapter API realignment to the witnessed `sig_*`/`bp_*` family
+
+Dispatch (controller, post-PR-#11): base `origin/main = 00491db`; charter =
+(1) `run_sigminer.R` realignment killing the false premise, (2) build-guard
+fix to the real NAMESPACE contract, (3) TDD with zero weakening of the
+frozen 48/45, (4) expedition budget 2 max with controller-gated launch,
+(5) digest flip ONLY on green build (not yet reached), (6) `TODO(paper)`,
+(7) this ledger + gates + push proof.
+
+### 9d.1 Realigned call surface (charter 1)
+
+`run_sigminer.R` now drives the package's documented best-practice
+extraction chain — the one its own vignette teaches — at documented
+defaults: `bp_extract_signatures(catalog, seed = seed)` (the single
+forwarded argument; the package docstring calls `seed` "a random seed to
+make reproducible result", so §3's one-lever seed discipline is preserved
+and the fictional "package-documented seed entry point" claim is dead —
+the witnessed NAMESPACE carries that name 0 times) → `bp_get_sig_obj(e1,
+e1$suggested)` (the extraction result's own suggested rank, no threshold
+override) → `sig_exposure(obj, type = "absolute")`. Input orientation is
+the witnessed sample-by-component catalogue contract (the package's own
+`send_info("NOTE: the input should be a sample-by-component matrix.")`).
+The `--catalog` mount stays protocol-carried but is NOT consumed by the
+de-novo cell — reference matching is the scoring-side `get_sig_similarity`
+job (§4), never an extraction lever. Interval honesty follows the
+`run_sigprofiler.py` house convention: the chain reports point exposures
+and no bounds, so `lo95/hi95` are written as `NaN`, never masquerading as
+zero-width (the fictional chain had duplicated the estimate into both
+bounds — itself an honesty violation the realignment removes). Pin guard
+mirrors the build: exact `2.3.1` + `CORE_API` function presence.
+
+### 9d.2 Build-guard fix (charter 2)
+
+`install_sigminer.R`: the fictional five-name `DOCUMENTED_EXPORTS` gate is
+retired (with this ledger as its grave marker). The tail gate now reads
+the verbatim `export()` contract **out of the resolver's own downloaded
+tarball bytes** — `INSTALLED_TF` stashes each installed node's tarball,
+`untar(tf, files = "sigminer/NAMESPACE")` extracts the witness member, a
+sha256 tripwire (`NS_SHA256`, value recorded §9c.2) must match before any
+trust, then every witnessed export must resolve in the installed
+namespace and the `CORE_API` family must resolve *as functions*. No
+second copy of the list to drift, no refetch, no build-context change.
+
+Two latent defects caught by the pre-flight, both live on the build base
+(zero build dollars spent): base R **4.3.3 has no `digest()`** (that
+merge landed in 4.4.0; probe printed "could not find function digest") —
+the first hash implementation would have died in the build; and
+`system2(stdout=TRUE, stderr=TRUE)` returns an ATOMIC vector under
+Rscript (no `$status`), so the hash channel uses the deterministic
+file-redirect form returning the integer exit status. Pre-flight verdict
+on `r-ver:4.3.3`, witnessed tarball mounted read-only:
+`PREFLIGHT-TAIL-OK: 115 witnessed exports, hash verified, core covered`.
+
+### 9d.3 Runner API-form smoke (host-side, real package semantics)
+
+`preflight_runner.R` replicated the shipped chain against the
+host-installed sigminer (2.3.3 — FORM check; the cell pins 2.3.1 and the
+bytes are exercised by the budgeted build): 3-sample × 96-channel
+simulated catalogue from two planted profiles →
+`PREFLIGHT-RUNNER-OK: 3 samples x 2 signatures = 6 rows;
+labels[Sig1,Sig2]`, suggested rank `2` = the planted truth. The real
+chain runs end-to-end with exactly the shipped call shapes.
+
+### 9d.4 TDD evidence (charter 3)
+
+New module `tests/test_sigminer_api_contract.py` (registered in
+`run_all.py`, group ⑪), 7 units, contract fixture
+`tests/fixtures/sigminer_2.3.1_namespace_exports.txt` = the verbatim
+`export()` stanza of the witnessed NAMESPACE (sha256
+`2168cf32059f09c2e12cf3f82cb9befc9b15a58883c92fa3473c462671927948`,
+`115` lines; full-NAMESPACE-bytes hash `37744aee…6a90df` shared with the
+build guard). RED first, verbatim: `54/55 … FAILED:
+test_sigminer_api_contract.test_installer_guard_verifies_from_the_fetched_witness`
+with the five fiction-pinning units failing against the fictional chain
+(earlier RED state: `50/55`, 5 contract failures, old 48 green
+throughout). GREEN: `55/55 tests passed.` — old 48 zero-weakened (the
+frozen g0 `45/45` untouched: `45/45 tests passed.`), `ci-selfcheck:
+PASS (all CI wiring assertions hold)` exit 0. Units pin: fixture↔witness
+hash identity, fiction eradicated chain-wide (`run_sigminer.R` /
+`install_sigminer.R` / `sigminer_adapter.py`), every `sig_*`/`bp_*`
+runner call site witnessed, guard reads the fetched-bytes contract behind
+the hash tripwire, guard/runner `CORE_API` cannot drift apart, exact pins
+survive, NaN-never-zero-width intervals, seed flows only through the
+documented parameter.
+
+### 9d.5 `TODO(paper)` — attempt and honest negative result (charter 6)
+
+The malformed as-recorded citation `10.1038/s41586-022-04738-6` stays
+verbatim above (9c.2). Attempted pins this slice: crossref via the search
+backend returned only fuzzy-match noise; a remembered candidate DOI
+`10.1038/s41592-022-00995-8` died at the resolver with **404** (never
+written anywhere as fact); the crossref REST API answers but this network
+demonstrably rewrites identifiers at digit level (response bodies carry
+impossible DOI/journal-name mutations), so **no verifiable DOI witness is
+obtainable from this network** — any pinned value would be invented, which
+policy prohibits. `TODO(paper)` REMAINS OPEN with these negative results
+recorded; the malformed string's shape suggests it is itself an artifact
+of the same rewrite class applied upstream at publication time.
+
+### 9d.6 Budget and gate state at report time
+
+Expedition budget: `0/2` consumed — zero builds spent; controller gates
+the launch (dispatch: report TDD evidence + guard/fixture proposal first).
+Registry `sigminer` entry: `PENDING-VERIFY` — untouched, per charter 5 the
+flip is reserved for the live `docker image inspect .Id` on a green build
+(the §9c.1 flip ceremony stands unchanged).
 
 ## 10. Open items for the GREEN dispatch
 
