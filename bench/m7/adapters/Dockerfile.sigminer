@@ -11,12 +11,13 @@
 # RepoDigests into competitors/registry.py (PENDING-VERIFY → sha256:...);
 # inventing a digest is prohibited (§5 ii).
 #
-# QUOTING NOTE: the Rscript -e string below deliberately carries NO "#"
-# comment lines. Whether Dockerfile line continuations preserve newlines
-# inside quoted content is parser-dependent, and a swallowed newline after
-# "#" would silently comment out the rest of the build script (including
-# the pin/export asserts at its tail). All build rationale therefore lives
-# in these Dockerfile-level comments instead.
+# STRUCTURAL NOTE (supersedes the old QUOTING NOTE): the build script is a
+# COPY'd file, not an Rscript -e one-liner. Whether Dockerfile line
+# continuations preserve newlines inside quoted content is parser-dependent,
+# and one swallowed newline after "#" silently commented out the rest of the
+# build script (including the pin/export asserts at its tail). A file copy
+# removes that hazard class entirely; build rationale lives in these
+# Dockerfile-level comments and in install_sigminer.R's header.
 FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
 
 RUN apt-get update \
@@ -49,100 +50,38 @@ RUN apt-get update \
 # CRAN package installs follow the G0-established idiom (memo §8): §5 governs
 # image pulls, not in-build package fetches. The pin is the CRAN archive
 # version 2.3.1 (the exact artifact the host-library xval anchor cross-
-# validates against, memo §2a note). The repos option is overridden to
-# CRAN-only on purpose: the r-ver base's default repository stack lets
-# remotes resolve some Imports (Rhtslib 2.2.0) through the legacy
-# Bioconductor 3.17 archive, whose sources fail to compile against this
-# R (recorded 2026-10-08: "bgzf.c:38:10: fatal error: zlib.h: No such
-# file or directory / ERROR: compilation failed for package 'Rhtslib'");
-# the CRAN-maintained releases of the same Imports build cleanly. cmake is
-# apt-installed because nloptr's configure requires it ("CMAKE NOT FOUND",
-# same recorded attempt). remotes::install_version pulls the pinned source
-# from the CRAN archive; the build-time assert makes any drift fail loudly
-# — the G0 build-guard idiom.
+# validates against, memo §2a note).
 #
-# Fourth recorded build defect (verbatim, rebuild 2, 2026-10-08, memo §9b
-# item 4): the pinned older Imports of sigminer 2.3.1 live only under CRAN's
-# Archive/ subtree, so the plain-contrib fetch 404s — "cannot open URL
-# 'https://cran.r-project.org/src/contrib/rbibutils_2.4.1.tar.gz'" (and the
-# gridBase_0.4-7 sibling), cascading Rdpack/reformulas/NMF unavailability
-# into sigminer. ensure.pin below is the recorded provisioning recipe:
-# R's own Archive-aware "==version" spec (contriburl + archiveurl, so
-# dependencies keep resolving through the contrib repo stack) first, an
-# explicit Archive-tarball download (flat and per-package Archive layouts)
-# as fallback second; install_version then finds both pins present and
-# upgrade="never" keeps them. P3M serves binaries only (no
-# src/contrib/Archive), which is why the pinned fetch names canonical CRAN
-# explicitly; the mirror policy governs image pulls, not these fetches.
+# SLICE-2 CLOSURE (2026-10-08, memo §9c): the recorded fourth-through-
+# seventh-defect chain (Archive-only 404s, the warning-not-error ==spec
+# contract, the tree-wide era-pinned-Import 404/SSL class) is closed here.
+# The ==spec + remotes::install_version + hand-pinned ensure.pin path was
+# retired because the ground truth proved it non-viable on this base R: the
+# "pkg==ver" string is looked up VERBATIM AS A PACKAGE NAME ("package
+# 'rbibutils==2.4.1' is not available for this version of R" — the recorded
+# seventh defect) and install.packages carries no archiveurl parameter at all
+# (slice-2 probe 1). The build now runs install_sigminer.R: a whole-tree,
+# result-gated, Archive-aware resolver — every transitive node of sigminer
+# 2.3.1 resolves through CRAN contrib -> Archive(per-pkg dir) -> Archive
+# (flat) -> the pinned Bioconductor 3.17 contrib, with name-case candidates
+# [db-canonical | Archive-index-alias | as-written | lowercase | capitalized],
+# per-URL retries against the recorded proxy flakiness (§9b item 1), and an
+# Archive-listing walk (plus master-index canonical discovery) as last
+# resort. The Bioconductor layer is load-bearing and recorded as such: the
+# sigminer Imports maftools/Rhtslib exist on NO CRAN tree (contrib-db miss +
+# the 28k-token Archive master index has no directory — probes 3/6), and the
+# bioc 3.17 release is the same source the recorded pre-hardening build
+# compiled Rhtslib from (second defect above: the -dev headers provision it).
+# A node counts as provisioned only when the library's own DESCRIPTION
+# reports the version — the recorded result-gate semantics, now the design
+# itself. The seventh defect's belt-and-braces pins (rbibutils 2.4.1,
+# gridBase 0.4-7) are kept, result-gated through the same fetch path.
 #
-# Sixth recorded build defect (verbatim, closure attempt 2, 2026-10-08): the
-# first ensure.pin iteration died on its own version probe — "Error in
-# pd[[Version]] : subscript out of bounds" — because the base R's
-# packageDescription() returns a version-less empty listy for a
-# not-installed package (newer R returns NULL); the probe now tryCatch-
-# wraps the [[ subsetting itself (memo §9b closure addendum).
-#
-# Seventh recorded build defect (verbatim, closure attempt 3, 2026-10-08):
-# the error-vs-warning contract of the ==version spec — an Archive-only
-# version passes install.packages WITHOUT raising: verbatim "2: package
-# 'rbibutils==2.4.1' is not available for this version of R" surfaced only
-# as a warning, so an error-caught ok-flag read TRUE, the Archive fallback
-# never ran, and the pin sat unprovisioned (later verbatim cascade:
-# "trying URL .../contrib/cli_3.6.6.tar.gz / cannot open URL ... / status
-# was SSL connect error" for the era-pinned Import tree, ending
-# "dependencies 'cli', ... are not available for package 'sigminer'").
-# ensure.pin is therefore result-gated, not error-gated: success means
-# packageDescription actually reports the pinned version in the library —
-# the version-spec path, then the Archive-tarball path, are both re-probed,
-# and only a real match short-circuits; otherwise the build stops loudly.
-# The tree-wide era-pinned-Import 404/SSL class beyond the two recorded
-# pins is NOT closed by this dispatch (build budget exhausted; memo §9b
-# closure addendum carries the verbatim record for the next slice).
-RUN Rscript -e '\
-  options(repos = c(CRAN = "https://cran.r-project.org")); \
-  install.packages("remotes", repos = "https://cloud.r-project.org", quiet = TRUE); \
-  ensure.pin <- function(pkg, ver) { \
-    getver <- function() { \
-      pd <- tryCatch(packageDescription(pkg), error = function(e) NULL); \
-      tryCatch(pd[["Version"]], error = function(e) NULL); \
-    }; \
-    matchpin <- function() { \
-      have <- getver(); \
-      !is.null(have) && identical(as.character(have), as.character(ver)); \
-    }; \
-    if (matchpin()) return(invisible(TRUE)); \
-    try(install.packages(sprintf("%s==%s", pkg, ver), lib = .libPaths()[1L], \
-      contriburl = "https://cran.r-project.org/src/contrib", \
-      archiveurl = "https://cran.r-project.org/src/contrib/Archive", \
-      repos = "https://cran.r-project.org", type = "source", quiet = TRUE), \
-      silent = TRUE); \
-    if (matchpin()) return(invisible(TRUE)); \
-    fname <- sprintf("%s_%s.tar.gz", pkg, ver); \
-    for (u in c(sprintf("https://cran.r-project.org/src/contrib/Archive/%s", fname), \
-                sprintf("https://cran.r-project.org/src/contrib/Archive/%s/%s", \
-                        pkg, fname))) { \
-      tf <- tempfile(fileext = ".tar.gz"); \
-      try(suppressWarnings(download.file(u, destfile = tf, quiet = TRUE, \
-                                         mode = "wb")), silent = TRUE); \
-      if (file.exists(tf) && file.size(tf) > 1024L) { \
-        try(install.packages(tf, lib = .libPaths()[1L], repos = NULL, \
-                             type = "source", quiet = TRUE), silent = TRUE); \
-        if (matchpin()) return(invisible(TRUE)); \
-      }; \
-    }; \
-    stop(sprintf("Archive-only pin not provisioned in library: %s %s", pkg, ver)); \
-  }; \
-  ensure.pin("rbibutils", "2.4.1"); \
-  ensure.pin("gridBase", "0.4-7"); \
-  remotes::install_version("sigminer", version = "2.3.1", \
-                           repos = "https://cran.r-project.org", \
-                           install_dir = .libPaths()[1L], upgrade = "never"); \
-  v <- as.character(packageVersion("sigminer")); \
-  if (!identical(v, "2.3.1")) stop(sprintf("SigMiner pin drift: got %s, want 2.3.1", v)); \
-  for (fn in c("set.seed", "signature_extract", "fitsignatures", \
-                "signature_import", "signature_renorm")) { \
-    if (!exists(fn, mode = "function", where = asNamespace("sigminer"))) \
-      stop(paste0("documented sigminer export missing: ", fn)) }'
+# The recorded build-time asserts are preserved verbatim in the script's
+# tail: packageVersion("sigminer")=="2.3.1" exact and the five documented
+# exports present — any drift stops the build loudly (G0 build-guard idiom).
+COPY install_sigminer.R /tmp/install_sigminer.R
+RUN Rscript /tmp/install_sigminer.R
 
 WORKDIR /work
 COPY m7_entry.py /work/
