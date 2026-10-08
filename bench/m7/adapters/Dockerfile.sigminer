@@ -111,7 +111,7 @@ RUN apt-get update \
 # discipline: the layer fails loudly unless the installed library's own
 # DESCRIPTION reports a version. Controller-ruled scope, one build, spent on the
 # COMPLETE audited closure -- never iteratively.
-RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org/src/contrib")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), "provisioned\\n")'
+RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), "provisioned\\n")'
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
 # /work/run_sigminer.R ... (adapters/docker_cmd.py ENTRY_SCRIPT); CMD is
 # documentation of that shape only.
