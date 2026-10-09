@@ -44,6 +44,7 @@ import shutil
 import subprocess
 import sys
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent                       # bench/m7
@@ -57,6 +58,7 @@ from competitors.errors import AdapterUnavailable            # noqa: E402
 from competitors import timings                              # noqa: E402
 from g0 import grid, seeds, sim                              # noqa: E402
 from g0.providers import ProviderError, provider_by_name    # noqa: E402
+from tools import matrix_governance as gov                   # noqa: E402
 
 # The four-file re-run guard (stricter than G0's two-file guard, §4.4).
 GUARD_FILES = ("intervals.csv", "errors.log", "manifest.json", "timing.json")
@@ -313,9 +315,26 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     if trusted:
         return row("cached", 0.0, 0.0)
 
+    if args.adapter == "docker":
+        # RB-08(3): fan-out=1 is enforced, not wished — refuse the launch
+        # while ANY measurement-image container co-tenants the VM (assert
+        # outcome logged per cell), and sample `docker top` during the run
+        # so the self-sizing process pools are OBSERVED, not assumed
+        # (RB-08(4)); the census sidecar lives under cachedir/census,
+        # OUTSIDE the four-file guard and the BYTE_EQUAL set.
+        if not gov.pre_flight_assert(stamp, cachedir / "preflight_log.jsonl"):
+            return row("preflight-refused: measurement co-tenant live "
+                       "(RB-08(3))", 0.0, 0.0)
+        census_ctx = gov.sample_worker_census(stamp, competitor,
+                                              cachedir / "census")
+    else:
+        census_ctx = nullcontext()
+
     t0 = time.time()
     try:
-        summary = invoke_adapter(args, competitor, spec, ind, outd, catalog_mount)
+        with census_ctx:
+            summary = invoke_adapter(args, competitor, spec, ind, outd,
+                                     catalog_mount)
     except AdapterUnavailable as e:                  # skip-not-skip sentinel
         return row(f"skip: {e}", 0.0, 0.0)
     except Exception as e:                           # noqa: BLE001 — cell failure
@@ -367,13 +386,37 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
                else "skip" if r["status"].startswith("skip") else "fail")
         tally[key] = tally.get(key, 0) + 1
     path = outdir / f"judgment_m7_{args.profile}_{ts}.md"
-    lines = [
-        f"# U-M7-02 fairness attestation — profile={args.profile}, "
-        f"adapter={args.adapter}, provider={args.provider}",
-        "",
-        "This is the **FAIRNESS ATTESTATION** half of the authoritative run: it",
-        "certifies *how* the cells ran, not *who won*.",
-        "",
+    defect = gov.nonpass_rows(rows)
+    if defect:
+        # Refuse-to-claim law (RB-08, born from matrix1 filing its attestation
+        # header over 20 failed cells): a judgment over rows that are not all
+        # pass speaks as DEFECT and certifies nothing.
+        head = [
+            f"# U-M7-02 DEFECT — profile={args.profile}, "
+            f"adapter={args.adapter}, provider={args.provider}",
+            "",
+            f"This pass is a **DEFECT**, not an attestation: {len(defect)} of "
+            f"{len(rows)} cells are not passes,",
+            "so this file certifies nothing about run fairness. The",
+            "refuse-to-claim law admits its authority header only over a",
+            "complete matrix whose every row passes.",
+            "",
+            "- first offenders (cell | status head):",
+        ] + [f"  - {r['cell']} | {r['status'].splitlines()[0][:120]}"
+             for r in defect[:8]]
+        if len(defect) > 8:
+            head.append(f"  - … {len(defect) - 8} more (see the timings table)")
+        head.append("")
+    else:
+        head = [
+            f"# U-M7-02 fairness attestation — profile={args.profile}, "
+            f"adapter={args.adapter}, provider={args.provider}",
+            "",
+            "This is the **FAIRNESS ATTESTATION** half of the authoritative run: it",
+            "certifies *how* the cells ran, not *who won*.",
+            "",
+        ]
+    lines = head + [
         "- single ground truth: all competitors saw msuiter-generated simulated",
         "  counts from the frozen G0 simulator (master seed "
         f"{seeds.MASTER_SEED}, data streams bit-identical to G0)",
@@ -485,8 +528,11 @@ def main(argv=None) -> int:
         for arm, n, counts_path in cells:
             row = run_cell(args, competitor, specs[competitor], arm, n,
                            counts_path, cachedir, catalog_ref)
+            flagged = gov.floor_gate(row)         # RB-08(7): DEFECT candidate
+            if flagged is not None:
+                row = flagged
             rows.append(row)
-            if row["status"].startswith("fail"):
+            if row["status"].startswith(("fail", "defect-", "preflight-refused")):
                 failures.append(row["cell"])
             elif row["status"].startswith("skip"):
                 skips.append((row["cell"], row["status"]))

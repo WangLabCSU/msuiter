@@ -251,6 +251,25 @@ Controller ruling, verbatim-governing, five clauses executed:
    hashes as precedent). Verify-by-command binds controller instructions too
    — RB-05(2) says so; the pin carries the command-measured hash, the
    commit message (`cc6e048`) records the erratum.
+
+   **RB-06(1) finalization of the erratum (controller FULL RETRACTION of the
+   "byte-pin triangle break" framing; how truth was established, not just
+   that a constant was corrected).** The pin `7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084`
+   IS the true SHA-256 of the committed bytes, established by three
+   independent explicit-algorithm recorders agreeing: host
+   `openssl dgst -sha256`, in-container `python3 hashlib.sha256`, and the
+   in-image `sha256sum` assert. The erratum's `fe700abe…` had two
+   controller-side root causes, both now on record: (i) **algorithm
+   conflation** — a host `shasum` invocation emits SHA-1 (40 hex) output that
+   was read as if SHA-256, which is exactly what a `fe700abec23b…`-shaped
+   string is; (ii) **an unmeasured remembered constant** — the "known"
+   sha256('abc') control value was cited from memory instead of measured,
+   itself the verify-by-command violation it appeared to expose.
+   **No oracle defect exists**: the bytes, the pins, and the manifest
+   role-claims were true as written throughout; no re-witnessing was or is
+   required. The lesson generalizes into tooling (next section), because a
+   narrative erratum cannot prevent the class — only measurement-bound
+   gates can.
 2. **(b) Era-gated bakes.** lpSolve 5.6.20, synchronicity 1.3.10, matrixStats
    1.3.0 — P3M `2024-04-23` snapshot ONLY, literal version gates (build9
    discipline: a null or off-version DESCRIPTION read is a `quit(status=1)`
@@ -331,3 +350,140 @@ The registry flip + `test_registry.py` pins are pure-data transcriptions of
 that live inspect — the ceremony RB-05(6) ordered: inspect verbatim -> probe
 GREEN -> flip, and not one step earlier. Phase-B (RB-02 full matrix)
 launches from this head.
+
+## RB-06 — hash provenance as executable law (ratifications and seals)
+
+Controller ratifications recorded verbatim-equivalent: the r5 bake ledger
+(1/1) is CONSUMED by the closure lineage above; the sixth recorded build
+defect (CRAN-fallback float caught by the literal-version gate) is
+classified instrumentation-class whose loud death WAS the result-gate
+working as designed; the matrixStats 1.3.0 P3M-only bake fold is ratified.
+
+The doctrine ("hash literals only ever pasted from command output, never
+re-authored" — RB-06(6) binds the CONTROLLER as well: a "this hash matches
+nothing" claim is a hypothesis requiring same-algorithm reproduction before
+it can become an order) is encoded as three structural seals, TDD RED-first
+(suite group (O) `tests/test_hash_provenance.py`, zero typed digests — every
+expected value measured at test time, every tamper derived from the measured
+value by last-hex mutation):
+
+1. **The byte-pin triangle** (`tools/audit_executed_surface_deps.py::
+   verify_byte_pin_triangle`): committed runner bytes == promoted witness
+   == the Dockerfile in-image assert constant == the manifest's entry and
+   role-claims == the registry row reconciled against the committed live
+   inspect — re-derived from measurement on every suite run.
+2. **The provenance lint** (`lint_hash_provenance`, standalone CLI
+   `--hash-provenance`): every 64-hex literal carried by the recipe family
+   (Dockerfile, runner, installer, self-witness, registry rows, contract
+   tests, the manifest itself) must be BACKED — it re-measures from
+   committed bytes, from the committed CRAN Archive tarball member, or is
+   transcribed from a committed live-inspect JSON. Witnesses committed:
+   `hash_provenance_r5_CLEAN.json` (live family, rc 0) and
+   `hash_provenance_TAMPERPROBE_DEFECT.json` (RED: a one-byte-tampered
+   copy of the manifest — the probe file, never live state — must and does
+   fire `manifest-entry-rehash` + `unbacked-literal`, rc 2).
+3. **The control vector** (manifest schema `m7-rehearsal-manifest-2`): the
+   minting tool records `sha256('abc')` from its own invocation; the lint
+   refuses any manifest whose control vector misses the true digest —
+   the RB-06(1)(i) SHA-1-as-SHA-256 class now dies the gate on first
+   contact. `measured_provenance` binds every backing source (tarball hash
+   `b2836c76…1953b` and NAMESPACE-member hash re-measured against an
+   independent upstream re-download — exact match — plus the fixture file).
+
+## Phase-B pass 1 — the shard OOM over-commit (seventh recorded defect,
+## matrix-class, tooling-owned)
+
+The first authoritative-pass attempt fanned the eight shards out UNBOUNDED
+(`tools/run_m7_bench.sh` line 42 — one background process per shard, no
+cap). Measured outcome (not narrative): 8/8 shards completed and filed;
+42/42 cells attempted; **20 cells FAILED — 17 sigminer + 3 sigprofiler** —
+with the VM's kernel answering ten containers' worth of worker processes on
+10 vCPUs / 8319504384 bytes (`docker info` verbatim): sigprofiler cells die
+`container run failed (exit 137)` (SIGKILL) right after
+`[Parallel(n_jobs=10)] ... LokyBackend with 10 concurrent workers`; sigminer
+cells die `Future ... MultisessionFuture interrupted (pid ...)` plus R's own
+furrr allocation diagnostics and `Execution halted`, after 39–88 minute
+crawled runs against 4–7 minute floors (≈10× contention drag). The frozen
+thread-caps were injected and enforced throughout — they cap BLAS/OpenMP
+THREADS; they cannot reach joblib/Loky or future::multisession PROCESSES,
+which size to the VM. The recorded G0 over-subscription lesson (8-way
+fan-out under an 8 GB VM) re-manifested as an omission in the m7 driver.
+
+Classification: instrumentation-class defect of the driver — NOT the r5
+image (probe GREEN, self-witness rc 0), NOT the frozen protocol (the 22 ok
+cells' seed-pinned outputs stand; zero failed-cell cache entry was accepted
+under the four-file guard). Witness committed per the standing
+capture-before-retry order: `phase_b_SHARD-OOM_DEFECT.json` (verbatim
+per-cell death texts, per-file sha256s, control vector). Cure under
+controller ruling: bounded concurrent-container fan-out + cache-hit
+re-entry of only the failed cells, then straight through RB-06(5)
+(authoritative serial pass, byte-equality attestation, resample gate,
+four gates, PR #13).
+
+## RB-08 — cache-reuse denial and the launch-governance seal (eighth law-group)
+
+Controller ruling RB-08, amended on record: the cache is DENIED for reuse —
+not on the originally cited inflation arithmetic (that measurement was
+compiled through `'__N100' in label`, which swept N10000/N100000/N1000000
+into the N100 class; the controller owns the retraction: comparing large-n
+cpu_seconds against the N100 probe floor was bogus arithmetic), but on
+three merits that need no retracted number:
+
+1. the matrix is INCOMPLETE — 20 of 42 cells failed; no all-pass census
+   exists to reuse;
+2. uniformity-by-construction is VIOLATED for every surviving cell — all
+   eight containers co-tenanted the VM for each cell's entire lifetime;
+3. the failed cells crawled 39–88 minutes against 4–7 minute
+   pre-registered floors — severe contention is proven by their own clocks.
+
+The FUTURE_MAX_WORKERS probe result (the knob is NOT honored by the r5
+image's future plan — live `docker top` counted 10 workers with
+`FUTURE_MAX_WORKERS=1` set) is adopted as proof of the doctrine it was
+designed by: measure, never assume. The worker pool is therefore
+OBSERVED, per cell, via a `docker top` census sidecar
+(`cachedir/census/<cell>/census.json`) — OUTSIDE the four-file guard and
+the BYTE_EQUAL set, so it can never contaminate cache-hit byte
+comparisons. The driver's fan-out, not the tool's pool, is the bounded
+quantity: benchmarking sigminer with the pool capped to 1 would measure a
+different program.
+
+The seal is suite group (P) `tests/test_matrix_governance.py` (15 units,
+TDD RED-first) over `tools/matrix_governance.py`, all pure with injected
+docker probes (CI-safe, same idiom as (L)):
+
+- **exact stamp grammar** — `parse_stamp` is the one admissible reader of
+  `tool__arm__N<int>`: ASCII digits only (the `int("١٠٠")` trap), no
+  leading zeros, full-string arms; `class_by_n` partitions by PARSED int
+  equality. Substring classification is now a compile-time impossibility,
+  not a discouraged practice;
+- **judgment refuse-to-claim** — `write_judgment` over any non-pass row
+  speaks as DEFECT and certifies nothing; the FAIRNESS ATTESTATION header
+  is admitted only over a complete all-pass matrix (matrix1 filed its
+  header over 20 failed cells — never again by construction);
+- **pre-flight co-tenant refusal** — before any container launch the
+  driver counts live measurement-image containers (`docker ps`, registry-
+  derived image set, so a shiny/test co-tenant never trips it) and
+  REFUSES to launch while any is live, logging the outcome per cell to
+  `preflight_log.jsonl`;
+- **worker census** — max-sibling-proc extraction from injected `docker
+  top` tables, folded across during-run samples into the census sidecar;
+- **3x-floor gate** — pre-registered, pre-committed floor table
+  (`floor_for`): BOOT+WORK anchors at the r5 GREEN probe (sigminer
+  360.25 cpu_s) and pilot §2 (sigprofiler 13.4 s wall), saturating sqrt
+  growth in n (mutation-space saturation: the committed N1e4 survivors
+  prove linear scaling would mispredict by an order of magnitude), arm
+  multipliers from the §5 pass-count projections; unknown tool = exempt
+  (mock is plumbing), unknown arm of a measured tool = hard error — an
+  ungated cell is forbidden;
+- **driver text law** — `run_m7_bench.sh` is rewritten STRICT SERIAL:
+  every shard invocation foreground, and a unit fails the suite if a
+  background `&` ever reappears in the driver outside an fd redirection.
+  The eighth defect was one character; it is now a test failure.
+
+Execution order per the amendment: commit the governance set → hash-
+manifested purge of `cache/bench_degraded_docker` (evicted-entry count in
+the DEFECT-witness addendum, deny-on-merits rationale restated, withdrawn
+numbers removed) → fresh 42-cell serial ignition under the frozen protocol
+(master seed 20260928 verbatim, zero protocol touches), with the first
+three cells' measured wall/cpu against their floor classes reported
+mid-flight before the tail sinks → straight through RB-06(5).

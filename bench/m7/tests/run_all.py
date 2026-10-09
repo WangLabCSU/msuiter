@@ -32,6 +32,10 @@ Executed-surface audit (U-M7-03, controller ruling RB-03 -- convergence gate):
 Hash provenance (U-M7-03, controller ruling RB-06 -- explicit-algorithm seal):
   (O) test_hash_provenance  byte-pin triangle + manifest-entry rehash +
       control-vector self-check; no re-typed digest survives this gate
+Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
+  (P) test_matrix_governance  exact-stamp parsing (no substring classes),
+      judgment refuse-to-claim, pre-flight co-tenant refusal, worker census,
+      pre-registered 3x-floor gate
 """
 
 from __future__ import annotations
@@ -57,7 +61,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-03 RB-03: executed-surface dependency closure (convergence gate):
            "test_executed_surface_audit",
            # U-M7-03 RB-06: hash-provenance gates (explicit-algorithm doctrine):
-           "test_hash_provenance"]
+           "test_hash_provenance",
+           # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
+           "test_matrix_governance"]
 
 
 def _collect(mod_name):

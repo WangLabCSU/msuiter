@@ -1,11 +1,28 @@
 #!/bin/sh
-# U-M7-02 sharded competitor driver — arm shards over one cachedir, then a
-# serial cache-hit pass emits the authoritative outputs (minutes, not hours).
+# U-M7-03 competitor driver — STRICT SERIAL (fan-out=1), one cachedir.
 #
-# Mirrors bench/g0/tools/run_degraded_pi.sh: cells are keyed
-# <competitor>__<arm>__N<n> under one cachedir (disjoint per arm), the
-# final serial pass hits the hash+four-file guard and re-emits the
-# fairness attestation + timings without re-invoking any competitor, and
+# This file is the RB-08 cure for the Phase-B pass-1 SHARD-OOM defect
+# (phase_b_SHARD-OOM_DEFECT.json): the previous version backgrounded eight
+# arm-shards at once, and ten containers' worth of self-sizing process
+# pools (joblib/LokyBackend, future::MultisessionFuture — beyond the frozen
+# BLAS/OpenMP thread caps) over-committed the 10-vCPU VM. Uniformity is
+# now enforced by construction, in three layers:
+#
+#   1. DRIVER: every cell invocation is a foreground process, one at a
+#      time. There is no `&` in this file, and none may be added.
+#   2. PRE-FLIGHT ASSERT (run_bench, per cell): the driver refuses to
+#      launch a cell while ANY measurement-image container is live
+#      (`docker ps` census in tools/matrix_governance), outcome logged to
+#      the cachedir preflight_log.jsonl — auditable, not just raised.
+#   3. WORKER CENSUS + FLOOR GATE (run_bench, per cell): `docker top`
+#      sampling records the observed pool width OUTSIDE the four-file
+#      guard (cachedir/census/<cell>/census.json), and any cell exceeding
+#      3x its pre-registered uncontended floor is flagged defect-floor ->
+#      the pass exits non-zero and this driver halts (defect candidates
+#      are reported, never averaged away).
+#
+# The final serial pass then hits the hash+four-file guard and re-emits
+# the fairness attestation + timings without re-invoking any competitor;
 # the rolled timings_sharded_master.csv keeps every measured second
 # attributable (§4.4/§4.5).
 #
@@ -34,17 +51,23 @@ rm -rf "$SH_OUT"; mkdir -p "$SH_OUT/logs"
 common="--profile $PROFILE --adapter $ADAPTER --provider $PROVIDER"
 common="$common --competitors $COMPETITORS --cachedir $CACHE"
 
-pids=""; names=""
+# Arm balance mirrors the G0 closure driver (STL-pole analog: the heavy
+# comp_pole tier rides as its own critical path). Order = light-first: a
+# defect candidate in a cheap cell kills the pass before the heavy tier
+# spends hours. EVERY shard runs foreground — fan-out=1, no exceptions.
 shard() {                       # shard <tag> <arms...>
   tag=$1; shift
   arms=$(printf '%s,' "$@" | sed -E 's/,$//')
-  python3 run_bench.py $common --arms "$arms" --shard-tag "$tag" \
-      --outdir "$SH_OUT/$tag" > "$SH_OUT/logs/$tag.log" 2>&1 &
-  pids="$pids $!"; names="$names $tag"
+  echo "[driver] serial shard $tag (arms=$arms) starting $(date -u +%H:%M:%S)"
+  if ! python3 run_bench.py $common --arms "$arms" --shard-tag "$tag" \
+      --outdir "$SH_OUT/$tag" > "$SH_OUT/logs/$tag.log" 2>&1; then
+    echo "SHARD FAILURE: $tag (see $SH_OUT/logs/$tag.log) — halting per" \
+         "RB-08(7): defect candidates are reported, not outrun" >&2
+    exit 1
+  fi
+  echo "[driver] serial shard $tag complete $(date -u +%H:%M:%S)"
 }
 
-# Arm balance mirrors the G0 closure driver (STL-pole analog: the heavy
-# comp_pole tier rides as its own critical path).
 shard main             main
 shard comp_clock_only  comp_clock_only
 shard comp_mmr         comp_mmr
@@ -54,13 +77,7 @@ shard nb               nb
 shard clock_sparse     clock sparse
 shard comp_pole        comp_pole
 
-fail=""
-set +e
-for p in $pids; do wait "$p" || fail="$fail $p"; done
-set -e
-[ -z "$fail" ] || { echo "SHARD FAILURE:$fail (see $SH_OUT/logs)" >&2; exit 1; }
-
-# Final serial pass: full grid over the now-complete cache → authoritative
+# Final serial pass: full grid over the now-complete cache -> authoritative
 # fairness attestation + timings; every invocation is a cache hit.
 ts=$(date -u +%Y%m%d-%H%M%S)
 OUT="../results/docker_m7_${PROFILE}_${ts}"
