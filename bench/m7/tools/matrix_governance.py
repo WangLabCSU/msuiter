@@ -171,7 +171,7 @@ def sample_worker_census(cell: str, tool: str, log_dir, *, interval: float = 5.0
     BYTE_EQUAL set — it never participates in cache-hit comparisons)."""
     sampler = sampler or docker_top_rows
     samples: list[list[dict]] = []
-    stop = threading.Events()
+    stop = threading.Event()
 
     def _tool_ref() -> str:
         from competitors import registry
@@ -188,6 +188,10 @@ def sample_worker_census(cell: str, tool: str, log_dir, *, interval: float = 5.0
             if rows:
                 samples.append(rows)
 
+    # The pump thread is created at factory time (not at __enter__): the
+    # exit path joins it, so both entry and exit must see the same object.
+    thread = threading.Thread(target=_pump, daemon=True)
+
     def _finish(ctx: Path):
         stop.set()
         thread.join(timeout=2 * interval + 5)
@@ -198,7 +202,6 @@ def sample_worker_census(cell: str, tool: str, log_dir, *, interval: float = 5.0
 
     class _Ctx:
         def __enter__(self):
-            thread = threading.Thread(target=_pump, daemon=True)
             thread.start()
             return self
 
