@@ -103,4 +103,68 @@ if (length(drift)) {
 }
 
 cat("docs-sync: OK -- no API-surface drift\n")
+
+# ---------------------------------------------------------------------------
+# Half two: ROADMAP checkbox-truth (U-M7-04 slice-A; controller ruling
+# 2026-10-10). A box flipped to [x] in the M6s / M7 / G sections is a
+# completion claim, and a completion claim must be auditable: each such line
+# must carry a parenthetical evidence citation containing a path:line
+# reference or a commit-hash token (>= 7 hex chars).
+# ---------------------------------------------------------------------------
+
+.checkbox_line  <- "^\\s*- \\[[xX]\\]"
+.section_head   <- "^#{2,4} "
+
+# True iff some parenthetical segment of the line cites path:line or a commit.
+# Capture-group extraction follows the proven house idiom (gregexec matcher,
+# cf. test-channels-sync.R): regmatches rows are [full match, group 1...].
+.checkbox_citation_ok <- function(line) {
+  rl <- regmatches(line, gregexec("\\(([^()]*)\\)", line, perl = TRUE))
+  if (!length(rl)) {
+    return(FALSE)                       # no () group present at all
+  }
+  hits <- rl[[1]]
+  segs <- hits[seq(2L, length(hits))]  # drop the full-match row, keep groups
+  any(grepl("[A-Za-z0-9._/-]+\\.[A-Za-z0-9]+:[0-9]+", segs, perl = TRUE)) ||
+  any(grepl("(?<![0-9a-f])[0-9a-f]{7,40}(?![0-9a-f])", segs, perl = TRUE))
+}
+
+.roadmap_checkbox_check <- function() {
+  lines <- readLines(.rd("ROADMAP.md"), warn = FALSE)
+  heads <- grep(.section_head, lines, perl = TRUE)
+  if (!length(heads)) {
+    stop("docs-sync: ROADMAP.md exposes no section headings", call. = FALSE)
+  }
+  section_of <- function(i) lines[max(heads[heads <= i])]
+  in_scope   <- function(sec) grepl("M6s", sec) ||
+                              grepl("M7\\b", sec, perl = TRUE) ||
+                              grepl("G 门", sec, fixed = TRUE)
+  checked <- grep(.checkbox_line, lines, perl = TRUE)
+  bad <- character(0)
+  n   <- 0L
+  for (i in checked) {
+    sec <- section_of(i)
+    if (!in_scope(sec)) next
+    n <- n + 1L
+    if (!.checkbox_citation_ok(lines[i])) {
+      bad <- c(bad, sprintf("ROADMAP.md:%d  %s", i,
+                            substr(trimws(lines[i]), 1L, 96L)))
+    }
+  }
+  list(n = n, bad = bad)
+}
+
+ct <- .roadmap_checkbox_check()
+cat(sprintf("docs-sync: checkbox-truth: %d checked box(es) in M6s/M7/G sections\n",
+            ct$n))
+if (length(ct$bad)) {
+  cat("docs-sync: checkbox-truth: DRIFT -- checked boxes without a",
+      "parenthetical evidence citation (need path:line or commit token):\n")
+  for (b in ct$bad) cat("  ", b, "\n", sep = "")
+  cat("docs-sync: checkbox-truth: cite the committing evidence on these lines",
+      "(or uncheck them). Exiting 1.\n")
+  quit(status = 1L)
+}
+cat("docs-sync: checkbox-truth: OK -- every in-scope checked box cites its",
+    "evidence\n")
 quit(status = 0L)
