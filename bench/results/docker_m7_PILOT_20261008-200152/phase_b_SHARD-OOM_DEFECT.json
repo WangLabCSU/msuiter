@@ -1,0 +1,478 @@
+{
+ "algorithm": "python3 hashlib.sha256 (explicit-algorithm recorder, RB-06)",
+ "classification": "instrumentation-class defect of MY driver, not an image or protocol defect: cell outputs are seed-pinned; the deaths are memory over-commit under unbounded shard fan-out. The frozen thread caps cover BLAS/OpenMP/GC threads; they cannot reach joblib/LokyBackend or future::MultisessionFuture PROCESS pools, which size themselves to the VM's 10 vCPUs per container.",
+ "control_vector": {
+  "input": "abc",
+  "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "tool": "python3 hashlib.sha256"
+ },
+ "cpu_census": {
+  "floors": {
+   "sigminer_cpu_seconds_floor": 360.25,
+   "sigprofiler_seconds_floor": 13.4
+  },
+  "inflation": {
+   "sigminer_max_cpu_inflation": 10.2,
+   "sigminer_min_cpu_inflation": 7.1,
+   "sigprofiler_max_inflation": 11.8
+  },
+  "reproduces_controller_census": {
+   "sigminer_cpu_seconds_cited": [
+    2555.3,
+    2675.3,
+    3416.8
+   ],
+   "sigminer_cpu_seconds_measured": [
+    2555.266,
+    2675.275,
+    3416.823,
+    3659.281
+   ],
+   "sigprofiler_N100_seconds_range_measured": [
+    16.84,
+    158.38
+   ]
+  },
+  "sigminer_ok_rows": [
+   {
+    "cell": "sigminer__comp_pole__N100000",
+    "cpu_seconds": 2675.275,
+    "seconds": 2398.7
+   },
+   {
+    "cell": "sigminer__comp_pole__N1000000",
+    "cpu_seconds": 3416.823,
+    "seconds": 2865.65
+   },
+   {
+    "cell": "sigminer__comp_pole__N300000",
+    "cpu_seconds": 3659.281,
+    "seconds": 2746.93
+   },
+   {
+    "cell": "sigminer__comp_strong_flat__N10000",
+    "cpu_seconds": 2555.266,
+    "seconds": 1921.44
+   }
+  ],
+  "sigprofiler_ok_rows": [
+   {
+    "cell": "sigprofiler__clock__N1000",
+    "cpu_seconds": 94.231,
+    "seconds": 76.7
+   },
+   {
+    "cell": "sigprofiler__comp_clock_only__N100",
+    "cpu_seconds": 209.203,
+    "seconds": 158.38
+   },
+   {
+    "cell": "sigprofiler__comp_clock_only__N1000",
+    "cpu_seconds": 103.497,
+    "seconds": 71.28
+   },
+   {
+    "cell": "sigprofiler__comp_clock_only__N10000",
+    "cpu_seconds": 110.533,
+    "seconds": 82.82
+   },
+   {
+    "cell": "sigprofiler__comp_flat_triple__N1000",
+    "cpu_seconds": 88.336,
+    "seconds": 52.58
+   },
+   {
+    "cell": "sigprofiler__comp_flat_triple__N10000",
+    "cpu_seconds": 76.077,
+    "seconds": 43.07
+   },
+   {
+    "cell": "sigprofiler__comp_mmr__N100",
+    "cpu_seconds": 68.635,
+    "seconds": 39.55
+   },
+   {
+    "cell": "sigprofiler__comp_mmr__N1000",
+    "cpu_seconds": 50.191,
+    "seconds": 23.16
+   },
+   {
+    "cell": "sigprofiler__comp_mmr__N10000",
+    "cpu_seconds": 45.865,
+    "seconds": 21.28
+   },
+   {
+    "cell": "sigprofiler__comp_pole__N100000",
+    "cpu_seconds": 108.262,
+    "seconds": 96.36
+   },
+   {
+    "cell": "sigprofiler__comp_pole__N1000000",
+    "cpu_seconds": 96.822,
+    "seconds": 97.8
+   },
+   {
+    "cell": "sigprofiler__comp_pole__N300000",
+    "cpu_seconds": 110.293,
+    "seconds": 114.47
+   },
+   {
+    "cell": "sigprofiler__comp_strong_flat__N100",
+    "cpu_seconds": 38.893,
+    "seconds": 17.34
+   },
+   {
+    "cell": "sigprofiler__comp_strong_flat__N1000",
+    "cpu_seconds": 36.227,
+    "seconds": 16.84
+   },
+   {
+    "cell": "sigprofiler__comp_strong_flat__N10000",
+    "cpu_seconds": 37.259,
+    "seconds": 17.12
+   },
+   {
+    "cell": "sigprofiler__main__N100",
+    "cpu_seconds": 97.131,
+    "seconds": 83.42
+   },
+   {
+    "cell": "sigprofiler__main__N1000",
+    "cpu_seconds": 89.392,
+    "seconds": 48.28
+   },
+   {
+    "cell": "sigprofiler__main__N10000",
+    "cpu_seconds": 73.69,
+    "seconds": 35.3
+   }
+  ],
+  "verdict": "CACHE-REUSE-DENIED (zero uncontended survivors)"
+ },
+ "driver": "bench/m7/tools/run_m7_bench.sh (unbounded per-shard fan-out)",
+ "driver_tail_verbatim": [
+  "SHARD FAILURE: 47000 47004 47008 47012 47016 47020 47024 (see cache/bench_degraded_docker/shard_out/logs)",
+  "PHASE-B rc=1"
+ ],
+ "evidence_sha256": [
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/clock_sparse/timings_m7_degraded_20261009-105124_clock_sparse.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/clock_sparse/timings_m7_degraded_20261009-105124_clock_sparse.csv",
+   "sha256": "7404f04ed0051ef6d9d1381a108f15f09fa8353fb2cc4f4be84be95368b0a632"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/clock_sparse/judgment_m7_degraded_20261009-105124.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/clock_sparse/judgment_m7_degraded_20261009-105124.md",
+   "sha256": "408e68a3e1c9a45848996f2f7841ef38bc3e5e33e00e25692c9cbcd69cb2e2e1"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_clock_only/timings_m7_degraded_20261009-105925_comp_clock_only.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_clock_only/timings_m7_degraded_20261009-105925_comp_clock_only.csv",
+   "sha256": "e13b3ded27bd51993d31de2b1fc933fdbb6291bddb168d27ca2727eed89fb368"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_clock_only/judgment_m7_degraded_20261009-105925.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_clock_only/judgment_m7_degraded_20261009-105925.md",
+   "sha256": "2a2ae43f5dc9f370d843bf5299b8ba7bb3aae947e6660cce6cb0c7c1ceaa5e97"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_flat_triple/timings_m7_degraded_20261009-110153_comp_flat_triple.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_flat_triple/timings_m7_degraded_20261009-110153_comp_flat_triple.csv",
+   "sha256": "12664d282fb961dbe834b27969bb93cf34a56410b672b6d0a7fe0b9f6fafcfab"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_flat_triple/judgment_m7_degraded_20261009-110153.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_flat_triple/judgment_m7_degraded_20261009-110153.md",
+   "sha256": "f96c8fbc0f966020c867cd9153d19be70138fc5d3b1a3bcb38fa381c64be9744"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_mmr/timings_m7_degraded_20261009-110251_comp_mmr.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_mmr/timings_m7_degraded_20261009-110251_comp_mmr.csv",
+   "sha256": "bf05199f9e0e94acad78300120ed24ef5e4a8f85419dd79eea778a5d745893fd"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_mmr/judgment_m7_degraded_20261009-110251.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_mmr/judgment_m7_degraded_20261009-110251.md",
+   "sha256": "8a6924a69b5d15918fd96947ecff133e4cbc36a951d598f5bf89b51dca4e6be1"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_pole/timings_m7_degraded_20261009-104657_comp_pole.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_pole/timings_m7_degraded_20261009-104657_comp_pole.csv",
+   "sha256": "bbd0a5d3fda6b2fbf382278a9e4caeaf6958f79946a144ddd8be407669ee630d"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_pole/judgment_m7_degraded_20261009-104657.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_pole/judgment_m7_degraded_20261009-104657.md",
+   "sha256": "313e8ca692412cf4beefbfaac129c8252373d8bdac4a91a5971e6114fb97bdbe"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_strong_flat/timings_m7_degraded_20261009-110849_comp_strong_flat.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_strong_flat/timings_m7_degraded_20261009-110849_comp_strong_flat.csv",
+   "sha256": "73da5c6cf3a07d1ed22fe1e6243544d14056eab25b48d1f430dd755d9386f16f"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/comp_strong_flat/judgment_m7_degraded_20261009-110849.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/comp_strong_flat/judgment_m7_degraded_20261009-110849.md",
+   "sha256": "1bca7aa8455cda80d5d711df734fed2d30dc5debcca6bfe20598153bcd59c5e3"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/main/timings_m7_degraded_20261009-110205_main.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/main/timings_m7_degraded_20261009-110205_main.csv",
+   "sha256": "19c1380fe181127781280fda4ed368078174488d125e561d234cdd77f0f41ac2"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/main/judgment_m7_degraded_20261009-110205.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/main/judgment_m7_degraded_20261009-110205.md",
+   "sha256": "8d24be0447217b7a48ab91b61dde9df879d998eaa32915a152edd7da54478357"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/nb/timings_m7_degraded_20261009-091210_nb.csv",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/nb/timings_m7_degraded_20261009-091210_nb.csv",
+   "sha256": "f53b75b732df7330ebb8a221fa085b2d82d52ba0fa2e7f916a85e6e9cfc06075"
+  },
+  {
+   "origin": "bench/m7/cache/bench_degraded_docker/shard_out/nb/judgment_m7_degraded_20261009-091210.md",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_pass1_evidence/nb/judgment_m7_degraded_20261009-091210.md",
+   "sha256": "614428e90fac1ac8c2972fc019052d81aa10f02a85b4cc205818829b0c875863"
+  },
+  {
+   "path": "/tmp/m7probe/phase_b.log (host-side driver log)",
+   "sha256": "d4b2814c0dd1eb3d725596d26bb3ab06fd8141f671dece38aab3030948426143"
+  }
+ ],
+ "schema": "m7-phase-b-defect-1",
+ "shards": [
+  {
+   "failed": 3,
+   "fails": [
+    {
+     "cell": "sigminer__clock__N1000",
+     "seconds": "4054.51",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__sparse__N1000",
+     "seconds": "4359.98",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigprofiler__sparse__N1000",
+     "seconds": "95.72",
+     "status_verbatim": "fail: container run failed (exit 137): [Parallel(n_jobs=10)]: Using backend LokyBackend with 10 concurrent workers.[Parallel(n_jobs=10)]: Done  52 tasks      | elapsed:   29.2s[Parallel(n_jobs=10)]: Done 100 out of 100 | elapsed:   40.9s finished",
+     "tool": "sigprofiler"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-105124.md",
+   "judgment_sha256": "408e68a3e1c9a45848996f2f7841ef38bc3e5e33e00e25692c9cbcd69cb2e2e1",
+   "ok": 1,
+   "rows": 4,
+   "shard": "clock_sparse",
+   "timings_csv": "timings_m7_degraded_20261009-105124_clock_sparse.csv",
+   "timings_sha256": "7404f04ed0051ef6d9d1381a108f15f09fa8353fb2cc4f4be84be95368b0a632"
+  },
+  {
+   "failed": 3,
+   "fails": [
+    {
+     "cell": "sigminer__comp_clock_only__N100",
+     "seconds": "2201.23",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_clock_only__N1000",
+     "seconds": "3938.35",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_clock_only__N10000",
+     "seconds": "2616.17",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-105925.md",
+   "judgment_sha256": "2a2ae43f5dc9f370d843bf5299b8ba7bb3aae947e6660cce6cb0c7c1ceaa5e97",
+   "ok": 3,
+   "rows": 6,
+   "shard": "comp_clock_only",
+   "timings_csv": "timings_m7_degraded_20261009-105925_comp_clock_only.csv",
+   "timings_sha256": "e13b3ded27bd51993d31de2b1fc933fdbb6291bddb168d27ca2727eed89fb368"
+  },
+  {
+   "failed": 4,
+   "fails": [
+    {
+     "cell": "sigminer__comp_flat_triple__N100",
+     "seconds": "2218.53",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_flat_triple__N1000",
+     "seconds": "4000.34",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_flat_triple__N10000",
+     "seconds": "2818.43",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigprofiler__comp_flat_triple__N100",
+     "seconds": "83.72",
+     "status_verbatim": "fail: container run failed (exit 137): [Parallel(n_jobs=10)]: Using backend LokyBackend with 10 concurrent workers.[Parallel(n_jobs=10)]: Done  52 tasks      | elapsed:   17.4s[Parallel(n_jobs=10)]: Done 100 out of 100 | elapsed:   20.2s finished",
+     "tool": "sigprofiler"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-110153.md",
+   "judgment_sha256": "f96c8fbc0f966020c867cd9153d19be70138fc5d3b1a3bcb38fa381c64be9744",
+   "ok": 2,
+   "rows": 6,
+   "shard": "comp_flat_triple",
+   "timings_csv": "timings_m7_degraded_20261009-110153_comp_flat_triple.csv",
+   "timings_sha256": "12664d282fb961dbe834b27969bb93cf34a56410b672b6d0a7fe0b9f6fafcfab"
+  },
+  {
+   "failed": 3,
+   "fails": [
+    {
+     "cell": "sigminer__comp_mmr__N100",
+     "seconds": "2326.1",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_mmr__N1000",
+     "seconds": "3993.84",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_mmr__N10000",
+     "seconds": "2870.71",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-110251.md",
+   "judgment_sha256": "8a6924a69b5d15918fd96947ecff133e4cbc36a951d598f5bf89b51dca4e6be1",
+   "ok": 3,
+   "rows": 6,
+   "shard": "comp_mmr",
+   "timings_csv": "timings_m7_degraded_20261009-110251_comp_mmr.csv",
+   "timings_sha256": "bf05199f9e0e94acad78300120ed24ef5e4a8f85419dd79eea778a5d745893fd"
+  },
+  {
+   "failed": 0,
+   "fails": [],
+   "judgment": "judgment_m7_degraded_20261009-104657.md",
+   "judgment_sha256": "313e8ca692412cf4beefbfaac129c8252373d8bdac4a91a5971e6114fb97bdbe",
+   "ok": 6,
+   "rows": 6,
+   "shard": "comp_pole",
+   "timings_csv": "timings_m7_degraded_20261009-104657_comp_pole.csv",
+   "timings_sha256": "bbd0a5d3fda6b2fbf382278a9e4caeaf6958f79946a144ddd8be407669ee630d"
+  },
+  {
+   "failed": 2,
+   "fails": [
+    {
+     "cell": "sigminer__comp_strong_flat__N100",
+     "seconds": "2396.88",
+     "status_verbatim": "fail: e of the 18 globals exported is 901.37 KiB The three largest globals are \u2018...furrr_chunk_args\u2019 (680.64 KiB of class \u2018list\u2019), \u2018...furrr_dots\u2019 (80.07 KiB of class \u2018list\u2019) and \u2018...furrr_fn\u2019 (40.73 KiB of class \u2018function\u2019) [future <unnamed-3> (287ffc1d6ecebdfa9736e3a8f61f0cf5-3); on 287ffc1d6ecebdfa9736e3a8f61f0cf5@ef47938c67d9<6>]\u2139 [2026-10-09 01:08:10.554416]: 39.852 mins elapsed.Execution halted",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__comp_strong_flat__N1000",
+     "seconds": "5262.85",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-110849.md",
+   "judgment_sha256": "1bca7aa8455cda80d5d711df734fed2d30dc5debcca6bfe20598153bcd59c5e3",
+   "ok": 4,
+   "rows": 6,
+   "shard": "comp_strong_flat",
+   "timings_csv": "timings_m7_degraded_20261009-110849_comp_strong_flat.csv",
+   "timings_sha256": "73da5c6cf3a07d1ed22fe1e6243544d14056eab25b48d1f430dd755d9386f16f"
+  },
+  {
+   "failed": 3,
+   "fails": [
+    {
+     "cell": "sigminer__main__N100",
+     "seconds": "2350.53",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__main__N1000",
+     "seconds": "3897.01",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigminer__main__N10000",
+     "seconds": "2814.02",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-110205.md",
+   "judgment_sha256": "8d24be0447217b7a48ab91b61dde9df879d998eaa32915a152edd7da54478357",
+   "ok": 3,
+   "rows": 6,
+   "shard": "main",
+   "timings_csv": "timings_m7_degraded_20261009-110205_main.csv",
+   "timings_sha256": "19c1380fe181127781280fda4ed368078174488d125e561d234cdd77f0f41ac2"
+  },
+  {
+   "failed": 2,
+   "fails": [
+    {
+     "cell": "sigminer__nb__N1000",
+     "seconds": "2502.64",
+     "status_verbatim": "",
+     "tool": "sigminer"
+    },
+    {
+     "cell": "sigprofiler__nb__N1000",
+     "seconds": "130.53",
+     "status_verbatim": "fail: container run failed (exit 137): [Parallel(n_jobs=10)]: Using backend LokyBackend with 10 concurrent workers.[Parallel(n_jobs=10)]: Done  52 tasks      | elapsed:   45.7s[Parallel(n_jobs=10)]: Done 100 out of 100 | elapsed:  1.1min finished",
+     "tool": "sigprofiler"
+    }
+   ],
+   "judgment": "judgment_m7_degraded_20261009-091210.md",
+   "judgment_sha256": "614428e90fac1ac8c2972fc019052d81aa10f02a85b4cc205818829b0c875863",
+   "ok": 0,
+   "rows": 2,
+   "shard": "nb",
+   "timings_csv": "timings_m7_degraded_20261009-091210_nb.csv",
+   "timings_sha256": "f53b75b732df7330ebb8a221fa085b2d82d52ba0fa2e7f916a85e6e9cfc06075"
+  }
+ ],
+ "signature_classes": {
+  "sigminer": "future (<unnamed-N>) of class MultisessionFuture interrupted (pid ...) + furrr allocation diagnostics + Execution halted",
+  "sigprofiler": "container run failed (exit 137) after [Parallel(n_jobs=10)] LokyBackend banner (SIGKILL)"
+ },
+ "summary": {
+  "failed": 20,
+  "failed_sigminer": 17,
+  "failed_sigprofiler": 3,
+  "rows": 42,
+  "shards": 8
+ },
+ "verdict": "SHARD-OOM-DEFECT",
+ "vm": {
+  "docker_events_window_requery": "event buffer rotated; zero retainable records (cell-recorded exit-137 strings below are authoritative)",
+  "docker_info": "10 cpus 8319504384 bytes"
+ },
+ "when": "2026-10-09 (driver window 09:05-11:02 local)"
+}

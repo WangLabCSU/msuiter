@@ -1,0 +1,19 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__main__N100,sigminer,main,100,2350.53,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1023) [future <unnamed-1> (e19b191bd71de7f7bc40363ca70f9bcd-1); on e19b191bd71de7f7bc40363ca70f9bcd@d2ff614f7fa0<7> at 2026-10-09 01:05:49.794784]
+ℹ [2026-10-09 01:07:23.293134]: 39.065 mins elapsed.
+Execution halted
+",0.0
+sigminer__main__N1000,sigminer,main,1000,3897.01,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1024) [future <unnamed-1> (cc94991e5b57e04ff4d03b7949da11a4-1); on cc94991e5b57e04ff4d03b7949da11a4@b4d6533a9353<6> at 2026-10-09 02:10:54.039896]
+ℹ [2026-10-09 02:12:21.327826]: 1.078 hours elapsed.
+Execution halted
+",0.0
+sigminer__main__N10000,sigminer,main,10000,2814.02,"fail: ───────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1025) [future <unnamed-1> (9f71cff8383e3c9db457957ff5a42585-1); on 9f71cff8383e3c9db457957ff5a42585@ef49a69b855b<7> at 2026-10-09 02:54:53.757651]
+ℹ [2026-10-09 02:59:17.65574]: 46.736 mins elapsed.
+Execution halted
+",0.0
+sigprofiler__main__N100,sigprofiler,main,100,83.42,ok,97.131
+sigprofiler__main__N1000,sigprofiler,main,1000,48.28,ok,89.392
+sigprofiler__main__N10000,sigprofiler,main,10000,35.3,ok,73.69

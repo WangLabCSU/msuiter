@@ -1,0 +1,6 @@
+[adapter] FAILED cells: ['sigminer__nb__N1000', 'sigprofiler__nb__N1000']
+[seeds] manifest -> cache/bench_degraded_docker/shard_out/nb/Seeds.txt
+[provider] synthetic; catalog=cache/bench_degraded_docker/catalog__synthetic.csv
+[sim] 1 (arm,N) cells x reps -> cachedir
+[adapter] docker: 0/2 cells ok|cached; timings -> timings_m7_degraded_20261009-091210_nb.csv
+[attestation] -> judgment_m7_degraded_20261009-091210.md

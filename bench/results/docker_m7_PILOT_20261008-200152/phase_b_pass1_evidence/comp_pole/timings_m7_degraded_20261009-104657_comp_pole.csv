@@ -1,0 +1,7 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__comp_pole__N100000,sigminer,comp_pole,100000,2398.7,ok,2675.275
+sigminer__comp_pole__N300000,sigminer,comp_pole,300000,2746.93,ok,3659.281
+sigminer__comp_pole__N1000000,sigminer,comp_pole,1000000,2865.65,ok,3416.823
+sigprofiler__comp_pole__N100000,sigprofiler,comp_pole,100000,96.36,ok,108.262
+sigprofiler__comp_pole__N300000,sigprofiler,comp_pole,300000,114.47,ok,110.293
+sigprofiler__comp_pole__N1000000,sigprofiler,comp_pole,1000000,97.8,ok,96.822

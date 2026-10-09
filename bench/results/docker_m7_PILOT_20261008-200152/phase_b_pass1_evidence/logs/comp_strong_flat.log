@@ -1,0 +1,6 @@
+[adapter] FAILED cells: ['sigminer__comp_strong_flat__N100', 'sigminer__comp_strong_flat__N1000']
+[seeds] manifest -> cache/bench_degraded_docker/shard_out/comp_strong_flat/Seeds.txt
+[provider] synthetic; catalog=cache/bench_degraded_docker/catalog__synthetic.csv
+[sim] 3 (arm,N) cells x reps -> cachedir
+[adapter] docker: 4/6 cells ok|cached; timings -> timings_m7_degraded_20261009-110849_comp_strong_flat.csv
+[attestation] -> judgment_m7_degraded_20261009-110849.md

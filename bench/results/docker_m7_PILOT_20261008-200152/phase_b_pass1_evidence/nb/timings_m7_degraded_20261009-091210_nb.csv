@@ -1,0 +1,10 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__nb__N1000,sigminer,nb,1000,2502.64,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1025) [future <unnamed-1> (9ac24a64eb1504dc78dfc7443836b1de-1); on 9ac24a64eb1504dc78dfc7443836b1de@021debb7b27b<7> at 2026-10-09 01:07:37.765381]
+ℹ [2026-10-09 01:09:57.919251]: 41.642 mins elapsed.
+Execution halted
+",0.0
+sigprofiler__nb__N1000,sigprofiler,nb,1000,130.53,"fail: container run failed (exit 137): [Parallel(n_jobs=10)]: Using backend LokyBackend with 10 concurrent workers.
+[Parallel(n_jobs=10)]: Done  52 tasks      | elapsed:   45.7s
+[Parallel(n_jobs=10)]: Done 100 out of 100 | elapsed:  1.1min finished
+",0.0

@@ -1,0 +1,6 @@
+[adapter] FAILED cells: ['sigminer__comp_clock_only__N100', 'sigminer__comp_clock_only__N1000', 'sigminer__comp_clock_only__N10000']
+[seeds] manifest -> cache/bench_degraded_docker/shard_out/comp_clock_only/Seeds.txt
+[provider] synthetic; catalog=cache/bench_degraded_docker/catalog__synthetic.csv
+[sim] 3 (arm,N) cells x reps -> cachedir
+[adapter] docker: 3/6 cells ok|cached; timings -> timings_m7_degraded_20261009-105925_comp_clock_only.csv
+[attestation] -> judgment_m7_degraded_20261009-105925.md

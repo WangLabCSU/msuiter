@@ -1,0 +1,22 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__comp_flat_triple__N100,sigminer,comp_flat_triple,100,2218.53,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1024) [future <unnamed-1> (25b47f219f715cc5789efb5b1097f770-1); on 25b47f219f715cc5789efb5b1097f770@49cc2914919f<7> at 2026-10-09 01:05:05.703405]
+ℹ [2026-10-09 01:05:11.315214]: 36.867 mins elapsed.
+Execution halted
+",0.0
+sigminer__comp_flat_triple__N1000,sigminer,comp_flat_triple,1000,4000.34,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1024) [future <unnamed-1> (1785f6b07dd79fd1a7693a66f0f089da-1); on 1785f6b07dd79fd1a7693a66f0f089da@90beea5eac3e<7> at 2026-10-09 02:11:10.582167]
+ℹ [2026-10-09 02:11:51.452193]: 1.107 hours elapsed.
+Execution halted
+",0.0
+sigminer__comp_flat_triple__N10000,sigminer,comp_flat_triple,10000,2818.43,"fail: ──────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1023) [future <unnamed-1> (1ad121b2216392b3a72bfba93b7c1404-1); on 1ad121b2216392b3a72bfba93b7c1404@bdc8399fff42<7> at 2026-10-09 02:54:37.499525]
+ℹ [2026-10-09 02:58:53.591978]: 46.801 mins elapsed.
+Execution halted
+",0.0
+sigprofiler__comp_flat_triple__N100,sigprofiler,comp_flat_triple,100,83.72,"fail: container run failed (exit 137): [Parallel(n_jobs=10)]: Using backend LokyBackend with 10 concurrent workers.
+[Parallel(n_jobs=10)]: Done  52 tasks      | elapsed:   17.4s
+[Parallel(n_jobs=10)]: Done 100 out of 100 | elapsed:   20.2s finished
+",0.0
+sigprofiler__comp_flat_triple__N1000,sigprofiler,comp_flat_triple,1000,52.58,ok,88.336
+sigprofiler__comp_flat_triple__N10000,sigprofiler,comp_flat_triple,10000,43.07,ok,76.077
