@@ -25,17 +25,34 @@ G0_TIMINGS_COLUMNS: tuple[str, ...] = ("cell", "tool", "arm", "n", "seconds",
                                        "status")
 TIMINGS_COLUMNS: tuple[str, ...] = G0_TIMINGS_COLUMNS + ("cpu_seconds",)
 
+#: Governance metadata may ride the row dict for the judgment writer
+#: (RB-09(3)(iv) re-adjudication lineage attaches per row in run_bench) but
+#: is NEVER written: the table is the frozen G0 prefix + cpu_seconds, full
+#: stop. Projection is explicit and audited below — an unlisted extra key
+#: still raises, so governance data can neither widen the schema nor be
+#: smuggled silently.
+GOVERNANCE_METADATA_KEYS: frozenset[str] = frozenset({"re_adjudication"})
+
 
 def write_timings(path: Path, rows: list[dict],
                   columns: tuple[str, ...] = TIMINGS_COLUMNS) -> Path:
     """Write the timings table: the G0 six-column prefix verbatim, then the
-    M7 ``cpu_seconds`` column. Row dicts must carry exactly these keys."""
+    M7 ``cpu_seconds`` column. Row dicts carry exactly the column keys plus
+    any registered :data:`GOVERNANCE_METADATA_KEYS` (projected out here)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    cols = list(columns)
+    slim = []
+    for r in rows:
+        unknown = set(r) - set(cols) - GOVERNANCE_METADATA_KEYS
+        if unknown:
+            raise ValueError(f"row keys outside the frozen timings schema: "
+                             f"{sorted(unknown)}")
+        slim.append({k: r[k] for k in cols})
     with path.open("w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(columns), extrasaction="raise")
+        w = csv.DictWriter(fh, fieldnames=cols, extrasaction="raise")
         w.writeheader()
-        w.writerows(rows)
+        w.writerows(slim)
     return path
 
 
