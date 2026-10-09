@@ -37,6 +37,11 @@
    "sha256": "a0e619184047448753ba350f780c3621024c8ddc47d140a676160bfca1c677c8"
   }
  ],
+ "control_vector": {
+  "input": "abc",
+  "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "tool": "python3 hashlib.sha256"
+ },
  "entries": [
   {
    "bytes": 415,
@@ -69,6 +74,12 @@
    "sha256": "31fe45e69333653bf7b6dac53f9294090a7954ca2b424dbaad603a231858a133"
   },
   {
+   "bytes": 2567,
+   "file": "image_inspect_sigprofiler_spa-1.1.5_live.json",
+   "role": "verbatim docker image inspect of the READY sigprofiler image at witness time -- the committed backing for the sigprofiler registry/pin row literals (hash-provenance lint, RB-06(4c))",
+   "sha256": "fb0b45305a5013a7bf3cd1113907ebea6d3f4c41680b92cda55897d2277d4596"
+  },
+  {
    "bytes": 3985,
    "file": "image_inspect_slice3-r4_live.json",
    "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r4 at witness time (cache-only material; digest non-authoritative, the registry row stays slice3-r2 until the post-r5 ceremony)",
@@ -99,12 +110,6 @@
    "sha256": "0e692c1eb8aa601606010bc8f03c381d5b9a0f6e3c27d521041aa611c11c7658"
   },
   {
-   "bytes": 6928,
-   "file": "rehearsal_manifest.json",
-   "role": "supporting lineage",
-   "sha256": "1c968958084eac1e51e1e7bea5b84a51192a5903dc0656f4a2d229094b2fb37f"
-  },
-  {
    "bytes": 282669,
    "file": "runB_excerpt.log",
    "role": "documented-rules excerpt of the full-argv diagnostic: the R auto-install storm (synchronicity et al. from the era mirror) and the lpSolve download 'SSL connect error' halt -- the class-(d) fairness hazard behind the RB-05(3.c) --network=none clause; full original on the controller host at /tmp/m7probe/runB.log",
@@ -123,6 +128,12 @@
    "sha256": "7407a9805724294d18d602ddc4ae5f2265eb953c362cd3d1a96be100c3c3d2c9"
   },
   {
+   "bytes": 4153108,
+   "file": "sigminer_2.3.1.tar.gz",
+   "role": "the witnessed CRAN Archive tarball for the pinned sigminer 2.3.1; every tarball/NAMESPACE tripwire hash the recipes carry re-measures from these committed bytes via measured_provenance (RB-06(4c): hash literals are backed, never merely asserted)",
+   "sha256": "b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b"
+  },
+  {
    "bytes": 270737,
    "file": "stage2_excerpt.log",
    "role": "documented-rules excerpt of the rc=0 end-to-end rehearsal (NMF 2-signature suggested solution, score 95.5, 4.185 mins, [run_sigminer] completion marker); full original on the controller host at /tmp/m7probe/stage2.log",
@@ -139,9 +150,45 @@
    "file": "../lint_slice3-r4_fixed-bytes_CLEAN.json",
    "role": "offline lint verdict on the stage2-proven bytes: CLEAN",
    "sha256": "66dc36233b1a40d6bdc62b682e334b27b9c3f21adc024f8b73da625c822e5b2f"
+  },
+  {
+   "bytes": 51,
+   "file": "../hash_provenance_r5_CLEAN.json",
+   "role": "RB-06(4c) hash-provenance lint verdict on the live recipe family: HASH-PROVENANCE-CLEAN (every 64-hex literal backed by re-measurement; the manifest's control-vector self-check verified by the suite)",
+   "sha256": "f310b09a9bb5a59acecfaae898d8a6270eaa615c94a553d153fbf534539507ba"
+  },
+  {
+   "bytes": 380,
+   "file": "../hash_provenance_TAMPERPROBE_DEFECT.json",
+   "role": "RED witness: the same lint fired on a one-byte-tampered COPY of this manifest (entries[0] claim flipped in /tmp/m7probe/manifest_tamperprobe.json) -- the gate detects drift; the live manifest is the CLEAN file, never this probe",
+   "sha256": "8372005a37a801cf90c1b1420e9843df3999d761d02b02eca7d75e5118d0d5b6"
+  },
+  {
+   "bytes": 17520,
+   "file": "../phase_b_SHARD-OOM_DEFECT.json",
+   "role": "Phase-B pass-1 DEFECT witness (seventh recorded defect, matrix-class, driver-owned): 20/42 cells died memory over-commit under the driver's unbounded 8-shard fan-out -- verbatim exit-137 SIGKILL + LokyBackend n_jobs=10 banners (sigprofiler) and MultisessionFuture-interrupted + furrr allocation diagnostics (sigminer); frozen thread-caps enforced but cannot reach process pools; the 22 ok cells' outputs stand, re-entry under controller ruling re-runs only the failed cells",
+   "sha256": "32c0e1b81c41a8c156c03c1937d2d48fca3864a54c074d9b33bcaca2adb0dd64"
   }
  ],
- "image": "msuiter-sigminer:slice3-r4",
- "ruling": "RB-05(4.ii)",
- "schema": "m7-rehearsal-manifest-1"
+ "image": "msuiter-sigminer:slice3-r5",
+ "measured_provenance": {
+  "2168cf32059f09c2e12cf3f82cb9befc9b15a58883c92fa3473c462671927948": {
+   "algorithm": "python3 hashlib.sha256",
+   "path": "bench/m7/tests/fixtures/sigminer_2.3.1_namespace_exports.txt",
+   "source": "contract fixture written from the witnessed tarball bytes (slice-2 \u00a79c.2); re-measured from the committed file"
+  },
+  "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df": {
+   "algorithm": "python3 hashlib.sha256",
+   "member": "sigminer/NAMESPACE",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/rehearsal_slice3-r4/sigminer_2.3.1.tar.gz",
+   "source": "https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz ! sigminer/NAMESPACE"
+  },
+  "b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b": {
+   "algorithm": "python3 hashlib.sha256",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/rehearsal_slice3-r4/sigminer_2.3.1.tar.gz",
+   "source": "https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz"
+  }
+ },
+ "ruling": "RB-05(4.ii) + RB-06(4c)",
+ "schema": "m7-rehearsal-manifest-2"
 }

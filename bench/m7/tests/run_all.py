@@ -29,6 +29,9 @@ Live image-probe (U-M7-03, controller ruling RB-01 -- pilot-catch witness):
   (L) test_image_cell_argv        real cell argv, sidecar-schema-valid depth
 Executed-surface audit (U-M7-03, controller ruling RB-03 -- convergence gate):
   (M) test_executed_surface_audit  closure of the two /work scripts vs recipe
+Hash provenance (U-M7-03, controller ruling RB-06 -- explicit-algorithm seal):
+  (O) test_hash_provenance  byte-pin triangle + manifest-entry rehash +
+      control-vector self-check; no re-typed digest survives this gate
 """
 
 from __future__ import annotations
@@ -52,7 +55,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-03 RB-01: live cell-argv probe (pilot-catch witness):
            "test_image_cell_argv",
            # U-M7-03 RB-03: executed-surface dependency closure (convergence gate):
-           "test_executed_surface_audit"]
+           "test_executed_surface_audit",
+           # U-M7-03 RB-06: hash-provenance gates (explicit-algorithm doctrine):
+           "test_hash_provenance"]
 
 
 def _collect(mod_name):

@@ -26,7 +26,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -343,6 +345,175 @@ def run_audit() -> tuple:
     return (0 if not gaps else 1), verdict
 
 
+# -- RB-06 hash-provenance gates (group (O) test_hash_provenance) ---------------
+# Explicit-algorithm doctrine, law after the RB-06(1) controller erratum: a
+# hash literal is admissible evidence only when it re-measures right now from
+# committed bytes with a recorder that NAMES its algorithm, and the recording
+# tool self-attests with the 'abc' control vector. The two failure modes that
+# produced the addendum -- a SHA-1 tool's output compared against SHA-256
+# digests, and a remembered control-vector constant cited as truth without
+# measuring it -- each die on a distinct check below.
+
+_CONTROL_INPUT = b"abc"
+
+
+def _sha256_hex(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _hex64_pattern() -> "re.Pattern[str]":
+    # The hex character class is ASSEMBLED, never hand-typed: a typed
+    # metacharacter class is this project's documented mangling class (an RB-05
+    # era draft carried an "0-9a-f" that matched nothing). str.digits is
+    # authoritative; the range hyphen is chr(45) so no hyphen literal exists
+    # to be doubled in transport.
+    digits = bytes(range(ord("0"), ord("9") + 1)).decode("ascii")   # derived, never typed
+    cls = "[" + digits + "a" + chr(45) + "f]"
+    return re.compile(cls + "{64}")
+
+
+_HEX64 = _hex64_pattern()
+
+REPO_ROOT = HERE.parents[1]
+
+
+def _rehearsal_dir(repo_root: Path) -> Path:
+    return (repo_root / "bench" / "results"
+            / "docker_m7_PILOT_20261008-200152" / "rehearsal_slice3-r4")
+
+
+def _entry_path(file_field: str, repo_root: Path) -> "Path | None":
+    rehearsal = _rehearsal_dir(repo_root)
+    for base in (rehearsal, rehearsal.parent, repo_root):
+        cand = Path(os.path.normpath(base / file_field))
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _all_entries(manifest: dict) -> list:
+    return (list(manifest.get("entries", []))
+            + list(manifest.get("adapters", [])))
+
+
+def _provenance_data(meta: dict, repo_root: Path) -> "bytes | None":
+    src = repo_root / meta["path"]
+    if not src.is_file():
+        return None
+    member = meta.get("member")
+    if not member:
+        return src.read_bytes()
+    import tarfile                                      # lazy: member readers pay
+    with tarfile.open(str(src)) as tf:                  # gzip by magic, auto
+        handle = tf.extractfile(member)
+        return None if handle is None else handle.read()
+
+
+def verify_byte_pin_triangle(*, runner_bytes: bytes, witness_bytes: bytes,
+                             dockerfile_text: str, manifest: dict,
+                             registry_digest: str, inspect_id: str) -> list:
+    """The RB-06(4b) triangle: committed runner bytes, promoted rehearsal
+    witness, the Dockerfile assert-constant and the manifest's hash/role
+    claims -- four measurements that must agree with what an
+    explicit-algorithm recorder measures NOW, plus the registry-row pair
+    against its committed live inspect. Dependency-injected (bytes/text/dict
+    in, flags out) so the suite tampers every leg in memory."""
+    flags: list = []
+    h_runner = _sha256_hex(runner_bytes)
+    if _sha256_hex(witness_bytes) != h_runner:
+        flags.append({"check": "witness-vs-runner",
+                      "detail": "promoted witness bytes differ from the committed runner"})
+    pin_lines = [ln for ln in dockerfile_text.splitlines()
+                 if "sha256sum" in ln and "/work/run_sigminer.R" in ln]
+    if len(pin_lines) != 1:
+        flags.append({"check": "dockerfile-assert-constant",
+                      "detail": f"expected exactly one sha256sum pin line, found {len(pin_lines)}"})
+    else:
+        toks = _HEX64.findall(pin_lines[0])
+        if toks != [h_runner]:
+            flags.append({"check": "dockerfile-assert-constant",
+                          "detail": f"assert constant {toks!r} is not the measured runner digest"})
+    legs = (("entries", "run_sigminer_fixed.R", witness_bytes),
+            ("adapters", "bench/m7/adapters/run_sigminer.R", runner_bytes))
+    for kind, key, over in legs:
+        entry = next((e for e in manifest.get(kind, []) if e["file"] == key), None)
+        if entry is None or entry.get("sha256") != _sha256_hex(over):
+            flags.append({"check": "manifest-entry",
+                          "detail": f"{kind}/{key}: claim is not the measured digest"})
+    prov = manifest.get("measured_provenance") or {}
+    for e in _all_entries(manifest):
+        for tok in _HEX64.findall(str(e.get("role", ""))):
+            if tok not in prov and not h_runner.startswith(tok):
+                flags.append({"check": "role-claim",
+                              "detail": f"{e.get('file')}: role cites {tok} ahead of any measurement"})
+    if registry_digest != inspect_id:
+        flags.append({"check": "registry-vs-live-inspect",
+                      "detail": f"registry row {registry_digest!r} differs from live inspect {inspect_id!r}"})
+    return flags
+
+
+def lint_hash_provenance(*, targets: dict, manifest: dict,
+                         repo_root: Path) -> list:
+    """RB-06(4c): every 64-hex literal the recipe family carries must be
+    BACKED -- measured from committed bytes (manifest entries), re-measured
+    from its recorded source (measured_provenance), or parsed from a
+    committed live-inspect JSON. The manifest must additionally carry a
+    verified 'abc' control-vector self-check from the recording tool."""
+    flags: list = []
+    cv = manifest.get("control_vector")
+    control_ok = (isinstance(cv, dict) and cv.get("input") == "abc"
+                  and isinstance(cv.get("sha256"), str)
+                  and cv["sha256"] == _sha256_hex(_CONTROL_INPUT)
+                  and "sha256" in str(cv.get("tool", "")).lower())
+    if not control_ok:
+        flags.append({"check": "control-vector",
+                      "detail": "manifest lacks a verified sha256('abc') control-vector "
+                                "self-check from the recording tool (RB-06(1) conflation seal)"})
+    backed = {_sha256_hex(_CONTROL_INPUT)}
+    for e in _all_entries(manifest):
+        p = _entry_path(e["file"], repo_root)
+        if p is None:
+            flags.append({"check": "manifest-entry-missing", "detail": e["file"]})
+            continue
+        measured = _sha256_hex(p.read_bytes())
+        if measured != e["sha256"]:
+            flags.append({"check": "manifest-entry-rehash",
+                          "detail": f"{e['file']}: claimed {e['sha256']!r} is not the measured digest"})
+        backed.add(measured)
+    for h, meta in (manifest.get("measured_provenance") or {}).items():
+        data = _provenance_data(meta, repo_root)
+        if data is None:
+            flags.append({"check": "provenance-source-missing",
+                          "detail": f"{h} unmeasurable: {meta.get('path')!r} absent"})
+        elif _sha256_hex(data) != h:
+            flags.append({"check": "provenance-remeasure",
+                          "detail": f"{h} does not re-measure from {meta.get('path')!r}"})
+        else:
+            backed.add(h)
+    rd = _rehearsal_dir(repo_root)
+    for j in sorted(rd.glob("image_inspect_*.json")) + sorted(rd.parent.glob("image_inspect_*.json")):
+        for d in json.loads(j.read_text(encoding="utf-8")):
+            backed.add(str(d.get("Id", "")).removeprefix("sha256:"))
+            for row in d.get("RepoDigests") or []:
+                backed.add(str(row).split("@")[-1].removeprefix("sha256:"))
+    for name, text in targets.items():
+        for tok in _HEX64.findall(text):
+            if tok not in backed:
+                flags.append({"check": "unbacked-literal", "detail": f"{name}: {tok}"})
+    return flags
+
+
+PROVENANCE_TARGETS = {                     # the recipe family the lint scans
+    "Dockerfile.sigminer": "adapters/Dockerfile.sigminer",
+    "install_sigminer.R": "adapters/install_sigminer.R",
+    "run_sigminer.R": "adapters/run_sigminer.R",
+    "self_witness.sh": "adapters/self_witness.sh",
+    "registry.py": "competitors/registry.py",
+    "test_registry.py": "tests/test_registry.py",
+    "test_sigminer_api_contract.py": "tests/test_sigminer_api_contract.py",
+}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--json", default=None, dest="json_path")
@@ -351,7 +522,37 @@ def main(argv=None) -> int:
                          "name/named-arg pairs against --allowlist")
     ap.add_argument("--allowlist", default=None, metavar="JSON",
                     help="witnessed-formals harvest snapshot (entries.*)")
+    ap.add_argument("--hash-provenance", action="store_true", default=False,
+                    dest="hash_provenance",
+                    help="RB-06 hash-provenance lint over the recipe family "
+                         "(manifest entries, measured_provenance, live "
+                         "inspects back every 64-hex literal)")
+    ap.add_argument("--manifest", default=None, metavar="JSON",
+                    help="rehearsal manifest for --hash-provenance")
     args = ap.parse_args(argv)
+    if args.hash_provenance:
+        if not args.manifest:
+            print("[audit] --hash-provenance requires --manifest", file=sys.stderr)
+            return 2
+        manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+        targets = {name: (HERE / rel).read_text(encoding="utf-8")
+                   for name, rel in PROVENANCE_TARGETS.items()}
+        manifest_name = "rehearsal_manifest.json"
+        targets[manifest_name] = Path(args.manifest).read_text(encoding="utf-8")
+        flags = lint_hash_provenance(targets=targets, manifest=manifest,
+                                     repo_root=REPO_ROOT)
+        verdict = {"lint": "HASH-PROVENANCE-DEFECT" if flags
+                   else "HASH-PROVENANCE-CLEAN", "flags": flags}
+        if args.json_path:
+            out = Path(args.json_path)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(json.dumps(verdict, sort_keys=True, indent=1) + chr(10),
+                           encoding="utf-8")
+        for f in flags:
+            print(f"[hash-provenance] {f['check']}: {f['detail']}",
+                  file=sys.stderr)
+        print(json.dumps(verdict, sort_keys=True))
+        return 2 if flags else 0
     if args.lint:
         if not args.allowlist:
             print("[audit] --lint requires --allowlist", file=sys.stderr)

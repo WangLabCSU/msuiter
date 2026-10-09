@@ -1,0 +1,13 @@
+{
+ "flags": [
+  {
+   "check": "manifest-entry-rehash",
+   "detail": "called_names.txt: claimed '53d5a144906b6f20d39eafed63627271afb937ecf02405f2bb5bf0e3efcf9f04' is not the measured digest"
+  },
+  {
+   "check": "unbacked-literal",
+   "detail": "rehearsal_manifest.json: 53d5a144906b6f20d39eafed63627271afb937ecf02405f2bb5bf0e3efcf9f04"
+  }
+ ],
+ "lint": "HASH-PROVENANCE-DEFECT"
+}
