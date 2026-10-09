@@ -81,7 +81,7 @@
 
 - [x] estimand 三层落地：presence LRT / support-conditional 绝对 exposure CI（BCa）/ 清零复合覆盖率（U-M3b-01/02/03；198-cell 校准网格全落判据窗——池化零分布 P0 修复后；分层 calibrated-percentile 升级臂记录于 M3b 设计备忘；G2 门未达成——co-author 未锁定，GB/NC 上限主动接受）
 - [x] 多项 + NB 双生成模型校准；coverage × N × Shannon 曲线；Fisher 内点区间；真实数据降采样 sanity 协议（U-M3b-02/04/05/06：calibrate.rs + ms_calibration_grid/verdict/plot/sanity 全链，终审+确认轮审计闭环 cf0751e）
-- [ ] **G0 先导实验结果写入叙事决策**（Framing A vs B）——阻塞于作者 COSMIC v3.6 目录文件（G0_CATALOG_PATH）
+- [x] **G0 先导实验结果写入叙事决策**（Framing A vs B）——阻塞于作者 COSMIC v3.6 目录文件（G0_CATALOG_PATH） —— 退化权威运行闭环以裁决书 verdict=A 记录 (bench/results/docker_degraded_pi_20261007-212438/judgment_degraded_20261008-013750.md:10; main@1dd50d1 #7)
 
 ### M4 · 相似度校准库 + viz（3 周）
 
@@ -92,11 +92,11 @@
 
 ### M6s · HRD 工作流（3 周；范围安全契约生效）
 
-- [ ] `ms_hrd_report()`：**HRDetect 系数模式 WGS-only**；allele-specific CN caller 白名单（Battenberg/ASCAT/FACETS/PURPLE/SEQUENZA）；WES 模式标 experimental；"参考忠实性测试"（系数逐位）；不确定性报告
+- [x] `ms_hrd_report()`：**HRDetect 系数模式 WGS-only**；allele-specific CN caller 白名单（Battenberg/ASCAT/FACETS/PURPLE/SEQUENZA）；WES 模式标 experimental；"参考忠实性测试"（系数逐位）；不确定性报告 (证据: R/hrd-report.R:222 导出; man/ms_hrd_report.Rd; tests/testthat/test-hrd-reference.R; main@2fc7e04 #6)
 
 ### M7 · Benchmark 完备 + 论文（8–10 周）
 
-- [ ] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/PI 裁决 D1+D2 采纳（TP-only）2026-10-05——驱动器 v1 已交付）
+- [x] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/PI 裁决 D1+D2 采纳（TP-only）2026-10-05——驱动器 v1 已交付） (证据: docs/devlog/2026-10-05-benchmark-design-memo.md:3 冻结条目; bench/results/docker_m7_degraded_20261009-184833/ 全量 42 格权威运行; main@f90ea1d #13)
 - [ ] 竞品容器 harness（仅 bench/）；钉硬件 bench 全表；`ms_benchmark()` 端到端
 - [ ] 论文草稿（headline 依 G0 结果定 A/B）+ renv/Docker/seed 一键复现 + bioRxiv 同挂
 - [ ] pkgdown 全站 + MSU↔函数映射表 + CITATION + 性能锚定文档
