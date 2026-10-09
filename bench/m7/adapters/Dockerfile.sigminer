@@ -137,7 +137,19 @@ RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install
 # self-witness replaying the zero-touch composed argv over the stage2-run
 # fixture bytes.
 RUN test "$(sha256sum /work/run_sigminer.R | cut -d' ' -f1)" = "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084" || (echo "[FATAL] run_sigminer.R bytes diverge from the stage2-proven rehearsal witness" >&2; exit 1)
-RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23", CRAN = "https://cran.r-project.org")); install.packages(c("lpSolve", "synchronicity"), dependencies = NA, quiet = TRUE); v1 <- packageVersion("lpSolve"); v2 <- packageVersion("synchronicity"); if (is.null(v1) || as.character(v1) != "5.6.20") quit(status = 1L); if (is.null(v2) || as.character(v2) != "1.3.10") quit(status = 1L); cat("[image] lpSolve ", as.character(v1), ", synchronicity ", as.character(v2), " provisioned\\n")'
+# Sixth recorded build defect (verbatim, r5 closure attempt 1, 2026-10-09):
+# with BOTH repos configured the era snapshot's PACKAGES index went unreadable
+# once (the recorded proxy flakiness, memo §9b item 1) and install.packages
+# SILENTLY fell through to current CRAN -- lpSolve resolved 5.6.23, two
+# versions above the era's 5.6.20. The literal version gate caught the drift
+# as a build death (exit 1, exactly its design intent: "drift is a build
+# death, never a silent float"); the zero-bake forensic run on the r4 image
+# reproduces both verdicts verbatim (two-repo -> v1=5.6.23; P3M-only ->
+# v1=5.6.20, v2=1.3.10, gate GREEN). Fix: P3M-ONLY for this layer too, the
+# same shape matrixStats already carries -- an unreadable snapshot index is
+# then an install death, never a float. An era snapshot is worthless as a
+# determinism device if a fallback repo can answer the lookup.
+RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23")); install.packages(c("lpSolve", "synchronicity"), dependencies = NA, quiet = TRUE); v1 <- packageVersion("lpSolve"); v2 <- packageVersion("synchronicity"); if (is.null(v1) || as.character(v1) != "5.6.20") quit(status = 1L); if (is.null(v2) || as.character(v2) != "1.3.10") quit(status = 1L); cat("[image] lpSolve ", as.character(v1), ", synchronicity ", as.character(v2), " provisioned\\n")'
 RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23")); install.packages("matrixStats", dependencies = NA, quiet = TRUE); v3 <- packageVersion("matrixStats"); if (is.null(v3) || as.character(v3) != "1.3.0") quit(status = 1L); cat("[image] matrixStats ", as.character(v3), " provisioned\\n")'
 COPY mini_cell/ /work/mini/in/
 COPY self_witness.sh /tmp/self_witness.sh

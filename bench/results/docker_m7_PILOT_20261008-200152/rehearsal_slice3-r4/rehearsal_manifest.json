@@ -1,10 +1,10 @@
 {
  "adapters": [
   {
-   "bytes": 10975,
+   "bytes": 11828,
    "file": "bench/m7/adapters/Dockerfile.sigminer",
    "role": "r5 recipe: RB-05 delta layers appended after the cache-warm jsonlite layer (hash-pin assert, era-gated bakes lpSolve 5.6.20 / synchronicity 1.3.10 / matrixStats 1.3.0, network-none self-witness)",
-   "sha256": "f5553255828883183df2e4d7d3bceb0003997212f9fab3da0cccfed2f9b1a015"
+   "sha256": "defd0330434efcbff2474ec000211d21a3042d7488d17d18e1eac8c2b75434b9"
   },
   {
    "bytes": 29552,
@@ -81,10 +81,22 @@
    "sha256": "a6cc0f6ab3a268579f902ac8c50438e64fd1d0baad0b364451e3ea8ab4bc6aab"
   },
   {
-   "bytes": 3851,
+   "bytes": 109,
+   "file": "r5_forensic_p3m_only.log",
+   "role": "the same probe P3M-only: lpSolve 5.6.20 + synchronicity 1.3.10, gate GREEN -- the era snapshot resolves every pinned version exactly; the r5 recipe bakes all three era packages this way",
+   "sha256": "c636ff37f41e000ecf80b293126b98d4f88568ce58a6acdf363ac81767b0fdd9"
+  },
+  {
+   "bytes": 109,
+   "file": "r5_forensic_two_repo.log",
+   "role": "zero-bake forensic on the r4 image: P3M+CRAN together resolve lpSolve to CRAN 5.6.23 over the era's 5.6.20 (install.packages answers from the highest version across ALL configured repos -- the sixth recorded build defect's root cause, caught as a build death by the literal version gate)",
+   "sha256": "0e692c1eb8aa601606010bc8f03c381d5b9a0f6e3c27d521041aa611c11c7658"
+  },
+  {
+   "bytes": 6136,
    "file": "rehearsal_manifest.json",
    "role": "supporting lineage",
-   "sha256": "f2690266117d99c52505338c17b536c7f3f26bc5127805b1262645237f06be37"
+   "sha256": "fec735cb9691be44cbc67addcdbc84750e8ca2020011d29bcd6bc92db186b912"
   },
   {
    "bytes": 282669,
