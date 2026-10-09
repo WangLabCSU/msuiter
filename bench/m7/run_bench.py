@@ -44,6 +44,7 @@ import shutil
 import subprocess
 import sys
 import time
+from contextlib import nullcontext
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent                       # bench/m7
@@ -57,6 +58,7 @@ from competitors.errors import AdapterUnavailable            # noqa: E402
 from competitors import timings                              # noqa: E402
 from g0 import grid, seeds, sim                              # noqa: E402
 from g0.providers import ProviderError, provider_by_name    # noqa: E402
+from tools import matrix_governance as gov                   # noqa: E402
 
 # The four-file re-run guard (stricter than G0's two-file guard, §4.4).
 GUARD_FILES = ("intervals.csv", "errors.log", "manifest.json", "timing.json")
@@ -85,8 +87,22 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--outdir", default=str(HERE / "results"))
     ap.add_argument("--force-rerun", action="store_true",
                     help="ignore cached cell outputs, re-invoke every cell")
+    ap.add_argument("--floor-gate", choices=("on", "off"), default="on",
+                    help="RB-08(7) 3x-floor DEFECT gate (+defect ledger). "
+                         "'off' is for CALIBRATION PROBES ONLY: a probe "
+                         "measures a class cost and must never "
+                         "self-adjudicate against the very floor table it "
+                         "is recalibrating (RB-09: the outdated table "
+                         "flagged the rep-100 anchors it exists to "
+                         "re-measure). The matrix pass always runs it ON.")
     ap.add_argument("--shard-tag", default=None,
                     help="suffix for the timings file name (sharded driver)")
+    ap.add_argument("--n-list", default=None, dest="n_list",
+                    help="comma-separated N-point filter (pilot/shard "
+                         "selection; per-arm intersection, mirrors --arms)")
+    ap.add_argument("--dry-run", action="store_true", dest="dry_run",
+                    help="print the machine-readable matrix plan (JSON) and "
+                         "exit 0 without touching the filesystem")
     return ap.parse_args(argv)
 
 
@@ -120,6 +136,31 @@ def m7_seeds(competitor: str, arm: str, n: int, reps: int) -> tuple[int, dict]:
                % seeds.TOOL_SEED_CAP
                for r in range(reps)}
     return batch, samples
+
+
+def build_plan(args, competitor_names: list, specs: dict, arms) -> dict:
+    """The selected matrix as data (U-M7-03 --dry-run): the exact invocation
+    set a full pass would execute plus the frozen fairness/provenance context
+    (caps, master seed, tool namespace, image refs and digests). Pure
+    function — no filesystem, no subprocess; commit provenance is stamped by
+    the caller."""
+    cells = [{"tool": name, "arm": a.name, "n": n, "reps": a.reps}
+             for name in competitor_names
+             for a in arms for n in a.n_list]
+    return {
+        "profile": args.profile, "adapter": args.adapter,
+        "provider": args.provider, "provider_seed": args.provider_seed,
+        "competitors": list(competitor_names),
+        "caps": list(docker_cmd.THREAD_CAPS),
+        "master_seed": seeds.MASTER_SEED, "tool_namespace": M7_TOOL_NS,
+        "cells": cells, "invocations": len(cells),
+        "samples_total": sum(c["reps"] for c in cells),
+        "provenance": {name: {"version": specs[name].version,
+                              "image_ref": specs[name].image_ref,
+                              "image_digest": specs[name].image_digest,
+                              "status": specs[name].status}
+                       for name in competitor_names},
+    }
 
 
 def compute_data_hash(counts_text: str, arm, reps: int, params: dict,
@@ -224,7 +265,8 @@ def cell_identity(competitor: str, spec, args) -> dict:
             "image_digest": spec.image_digest, "entrypoint": spec.entrypoint,
             "runner_script": spec.runner_script,
             "caps": list(docker_cmd.THREAD_CAPS),
-            "adapter": args.adapter, "provider": args.provider}
+            "adapter": args.adapter, "provider": args.provider,
+            "provider_seed": args.provider_seed}
 
 
 def write_cell_manifest(out_dir: Path, manifest: dict) -> None:
@@ -272,18 +314,44 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     hash_file.write_text(data_hash, encoding="utf-8")
 
     def row(status: str, seconds: float, cpu: float) -> dict:
-        return {"cell": stamp, "tool": competitor, "arm": arm.name,
-                "n": n, "seconds": seconds, "status": status,
-                "cpu_seconds": cpu}
+        r = {"cell": stamp, "tool": competitor, "arm": arm.name,
+             "n": n, "seconds": seconds, "status": status,
+             "cpu_seconds": cpu}
+        if status in gov.PASS_STATUSES:
+            # RB-09(3)(iv): a pass under a NEW floor-table epoch for a cell
+            # defect-flagged under an OLD one is a re-adjudication — it must
+            # carry its mechanism citation, never re-status silently.
+            lineage = gov.re_adjudication(
+                r, gov.latest_defect_records(cachedir).get(stamp))
+            if lineage is not None:
+                r["re_adjudication"] = lineage
+        return r
 
     trusted = (not args.force_rerun
                and all((outd / name).exists() for name in GUARD_FILES))
     if trusted:
         return row("cached", 0.0, 0.0)
 
+    if args.adapter == "docker":
+        # RB-08(3): fan-out=1 is enforced, not wished — refuse the launch
+        # while ANY measurement-image container co-tenants the VM (assert
+        # outcome logged per cell), and sample `docker top` during the run
+        # so the self-sizing process pools are OBSERVED, not assumed
+        # (RB-08(4)); the census sidecar lives under cachedir/census,
+        # OUTSIDE the four-file guard and the BYTE_EQUAL set.
+        if not gov.pre_flight_assert(stamp, cachedir / "preflight_log.jsonl"):
+            return row("preflight-refused: measurement co-tenant live "
+                       "(RB-08(3))", 0.0, 0.0)
+        census_ctx = gov.sample_worker_census(stamp, competitor,
+                                              cachedir / "census")
+    else:
+        census_ctx = nullcontext()
+
     t0 = time.time()
     try:
-        summary = invoke_adapter(args, competitor, spec, ind, outd, catalog_mount)
+        with census_ctx:
+            summary = invoke_adapter(args, competitor, spec, ind, outd,
+                                     catalog_mount)
     except AdapterUnavailable as e:                  # skip-not-skip sentinel
         return row(f"skip: {e}", 0.0, 0.0)
     except Exception as e:                           # noqa: BLE001 — cell failure
@@ -335,13 +403,37 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
                else "skip" if r["status"].startswith("skip") else "fail")
         tally[key] = tally.get(key, 0) + 1
     path = outdir / f"judgment_m7_{args.profile}_{ts}.md"
-    lines = [
-        f"# U-M7-02 fairness attestation — profile={args.profile}, "
-        f"adapter={args.adapter}, provider={args.provider}",
-        "",
-        "This is the **FAIRNESS ATTESTATION** half of the authoritative run: it",
-        "certifies *how* the cells ran, not *who won*.",
-        "",
+    defect = gov.nonpass_rows(rows)
+    if defect:
+        # Refuse-to-claim law (RB-08, born from matrix1 filing its attestation
+        # header over 20 failed cells): a judgment over rows that are not all
+        # pass speaks as DEFECT and certifies nothing.
+        head = [
+            f"# U-M7-02 DEFECT — profile={args.profile}, "
+            f"adapter={args.adapter}, provider={args.provider}",
+            "",
+            f"This pass is a **DEFECT**, not an attestation: {len(defect)} of "
+            f"{len(rows)} cells are not passes,",
+            "so this file certifies nothing about run fairness. The",
+            "refuse-to-claim law admits its authority header only over a",
+            "complete matrix whose every row passes.",
+            "",
+            "- first offenders (cell | status head):",
+        ] + [f"  - {r['cell']} | {r['status'].splitlines()[0][:120]}"
+             for r in defect[:8]]
+        if len(defect) > 8:
+            head.append(f"  - … {len(defect) - 8} more (see the timings table)")
+        head.append("")
+    else:
+        head = [
+            f"# U-M7-02 fairness attestation — profile={args.profile}, "
+            f"adapter={args.adapter}, provider={args.provider}",
+            "",
+            "This is the **FAIRNESS ATTESTATION** half of the authoritative run: it",
+            "certifies *how* the cells ran, not *who won*.",
+            "",
+        ]
+    lines = head + [
         "- single ground truth: all competitors saw msuiter-generated simulated",
         "  counts from the frozen G0 simulator (master seed "
         f"{seeds.MASTER_SEED}, data streams bit-identical to G0)",
@@ -366,6 +458,20 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
         f"- timings table: timings_m7_{args.profile}_{ts}.csv "
         "(G0 six-column prefix + cpu_seconds; every measured second attributable)",
         "",
+    ]
+    lineage_rows = [r for r in rows if r.get("re_adjudication")]
+    if lineage_rows:
+        # RB-09(3)(iv): flips are spoken with their citation in the judgment
+        # lineage — a defect-floor flag never dies silently at re-adjudication.
+        lines += ["", "## Re-adjudication lineage (RB-09(3)(iv))", ""]
+        for r in lineage_rows:
+            la = r["re_adjudication"]
+            lines += [
+                f"- **{r['cell']}** — prior flag `{la['prior_status'][:120]}` "
+                f"(floor epoch `{la['prior_epoch']}`) now passes as "
+                f"`{r['status']}` under re-calibrated epoch `{la['epoch']}`;",
+                f"  - mechanism: {la['mechanism']}"]
+    lines += [
         "Honest footer: this is harness output serving as the adjudication gate.",
         "Authoritative competitor measurement is the docker-adapter run at the",
         "frozen protocol; smoke/mock passes prove pipeline plumbing only. This",
@@ -393,9 +499,6 @@ def main(argv=None) -> int:
                 return 2
 
     outdir, cachedir = Path(args.outdir), Path(args.cachedir)
-    outdir.mkdir(parents=True, exist_ok=True)
-    for sub in ("counts", "truth", "cells"):
-        (cachedir / sub).mkdir(parents=True, exist_ok=True)
 
     arms = grid.arms_for_profile(args.profile)
     if args.arms:
@@ -408,6 +511,34 @@ def main(argv=None) -> int:
     if args.reps:
         arms = [grid.ArmSpec(a.name, a.n_list, args.reps, a.params, a.judge)
                 for a in arms]
+    if args.n_list:
+        try:
+            want = {int(t) for t in args.n_list.split(",") if t.strip()}
+        except ValueError:
+            print(f"[grid] --n-list {args.n_list!r} must be comma-separated "
+                  f"integers", file=sys.stderr)
+            return 2
+        pruned = []
+        for a in arms:
+            kept = tuple(n for n in a.n_list if n in want)
+            if kept:
+                pruned.append(grid.ArmSpec(a.name, kept, a.reps, a.params,
+                                          a.judge))
+        if not pruned:
+            print(f"[grid] --n-list {args.n_list!r} matched no N point in "
+                  f"profile {args.profile!r}", file=sys.stderr)
+            return 2
+        arms = pruned
+
+    if args.dry_run:                    # plan-only seam: zero side effects
+        plan = build_plan(args, competitor_names, specs, arms)
+        plan["commit"] = git_sha()
+        print(json.dumps(plan, sort_keys=True, indent=1))
+        return 0
+
+    outdir.mkdir(parents=True, exist_ok=True)
+    for sub in ("counts", "truth", "cells"):
+        (cachedir / sub).mkdir(parents=True, exist_ok=True)
 
     write_seeds_manifest(outdir / "Seeds.txt", arms, competitor_names, args)
     print(f"[seeds] manifest -> {outdir / 'Seeds.txt'}")
@@ -428,8 +559,16 @@ def main(argv=None) -> int:
         for arm, n, counts_path in cells:
             row = run_cell(args, competitor, specs[competitor], arm, n,
                            counts_path, cachedir, catalog_ref)
+            flagged = (gov.floor_gate(row) if args.floor_gate == "on"
+                      else None)               # RB-08(7); RB-09: probes run it off
+            if flagged is not None:
+                row = flagged
+                # RB-09(3)(iv): ledger the flag with its floor-table epoch so a
+                # later pass under a re-calibrated table speaks as a cited
+                # re-adjudication instead of a silent re-status.
+                gov.append_defect_record(cachedir, row)
             rows.append(row)
-            if row["status"].startswith("fail"):
+            if row["status"].startswith(("fail", "defect-", "preflight-refused")):
                 failures.append(row["cell"])
             elif row["status"].startswith("skip"):
                 skips.append((row["cell"], row["status"]))

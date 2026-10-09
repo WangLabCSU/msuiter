@@ -1,0 +1,201 @@
+{
+ "adapters": [
+  {
+   "bytes": 11828,
+   "file": "bench/m7/adapters/Dockerfile.sigminer",
+   "role": "r5 recipe: RB-05 delta layers appended after the cache-warm jsonlite layer (hash-pin assert, era-gated bakes lpSolve 5.6.20 / synchronicity 1.3.10 / matrixStats 1.3.0, network-none self-witness)",
+   "sha256": "defd0330434efcbff2474ec000211d21a3042d7488d17d18e1eac8c2b75434b9"
+  },
+  {
+   "bytes": 29552,
+   "file": "bench/m7/adapters/mini_cell/catalog.csv",
+   "role": "stage2-run fixture input, byte-identical to the probe cell input",
+   "sha256": "35706fdc218fae2ddff4440c9f72b73a0840a621815fa5a8bf42f095d2cf0571"
+  },
+  {
+   "bytes": 985,
+   "file": "bench/m7/adapters/mini_cell/counts.csv",
+   "role": "stage2-run fixture input, byte-identical to the probe cell input",
+   "sha256": "c2593d3779167c87b5298ec57bfd9a261f88065c5484ee50a139decfbe9261b1"
+  },
+  {
+   "bytes": 387,
+   "file": "bench/m7/adapters/mini_cell/params.json",
+   "role": "stage2-run fixture input, byte-identical to the probe cell input",
+   "sha256": "1273806ad342164518f5097e1681d01d86f2571064ab85aaf7d933d2302cc927"
+  },
+  {
+   "bytes": 5925,
+   "file": "bench/m7/adapters/run_sigminer.R",
+   "role": "committed runner now byte-equal to the 7f3067 stage2-proven bytes",
+   "sha256": "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084"
+  },
+  {
+   "bytes": 2513,
+   "file": "bench/m7/adapters/self_witness.sh",
+   "role": "the network-none self-witness layer script (RB-05(3.c))",
+   "sha256": "a0e619184047448753ba350f780c3621024c8ddc47d140a676160bfca1c677c8"
+  }
+ ],
+ "control_vector": {
+  "input": "abc",
+  "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  "tool": "python3 hashlib.sha256"
+ },
+ "entries": [
+  {
+   "bytes": 415,
+   "file": "called_names.txt",
+   "role": "host-minted called-name tokens (mint_called_names.py over the 7f3067-proven bytes) consumed by the container-side harvester",
+   "sha256": "53d5a144906b6f20d39eafed63627271afb937ecf02405f2bb5bf0e3efcf9f05"
+  },
+  {
+   "bytes": 1345,
+   "file": "depinv_r4.log",
+   "role": "read-only dependency inventory of the pinned image: declared closure 0-missing; lpSolve/synchronicity absent (Suggests-only, the closure blind spot)",
+   "sha256": "476817c7b0944fdd0db930ccb259d75ba24350529ec79c3f17c20aac31e9c7ad"
+  },
+  {
+   "bytes": 3411,
+   "file": "excerpt3.py",
+   "role": "the documented line-selection rules used to trim the bulky logs; the trimmed files' headers bind the full-file sha256 of the unsanitised originals",
+   "sha256": "6c0899d13f146cac29eb48eb13bd7c5709f88996e2dd06a746c15bc316e92808"
+  },
+  {
+   "bytes": 5083,
+   "file": "formals_allowlist_slice3-r4.json",
+   "role": "witnessed-formals harvest snapshot from the pinned image's own R (4.3.3): per called name the era-resolved formals + environment; minimum witness commandArgs/{trailingOnly} from base",
+   "sha256": "cdfec59d0ed5fe6261d9c749bf127463dd3b3ae28b1471924d6c1615e7a02c8d"
+  },
+  {
+   "bytes": 1462,
+   "file": "harvest_formals.R",
+   "role": "container-side harvester (pure get()/formals()/where() lookups; zero regex in era R, zero hand-typed dependency literals)",
+   "sha256": "31fe45e69333653bf7b6dac53f9294090a7954ca2b424dbaad603a231858a133"
+  },
+  {
+   "bytes": 2567,
+   "file": "image_inspect_sigprofiler_spa-1.1.5_live.json",
+   "role": "verbatim docker image inspect of the READY sigprofiler image at witness time -- the committed backing for the sigprofiler registry/pin row literals (hash-provenance lint, RB-06(4c))",
+   "sha256": "fb0b45305a5013a7bf3cd1113907ebea6d3f4c41680b92cda55897d2277d4596"
+  },
+  {
+   "bytes": 3985,
+   "file": "image_inspect_slice3-r4_live.json",
+   "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r4 at witness time (cache-only material; digest non-authoritative, the registry row stays slice3-r2 until the post-r5 ceremony)",
+   "sha256": "4898be69924ec1e057ec86a0335f7bc66d06edb868a8a218925a634d3c56e2e0"
+  },
+  {
+   "bytes": 4531,
+   "file": "image_inspect_slice3-r5_live.json",
+   "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r5 at witness time -- THE source of record for the registry flip (Id 05cb29e0..02c703e9, Size 1936876727); the GREEN cell-argv probe beside the pilot root binds the same ref+digest pair",
+   "sha256": "fde73968897b21fd4e59753e06becc69ad6665c7504d12da59e12f240111c66d"
+  },
+  {
+   "bytes": 1015,
+   "file": "mint_called_names.py",
+   "role": "host-side token minter lineage",
+   "sha256": "a6cc0f6ab3a268579f902ac8c50438e64fd1d0baad0b364451e3ea8ab4bc6aab"
+  },
+  {
+   "bytes": 109,
+   "file": "r5_forensic_p3m_only.log",
+   "role": "the same probe P3M-only: lpSolve 5.6.20 + synchronicity 1.3.10, gate GREEN -- the era snapshot resolves every pinned version exactly; the r5 recipe bakes all three era packages this way",
+   "sha256": "c636ff37f41e000ecf80b293126b98d4f88568ce58a6acdf363ac81767b0fdd9"
+  },
+  {
+   "bytes": 109,
+   "file": "r5_forensic_two_repo.log",
+   "role": "zero-bake forensic on the r4 image: P3M+CRAN together resolve lpSolve to CRAN 5.6.23 over the era's 5.6.20 (install.packages answers from the highest version across ALL configured repos -- the sixth recorded build defect's root cause, caught as a build death by the literal version gate)",
+   "sha256": "0e692c1eb8aa601606010bc8f03c381d5b9a0f6e3c27d521041aa611c11c7658"
+  },
+  {
+   "bytes": 282669,
+   "file": "runB_excerpt.log",
+   "role": "documented-rules excerpt of the full-argv diagnostic: the R auto-install storm (synchronicity et al. from the era mirror) and the lpSolve download 'SSL connect error' halt -- the class-(d) fairness hazard behind the RB-05(3.c) --network=none clause; full original on the controller host at /tmp/m7probe/runB.log",
+   "sha256": "f2a8ab8ad7abc434766fb7b4ce6bd237245f73441420a9bb2740fc6f611b5123"
+  },
+  {
+   "bytes": 5925,
+   "file": "run_sigminer_fixed.R",
+   "role": "the stage2-proven amended runner bytes (single-line L44 fix); sha256 7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084 is the r5 COPY/hash-pin designator",
+   "sha256": "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084"
+  },
+  {
+   "bytes": 237440,
+   "file": "selfwitness_prebake2_excerpt.log",
+   "role": "documented-rules excerpt of the pre-bake self-witness rehearsal: network-none, deps mounted via R_LIBS_USER (the Linux search-path variable; R_LIB_USER is Windows-only -- the reason the stage2 run self-healed via auto-install), rc=0, zero auto-install lines, NMF suggested result 95.5 verbatim; full original on the controller host at /tmp/m7probe/selfwitness_prebake2.log",
+   "sha256": "7407a9805724294d18d602ddc4ae5f2265eb953c362cd3d1a96be100c3c3d2c9"
+  },
+  {
+   "bytes": 4153108,
+   "file": "sigminer_2.3.1.tar.gz",
+   "role": "the witnessed CRAN Archive tarball for the pinned sigminer 2.3.1; every tarball/NAMESPACE tripwire hash the recipes carry re-measures from these committed bytes via measured_provenance (RB-06(4c): hash literals are backed, never merely asserted)",
+   "sha256": "b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b"
+  },
+  {
+   "bytes": 270737,
+   "file": "stage2_excerpt.log",
+   "role": "documented-rules excerpt of the rc=0 end-to-end rehearsal (NMF 2-signature suggested solution, score 95.5, 4.185 mins, [run_sigminer] completion marker); full original on the controller host at /tmp/m7probe/stage2.log",
+   "sha256": "487d952512230c1ad0d97ca853eb76f121d51ae590a4f746fb6720cda07adfd3"
+  },
+  {
+   "bytes": 167,
+   "file": "../lint_slice3-r4_current-bytes_DEFECT.json",
+   "role": "offline lint verdict on the UNFIXED branch bytes: FABRICATED-ARGS (line 44 removeDuplicates vs witnessed {trailingOnly})",
+   "sha256": "1094f463af1bcf9c0c8f3f7b5783f7837c6984ee993f5ee6de38b79e467bbc66"
+  },
+  {
+   "bytes": 31,
+   "file": "../lint_slice3-r4_fixed-bytes_CLEAN.json",
+   "role": "offline lint verdict on the stage2-proven bytes: CLEAN",
+   "sha256": "66dc36233b1a40d6bdc62b682e334b27b9c3f21adc024f8b73da625c822e5b2f"
+  },
+  {
+   "bytes": 51,
+   "file": "../hash_provenance_r5_CLEAN.json",
+   "role": "RB-06(4c) hash-provenance lint verdict on the live recipe family: HASH-PROVENANCE-CLEAN (every 64-hex literal backed by re-measurement; the manifest's control-vector self-check verified by the suite)",
+   "sha256": "f310b09a9bb5a59acecfaae898d8a6270eaa615c94a553d153fbf534539507ba"
+  },
+  {
+   "bytes": 380,
+   "file": "../hash_provenance_TAMPERPROBE_DEFECT.json",
+   "role": "RED witness: the same lint fired on a one-byte-tampered COPY of this manifest (entries[0] claim flipped in /tmp/m7probe/manifest_tamperprobe.json) -- the gate detects drift; the live manifest is the CLEAN file, never this probe",
+   "sha256": "8372005a37a801cf90c1b1420e9843df3999d761d02b02eca7d75e5118d0d5b6"
+  },
+  {
+   "bytes": 18655,
+   "file": "../phase_b_SHARD-OOM_DEFECT.json",
+   "rb09_re_mint": "RB-09(1) re-caption addendum appended to the witness; prior digest recorded in the witness rb09_addendum field witness_sha256_pre_addendum and in version-control history",
+   "role": "Phase-B pass-1 DEFECT witness (seventh recorded defect, matrix-class, driver-owned): 20/42 cells died memory over-commit under the driver's unbounded 8-shard fan-out -- verbatim exit-137 SIGKILL + LokyBackend n_jobs=10 banners (sigprofiler) and MultisessionFuture-interrupted + furrr allocation diagnostics (sigminer); frozen thread-caps enforced but cannot reach process pools; RB-08-as-amended: cache reuse DENIED on merits (incomplete matrix, uniformity violated, contended clocks), fresh full 42-cell serial re-ignition, retracted floor-ratio framing not carried",
+   "sha256": "61dedba72cf518cba724d287ce3b4a904669a13f277a6bdc7bd22739e02cdb3b"
+  },
+  {
+   "bytes": 113888,
+   "file": "../phase_b_PURGE_MANIFEST.json",
+   "role": "RB-08(1) hash-manifested purge record: every evicted cachedir entry (594 files) hashed with the explicit-algorithm recorder BEFORE deletion; the purge executed only after this manifest was bound here and in the DEFECT witness addendum",
+   "sha256": "9768a7fc8bfe548b0c7182dbea20236ba83d1b3cb6f54a02c58bd9108e9249ac"
+  }
+ ],
+ "image": "msuiter-sigminer:slice3-r5",
+ "measured_provenance": {
+  "2168cf32059f09c2e12cf3f82cb9befc9b15a58883c92fa3473c462671927948": {
+   "algorithm": "python3 hashlib.sha256",
+   "path": "bench/m7/tests/fixtures/sigminer_2.3.1_namespace_exports.txt",
+   "source": "contract fixture written from the witnessed tarball bytes (slice-2 \u00a79c.2); re-measured from the committed file"
+  },
+  "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df": {
+   "algorithm": "python3 hashlib.sha256",
+   "member": "sigminer/NAMESPACE",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/rehearsal_slice3-r4/sigminer_2.3.1.tar.gz",
+   "source": "https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz ! sigminer/NAMESPACE"
+  },
+  "b2836c76a52f7c7add8756afb09dc50ab31d736b4640b803bee57b6caec1953b": {
+   "algorithm": "python3 hashlib.sha256",
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/rehearsal_slice3-r4/sigminer_2.3.1.tar.gz",
+   "source": "https://cran.r-project.org/src/contrib/Archive/sigminer/sigminer_2.3.1.tar.gz"
+  }
+ },
+ "ruling": "RB-05(4.ii) + RB-06(4c)",
+ "schema": "m7-rehearsal-manifest-2"
+}

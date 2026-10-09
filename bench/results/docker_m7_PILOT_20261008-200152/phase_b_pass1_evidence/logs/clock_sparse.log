@@ -1,0 +1,6 @@
+[adapter] FAILED cells: ['sigminer__clock__N1000', 'sigminer__sparse__N1000', 'sigprofiler__sparse__N1000']
+[seeds] manifest -> cache/bench_degraded_docker/shard_out/clock_sparse/Seeds.txt
+[provider] synthetic; catalog=cache/bench_degraded_docker/catalog__synthetic.csv
+[sim] 2 (arm,N) cells x reps -> cachedir
+[adapter] docker: 1/4 cells ok|cached; timings -> timings_m7_degraded_20261009-105124_clock_sparse.csv
+[attestation] -> judgment_m7_degraded_20261009-105124.md

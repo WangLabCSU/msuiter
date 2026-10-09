@@ -1,0 +1,19 @@
+{
+ "cell": "sigminer__main__N100",
+ "provenance": {
+  "image_digest": "sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9",
+  "image_ref": "msuiter-sigminer:slice3-r5",
+  "name": "sigminer",
+  "status": "ready",
+  "version": "2.3.1"
+ },
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 360.252302,
+  "exit_status": 0,
+  "ru_stime": 18.943432,
+  "ru_utime": 341.30887
+ },
+ "status_tail": "ok",
+ "verdict": "OK"
+}

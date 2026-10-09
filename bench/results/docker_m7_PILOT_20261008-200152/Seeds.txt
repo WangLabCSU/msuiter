@@ -1,0 +1,8 @@
+# U-M7-02 Seeds manifest | master_seed=20260928 | data stream = g0/v1 (bit-identical to G0); tool stream namespace = m7-tool|<competitor>|<arm>|N<n>|r<k>
+# note: profile=degraded adapter=docker provider=synthetic competitors=sigminer,sigprofiler commit=5f6d14ed930f0c351b90db72f1ee1152a0a10080
+arm	N	rep	data_seed	seed_sigminer	seed_sigprofiler
+main	100	0	3892182331271704643	378370763	157346364
+main	1000	0	663988732034039842	1179398890	1586813777
+comp_mmr	100	0	5972924730034738981	187074784	1442359181
+comp_mmr	1000	0	11312223449983860568	809484058	569654015
+nb	1000	0	12403870183931229977	1466524387	994577719

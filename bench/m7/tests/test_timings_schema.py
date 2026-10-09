@@ -69,3 +69,35 @@ def test_intervals_header_stays_g0_compatible():
     from competitors import intervals                 # noqa: F401 (RED seam)
     recs = intervals.parse(FIXTURES / "g0_intervals_header.csv")
     assert isinstance(recs, list) and not recs       # header-only fixture
+
+
+def test_governance_metadata_rides_the_row_but_never_the_frozen_table():
+    # The re-adjudication lineage (RB-09(3)(iv)) rides the row dict for the
+    # judgment writer; the timings table is the frozen G0 six-column prefix
+    # plus cpu_seconds and must NEVER gain a column from governance data.
+    # The writer therefore projects known governance keys out explicitly,
+    # and unknown keys must still raise loudly (no silent smuggling either
+    # way). This unit reproduces the main-shard crash of the RB-09
+    # re-ignition: six cached rows carried re_adjudication and the strict
+    # DictWriter refused the extra key mid-write.
+    row = {"cell": "sigminer__main__N100", "tool": "sigminer",
+           "arm": "main", "n": "100", "seconds": "767.64",
+           "status": "cached", "cpu_seconds": "1004.879",
+           "re_adjudication": {"mechanism": "RB-09",
+                              "prior_epoch": "7addcda244d18753"}}
+    tmp = Path(tempfile.mkdtemp(prefix="m7timings_gov_"))
+    try:
+        path = timings.write_timings(tmp / "t.csv", [row])
+        text = path.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        assert lines[0] == ",".join(timings.TIMINGS_COLUMNS)
+        assert "re_adjudication" not in text
+        assert "7addcda244d18753" not in text
+        try:
+            timings.write_timings(tmp / "u.csv", [dict(row, smuggled=1)])
+        except ValueError as exc:
+            assert "smuggled" in str(exc)
+        else:
+            raise AssertionError("unknown row key passed silently")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

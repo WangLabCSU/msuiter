@@ -1,0 +1,12 @@
+{
+ "cell": "sigminer__main__N100",
+ "missing": [
+  "intervals.csv",
+  "errors.log",
+  "manifest.json",
+  "timing.json"
+ ],
+ "run_rc": 1,
+ "status_tail": "fail: container run failed (exit 127): docker: Error response from daemon: failed to create task for container: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"python3\": executable file not found in $PATH\n\nRun 'docker run --help' for more information\n",
+ "verdict": "DEFECT"
+}

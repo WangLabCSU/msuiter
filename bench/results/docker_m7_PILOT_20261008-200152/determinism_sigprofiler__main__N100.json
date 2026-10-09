@@ -1,0 +1,28 @@
+{
+ "byte_equal": {
+  "errors.log": true,
+  "intervals.csv": true,
+  "manifest.json": true
+ },
+ "canonical": "cache/pilot_r1/cells/sigprofiler__main__N100/out",
+ "cell": "sigprofiler__main__N100",
+ "digests": {
+  "errors.log": [
+   "e3b0c44298fc1c14",
+   "e3b0c44298fc1c14"
+  ],
+  "intervals.csv": [
+   "a04aa2ab4d967dd1",
+   "a04aa2ab4d967dd1"
+  ],
+  "manifest.json": [
+   "5952419079b65ec6",
+   "5952419079b65ec6"
+  ]
+ },
+ "ok": true,
+ "reps": 1,
+ "resample": "/tmp/m7probe/resample_A/resample_sigprofiler__main__N100/cells/sigprofiler__main__N100/out",
+ "resample_rc": 0,
+ "verdict": "OK"
+}

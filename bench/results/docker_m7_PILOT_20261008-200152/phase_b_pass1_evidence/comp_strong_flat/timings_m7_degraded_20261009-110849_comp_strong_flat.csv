@@ -1,0 +1,14 @@
+cell,tool,arm,n,seconds,status,cpu_seconds
+sigminer__comp_strong_flat__N100,sigminer,comp_strong_flat,100,2396.88,"fail: e of the 18 globals exported is 901.37 KiB The three largest globals are ‘...furrr_chunk_args’ (680.64 KiB of class ‘list’), ‘...furrr_dots’ (80.07 KiB of class ‘list’) and ‘...furrr_fn’ (40.73 KiB of class ‘function’) [future <unnamed-3> (287ffc1d6ecebdfa9736e3a8f61f0cf5-3); on 287ffc1d6ecebdfa9736e3a8f61f0cf5@ef47938c67d9<6>]
+ℹ [2026-10-09 01:08:10.554416]: 39.852 mins elapsed.
+Execution halted
+",0.0
+sigminer__comp_strong_flat__N1000,sigminer,comp_strong_flat,1000,5262.85,"fail: ───────────────────────── 100%
+ Progress: ──────────────────────────────────────────────────────────────── 100%Error: Future (<unnamed-1>) of class MultisessionFuture interrupted (pid 1022) [future <unnamed-1> (56167a48513bb8102bc2475ed785ef43-1); on 56167a48513bb8102bc2475ed785ef43@40d308f8aa19<7> at 2026-10-09 02:14:46.045041]
+ℹ [2026-10-09 02:35:55.260753]: 1.46 hours elapsed.
+Execution halted
+",0.0
+sigminer__comp_strong_flat__N10000,sigminer,comp_strong_flat,10000,1921.44,ok,2555.266
+sigprofiler__comp_strong_flat__N100,sigprofiler,comp_strong_flat,100,17.34,ok,38.893
+sigprofiler__comp_strong_flat__N1000,sigprofiler,comp_strong_flat,1000,16.84,ok,36.227
+sigprofiler__comp_strong_flat__N10000,sigprofiler,comp_strong_flat,10000,17.12,ok,37.259
