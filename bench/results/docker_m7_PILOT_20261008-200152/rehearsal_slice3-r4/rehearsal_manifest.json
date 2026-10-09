@@ -166,8 +166,9 @@
   {
    "bytes": 18655,
    "file": "../phase_b_SHARD-OOM_DEFECT.json",
+   "rb09_re_mint": "RB-09(1) re-caption addendum appended to the witness; prior digest recorded in the witness rb09_addendum field witness_sha256_pre_addendum and in version-control history",
    "role": "Phase-B pass-1 DEFECT witness (seventh recorded defect, matrix-class, driver-owned): 20/42 cells died memory over-commit under the driver's unbounded 8-shard fan-out -- verbatim exit-137 SIGKILL + LokyBackend n_jobs=10 banners (sigprofiler) and MultisessionFuture-interrupted + furrr allocation diagnostics (sigminer); frozen thread-caps enforced but cannot reach process pools; RB-08-as-amended: cache reuse DENIED on merits (incomplete matrix, uniformity violated, contended clocks), fresh full 42-cell serial re-ignition, retracted floor-ratio framing not carried",
-   "sha256": "6d25cdac4f90ec395618a76d6ebaea1c139e30676eddfc159c334fd1d52bd54f"
+   "sha256": "61dedba72cf518cba724d287ce3b4a904669a13f277a6bdc7bd22739e02cdb3b"
   },
   {
    "bytes": 113888,

@@ -28,7 +28,10 @@ stderr.
 
 Usage:
   python3 tools/probe_sigminer_cell_argv.py [--work DIR] [--json PATH]
-      [--arm main] [--n 100] [--reps 1]
+      [--arm main] [--n 100] [--reps N]
+Floor witnesses (RB-09): pass --reps 100 — a REP-1 witness may never gate
+a REP-100 protocol class. The --reps default stays 1 for the (L) cell-argv
+smoke contract, which certifies EXECUTABILITY, not floor cost.
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ import hashlib
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]              # bench/m7
@@ -126,6 +130,92 @@ def _cell_status_tail(cachedir: Path, cell: str) -> str:
     return ""
 
 
+def witness_extras(rb_argv: list[str], *, tool: str, arm: str, n: int,
+                    wall_seconds: float) -> dict:
+    """Floor-witness provenance extras (controller ruling RB-09(ii)/(5)).
+
+    A probe verdict that seeds a floor anchor must carry its FULL argv —
+    ``--reps`` included — plus the host-side wall clock, so a reps mismatch
+    (the RB-09 root cause: REP-1 anchors gating REP-100 cells) is
+    mechanically detectable by the floor_semantics units instead of living
+    in audit folklore. The child-side cpu/utime/stime quartet arrives with
+    the validated timing.json sidecar; wall is host-side by design.
+    """
+    if "--reps" not in rb_argv:
+        raise ValueError("witness argv carries no --reps token")
+    raw = rb_argv[rb_argv.index("--reps") + 1]
+    try:
+        reps = int(raw)
+    except ValueError:
+        raise ValueError(f"witness --reps echo is not integral: {raw!r}") from None
+    return {"argv": list(rb_argv), "reps": reps, "tool": tool, "arm": arm,
+            "n": n, "wall_seconds": wall_seconds}
+
+
+def freshness_law(status_tail: str) -> str | None:
+    """A floor witness must MEASURE: the orchestrator returning the cell as
+    ``cached`` means the four-file guard replayed an earlier run, so the
+    host-side wall of this verdict would be staging fiction riding a replayed
+    sidecar. Defect the replay; the caller must clear the cell (or use a
+    fresh work dir) instead of certifying a replay as a measurement."""
+    if status_tail.strip() == "cached":
+        return ("probe refused: cell replayed from cache (status 'cached') — "
+                "a witness must be a fresh measurement")
+    return None
+
+
+def run_probe(tool: str, *, arm: str, n: int, reps: int,
+              json_path: str | None = None, work: str | None = None) -> int:
+    """Drive one synthetic ``tool`` cell end-to-end and emit the witness JSON.
+
+    Shared core for the per-tool probe entry points; the tool name is the
+    only difference between the sigminer and sigprofiler witnesses (the
+    registry row selects image, entrypoint and runner)."""
+    try:
+        spec = registry.lookup(tool)
+    except Exception as exc:                       # row absent/unloadable
+        print(f"probe: inadmissible registry state: {exc}", file=sys.stderr)
+        return 2
+    provenance = {"name": spec.name, "version": spec.version,
+                  "image_ref": spec.image_ref, "image_digest": spec.image_digest,
+                  "status": spec.status}
+    scratch = (Path(work) / f"probe_{hashlib.sha256(f'{tool}|{arm}|{n}|{reps}'.encode()).hexdigest()[:8]}"
+               if work is not None
+               else Path(tempfile.mkdtemp(prefix="m7cellprobe_")))
+    cachedir = scratch / "probe_cache"
+    cell = f"{tool}__{arm}__N{n}"
+    rb_argv = ["--profile", "degraded", "--adapter", "docker",
+               "--competitors", tool, "--arms", arm,
+               "--n-list", str(n), "--reps", str(reps),
+               "--provider", "synthetic", "--provider-seed", "0",
+               "--floor-gate", "off",          # RB-09: a probe measures, it
+                                               # never self-adjudicates
+               "--shard-tag", "cell-argv",
+               "--cachedir", str(cachedir), "--outdir", str(cachedir / "out")]
+    print(f"[probe] executing real cell argv for {cell} at REP-{reps} against "
+          f"{spec.image_ref} ({spec.image_digest[:18]}...) into {cachedir}",
+          file=sys.stderr)
+    t0 = time.monotonic()
+    run_rc = run_bench.main(rb_argv)
+    wall = round(time.monotonic() - t0, 3)
+    status_tail = _cell_status_tail(cachedir, cell)
+    code, verdict = assess_cell(cachedir / "cells" / cell / "out",
+                                run_rc=run_rc, provenance=provenance)
+    replay = freshness_law(status_tail)
+    if replay is not None:
+        code, verdict = 1, {"verdict": "DEFECT", "reason": replay}
+    verdict.update({"cell": cell, "run_rc": run_rc, "status_tail": status_tail})
+    verdict.update(witness_extras(rb_argv, tool=tool, arm=arm, n=n,
+                                  wall_seconds=wall))
+    if json_path:
+        out_json = Path(json_path)
+        out_json.parent.mkdir(parents=True, exist_ok=True)
+        out_json.write_text(json.dumps(verdict, sort_keys=True, indent=1),
+                            encoding="utf-8")
+    print(json.dumps(verdict, sort_keys=True))             # final stdout line
+    return code
+
+
 def parse_args(argv=None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--work", default=None,
@@ -134,46 +224,17 @@ def parse_args(argv=None) -> argparse.Namespace:
                     help="also write the verdict JSON to this path")
     ap.add_argument("--arm", default="main")
     ap.add_argument("--n", type=int, default=100, dest="n_point")
-    ap.add_argument("--reps", type=int, default=1)
+    ap.add_argument("--reps", type=int, default=1,
+                    help="protocol reps for a floor witness: pass --reps 100 "
+                         "(RB-09: REP-1 anchors cannot gate REP-100 cells)")
     return ap.parse_args(argv)
 
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    try:
-        spec = registry.lookup("sigminer")
-    except Exception as exc:                       # row absent/unloadable
-        print(f"probe: inadmissible registry state: {exc}", file=sys.stderr)
-        return 2
-    provenance = {"name": spec.name, "version": spec.version,
-                  "image_ref": spec.image_ref, "image_digest": spec.image_digest,
-                  "status": spec.status}
-    scratch = (Path(args.work) / f"probe_{hashlib.sha256(str(args).encode()).hexdigest()[:8]}"
-               if args.work is not None
-               else Path(tempfile.mkdtemp(prefix="m7cellprobe_")))
-    cachedir = scratch / "probe_cache"
-    cell = f"sigminer__{args.arm}__N{args.n_point}"
-    rb_argv = ["--profile", "degraded", "--adapter", "docker",
-               "--competitors", "sigminer", "--arms", args.arm,
-               "--n-list", str(args.n_point), "--reps", str(args.reps),
-               "--provider", "synthetic", "--provider-seed", "0",
-               "--shard-tag", "cell-argv",
-               "--cachedir", str(cachedir), "--outdir", str(cachedir / "out")]
-    print(f"[probe] executing real cell argv for {cell} against "
-          f"{spec.image_ref} ({spec.image_digest[:18]}...) into {cachedir}",
-          file=sys.stderr)
-    run_rc = run_bench.main(rb_argv)
-    code, verdict = assess_cell(cachedir / "cells" / cell / "out",
-                                run_rc=run_rc, provenance=provenance)
-    verdict.update({"cell": cell, "run_rc": run_rc,
-                    "status_tail": _cell_status_tail(cachedir, cell)})
-    if args.json_path:
-        json_path = Path(args.json_path)
-        json_path.parent.mkdir(parents=True, exist_ok=True)
-        json_path.write_text(json.dumps(verdict, sort_keys=True, indent=1),
-                             encoding="utf-8")
-    print(json.dumps(verdict, sort_keys=True))             # final stdout line
-    return code
+    return run_probe("sigminer", arm=args.arm, n=args.n_point,
+                     reps=args.reps, json_path=args.json_path,
+                     work=args.work)
 
 
 if __name__ == "__main__":

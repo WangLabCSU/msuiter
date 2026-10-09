@@ -487,3 +487,79 @@ numbers removed) → fresh 42-cell serial ignition under the frozen protocol
 (master seed 20260928 verbatim, zero protocol touches), with the first
 three cells' measured wall/cpu against their floor classes reported
 mid-flight before the tail sinks → straight through RB-06(5).
+
+## RB-09: the floor table's reps-mismatch root cause (controller ruling 2026-10-09)
+
+The fresh serial pass-1 halted as designed: `sigminer__main__N100` passed
+content (four-file guard, sidecar exit 0) but measured wall 767.64 s /
+cpu 1004.879 s against a pre-registered floor of 310.0 s — the 3x gate
+fired (`defect-floor`, first-pass row verbatim in
+`shard_out/main/timings_m7_degraded_20261009-135749_main.csv`). My
+in-flight forensics argued environment inflation; the controller REFUTED
+that and named the root cause: the floor table descends from REP-1
+witnesses while the protocol runs REP-100 cells. The probe
+(`tools/probe_sigminer_cell_argv.py`) defaults `--reps 1`; the r5 anchor
+witness (cpu 360.252302) is a single-repetition measurement; the pilot
+`Seeds.txt` enumerates one rep row per class. The arithmetic is fatal in
+the open: `floor(sigminer, main, N100) = 310` sat BELOW the rep-1 witness
+itself (360.25) — no green cell was ever physically possible, and the
+gate could only ever halt the matrix it governed. I verified every link
+against the artifacts before accepting it: probe default line 137, the
+witness JSON, the pilot timing rows, the floor literal. All confirmed.
+
+**The superlinearity finding (mine, sealed by the ruling's method).** The
+fresh reps-sweep refutes the linear model the controller's own
+reconstruction used: at N100, rep1 cpu 366.27 → rep5 cpu 374.71 gives a
+sweep slope of ~2.1 s/rep, whose linear rep-100 projection (~575 s) misses
+the landed rep-100 cell (1004.879) by ~1.75x — the ~6.5 s/rep constant
+only exists when fitted FROM the rep-100 measurement itself. Per-rep cost
+GROWS with reps at protocol scale. Consequence for the law: short probes
+may pin the SHAPE (boot intercept, probe-scale reps-linearity, the n
+plateau) but may never seed floor MAGNITUDES; every floor class is
+anchored at its own protocol scale — a committed `--reps 100` witness per
+class (all 42), with the 3.0x ratio untouchable ("you do not get to widen
+the ratio, only to fix what it multiplies").
+
+**Freshness law.** The first batch produced a `sigminer main N100 rep1`
+witness reading wall 0.028 s — a four-file-guard replay of my own earlier
+smoke cell, a "measurement" that measured nothing. Sealed:
+`freshness_law()` DEFECTs any probe whose orchestrator status_tail is
+`cached` (a replay's host wall is staging fiction riding a replayed
+sidecar), and every batch probe gets a unique `--work` dir so replay is
+unreachable by construction.
+
+**Calibration probes must not self-adjudicate.** The first rep-100 anchor
+probe crashed running the OUTDATED table's own gate: the cell exceeded the
+old 3x floor (as the whole RB-09 thesis predicts), the flag path invoked
+the defect-ledger writer, and `floor_table_epoch` died JSON-serializing
+tuple keys. Two fixes: `_canonical()` (tuple keys → `|`-joined strings) and
+the run_bench `--floor-gate off` law — a probe measures, it never judges;
+the matrix pass runs the gate ON, always.
+
+**Witness provenance (RB-09(5)) and the defect ledger (RB-09(3)(iv)).**
+Every floor witness now echoes its FULL argv (including `--reps`), the
+host wall, the digest-pinned registry row and the sidecar quartet — a
+reps mismatch is mechanically detectable, not audit folklore.
+Flags are ledgered (`cachedir/governance/defect_ledger.jsonl`, outside
+the four-file guard and the BYTE_EQUAL set) with the floor table's hash
+epoch; a pass for a ledgered flag under a NEW epoch is a RE-ADJUDICATION
+and must carry the mechanism citation into the judgment's lineage — no
+silent re-status. The pass-1 `sigminer__main__N100` flag is backfilled
+verbatim (pre-RB-09 epoch label `pre-RB-09/rep-1-anchor-table@ddfaa2e` —
+the ddfaa2e module predates the epoch helper, so the honest epoch is
+descriptive, not a fabricated hash); at re-ignition its hash-cached replay
+returns `cached` WITH the cited lineage block. The six landed cells keep
+their content and hash-guard reuse. The phase-B SHARD-OOM witness stands
+unamended in substance — an `rb09_addendum` re-caption records the root
+cause verbatim (append-only, prior sha256 pinned in the file and the
+rehearsal manifest entry re-minted from command output).
+
+**OBSERVE-DON'T-ASSUME (RB-09(4)) and the 5-vs-10 census note.** The
+worker census is observational: for the N100 repro cell the sampled
+`docker top` census observed `max_worker_procs = 5`. The plan's "10" is
+the container's SELF-SIZING pool target (furrr/joblib size to the VM's 10
+vCPUs — the very mechanism the frozen thread caps cannot reach); 5 is what
+this class under these caps actually presented during the sampled window.
+The distinction is kept deliberately: a synthetic-probe-derived number
+may not seed a real-plan constant, and the census exists to catch a cell
+that secretly ran fan-out, not to certify a desired width.

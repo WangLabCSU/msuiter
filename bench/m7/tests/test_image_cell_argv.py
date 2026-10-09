@@ -141,3 +141,53 @@ def test_verdict_json_round_trips_machine_readable():
         _full_cell(out)
         _, verdict = probe.assess_cell(out, run_rc=0, provenance={})
         assert json.loads(json.dumps(verdict, sort_keys=True)) == verdict
+
+
+# -- witness provenance extras (RB-09(ii)/(5)) -------------------------------------
+# A floor witness must carry its FULL argv (including --reps) and its host-side
+# wall: every anchor claim becomes mechanically auditable for the reps-match that
+# the floor_semantics units (group (P), 5a) gate on.
+
+_RB = ["--profile", "degraded", "--adapter", "docker", "--competitors",
+       "sigminer", "--arms", "main", "--n-list", "100", "--reps", "100",
+       "--provider", "synthetic", "--provider-seed", "0"]
+
+
+def test_witness_extras_echo_full_argv_and_reps():
+    extras = probe.witness_extras(_RB, tool="sigminer", arm="main",
+                                  n=100, wall_seconds=412.5)
+    assert extras["argv"] == _RB
+    assert extras["reps"] == 100
+    assert extras["tool"] == "sigminer" and extras["arm"] == "main"
+    assert extras["n"] == 100 and extras["wall_seconds"] == 412.5
+
+
+def test_witness_extras_refuse_argv_without_reps():
+    argv = [a for a in _RB if a != "100" and a != "--reps"]
+    try:
+        probe.witness_extras(argv, tool="sigminer", arm="main", n=100,
+                             wall_seconds=1.0)
+    except ValueError:
+        return
+    raise AssertionError("witness argv without --reps was admitted")
+
+
+def test_witness_extras_refuse_non_integral_reps():
+    bad = list(_RB)
+    bad[bad.index("--reps") + 1] = "many"
+    try:
+        probe.witness_extras(bad, tool="sigminer", arm="main", n=100,
+                             wall_seconds=1.0)
+    except ValueError:
+        return
+    raise AssertionError("non-integral --reps echo was admitted")
+
+
+def test_freshness_law_defects_cached_replays():
+    # A witness must MEASURE. The orchestrator's 'cached' row means the
+    # four-file guard replayed an older run — the host wall of the verdict
+    # would be staging fiction riding a replayed sidecar.
+    assert probe.freshness_law("cached") is not None
+    assert probe.freshness_law("  cached  ") is not None          # tolerant
+    assert probe.freshness_law("ok") is None
+    assert probe.freshness_law("fail: container run failed (exit 137)") is None

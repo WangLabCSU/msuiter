@@ -23,6 +23,7 @@ not all pass (write_judgment consults nonpass_rows).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -247,6 +248,46 @@ _ARM_MULT = {"main": 1.0, "comp_clock_only": 1.2, "comp_mmr": 1.8,
 FLOOR_RATIO = 3.0
 PASS_STATUSES = ("ok", "cached")
 
+# -- floor anchor provenance (RB-09(3)(i)/(v)) ------------------------------------
+# BOOT/WORK constants are not folklore: every floor class must descend from a
+# committed witness JSON whose own ``--reps`` equals the frozen protocol reps.
+# RB-09's root cause was exactly the absence of this law: the r5 anchor was a
+# REP-1 probe (cpu 360.252302) and the sigprofiler anchor a REP-1 pilot row
+# (pilot Seeds.txt: one rep row per class), while the matrix runs REP-100
+# cells — floor(sigminer,main,N100)=310 sat below the rep-1 witness itself,
+# so the fresh serial matrix could only ever self-halt on its own gate.
+PROTOCOL_REPS = _REPS                                   # gated protocol scale
+_RESULTS_DIR = Path(__file__).resolve().parents[2] / "results"   # bench/results
+
+_FLOOR_ANCHORS: dict[tuple[str, str, int], dict] = {
+    ("sigminer", "main", 100): {
+        "witness": ("docker_m7_PILOT_20261008-200152",
+                    "cell_argv_probe_slice3-r5_GREEN.json"),
+        "reps": 1,          # probe_sigminer_cell_argv.py --reps DEFAULT (RB-09)
+        "cpu_seconds": 360.252302,
+    },
+    ("sigprofiler", "main", 100): {
+        "witness": ("docker_m7_PILOT_20261008-200152",
+                    "timings_m7_degraded_20261009-040326.csv"),
+        "cell": "sigprofiler__main__N100",
+        "reps": 1,          # pilot Seeds.txt enumerates one rep row per class
+        "wall_seconds": 14.16,
+        "cpu_seconds": 13.934,
+    },
+}
+
+
+def anchor_witness_path(anchor: dict) -> Path:
+    """Absolute path of a floor anchor's committed witness file."""
+    return _RESULTS_DIR.joinpath(*anchor["witness"])
+
+
+def anchor_measured(anchor: dict) -> float:
+    """The witness's honest uncontended cost for its class — the same
+    max(wall, cpu) metric the gate itself measures against."""
+    return max(float(anchor.get("wall_seconds", 0.0)),
+               float(anchor.get("cpu_seconds", 0.0)))
+
 
 def floor_for(tool: str, arm: str, n: int) -> float:
     """Pre-registered uncontended floor for one cell (units: the tool's
@@ -289,3 +330,86 @@ def nonpass_rows(rows) -> list[dict]:
     """The judgment writer's refuse-to-claim predicate: any row that is not
     an outright pass (ok/cached) voids the fairness attestation header."""
     return [r for r in rows if r["status"] not in PASS_STATUSES]
+
+
+# -- (4b) defect ledger + re-adjudication lineage (RB-09(3)(iv)) --------------------
+# A defect-floor flag is law for the floor-table epoch that raised it. When a
+# cell flagged under an OLD epoch later passes under a NEW one (the RB-09
+# calibration repair), the pass is a RE-ADJUDICATION and must carry its
+# mechanism citation — never a silent re-status. The ledger lives under
+# cachedir/governance/, outside the four-file guard and the BYTE_EQUAL set.
+GOVERNANCE_SUBDIR = "governance"
+FLOOR_TABLE_FIELDS = ("_BOOT", "_WORK", "_REPS", "_N_REF", "_N_SAT",
+                      "_ARM_MULT", "FLOOR_RATIO", "_FLOOR_ANCHORS")
+RE_ADJUDICATION_MECHANISM = (
+    "RB-09 (controller ruling 2026-10-09): the pre-registered floor table was "
+    "calibrated from REP-1 witnesses (probe_sigminer_cell_argv --reps default; "
+    "pilot Seeds.txt one rep row per class) while the protocol runs REP-100 "
+    "cells — the defect-floor halt was an anchor-miscalibration artifact, the "
+    "cell content itself intact. See the committed witness addendum and "
+    "docs/devlog/2026-10-09-m7-benchmark-matrix.md.")
+
+
+def _canonical(value):
+    """JSON-canonical view of a floor-table constant: tuple keys become
+    '|'-joined strings, tuples become lists — the epoch hash must see every
+    byte of the table, including its (tool, arm, n) anchor keys."""
+    if isinstance(value, dict):
+        return {("|".join(map(str, k)) if isinstance(k, tuple) else str(k)):
+                _canonical(v) for k, v in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_canonical(v) for v in value]
+    return value
+
+
+def floor_table_epoch() -> str:
+    """Explicit-algorithm epoch of the floor table (RB-06 hash doctrine):
+    sha256 over the canonical JSON of every floor-affecting constant, pins
+    included. Any re-calibration flips it by construction."""
+    blob = json.dumps({name: _canonical(globals()[name])
+                       for name in FLOOR_TABLE_FIELDS},
+                      sort_keys=True, default=str)
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def defect_ledger_path(cachedir) -> Path:
+    return Path(cachedir) / GOVERNANCE_SUBDIR / "defect_ledger.jsonl"
+
+
+def append_defect_record(cachedir, row: dict) -> None:
+    """Ledger one DEFECT-candidate flag verbatim with its table epoch."""
+    path = defect_ledger_path(cachedir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps({"ts": _utc_iso(), "epoch": floor_table_epoch(),
+                             "cell": row["cell"], "status": row["status"]},
+                            sort_keys=True) + "\n")
+
+
+def _utc_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def latest_defect_records(cachedir) -> dict[str, dict]:
+    """Last ledger record per cell (absent/empty ledger reads as empty)."""
+    path = defect_ledger_path(cachedir)
+    latest: dict[str, dict] = {}
+    if not path.exists():
+        return latest
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            record = json.loads(line)
+            latest[record["cell"]] = record
+    return latest
+
+
+def re_adjudication(row: dict, prior: dict | None) -> dict | None:
+    """Lineage annotation for a passing row whose cell was defect-flagged
+    under a DIFFERENT floor-table epoch; None keeps the pass silent."""
+    if prior is None or not str(prior.get("status", "")).startswith("defect-"):
+        return None
+    if prior.get("epoch") == floor_table_epoch():
+        return None                      # same law still in force
+    return {"prior_status": prior["status"], "prior_epoch": prior["epoch"],
+            "epoch": floor_table_epoch(),
+            "mechanism": RE_ADJUDICATION_MECHANISM}

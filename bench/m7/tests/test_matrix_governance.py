@@ -31,6 +31,7 @@ import copy
 import io
 import json
 import sys
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -225,3 +226,201 @@ def test_floor_gate_scope_hard_errors_on_unknown_arm():
     except KeyError:
         return
     raise AssertionError("unknown arm of a measured tool passed silently")
+
+
+# -- (5b) defect ledger + re-adjudication lineage (RB-09(3)(iv)) -------------------
+
+def test_defect_ledger_round_trips_outside_the_cell_guard():
+    cache = Path(tempfile.mkdtemp(prefix="m7ledger_"))
+    row = _row("sigminer__main__N100",
+               "defect-floor: wall/cpu 1004.9s > 3.0x pre-registered floor")
+    gov.append_defect_record(cache, row)
+    latest = gov.latest_defect_records(cache)
+    rec = latest[row["cell"]]
+    assert rec["status"].startswith("defect-floor")
+    assert rec["epoch"] == gov.floor_table_epoch()
+    path = gov.defect_ledger_path(cache)
+    # outside the four-file guard and the BYTE_EQUAL set: never under cells/
+    assert "cells" not in path.parts and path.parent.name == gov.GOVERNANCE_SUBDIR
+    row2 = _row(row["cell"], "defect-floor: later flag")
+    gov.append_defect_record(cache, row2)
+    assert gov.latest_defect_records(cache)[row["cell"]]["status"] \
+        == "defect-floor: later flag"          # append-only log, last wins
+
+
+def test_missing_ledger_reads_empty_and_silent():
+    cache = Path(tempfile.mkdtemp(prefix="m7noledger_"))
+    assert gov.latest_defect_records(cache) == {}
+    assert gov.re_adjudication(_row("sigminer__main__N100", "ok"), None) is None
+
+
+def test_floor_table_epoch_is_deterministic_and_flips_on_recalibration():
+    e0 = gov.floor_table_epoch()
+    assert e0 == gov.floor_table_epoch(), "epoch must be a pure function"
+    saved_boot = dict(gov._BOOT)
+    try:                                        # test-scoped patch, restored below
+        gov._BOOT["sigminer"] = saved_boot["sigminer"] + 1.0
+        assert gov.floor_table_epoch() != e0, "re-calibration must flip the epoch"
+    finally:
+        gov._BOOT.clear()
+        gov._BOOT.update(saved_boot)
+    assert gov.floor_table_epoch() == e0        # restore verified
+
+
+def test_re_adjudication_attaches_only_across_epochs():
+    row = _row("sigminer__main__N100", "cached")
+    now = gov.floor_table_epoch()
+    assert gov.re_adjudication(row, {"status": "defect-floor: x",
+                                     "epoch": now}) is None   # same law in force
+    assert gov.re_adjudication(row, {"status": "fail: exit 137",
+                                     "epoch": "a" * 16}) is None   # not a floor flag
+    la = gov.re_adjudication(row, {"status": "defect-floor: x", "epoch": "a" * 16})
+    assert la is not None and la["prior_epoch"] == "a" * 16
+    assert la["epoch"] == now
+    assert "REP-1" in la["mechanism"] and "REP-100" in la["mechanism"], \
+        "the citation must name the adjudicated root cause"
+
+
+def test_judgment_emits_re_adjudication_lineage_block():
+    row = _row("sigminer__main__N100", "cached")
+    row["re_adjudication"] = {
+        "prior_status": "defect-floor: wall/cpu 1004.9s > 3.0x pre-registered "
+                        "floor 310.0s (tool=sigminer arm=main n=100)",
+        "prior_epoch": "a" * 16, "epoch": "b" * 16,
+        "mechanism": "RB-09: REP-1 anchors gated REP-100 cells"}
+    text = _judgment_text([row, _row("sigminer__main__N1000", "ok")])
+    assert "Re-adjudication lineage" in text
+    assert "defect-floor: wall/cpu 1004.9s" in text      # prior flag verbatim
+    assert "REP-1 anchors gated REP-100 cells" in text   # mechanism cited
+    assert "FAIRNESS ATTESTATION" in text                # all-pass: header stands
+
+
+def test_judgment_omits_lineage_when_no_flips():
+    text = _judgment_text([_row("sigminer__main__N100", "ok"),
+                           _row("sigminer__main__N1000", "cached")])
+    assert "Re-adjudication lineage" not in text
+
+
+# -- (5a) floor_semantics: anchors must be reps-matched witnesses (RB-09(3)(i)) ----
+# RB-09 root cause: every BOOT/WORK constant of the pre-registered table was
+# calibrated from a REP-1 witness (the r5 probe's --reps default; the pilot
+# Seeds.txt shows one rep row per class) while the frozen protocol runs
+# REP-100 cells. floor(sigminer,main,N100)=310 sat BELOW the rep-1 witness
+# itself (360.25): no green cell was ever physically possible and the gate
+# self-halted the fresh serial matrix. These units make a reps-mismatched
+# anchor mechanically impossible, per the controller's TDD order.
+
+def test_floor_anchors_are_reps_matched_to_the_protocol():
+    # Every floor class must descend from a witness produced at the frozen
+    # protocol reps (RB-09(3)(i)): anchor.reps == protocol cell reps.
+    for (tool, arm, n), anchor in gov._FLOOR_ANCHORS.items():
+        assert anchor["reps"] == gov.PROTOCOL_REPS, (
+            f"floor class {tool}/{arm}/N{n} is anchored by a REP-{anchor['reps']} "
+            f"witness while the protocol runs REP-{gov.PROTOCOL_REPS} cells")
+
+
+def test_floor_dominates_the_measured_witness_for_its_class():
+    # The pre-registered floor must not sit below the honest uncontended cost
+    # measured for its own class: a floor under its own witness calibrates
+    # the gate at a scale no green cell can occupy (the N100 case:
+    # 310 < 360.25).
+    for (tool, arm, n), anchor in gov._FLOOR_ANCHORS.items():
+        floor = gov.floor_for(tool, arm, n)
+        measured = gov.anchor_measured(anchor)
+        assert floor >= measured, (
+            f"floor({tool},{arm},N{n})={floor:.1f}s is below the measured "
+            f"rep-matched witness cost {measured:.1f}s for its own class")
+
+
+def test_anchor_witnesses_are_committed_probe_json_with_full_argv():
+    # RB-09(5): every floor/anchor claim carries its witness's FULL argv
+    # (including --reps) inside the provenance file, and the recorded cost
+    # must equal the witness verbatim — reps mismatch becomes mechanically
+    # detectable instead of audit-dependent folklore.
+    for (tool, arm, n), anchor in gov._FLOOR_ANCHORS.items():
+        path = gov.anchor_witness_path(anchor)
+        assert path.exists(), f"anchor witness missing: {path}"
+        assert path.suffix == ".json", (
+            f"anchor witness for {tool}/{arm}/N{n} is {path.name}, but a "
+            f"floor witness must be a probe verdict JSON with an argv echo")
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        argv = doc.get("argv")
+        assert argv and "--reps" in argv, (
+            f"anchor witness {path.name} carries no --reps argv echo")
+        assert int(argv[argv.index("--reps") + 1]) == anchor["reps"], (
+            f"anchor witness {path.name} disagrees with the registry reps")
+        assert (doc["sidecar"]["cpu_seconds"]
+                == anchor["cpu_seconds"]), "registry cost != witness verbatim"
+
+
+# -- (5b) defect ledger + re-adjudication lineage (RB-09(3)(iv)) -------------------
+
+def test_defect_ledger_round_trips_outside_the_cell_guard():
+    cache = Path(tempfile.mkdtemp(prefix="m7ledger_"))
+    row = _row("sigminer__main__N100",
+               "defect-floor: wall/cpu 1004.9s > 3.0x pre-registered floor")
+    gov.append_defect_record(cache, row)
+    latest = gov.latest_defect_records(cache)
+    rec = latest[row["cell"]]
+    assert rec["status"].startswith("defect-floor")
+    assert rec["epoch"] == gov.floor_table_epoch()
+    path = gov.defect_ledger_path(cache)
+    # outside the four-file guard and the BYTE_EQUAL set: never under cells/
+    assert "cells" not in path.parts and path.parent.name == gov.GOVERNANCE_SUBDIR
+    row2 = _row(row["cell"], "defect-floor: later flag")
+    gov.append_defect_record(cache, row2)
+    assert gov.latest_defect_records(cache)[row["cell"]]["status"] \
+        == "defect-floor: later flag"          # append-only log, last wins
+
+
+def test_missing_ledger_reads_empty_and_silent():
+    cache = Path(tempfile.mkdtemp(prefix="m7noledger_"))
+    assert gov.latest_defect_records(cache) == {}
+    assert gov.re_adjudication(_row("sigminer__main__N100", "ok"), None) is None
+
+
+def test_floor_table_epoch_is_deterministic_and_flips_on_recalibration():
+    e0 = gov.floor_table_epoch()
+    assert e0 == gov.floor_table_epoch(), "epoch must be a pure function"
+    saved_boot = dict(gov._BOOT)
+    try:                                        # test-scoped patch, restored below
+        gov._BOOT["sigminer"] = saved_boot["sigminer"] + 1.0
+        assert gov.floor_table_epoch() != e0, "re-calibration must flip the epoch"
+    finally:
+        gov._BOOT.clear()
+        gov._BOOT.update(saved_boot)
+    assert gov.floor_table_epoch() == e0        # restore verified
+
+
+def test_re_adjudication_attaches_only_across_epochs():
+    row = _row("sigminer__main__N100", "cached")
+    now = gov.floor_table_epoch()
+    assert gov.re_adjudication(row, {"status": "defect-floor: x",
+                                     "epoch": now}) is None   # same law in force
+    assert gov.re_adjudication(row, {"status": "fail: exit 137",
+                                     "epoch": "a" * 16}) is None   # not a floor flag
+    la = gov.re_adjudication(row, {"status": "defect-floor: x", "epoch": "a" * 16})
+    assert la is not None and la["prior_epoch"] == "a" * 16
+    assert la["epoch"] == now
+    assert "REP-1" in la["mechanism"] and "REP-100" in la["mechanism"], \
+        "the citation must name the adjudicated root cause"
+
+
+def test_judgment_emits_re_adjudication_lineage_block():
+    row = _row("sigminer__main__N100", "cached")
+    row["re_adjudication"] = {
+        "prior_status": "defect-floor: wall/cpu 1004.9s > 3.0x pre-registered "
+                        "floor 310.0s (tool=sigminer arm=main n=100)",
+        "prior_epoch": "a" * 16, "epoch": "b" * 16,
+        "mechanism": "RB-09: REP-1 anchors gated REP-100 cells"}
+    text = _judgment_text([row, _row("sigminer__main__N1000", "ok")])
+    assert "Re-adjudication lineage" in text
+    assert "defect-floor: wall/cpu 1004.9s" in text      # prior flag verbatim
+    assert "REP-1 anchors gated REP-100 cells" in text   # mechanism cited
+    assert "FAIRNESS ATTESTATION" in text                # all-pass: header stands
+
+
+def test_judgment_omits_lineage_when_no_flips():
+    text = _judgment_text([_row("sigminer__main__N100", "ok"),
+                           _row("sigminer__main__N1000", "cached")])
+    assert "Re-adjudication lineage" not in text

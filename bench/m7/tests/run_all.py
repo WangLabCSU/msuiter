@@ -27,6 +27,7 @@ Matrix-runner extensions (U-M7-03, arms×N×reps @ pinned seeds):
   ⑫ test_matrix_runner          N-point filter, dry-run plan, resample-verify
 Live image-probe (U-M7-03, controller ruling RB-01 -- pilot-catch witness):
   (L) test_image_cell_argv        real cell argv, sidecar-schema-valid depth
+  (L) test_image_cell_argv_sigprofiler  per-tool floor probe (RB-09, sigprofiler twin)
 Executed-surface audit (U-M7-03, controller ruling RB-03 -- convergence gate):
   (M) test_executed_surface_audit  closure of the two /work scripts vs recipe
 Hash provenance (U-M7-03, controller ruling RB-06 -- explicit-algorithm seal):
@@ -36,6 +37,9 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
   (P) test_matrix_governance  exact-stamp parsing (no substring classes),
       judgment refuse-to-claim, pre-flight co-tenant refusal, worker census,
       pre-registered 3x-floor gate
+  (R) test_floor_calibration  RB-09 calibrated floor table: per-class
+      REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
+      ratio untouchable, superlinearity recorded
 """
 
 from __future__ import annotations
@@ -58,12 +62,15 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_matrix_runner",
            # U-M7-03 RB-01: live cell-argv probe (pilot-catch witness):
            "test_image_cell_argv",
+           # U-M7-03 RB-09(3)(ii): per-tool floor probes (sigprofiler twin):
+           "test_image_cell_argv_sigprofiler",
            # U-M7-03 RB-03: executed-surface dependency closure (convergence gate):
            "test_executed_surface_audit",
            # U-M7-03 RB-06: hash-provenance gates (explicit-algorithm doctrine):
            "test_hash_provenance",
            # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
-           "test_matrix_governance"]
+           "test_matrix_governance",
+           "test_floor_calibration"]
 
 
 def _collect(mod_name):

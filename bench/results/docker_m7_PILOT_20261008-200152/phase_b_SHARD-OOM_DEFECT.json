@@ -254,6 +254,14 @@
   "manifest_file": "phase_b_PURGE_MANIFEST.json",
   "manifest_sha256": "9768a7fc8bfe548b0c7182dbea20236ba83d1b3cb6f54a02c58bd9108e9249ac"
  },
+ "rb09_addendum": {
+  "added": "2026-10-09T08:05:59+00:00",
+  "added_by": "U-M7-03 execution agent under controller ruling RB-09(1) (coordinator message 2026-10-09; coordinator texts are not user consent)",
+  "re_caption": "the floors block of this witness (sigminer 360.25 / sigprofiler 13.4) descends from REP-1 witnesses (the r5 probe default; pilot rep-1 rows) while the protocol runs REP-100 cells; every floor-class constant that seeded the later 3x-floor table inherited that reps mismatch, and the fresh serial pass-1 defect-floor halt was the gate firing on its own miscalibration \u2014 an anchor-rep artifact, not cell content. This SHARD-OOM witness itself stands unamended: the pass-1 deaths are the unbounded-fan-out over-commit class, adjudicated independently of and unaffected by the floor-table defect.",
+  "root_cause_verbatim": "RB-09: probe_sigminer_cell_argv.py carries --reps default=1. The r5 anchor witness (cpu 360.252, utime 341.3) is a REP-1 measurement. The frozen matrix protocol runs REP-100 cells. floor(N100)=310 < rep-1 measured floor 360 => NO green cell was ever physically possible.",
+  "superseded_by": "bench/results/m7_floor_calibration_20261009/ (REP-100 per-class anchors, RB-09(3)(ii))",
+  "witness_sha256_pre_addendum": "6d25cdac4f90ec395618a76d6ebaea1c139e30676eddfc159c334fd1d52bd54f"
+ },
  "schema": "m7-phase-b-defect-1",
  "shards": [
   {

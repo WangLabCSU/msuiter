@@ -87,6 +87,14 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--outdir", default=str(HERE / "results"))
     ap.add_argument("--force-rerun", action="store_true",
                     help="ignore cached cell outputs, re-invoke every cell")
+    ap.add_argument("--floor-gate", choices=("on", "off"), default="on",
+                    help="RB-08(7) 3x-floor DEFECT gate (+defect ledger). "
+                         "'off' is for CALIBRATION PROBES ONLY: a probe "
+                         "measures a class cost and must never "
+                         "self-adjudicate against the very floor table it "
+                         "is recalibrating (RB-09: the outdated table "
+                         "flagged the rep-100 anchors it exists to "
+                         "re-measure). The matrix pass always runs it ON.")
     ap.add_argument("--shard-tag", default=None,
                     help="suffix for the timings file name (sharded driver)")
     ap.add_argument("--n-list", default=None, dest="n_list",
@@ -306,9 +314,18 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     hash_file.write_text(data_hash, encoding="utf-8")
 
     def row(status: str, seconds: float, cpu: float) -> dict:
-        return {"cell": stamp, "tool": competitor, "arm": arm.name,
-                "n": n, "seconds": seconds, "status": status,
-                "cpu_seconds": cpu}
+        r = {"cell": stamp, "tool": competitor, "arm": arm.name,
+             "n": n, "seconds": seconds, "status": status,
+             "cpu_seconds": cpu}
+        if status in gov.PASS_STATUSES:
+            # RB-09(3)(iv): a pass under a NEW floor-table epoch for a cell
+            # defect-flagged under an OLD one is a re-adjudication — it must
+            # carry its mechanism citation, never re-status silently.
+            lineage = gov.re_adjudication(
+                r, gov.latest_defect_records(cachedir).get(stamp))
+            if lineage is not None:
+                r["re_adjudication"] = lineage
+        return r
 
     trusted = (not args.force_rerun
                and all((outd / name).exists() for name in GUARD_FILES))
@@ -441,6 +458,20 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
         f"- timings table: timings_m7_{args.profile}_{ts}.csv "
         "(G0 six-column prefix + cpu_seconds; every measured second attributable)",
         "",
+    ]
+    lineage_rows = [r for r in rows if r.get("re_adjudication")]
+    if lineage_rows:
+        # RB-09(3)(iv): flips are spoken with their citation in the judgment
+        # lineage — a defect-floor flag never dies silently at re-adjudication.
+        lines += ["", "## Re-adjudication lineage (RB-09(3)(iv))", ""]
+        for r in lineage_rows:
+            la = r["re_adjudication"]
+            lines += [
+                f"- **{r['cell']}** — prior flag `{la['prior_status'][:120]}` "
+                f"(floor epoch `{la['prior_epoch']}`) now passes as "
+                f"`{r['status']}` under re-calibrated epoch `{la['epoch']}`;",
+                f"  - mechanism: {la['mechanism']}"]
+    lines += [
         "Honest footer: this is harness output serving as the adjudication gate.",
         "Authoritative competitor measurement is the docker-adapter run at the",
         "frozen protocol; smoke/mock passes prove pipeline plumbing only. This",
@@ -528,9 +559,14 @@ def main(argv=None) -> int:
         for arm, n, counts_path in cells:
             row = run_cell(args, competitor, specs[competitor], arm, n,
                            counts_path, cachedir, catalog_ref)
-            flagged = gov.floor_gate(row)         # RB-08(7): DEFECT candidate
+            flagged = (gov.floor_gate(row) if args.floor_gate == "on"
+                      else None)               # RB-08(7); RB-09: probes run it off
             if flagged is not None:
                 row = flagged
+                # RB-09(3)(iv): ledger the flag with its floor-table epoch so a
+                # later pass under a re-calibrated table speaks as a cited
+                # re-adjudication instead of a silent re-status.
+                gov.append_defect_record(cachedir, row)
             rows.append(row)
             if row["status"].startswith(("fail", "defect-", "preflight-refused")):
                 failures.append(row["cell"])
