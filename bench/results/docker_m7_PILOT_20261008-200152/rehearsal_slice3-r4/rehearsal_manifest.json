@@ -75,6 +75,12 @@
    "sha256": "4898be69924ec1e057ec86a0335f7bc66d06edb868a8a218925a634d3c56e2e0"
   },
   {
+   "bytes": 4531,
+   "file": "image_inspect_slice3-r5_live.json",
+   "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r5 at witness time -- THE source of record for the registry flip (Id 05cb29e0..02c703e9, Size 1936876727); the GREEN cell-argv probe beside the pilot root binds the same ref+digest pair",
+   "sha256": "fde73968897b21fd4e59753e06becc69ad6665c7504d12da59e12f240111c66d"
+  },
+  {
    "bytes": 1015,
    "file": "mint_called_names.py",
    "role": "host-side token minter lineage",
@@ -93,10 +99,10 @@
    "sha256": "0e692c1eb8aa601606010bc8f03c381d5b9a0f6e3c27d521041aa611c11c7658"
   },
   {
-   "bytes": 6136,
+   "bytes": 6928,
    "file": "rehearsal_manifest.json",
    "role": "supporting lineage",
-   "sha256": "fec735cb9691be44cbc67addcdbc84750e8ca2020011d29bcd6bc92db186b912"
+   "sha256": "1c968958084eac1e51e1e7bea5b84a51192a5903dc0656f4a2d229094b2fb37f"
   },
   {
    "bytes": 282669,

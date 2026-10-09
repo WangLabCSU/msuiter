@@ -48,20 +48,23 @@ REGISTRY: dict[str, CompetitorSpec] = {
         name="sigminer",
         runtime="R",
         version="2.3.1",
-        # slice-3 flip 2026-10-08 (memo 9d.8): build9 green -- docker build
-        # exit 0 (/tmp/m7_sigminer_build9.log): INSTALL sigminer 2.3.1 OK ->
-        # 'ASSERT sigminer 2.3.1 exact + 115 witnessed exports present
-        # (9 core functions)' -> naming to docker.io/library/msuiter-
-        # sigminer:slice3-r2 done -> unpacking done -> DONE 7.1s. Live
-        # inspect, controller capture = source of record (agent capture
-        # byte-identical): Id sha256:c2a52c719f6ed2f45184e4fd61dcec767596
-        # b82c04061006c7ec9f5d0fb91157, Size 1707456647, Created
-        # 2026-10-08T14:33:58.976726552Z. Image built at branch commit
-        # f3827bb (the guard-dequote fix; build8 had died at the pre-fix
-        # witnessed-export assert -- controller-ruled instrumentation-class,
-        # one-use exception spent on this build).
-        image_ref="msuiter-sigminer:slice3-r2",
-        image_digest="sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c04061006c7ec9f5d0fb91157",  # docker image inspect .Id, 2026-10-08 verified build
+        # RB-05(6) flip ceremony 2026-10-09, data-only. Single authorized
+        # slice3-r5 bake (RB-05 ledger): docker build exit 0, all gates
+        # green verbatim in the build log — byte-pin assert PASS, era bakes
+        # "[image] lpSolve 5.6.20, synchronicity 1.3.10 provisioned" /
+        # "[image] matrixStats 1.3.0 provisioned", network-none build
+        # self-witness "[self-witness] mini-cell OK: rc 0, sidecar schema
+        # valid, container-side guard satisfied" (zero auto-install lines,
+        # NMF suggested 95.5, 3.932 min). Recipe bytes at commit d24ebd4
+        # (Dockerfile.sigminer; r5 closure fold — sixth recorded defect,
+        # CRAN-fallback float caught by the literal-version gate). Live
+        # docker image inspect verbatim:
+        # Id/RepoDigest sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9,
+        # Size 1936876727, Created 2026-10-09T00:16:11.442885095Z.
+        # Witness JSONs: r5 image inspect + GREEN cell-argv probe committed
+        # beside the pilot records (see this commit's --stat).
+        image_ref="msuiter-sigminer:slice3-r5",
+        image_digest="sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9",  # docker image inspect .Id, 2026-10-09 verified build
         status=STATUS_READY,
         entrypoint="python3",           # m7_entry.py measures the Rscript child
         runner_script="run_sigminer.R",

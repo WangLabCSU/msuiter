@@ -27,13 +27,16 @@ from competitors import docker_cmd, registry                  # noqa: E402  (RED
 EXPECTED_NAMES = {"sigminer", "sigprofiler", "signal"}
 VALID_STATUSES = {"ready", "pending-verify"}
 
-# slice-3 flip witnesses (memo 9d.8). The build9 image: docker build exit 0,
-# tail assert passed ('ASSERT sigminer 2.3.1 exact + 115 witnessed exports
-# present (9 core functions)'), controller live-inspect capture is the source
-# of record — two independent live captures agreed byte-for-byte.
-SIGMINER_IMAGE_REF = "msuiter-sigminer:slice3-r2"
-SIGMINER_IMAGE_DIGEST = ("sha256:c2a52c719f6ed2f45184e4fd61dcec767596b82c"
-                         "04061006c7ec9f5d0fb91157")
+# RB-05(6) flip witnesses 2026-10-09, data-only. The single authorized
+# slice3-r5 bake: docker build exit 0 with the byte-pin assert, all three
+# era-gated version gates and the network-none build self-witness green
+# verbatim in the build log (rc 0, zero auto-install lines, NMF suggested
+# 95.5). Controller ruling RB-05(6): registry flip only after the live
+# docker image inspect + the GREEN cell-argv probe; both witness JSONs
+# committed beside the pilot records (see the flip commit's --stat).
+SIGMINER_IMAGE_REF = "msuiter-sigminer:slice3-r5"
+SIGMINER_IMAGE_DIGEST = ("sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f"
+                         "5d1c135787027e6002c703e9")
 
 
 def test_registry_loads_exactly_the_three_competitors():
