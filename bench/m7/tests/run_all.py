@@ -39,7 +39,8 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
       pre-registered 3x-floor gate
   (R) test_floor_calibration  RB-09 calibrated floor table: per-class
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
-      ratio untouchable, superlinearity recorded
+      ratio untouchable, probe-scale extrapolation refuted in BOTH signs
+      (sigminer superlinear, sigprofiler amortizing)
 """
 
 from __future__ import annotations

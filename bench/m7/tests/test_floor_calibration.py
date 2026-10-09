@@ -88,13 +88,21 @@ def test_sweep_is_reps_linear_within_tolerance_at_probe_scale():
             assert resid <= LINEAR_RESID_TOL, (tool, n, resid)
             assert abs(fit["per_rep"] - slope) / slope < 0.02   # committed fit
 
-def test_measured_main_arm_cost_is_monotonic_non_decreasing_in_n():
+def test_measured_main_arm_costs_are_finite_and_n_saturating():
+    # RB-09(3)(iii): the n-shape is MEASURED, never assumed — the committed
+    # rows are non-monotone in total cost across n (sigminer 1330/1063/1878
+    # s at n=1e2/1e3/1e4: small-n convergence work dominates), so the old
+    # monotonicity expectation was itself a fabricated shape. The law the
+    # gate needs: costs are positive and SUBLINEAR in n — a 10x grid
+    # growth may never move total cost by more than 4x (a superlinear-in-n
+    # regime would mean the frozen grid is unmeasurable and every floor
+    # suspect). sigprofiler saturates flat (~0.40 s/rep across all n).
     for tool in ("sigminer", "sigprofiler"):
-        prev = -1.0
-        for n in SWEEP_N:
-            cost = gov.anchor_measured(gov._FLOOR_ANCHORS[(tool, "main", n)])
-            assert cost >= prev, (tool, n, cost, prev)   # saturation is FLAT,
-            prev = cost                                   # never inverted
+        costs = [gov.anchor_measured(gov._FLOOR_ANCHORS[(tool, "main", n)])
+                 for n in SWEEP_N]
+        assert all(c > 0 for c in costs), (tool, costs)
+        assert costs[1] <= 4.0 * costs[0], (tool, "1e2->1e3", costs)
+        assert costs[2] <= 4.0 * costs[1], (tool, "1e3->1e4", costs)
 
 
 # -- (3) the floor is the measured witness, ratio untouched -----------------------
@@ -112,13 +120,24 @@ def test_gate_ratio_remains_the_pre_registered_three():
 
 
 def test_superlinearity_of_protocol_scale_is_recorded_by_the_sweep():
-    # The RB-09 discovery: rep-100 per-rep cost at the protocol scale is AT
-    # LEAST the probe-scale linear projection (sigminer ~6.5 s/rep vs the
-    # sweep's ~2.1 — a short probe may pin shape, never magnitude). Pin it
-    # as data so a future regression to sweep-extrapolated floors is visible.
-    for tool in ("sigminer", "sigprofiler"):
-        for n in SWEEP_N:
-            slope = gov._SWEEP_FIT[f"{tool}|N{n}"]["per_rep"]
-            anchor_cpu = gov._FLOOR_ANCHORS[(tool, "main", n)]["cpu_seconds"]
-            assert (anchor_cpu / gov.PROTOCOL_REPS) >= 0.9 * slope, \
-                (tool, n, slope, anchor_cpu)
+    # The RB-09 discovery in both of its observed signs — a short probe may
+    # pin SHAPE, never MAGNITUDE, and the data showed the extrapolation can
+    # err on either side:
+    #   sigminer (the ruling's finding): protocol per-rep cost is AT LEAST
+    #     the probe-scale linear projection (superlinear — ratios 1.0-8.6);
+    #     an extrapolated floor would sit BELOW reality and self-halt the
+    #     matrix (pass-1: floor 310 < rep-1 witness 360).
+    #   sigprofiler (the mirror image): the 100-rep cost amortizes BELOW the
+    #     probe slope (fixed startup ~11 s dominates at reps<=10; protocol
+    #     per-rep ratio ~0.2). An extrapolated floor would sit ABOVE reality
+    #     — arbitrary, which RB-09 forbids equally.
+    # Pinned as data so any regression to sweep-extrapolated floors is
+    # visible; the floor itself remains the measured witness (unit above).
+    for n in SWEEP_N:
+        slope = gov._SWEEP_FIT[f"sigminer|N{n}"]["per_rep"]
+        anchor_cpu = gov._FLOOR_ANCHORS[("sigminer", "main", n)]["cpu_seconds"]
+        assert (anchor_cpu / gov.PROTOCOL_REPS) >= 0.9 * slope, ("superlinear", n)
+    for n in SWEEP_N:
+        slope = gov._SWEEP_FIT[f"sigprofiler|N{n}"]["per_rep"]
+        anchor_cpu = gov._FLOOR_ANCHORS[("sigprofiler", "main", n)]["cpu_seconds"]
+        assert (anchor_cpu / gov.PROTOCOL_REPS) <= slope, ("amortizing", n)

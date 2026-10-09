@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import math
 import re
 import subprocess
 import threading
@@ -213,68 +212,313 @@ def sample_worker_census(cell: str, tool: str, log_dir, *, interval: float = 5.0
     return _Ctx()
 
 
-# -- (4) the 3x-floor gate: pre-registered uncontended floors ---------------------
-# Floors are PRE-REGISTERED model projections fixed BEFORE the fresh serial
-# pass (RB-08(7)); they are never re-fit to the data they gate. Form:
+# -- (4) the 3x-floor gate: measured protocol-scale anchors (RB-09) --------------
+# One law, zero model degrees of freedom: the floor of a cell class is that
+# class's OWN committed REP-100 uncontended witness cost,
 #
-#     floor(tool, arm, n) = BOOT(tool) + REPS x MULT(arm) x WORK(tool)
-#                                     x sqrt(max(n, 100) / 100)
+#     floor(tool, arm, n) := max(witness wall_seconds, witness cpu_seconds)
 #
-# The sqrt-in-n growth is the §5 complexity projection: per-rep cost is
-# dominated by scanning the 100k-segment genome, so work per mutation
-# collapses as the mutated fraction saturates (measured plateaus: sigminer
-# ~3.6 s/rep at N100 [r5 GREEN probe, cpu_seconds 360.25] rising to
-# ~25 s/rep at the N1e4 class [committed sharded survivors], then only
-# 27-34 s/rep across N1e5..N1e6); linear scaling would mispredict the
-# 1e4-class survivors by an order of magnitude and leave the heavy cells
-# without teeth. Growth saturates at N_SAT: beyond it the genome is
-# mutation-covered.
-#   anchors: BOOT+WORK(sigminer)  fixed by the r5 GREEN probe (single
-#            uncontended main/N100 cell, cpu_seconds 360.25);
-#            BOOT+WORK(sigprofiler) fixed by pilot §2 uncontended N100
-#            main wall 13.4 s (docs/devlog pilot table).
-#   MULT(arm) from the §5 pass-count projections (MINT triage = 3 passes).
-# Overshoot is the SAFE direction (a too-low floor false-halts the matrix);
-# the 3x margin absorbs boot noise on top.
-_BOOT = {"sigminer": 60.0, "sigprofiler": 8.0}
-_WORK = {"sigminer": 2.5, "sigprofiler": 0.054}
-_REPS = 100          # frozen degraded-profile repetitions
-_N_REF = 100         # calibration point of BOOT+WORK
-_N_SAT = 10_000      # mutation-saturation ceiling of the sqrt regime
-_ARM_MULT = {"main": 1.0, "comp_clock_only": 1.2, "comp_mmr": 1.8,
-             "comp_pole": 3.5, "comp_flat_triple": 1.6,
-             "comp_strong_flat": 2.0, "nb": 1.1, "clock": 1.2,
-             "sparse": 1.0}
+# measured fresh (--floor-gate off, freshness law: a cached replay is a
+# DEFECT witness, never a floor). FLOOR_RATIO below is the untouched
+# RB-08(7) sentinel — the ratio gates the witness, the witness never gates
+# the ratio. The reps-sweep {1,5,10} x n {100,1e3,1e4} (main arm, both
+# tools) is committed as _SWEEP_RAW with its least-squares _SWEEP_FIT:
+# probe-scale reps-linearity and the BOOT intercepts are DATA pinned by the
+# (R) units. Short-probe magnitudes may never seed floors (RB-09
+# superlinearity: rep-100 per-rep cost >= the probe-scale projection —
+# recorded, and the (R) units stop a regression to sweep-extrapolated
+# floors). An unanchored class is a hard error: an ungated cell is
+# forbidden.
+_SWEEP_FIT = {
+ "sigminer|N100": {
+  "boot": 367.6,
+  "max_linear_resid": 0.031,
+  "per_rep": 1.546
+ },
+ "sigminer|N1000": {
+  "boot": 363.6,
+  "max_linear_resid": 0.0347,
+  "per_rep": 5.223
+ },
+ "sigminer|N10000": {
+  "boot": 661.8,
+  "max_linear_resid": 0.0041,
+  "per_rep": 8.253
+ },
+ "sigprofiler|N100": {
+  "boot": 11.4,
+  "max_linear_resid": 0.0341,
+  "per_rep": 2.294
+ },
+ "sigprofiler|N1000": {
+  "boot": 11.7,
+  "max_linear_resid": 0.0771,
+  "per_rep": 2.017
+ },
+ "sigprofiler|N10000": {
+  "boot": 11.9,
+  "max_linear_resid": 0.0389,
+  "per_rep": 2.005
+ }
+}
+_SWEEP_RAW = {
+ "sigminer|N100": {
+  "1": 362.43,
+  "10": 377.676,
+  "5": 387.283
+ },
+ "sigminer|N1000": {
+  "1": 360.995,
+  "10": 409.559,
+  "5": 403.67
+ },
+ "sigminer|N10000": {
+  "1": 668.446,
+  "10": 743.038,
+  "5": 705.919
+ },
+ "sigprofiler|N100": {
+  "1": 14.139,
+  "10": 34.703,
+  "5": 22.142
+ },
+ "sigprofiler|N1000": {
+  "1": 14.583,
+  "10": 32.562,
+  "5": 20.226
+ },
+ "sigprofiler|N10000": {
+  "1": 14.349,
+  "10": 32.304,
+  "5": 21.093
+ }
+}
+_FLOOR_ANCHORS = {
+    ('sigminer', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1079.517548, 'wall_seconds': 820.965,
+    },
+    ('sigminer', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1987.9280860000001, 'wall_seconds': 1506.929,
+    },
+    ('sigminer', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1473.853008, 'wall_seconds': 1028.773,
+    },
+    ('sigminer', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1074.911007, 'wall_seconds': 802.948,
+    },
+    ('sigminer', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 992.969009, 'wall_seconds': 740.132,
+    },
+    ('sigminer', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1073.205358, 'wall_seconds': 808.615,
+    },
+    ('sigminer', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1092.265774, 'wall_seconds': 813.111,
+    },
+    ('sigminer', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 994.2634899999999, 'wall_seconds': 752.927,
+    },
+    ('sigminer', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1078.1636099999998, 'wall_seconds': 816.187,
+    },
+    ('sigminer', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1091.936985, 'wall_seconds': 809.114,
+    },
+    ('sigminer', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1028.535546, 'wall_seconds': 558.21,
+    },
+    ('sigminer', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 919.758643, 'wall_seconds': 513.429,
+    },
+    ('sigminer', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 808.148956, 'wall_seconds': 498.576,
+    },
+    ('sigminer', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 988.060477, 'wall_seconds': 692.085,
+    },
+    ('sigminer', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1085.672869, 'wall_seconds': 818.52,
+    },
+    ('sigminer', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1110.405228, 'wall_seconds': 828.443,
+    },
+    ('sigminer', 'main', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1330.222873, 'wall_seconds': 940.066,
+    },
+    ('sigminer', 'main', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1062.816926, 'wall_seconds': 812.905,
+    },
+    ('sigminer', 'main', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1877.874399, 'wall_seconds': 1467.65,
+    },
+    ('sigminer', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1006.058547, 'wall_seconds': 562.568,
+    },
+    ('sigminer', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigminer__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1096.5625750000002, 'wall_seconds': 838.544,
+    },
+    ('sigprofiler', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 39.244772999999995, 'wall_seconds': 18.449,
+    },
+    ('sigprofiler', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 34.820338, 'wall_seconds': 16.98,
+    },
+    ('sigprofiler', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 34.806035, 'wall_seconds': 16.399,
+    },
+    ('sigprofiler', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 35.652210999999994, 'wall_seconds': 16.759,
+    },
+    ('sigprofiler', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 40.549361, 'wall_seconds': 18.38,
+    },
+    ('sigprofiler', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 39.274159999999995, 'wall_seconds': 18.277,
+    },
+    ('sigprofiler', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 37.464264, 'wall_seconds': 17.207,
+    },
+    ('sigprofiler', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 36.290394, 'wall_seconds': 17.569,
+    },
+    ('sigprofiler', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 37.709974, 'wall_seconds': 17.003,
+    },
+    ('sigprofiler', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 37.273843, 'wall_seconds': 17.139,
+    },
+    ('sigprofiler', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 36.79912, 'wall_seconds': 17.304,
+    },
+    ('sigprofiler', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 37.579026999999996, 'wall_seconds': 17.521,
+    },
+    ('sigprofiler', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 38.160320999999996, 'wall_seconds': 17.361,
+    },
+    ('sigprofiler', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 35.86489, 'wall_seconds': 16.877,
+    },
+    ('sigprofiler', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 36.740424000000004, 'wall_seconds': 16.918,
+    },
+    ('sigprofiler', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 35.797524, 'wall_seconds': 16.811,
+    },
+    ('sigprofiler', 'main', 100): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 41.832933, 'wall_seconds': 18.637,
+    },
+    ('sigprofiler', 'main', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 39.971613000000005, 'wall_seconds': 17.563,
+    },
+    ('sigprofiler', 'main', 10000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 40.177937, 'wall_seconds': 16.936,
+    },
+    ('sigprofiler', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 39.859497, 'wall_seconds': 18.441,
+    },
+    ('sigprofiler', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_20261009', 'witnesses',
+                    'sigprofiler__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 40.213161, 'wall_seconds': 18.265,
+    },
+}
 FLOOR_RATIO = 3.0
 PASS_STATUSES = ("ok", "cached")
 
 # -- floor anchor provenance (RB-09(3)(i)/(v)) ------------------------------------
-# BOOT/WORK constants are not folklore: every floor class must descend from a
-# committed witness JSON whose own ``--reps`` equals the frozen protocol reps.
+# The anchors ARE the law and the provenance: every floor class descends from
+# a committed witness JSON whose own ``--reps`` equals the frozen protocol reps.
 # RB-09's root cause was exactly the absence of this law: the r5 anchor was a
 # REP-1 probe (cpu 360.252302) and the sigprofiler anchor a REP-1 pilot row
 # (pilot Seeds.txt: one rep row per class), while the matrix runs REP-100
 # cells — floor(sigminer,main,N100)=310 sat below the rep-1 witness itself,
 # so the fresh serial matrix could only ever self-halt on its own gate.
-PROTOCOL_REPS = _REPS                                   # gated protocol scale
+PROTOCOL_REPS = 100                                   # gated protocol scale
 _RESULTS_DIR = Path(__file__).resolve().parents[2] / "results"   # bench/results
 
-_FLOOR_ANCHORS: dict[tuple[str, str, int], dict] = {
-    ("sigminer", "main", 100): {
-        "witness": ("docker_m7_PILOT_20261008-200152",
-                    "cell_argv_probe_slice3-r5_GREEN.json"),
-        "reps": 1,          # probe_sigminer_cell_argv.py --reps DEFAULT (RB-09)
-        "cpu_seconds": 360.252302,
-    },
-    ("sigprofiler", "main", 100): {
-        "witness": ("docker_m7_PILOT_20261008-200152",
-                    "timings_m7_degraded_20261009-040326.csv"),
-        "cell": "sigprofiler__main__N100",
-        "reps": 1,          # pilot Seeds.txt enumerates one rep row per class
-        "wall_seconds": 14.16,
-        "cpu_seconds": 13.934,
-    },
-}
 
 
 def anchor_witness_path(anchor: dict) -> Path:
@@ -289,20 +533,21 @@ def anchor_measured(anchor: dict) -> float:
                float(anchor.get("cpu_seconds", 0.0)))
 
 
+_MEASURED_TOOLS = tuple(sorted({t for (t, _, _) in _FLOOR_ANCHORS}))
+
+
 def floor_for(tool: str, arm: str, n: int) -> float:
-    """Pre-registered uncontended floor for one cell (units: the tool's
-    anchor units — cpu_seconds-style work-seconds for sigminer, wall for
-    sigprofiler; the gate measures max(wall, cpu) against it). Unknown
-    tool/arm is a hard error — silence here would mean an ungated cell."""
-    if tool not in _BOOT:
-        raise KeyError(f"no pre-registered floor for tool {tool!r}")
-    if arm not in _ARM_MULT:
-        raise KeyError(f"no pre-registered floor for arm {arm!r}")
+    """The measured protocol-scale uncontended floor for one cell class —
+    that class's own committed REP-100 witness cost (RB-09(3)(iii)). An
+    unanchored class is a hard error: silence here would mean an ungated
+    cell."""
     if n < 1:
         raise ValueError(f"floor needs n >= 1, got {n!r}")
-    growth = math.sqrt(max(n, _N_REF) / _N_REF)
-    growth = min(growth, math.sqrt(_N_SAT / _N_REF))
-    return _BOOT[tool] + _REPS * _ARM_MULT[arm] * _WORK[tool] * growth
+    key = (tool, arm, n)
+    if key not in _FLOOR_ANCHORS:
+        raise KeyError(f"no measured floor anchor for class {key!r} — the "
+                       f"gate refuses to invent one")
+    return anchor_measured(_FLOOR_ANCHORS[key])
 
 
 def floor_gate(row: dict):
@@ -314,7 +559,7 @@ def floor_gate(row: dict):
     if row["status"] not in PASS_STATUSES:
         return None
     tool, arm, n = parse_stamp(row["cell"])
-    if tool not in _BOOT:
+    if tool not in _MEASURED_TOOLS:
         return None
     floor = floor_for(tool, arm, n)
     observed = max(float(row["seconds"]), float(row.get("cpu_seconds", 0.0)))
@@ -322,7 +567,7 @@ def floor_gate(row: dict):
         return None
     return {**row,
             "status": (f"defect-floor: wall/cpu {observed:.1f}s > "
-                       f"{FLOOR_RATIO}x pre-registered floor {floor:.1f}s "
+                       f"{FLOOR_RATIO}x measured uncontended floor {floor:.1f}s "
                        f"(tool={tool} arm={arm} n={n})")}
 
 
@@ -339,8 +584,8 @@ def nonpass_rows(rows) -> list[dict]:
 # mechanism citation — never a silent re-status. The ledger lives under
 # cachedir/governance/, outside the four-file guard and the BYTE_EQUAL set.
 GOVERNANCE_SUBDIR = "governance"
-FLOOR_TABLE_FIELDS = ("_BOOT", "_WORK", "_REPS", "_N_REF", "_N_SAT",
-                      "_ARM_MULT", "FLOOR_RATIO", "_FLOOR_ANCHORS")
+FLOOR_TABLE_FIELDS = ("_FLOOR_ANCHORS", "FLOOR_RATIO",
+                      "_SWEEP_FIT", "_SWEEP_RAW")
 RE_ADJUDICATION_MECHANISM = (
     "RB-09 (controller ruling 2026-10-09): the pre-registered floor table was "
     "calibrated from REP-1 witnesses (probe_sigminer_cell_argv --reps default; "

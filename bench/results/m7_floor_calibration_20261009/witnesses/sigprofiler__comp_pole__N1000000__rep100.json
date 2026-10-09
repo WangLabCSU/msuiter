@@ -1,0 +1,50 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigprofiler",
+  "--arms",
+  "comp_pole",
+  "--n-list",
+  "1000000",
+  "--reps",
+  "100",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/tmp/m7probe/runs/sigprofiler_comp_pole_N1000000_rep100_1107215620/probe_d0b99d9a/probe_cache",
+  "--outdir",
+  "/tmp/m7probe/runs/sigprofiler_comp_pole_N1000000_rep100_1107215620/probe_d0b99d9a/probe_cache/out"
+ ],
+ "arm": "comp_pole",
+ "cell": "sigprofiler__comp_pole__N1000000",
+ "n": 1000000,
+ "provenance": {
+  "image_digest": "sha256:7dba2f43ad3a3858ed1cfdedd278c9c2f52a665fd4c18ac91a482b74258bfbed",
+  "image_ref": "m7-sigprofiler:spa-1.1.5",
+  "name": "sigprofiler",
+  "status": "ready",
+  "version": "v1.1.5"
+ },
+ "reps": 100,
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 38.160320999999996,
+  "exit_status": 0,
+  "ru_stime": 2.218576,
+  "ru_utime": 35.941745
+ },
+ "status_tail": "ok",
+ "tool": "sigprofiler",
+ "verdict": "OK",
+ "wall_seconds": 17.361
+}

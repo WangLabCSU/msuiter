@@ -563,3 +563,77 @@ this class under these caps actually presented during the sampled window.
 The distinction is kept deliberately: a synthetic-probe-derived number
 may not seed a real-plan constant, and the census exists to catch a cell
 that secretly ran fan-out, not to certify a desired width.
+
+## RB-09 GREEN: the measured-anchor table goes live (42 classes, zero model DOF)
+
+The refuted BOOT/WORK model is gone from `tools/matrix_governance.py`; the
+floor of every class is now that class's OWN committed REP-100 uncontended
+witness cost, `max(wall, cpu)`, pasted PROGRAMMATICALLY from the fitter
+(`fit_floors.py` emits the literals; `green_table.py` inserts them — no hand
+transcription anywhere, hash-literal doctrine respected by construction).
+Unanchored class = hard KeyError; the gate cannot invent a floor. The 3.0x
+ratio stands untouched — only what it multiplies was fixed.
+
+Committed corpus: `bench/results/m7_floor_calibration_20261009/` — 60
+witnesses verbatim + `CALIBRATION.json` (schema m7-floor-calibration-1;
+per-file sha256 recomputed from the written bytes, registry digest at mint,
+explicit-algorithm recorder + 'abc' control vector). Fitter verdict on the
+corpus: **FIT-AUDIT: PASS, 42/42 classes anchored**, all six sweep fits
+inside the 10% probe-scale linearity gate (worst residual 7.71%).
+
+Sweep fits (reps-linearity, probe scale) — `boot` is the least-squares
+intercept, `per_rep` the slope:
+
+    sigminer    N100 1.546 (boot 367.6, 3.10%) | N1000 5.223 (363.6, 3.47%)
+                N10000 8.253 (661.8, 0.41%)
+    sigprofiler N100 2.294 (11.4, 3.41%)        | N1000 2.017 (11.7, 7.71%)
+                N10000 2.005 (11.9, 3.89%)
+
+Extrapolation refuted in BOTH signs — the (R) units pin each as data:
+
+    SUPERLINEAR (sigminer, the ruling's finding): protocol per-rep cost
+      8.6x / 2.0x / 2.3x the probe projection (N100/N1000/N10000). A
+      sweep-extrapolated floor would sit BELOW reality — precisely the
+      pass-1 self-halt mechanism (floor 310 < rep-1 witness 360).
+    SUBLINEAR (sigprofiler, mirror image): the 100-rep run amortizes to
+      ~0.2 of the probe slope (fixed ~11 s startup dominates at reps<=10).
+      An extrapolated floor would sit ABOVE reality — arbitrary, forbidden
+      equally. Short probes pin SHAPE, never MAGNITUDE, in either
+      direction.
+
+n-shape is measured, never assumed: the sigminer main row (1330/1063/1878 s
+at n=1e2/1e3/1e4) is non-monotone in total cost — small-n convergence work
+dominates — so the earlier monotonicity expectation in the (R) unit was
+itself a fabricated shape and was replaced by the load-bearing law: costs
+positive and sublinear-in-n (a 10x grid growth may never move total cost
+beyond 4x). sigprofiler saturates flat (~0.40 s/rep across all n).
+
+Data-hygiene events during admission (both caught BY the gates, zero
+silent passes):
+
+* 10 pre-flag sweep witnesses (batch v1 era, predating the `--floor-gate
+  off` probe law; their argv lacks the token) survived the v2/v3 valid()
+  resume-skip — the admission argv-law refused them; quarantined to
+  /tmp/m7probe/orphans_pre-flag and re-measured under the current probe.
+* sigminer main N1000 rep10 measured cpu 729.34 s — 60% above the
+  adjacent-points trend (rep1 360.99, rep5 403.67) and ABOVE the class's
+  own rep-100 anchor economics: contamination. Quarantined
+  (/tmp/m7probe/orphans_suspect) and re-measured: 409.56 s, collinear
+  (resid 3.47%), slope 41.919 -> 5.223. One point, one re-measure, data
+  won.
+
+The falsified replay witness is committed as evidence:
+`FRESHNESS-REPLAY_DEFECT_sigminer__main__N100__rep1.json` (0.028 s wall,
+status_tail "cached" — a staging fiction presented as a measurement; the
+freshness law DEFECTs it: a replay is never a floor). The corpus manifest's
+`defect_evidence` section carries its recomputed sha256 and cites the law
+to ruling RB-09(3) — rulings, not persons; the defect ledger's backfill
+entry was recited the same way.
+
+Floor-table epoch migrated 7addcda244d18753 -> 46bc002d7aea6b7f with the
+swap. Consequence by construction: when the matrix re-ignites, the six
+hash-guarded landed cells return `cached` (PASS_STATUSES, gate-silent) and
+`sigminer__main__N100` — whose pass-1 defect-floor flag lives in the ledger
+under the PRIOR epoch — re-enters the judgment ONLY through the
+re-adjudication lineage block (prior flag verbatim + mechanism citation),
+never as a silent re-status. Full m7 suite at this boundary: 144/144.
