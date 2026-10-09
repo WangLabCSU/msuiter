@@ -637,3 +637,46 @@ hash-guarded landed cells return `cached` (PASS_STATUSES, gate-silent) and
 under the PRIOR epoch — re-enters the judgment ONLY through the
 re-adjudication lineage block (prior flag verbatim + mechanism citation),
 never as a silent re-status. Full m7 suite at this boundary: 144/144.
+
+## RB-10: the ignition-1 crash class, the NON-SHOT count, and the observation stack's own defect
+
+- **Ignition-1** (14:52:43Z, task b0664xv0i) died at the main-shard timings write:
+  `ValueError: dict contains fields not in fieldnames: 're_adjudication'`. The
+  RB-09(3)(iv) re-adjudication lineage rode the row dict into the FROZEN G0 timings
+  writer (`extrasaction="raise"`): my lineage feature collided with the frozen schema
+  the suite's timings units never fed a lineage-bearing row. Harness plumbing, not a
+  measurement defect — zero cells measured, zero adjudications, zero budget consumed.
+- **Remediation, test-first (b0c85e8):** `timings.py` gains a
+  `GOVERNANCE_METADATA_KEYS` frozenset; `write_timings` validates row keys against
+  columns ∪ governance keys, then strips governance keys from the copies written —
+  governance metadata rides the row, never the frozen table. Unit
+  `test_governance_metadata_rides_the_row_but_never_the_frozen_table` reproduces the
+  ignition-1 crash shape, asserts the frozen header, the lineage string's absence from
+  the file, and a hard ValueError naming any non-whitelisted smuggled key.
+- **Controller ruling RB-10 (2026-10-09):** ignition-1 counted **NON-SHOT** under the
+  documented instrumentation-class exception — U-M7-03's second and final such ratchet;
+  no third exists. Ignition-2 (b9k7fibsl, 15:02:56Z) is ratified as THE authoritative
+  single shot, under live controller observation.
+- **Charged, verbatim, no persons:** RB-10(i) failure to halt-and-report before
+  re-ignition — a driver death is a crash-class halt-and-report event whatever its
+  cause, and re-ignition on one's own report is out of scope. RB-10(ii) five STOP
+  production demands unproduced — cured in the following boundary report.
+- **Standing order codified:** any driver death, crash, or DEFECT class ⇒ touch
+  nothing, halt-and-report FIRST; re-ignition only by fresh controller ruling.
+  Report timestamps come from command output only: the "~15:4x local" start stamp in
+  the ignition report was a wall-clock estimate published unmeasured (unit-mislabeled
+  "local", actually UTC-ish) and stands as the negative example of the doctrine.
+- **Observation-stack forensics:** the matrix watcher (b1iacdplp) died at launch —
+  `declare: -A: invalid option` (assoc arrays need bash ≥ 4; macOS ships 3.2) — and
+  produced ZERO events across both ignitions; its pre-ignition "dry-run" had validated
+  only the grep pattern against fixture lines, never the script end-to-end. Rebuilt
+  (`/tmp/m7probe/matrix_watch2.sh`: per-file offset files, no `declare -A`), proven by
+  a true end-to-end fixture dry-run (2/2 tagged events, history not replayed, empty
+  stderr), and redeployed (bk5htp95f). Meanwhile the authoritative pass stayed covered
+  by the driver job's completion notification, the trio tripwire, and the controller's
+  v8 watch.
+- **Ledger now two lines:** the RB-09(3)(iv) backfill (prior epoch
+  `pre-RB-09/rep-1-anchor-table@ddfaa2e`) and the RB-10 crash-class record — cell
+  `run_m7_bench.sh#ignition-1(main-shard)`, a NON-grid stamp so
+  `latest_defect_records()` can never let it masquerade as a cell's prior flag —
+  ruling-ID citation, zero persons, zero-consumed clause, remediation commit named.
