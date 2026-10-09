@@ -7,14 +7,18 @@
   "tool": "python3 hashlib.sha256"
  },
  "cpu_census": {
+  "cache_reuse_denied_on_merits": {
+   "merits": [
+    "matrix INCOMPLETE: 20 of 42 cells failed; no all-pass census exists to reuse",
+    "uniformity-by-construction VIOLATED: every surviving cell ran its whole lifetime with 8 measurement containers co-tenanting the VM",
+    "severe contention PROVEN by the failed cells' own clocks: 39-88 minute crawled runs against 4-7 minute pre-registered floors"
+   ],
+   "retraction_note": "the originally-cited floor-ratio inflation arithmetic was retracted on record at the RB-08 amendment (substring label classification: the '__N100' prefix swept N10000/N100000/N1000000); this witness carries NO floor-ratio inflation claim \u2014 the denial rests on the three merits alone",
+   "verdict": "CACHE-REUSE-DENIED (RB-08 as amended)"
+  },
   "floors": {
    "sigminer_cpu_seconds_floor": 360.25,
    "sigprofiler_seconds_floor": 13.4
-  },
-  "inflation": {
-   "sigminer_max_cpu_inflation": 10.2,
-   "sigminer_min_cpu_inflation": 7.1,
-   "sigprofiler_max_inflation": 11.8
   },
   "reproduces_controller_census": {
    "sigminer_cpu_seconds_cited": [
@@ -238,8 +242,18 @@
   {
    "path": "/tmp/m7probe/phase_b.log (host-side driver log)",
    "sha256": "d4b2814c0dd1eb3d725596d26bb3ab06fd8141f671dece38aab3030948426143"
+  },
+  {
+   "path": "bench/results/docker_m7_PILOT_20261008-200152/phase_b_PURGE_MANIFEST.json",
+   "sha256": "9768a7fc8bfe548b0c7182dbea20236ba83d1b3cb6f54a02c58bd9108e9249ac"
   }
  ],
+ "purge_addendum": {
+  "authorized_by": "RB-08(1)-(2): hash-manifested purge of the whole cachedir, then a FRESH full matrix (no cache carry)",
+  "evicted_entries": 594,
+  "manifest_file": "phase_b_PURGE_MANIFEST.json",
+  "manifest_sha256": "9768a7fc8bfe548b0c7182dbea20236ba83d1b3cb6f54a02c58bd9108e9249ac"
+ },
  "schema": "m7-phase-b-defect-1",
  "shards": [
   {

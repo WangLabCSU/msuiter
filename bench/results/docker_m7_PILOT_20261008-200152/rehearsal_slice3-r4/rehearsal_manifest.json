@@ -164,10 +164,16 @@
    "sha256": "8372005a37a801cf90c1b1420e9843df3999d761d02b02eca7d75e5118d0d5b6"
   },
   {
-   "bytes": 17520,
+   "bytes": 18655,
    "file": "../phase_b_SHARD-OOM_DEFECT.json",
-   "role": "Phase-B pass-1 DEFECT witness (seventh recorded defect, matrix-class, driver-owned): 20/42 cells died memory over-commit under the driver's unbounded 8-shard fan-out -- verbatim exit-137 SIGKILL + LokyBackend n_jobs=10 banners (sigprofiler) and MultisessionFuture-interrupted + furrr allocation diagnostics (sigminer); frozen thread-caps enforced but cannot reach process pools; the 22 ok cells' outputs stand, re-entry under controller ruling re-runs only the failed cells",
-   "sha256": "32c0e1b81c41a8c156c03c1937d2d48fca3864a54c074d9b33bcaca2adb0dd64"
+   "role": "Phase-B pass-1 DEFECT witness (seventh recorded defect, matrix-class, driver-owned): 20/42 cells died memory over-commit under the driver's unbounded 8-shard fan-out -- verbatim exit-137 SIGKILL + LokyBackend n_jobs=10 banners (sigprofiler) and MultisessionFuture-interrupted + furrr allocation diagnostics (sigminer); frozen thread-caps enforced but cannot reach process pools; RB-08-as-amended: cache reuse DENIED on merits (incomplete matrix, uniformity violated, contended clocks), fresh full 42-cell serial re-ignition, retracted floor-ratio framing not carried",
+   "sha256": "6d25cdac4f90ec395618a76d6ebaea1c139e30676eddfc159c334fd1d52bd54f"
+  },
+  {
+   "bytes": 113888,
+   "file": "../phase_b_PURGE_MANIFEST.json",
+   "role": "RB-08(1) hash-manifested purge record: every evicted cachedir entry (594 files) hashed with the explicit-algorithm recorder BEFORE deletion; the purge executed only after this manifest was bound here and in the DEFECT witness addendum",
+   "sha256": "9768a7fc8bfe548b0c7182dbea20236ba83d1b3cb6f54a02c58bd9108e9249ac"
   }
  ],
  "image": "msuiter-sigminer:slice3-r5",
