@@ -855,3 +855,66 @@ def test_load_witnesses_render_null_safe_json_on_the_target_interpreter():
     assert '"loadavg":[%.3g' not in text and '"load_before":[%.3g' not in text, \
         "witness writers must render load vectors through the null-safe " \
         "helper, not sprintf triplets that leak bare NA"
+
+
+# -- 14. write_anchor renders on the target interpreter (seventh live witness) --------
+# Smoke #5 reached the anchor leg for the first time (probes, floor gates,
+# arms, invariance all green) and died inside sprintf: the format pieces
+# were COMMA-separated actuals, so sprintf received a format VECTOR and
+# recycled the argument list into the second format — the '%.12g' slot
+# then met recs$sample, a character. The match.call linter cannot see this
+# (the call is arity-correct; the crime is format/argument pairing), so
+# the anchor renderer gets its own executed unit against the fixture.
+_ANCHOR_RPROG = """
+src <- '@@SRC@@'
+env <- new.env()
+need <- c('write_anchor')
+for (e in parse(src)) {
+  op <- ''
+  if (is.call(e) && length(e) >= 2L)
+    op <- tryCatch(as.character(e[[1L]]), error = function(...) '')
+  if (length(op) == 1L && op %in% c('<-', '<<-', '=') && is.symbol(e[[2L]]) &&
+      as.character(e[[2L]]) %in% need) eval(e, env)
+}
+if (!all(need %in% ls(env, all.names = TRUE))) {
+  cat('ANCHOR-NO-FN\\n'); quit(status = 4L)
+}
+recs <- data.frame(sample = c('s1', 's2'), sig = c('A', 'B'),
+  lo = c(0.1, 0.2), hi = c(0.5, 0.6), median = c(0.3, 0.4))
+out <- tempfile('anch')
+w <- get('write_anchor', envir = env)
+r <- tryCatch({ w(out, recs); 'OK' }, error = function(e)
+  paste0('ERR ', conditionMessage(e)))
+if (!identical(r, 'OK')) { cat('ANCHOR-', r, '\\n', sep = ''); quit(status = 5L) }
+cat('ANCHOR-LINES[', paste(readLines(out, warn = FALSE), collapse = ' ;; '),
+    ']\\n', sep = '')
+quit(status = 0L)
+"""
+
+
+def test_write_anchor_renders_witness_lines_on_the_target_interpreter():
+    """Every anchor witness line must be json.loads-parseable bytes produced
+    by the real write_anchor closure — the reader-side --anchor-check consumes
+    them, so a format/argument mispair (witnessed live in smoke #5 as
+    sprintf receiving a recycled format vector) must die here, not at the
+    first run that reaches the anchor leg."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    src = BOOT / "run_campaign.R"
+    prog = _ANCHOR_RPROG.replace("@@SRC@@", str(src).replace("'", ""))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"write_anchor died on the target interpreter (smoke-5 class: " \
+        f"format/argument mispair surfacing inside sprintf):\n" \
+        f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+    line = next(x for x in r.stdout.splitlines() if x.startswith("ANCHOR-LINES["))
+    body = line[len("ANCHOR-LINES["):-1]
+    lines = body.split(" ;; ")
+    assert len(lines) == 2, line
+    want = [("s1", "A", 0.1, 0.5, 0.3), ("s2", "B", 0.2, 0.6, 0.4)]
+    for txt, (sm, sg, lo, hi, md) in zip(lines, want):
+        rec = json.loads(txt)
+        assert rec["sample"] == sm and rec["sig"] == sg, rec
+        for k, v in (("lo", lo), ("hi", hi), ("median", md)):
+            assert abs(rec[k] - v) < 1e-9, (rec, k, v)

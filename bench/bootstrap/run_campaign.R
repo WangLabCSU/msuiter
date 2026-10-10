@@ -389,9 +389,10 @@ say("[campaign] thread-invariance witness: ok=", inv_ok)
 # -- correctness anchor (share-normalized, protocol §5 + addendum) -------------------
 qcell <- function(x) stats::quantile(x, c(.025, .5, .975), names = FALSE)
 write_anchor <- function(path, recs) writeLines(vapply(seq_len(nrow(recs)),
-  function(i) sprintf('{"sample":"%s","sig":"%s","lo":%.12g,"hi":%.12g',
-    ',"median":%.12g}', recs$sample[i], recs$sig[i], recs$lo[i], recs$hi[i],
-    recs$median[i]), character(1L), USE.NAMES = FALSE), path)
+  function(i) sprintf(paste0('{', '"sample":"%s","sig":"%s",',
+    '"lo":%.12g,"hi":%.12g,"median":%.12g}'),
+    recs$sample[i], recs$sig[i], recs$lo[i], recs$hi[i], recs$median[i]),
+    character(1L), USE.NAMES = FALSE), path)
 anchor_a1 <- function() {
   set.seed(SEED, kind = "Mersenne-Twister", normal.kind = "Inversion",
     sample.kind = "Rejection")
