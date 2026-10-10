@@ -423,3 +423,97 @@ def test_harness_carries_no_write_lines_with_append_misuse():
     assert text.count("append_line(") >= 2, \
         "the helper must serve every append site (ledger + probes): found " \
         f"{text.count('append_line(')} call site(s)"
+
+
+# -- 7. the call-resolution audit (RB-04D.2 second live witness) ------------------------
+# The second smoke rehearsal died one step past the repaired ledger, at
+# loadRDS — a function that does not exist (R spells it readRDS). Same gap
+# class as the append defect: the (T) suite never executed the harness body,
+# so a nonfunction name rode through pre-registration. The fix that must not
+# decay into whack-a-mole is static: walk the parse tree of BOTH instruments,
+# demand every called name resolve (file-local definition, function
+# parameter, the base search path, or msuiter/sigminer namespace members).
+# Witnessed live: AUDIT-UNRESOLVED[loadRDS,sys.time] — the sys.time pair
+# (lower-case, R spells Sys.time) sat in timed(), which probes call.
+
+_AUDIT_RPROG = """
+walk <- function(e) {
+  if (is.name(e)) return(invisible(NULL))
+  if (!is.call(e)) {
+    if (is.list(e)) for (x in e) walk(x)
+    return(invisible(NULL))
+  }
+  h <- e[[1L]]
+  if (is.name(h)) {
+    hn <- as.character(h)
+    if (hn %in% c('<-', '<<-', '=', '->', '->>')) {
+      if (is.name(e[[2L]])) defs[[length(defs) + 1L]] <<- as.character(e[[2L]])
+      for (i in seq_len(length(e))[-c(1L, 2L)]) walk(e[[i]])
+      return(invisible(NULL))
+    }
+    if (identical(hn, 'function')) {
+      fnm <- names(as.list(e[[2L]]))
+      if (!is.null(fnm)) pars <<- c(pars, fnm[nzchar(fnm)])
+      walk(e[[3L]])
+      return(invisible(NULL))
+    }
+    if (!hn %in% c('if', 'for', 'while', 'repeat', 'function'))
+      calls[[length(calls) + 1L]] <<- hn
+  } else if (is.call(h) && length(h) == 3L &&
+             is.name(h[[1L]]) && as.character(h[[1L]]) %in% c('::', ':::')) {
+    calls[[length(calls) + 1L]] <<- paste0(as.character(h[[2L]]), ':::',
+                                           as.character(h[[3L]]))
+  }
+  for (i in seq_along(e)[-1L]) walk(e[[i]])
+  invisible(NULL)
+}
+defs <- character(0); pars <- character(0); calls <- character(0)
+for (s in c('@@RUN@@', '@@GEN@@')) for (e in parse(s)) walk(e)
+if (!(requireNamespace('msuiter', quietly = TRUE) &&
+      requireNamespace('sigminer', quietly = TRUE))) {
+  cat('AUDIT-SKIP-NO-PKGS\\n'); quit(status = 0L)
+}
+allowed <- c(defs, pars, unlist(lapply(c('msuiter', 'sigminer'),
+                                        function(p) ls(asNamespace(p),
+                                                       all.names = TRUE))))
+unknown <- character(0)
+for (cn in unique(calls)) {
+  if (cn %in% allowed) next
+  if (grepl(':::', cn, fixed = TRUE)) {
+    parts <- strsplit(cn, ':::', fixed = TRUE)[[1L]]
+    if (exists(parts[2L], envir = getNamespace(parts[1L]),
+               inherits = FALSE)) next
+  } else if (exists(cn, mode = 'function')) next
+  unknown[[length(unknown) + 1L]] <- cn
+}
+if (length(unknown)) {
+  cat('AUDIT-UNRESOLVED[', paste(sort(unknown), collapse = ','), ']\\n',
+      sep = '')
+  quit(status = 5L)
+}
+cat('AUDIT-CLEAN calls=', length(unique(calls)), ' defs=',
+    length(unique(defs)), '\\n', sep = '')
+quit(status = 0L)
+"""
+
+
+def test_instruments_resolve_every_called_function():
+    """No nonfunction name may ride through pre-registration again: both
+    campaign instruments must parse to calls that all resolve in the host
+    runtime (base path + attached package namespaces + file-local defs)."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    run_src = BOOT / "run_campaign.R"
+    gen_src = BOOT / "gen_campaign.R"
+    assert run_src.is_file() and gen_src.is_file(), "campaign instruments absent"
+    prog = (_AUDIT_RPROG
+            .replace("@@RUN@@", str(run_src).replace("'", ""))
+            .replace("@@GEN@@", str(gen_src).replace("'", "")))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"unresolvable call name(s) in the campaign instruments (verbatim R " \
+        f"audit line; the class witnessed live at loadRDS, absent from base " \
+        f"— R spells it readRDS):\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    assert r.stdout.startswith("AUDIT-CLEAN"), \
+        f"audit did not reach its clean verdict: {r.stdout!r}"

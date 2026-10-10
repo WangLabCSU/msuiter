@@ -167,7 +167,7 @@ if (!file.exists(file.path(outdir, "campaign.rds"))) {
   if (!ok_rc(gst)) abort("generator failed (status ", as.integer(gst),
     "): ", paste(readLines(gen_tf, warn = FALSE), collapse = " | "))
 }
-d <- loadRDS(file.path(outdir, "campaign.rds"))
+d <- readRDS(file.path(outdir, "campaign.rds"))
 counts <- d$counts; sigs <- d$signatures
 stopifnot(identical(dim(counts), c(K, S)))
 samples <- d$samples; labels <- d$labels
@@ -193,9 +193,9 @@ loadavg <- function() {
 }
 timed <- function(expr) {
   invisible(gc(verbose = FALSE)); invisible(gc(verbose = FALSE))
-  c0 <- proc.time(); w0 <- sys.time()[["elapsed"]]
+  c0 <- proc.time(); w0 <- proc.time()[["elapsed"]]
   v <- force(expr)
-  wall <- sys.time()[["elapsed"]] - w0; c1 <- proc.time()
+  wall <- proc.time()[["elapsed"]] - w0; c1 <- proc.time()
   list(value = v, wall = wall,
     cpu = (c1[["user"]] - c0[["user"]]) + (c1[["system"]] - c0[["system"]]),
     load_before = loadavg(), load_after = loadavg())
