@@ -92,6 +92,24 @@ if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
   if (file.exists(ef)) txt <- c(txt, readLines(ef, warn = FALSE))
   list(rc = rc, log = txt)
 }
+# Every subprocess must resolve R.home-ABSOLUTE: when this harness is
+# driven from an in-check suite (the in-suite unit under a real R CMD
+# check), the parent's PATH carries tools:::add_dummies' par. 1.6 stubs
+# prepended (<checkdir>/tests/R_check_bin/{R,Rscript}: echo-warning +
+# exit 1, mode 0755 -- re-verified verbatim from the live 4.5.2) and a
+# bare-name "R"/"Rscript" spawn dies there (measured CI-shape RED,
+# 2026-10-10). Fail-closed: inability to resolve is a STOP, never a
+# PATH-resolved fallback that the stubs would silently intercept.
+.abs_bin <- function(name) {
+  p <- file.path(R.home(), "bin", name)
+  if (!file.exists(p)) p <- file.path(R.home(), "bin", paste0(name, ".exe"))
+  if (!file.exists(p)) {
+    stop("R.home-absolute ", name, " not locatable -- refusing PATH-resolved spawn")
+  }
+  p
+}
+.Rbin <- .abs_bin("R")
+.Rscript.bin <- .abs_bin("Rscript")
 
 root <- .kv("root", NULL)
 if (is.null(root)) {
@@ -166,7 +184,7 @@ if (!keep) on.exit(unlink(work, recursive = TRUE))
 ## 1. the real tarball ------------------------------------------------------
 .wd0 <- getwd()
 invisible(setwd(work))   # this build's system2 has no wd= argument (measured)
-b <- .run3("R",
+b <- .run3(.Rbin,
            c("CMD", "build", "--no-build-vignettes", "--no-manual",
              "--compact-vc-exclusions", root),
            "build")
@@ -245,7 +263,7 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
   dir.create(new, recursive = TRUE)   # INSTALL refuses a missing --library dir
   # --library= (NOT -l=): this build warns "unknown option" on -l= and then
   # silently targets the USER library (measured near-miss 2026-10-10).
-  ins <- .run3("R", c("CMD", "INSTALL", "--no-byte-compile", "--no-docs",
+  ins <- .run3(.Rbin, c("CMD", "INSTALL", "--no-byte-compile", "--no-docs",
                       paste0("--library=", new), root), "install")
   if (!identical(ins$rc, 0L)) {
     cat(ins$log, sep = "\n")
@@ -363,7 +381,7 @@ writeLines(c(
   "writeLines(rows, file.path(.cfgf$result, 'sim-result.tsv'))",
   "quit(status = 0L)"
 ), runner)
-r3 <- .run3("Rscript", runner, "sim")
+r3 <- .run3(.Rscript.bin, runner, "sim")
 rc <- r3$rc
 log <- r3$log
 if (!identical(rc, 0L)) {

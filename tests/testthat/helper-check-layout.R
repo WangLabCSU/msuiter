@@ -50,3 +50,21 @@
 # The CITATION twin: inst/CITATION in the source tree, root CITATION once
 # installed.
 .cit_src <- function() .ms_src("inst/CITATION", "CITATION")
+
+# R CMD check's test phase (tools:::add_dummies, re-verified verbatim on the
+# live 4.5.2) creates <checkdir>/tests/R_check_bin/{R,Rscript} executables
+# (mode 0755) whose whole body is the par. 1.6 echo warning + exit 1, and
+# PREPENDS that directory to PATH -- every bare-name spawn dies there (CI
+# arms 2026-10-10: the stub text surfaced inside every spawning guard's
+# captured output). Suite spawns must therefore resolve R.home-absolute and
+# never through PATH. Fail-closed STOP, never skip: a silent skip would
+# re-open exactly the masking hole this helper exists to seal (a spawn that
+# never ran would look like a spawn that passed).
+.ms_rscript <- function() {
+  p <- file.path(R.home(), "bin", "Rscript")
+  if (!file.exists(p)) p <- file.path(R.home(), "bin", "Rscript.exe")
+  if (!file.exists(p)) {
+    stop(msg = "R.home-absolute Rscript not locatable -- refusing PATH-resolved spawn")
+  }
+  p
+}

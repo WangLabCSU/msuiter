@@ -37,7 +37,7 @@ test_that("inst/CITATION regenerates byte-exactly from DESCRIPTION", {
     skip("inst/CITATION not available (R CMD check context)")
   }
   out <- tempfile("gen-citation-")
-  rc <- system2("Rscript", c(script, paste0("--out=", out)),
+  rc <- system2(.ms_rscript(), c(script, paste0("--out=", out)),
                 stdout = FALSE, stderr = FALSE)
   expect_identical(rc, 0L)
   drop_year <- function(ls) ls[!grepl("^  year = \"[0-9]{4}\",$", ls)]

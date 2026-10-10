@@ -23,7 +23,7 @@ test_that("check-layout-sim: full suite is green under the simulated check layou
     skip("tools/check-layout-sim.R not locatable (R CMD check context)")
   }
   out <- tempfile("check-layout-sim-out-")
-  rc <- system2("Rscript", c(sim, paste0("--root=", .ms_root)),
+  rc <- system2(.ms_rscript(), c(sim, paste0("--root=", .ms_root)),
                 stdout = out, stderr = FALSE)
   lines <- readLines(out, warn = FALSE)
   if (length(lines) > 20L) lines <- lines[(length(lines) - 19L):length(lines)]

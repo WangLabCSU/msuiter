@@ -31,7 +31,7 @@ test_that("docs-sync enforces ROADMAP checkbox evidence citations", {
   script <- .docs_repo_file("tools/docs-sync.R")
   out <- tempfile("docs-sync-")
   # The guard speaks via cat() on stdout; stderr is the Rscript noise floor.
-  rc <- system2("Rscript", script, stdout = out, stderr = FALSE)
+  rc <- system2(.ms_rscript(), script, stdout = out, stderr = FALSE)
   msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
   # The checkbox half must exist and speak...
   expect_match(msgs, "checkbox-truth")
@@ -56,7 +56,7 @@ test_that("docs-sync enforces ROADMAP checkbox evidence citations", {
 test_that("docs-sync indexes every NAMESPACE export in the pkgdown reference index", {
   script <- .docs_repo_file("tools/docs-sync.R")
   out <- tempfile("docs-sync-idx-")
-  rc <- system2("Rscript", script, stdout = out, stderr = FALSE)
+  rc <- system2(.ms_rscript(), script, stdout = out, stderr = FALSE)
   msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_match(msgs, "pkgdown-index: OK")
   expect_identical(rc, 0L)
@@ -70,7 +70,7 @@ test_that("pkgdown-index half catches an export dropped from the reference index
   expect_length(hit, 1L)
   writeLines(lines[-hit], tf)
   out <- tempfile("docs-sync-tamper-")
-  rc <- system2("Rscript", c(script, paste0("--pkgdown=", tf)),
+  rc <- system2(.ms_rscript(), c(script, paste0("--pkgdown=", tf)),
                 stdout = out, stderr = FALSE)
   msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_identical(rc, 1L)
@@ -86,7 +86,7 @@ test_that("pkgdown-index half flags ghost entries with no export and no Rd", {
   lines <- append(lines, "  - ms_no_such_export", after = hit[1])
   writeLines(lines, tf)
   out <- tempfile("docs-sync-ghost-")
-  rc <- system2("Rscript", c(script, paste0("--pkgdown=", tf)),
+  rc <- system2(.ms_rscript(), c(script, paste0("--pkgdown=", tf)),
                 stdout = out, stderr = FALSE)
   msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
   expect_identical(rc, 1L)
