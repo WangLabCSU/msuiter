@@ -1,4 +1,5 @@
-# ROADMAP checkbox-truth guard (U-M7-04 slice-A; controller ruling 2026-10-10).
+# ROADMAP checkbox-truth guard (U-M7-04 slice-A; controller ruling 2026-10-10;
+# GO-04D check-layout hardening).
 #
 # Repository-drift semantics (same pattern as test-ffi-surface-drift.R):
 # every checked ([x]) ROADMAP line inside the M6s / M7 / G sections must
@@ -6,14 +7,28 @@
 # or a commit-hash token -- a claim of completion is a claim that can be
 # audited. The check itself lives in tools/docs-sync.R (single source of
 # truth with the API-surface half); this test drives the script end-to-end
-# and asserts both halves report green. Skips under R CMD check of a
-# tarball, where tools/ is not shipped.
+# and asserts both halves report green.
+#
+# These units are REPOSITORY-ONLY by nature: tools/docs-sync.R validates
+# docs/ROADMAP.md, NAMESPACE and _pkgdown.yml against each other -- none of
+# which travel in the installed tree. Under R CMD check they therefore skip
+# on an explicit repository-ness gate (.ms_root locatable + the artifact
+# present under it), never on an accidental miss of test_path('../../...')
+# above the check directory (see helper-check-layout.R).
+
+.docs_repo_file <- function(rel) {
+  if (is.na(.ms_root)) {
+    skip("repository checkout not locatable (R CMD check context)")
+  }
+  f <- file.path(.ms_root, rel)
+  if (!file.exists(f)) {
+    skip(paste0(rel, " not available (R CMD check context)"))
+  }
+  f
+}
 
 test_that("docs-sync enforces ROADMAP checkbox evidence citations", {
-  script <- testthat::test_path("../../tools/docs-sync.R")
-  if (!file.exists(script)) {
-    skip("tools/docs-sync.R not available (R CMD check context)")
-  }
+  script <- .docs_repo_file("tools/docs-sync.R")
   out <- tempfile("docs-sync-")
   # The guard speaks via cat() on stdout; stderr is the Rscript noise floor.
   rc <- system2("Rscript", script, stdout = out, stderr = FALSE)
@@ -32,20 +47,14 @@ test_that("docs-sync enforces ROADMAP checkbox evidence citations", {
 # without ever committing a broken site index.
 
 .pkgdown_copy <- function(pattern) {
-  src <- testthat::test_path("../../_pkgdown.yml")
-  if (!file.exists(src)) {
-    skip("_pkgdown.yml not available (R CMD check context)")
-  }
+  src <- .docs_repo_file("_pkgdown.yml")
   dst <- tempfile(pattern = pattern)
   writeLines(readLines(src, warn = FALSE), dst)
   dst
 }
 
 test_that("docs-sync indexes every NAMESPACE export in the pkgdown reference index", {
-  script <- testthat::test_path("../../tools/docs-sync.R")
-  if (!file.exists(script)) {
-    skip("tools/docs-sync.R not available (R CMD check context)")
-  }
+  script <- .docs_repo_file("tools/docs-sync.R")
   out <- tempfile("docs-sync-idx-")
   rc <- system2("Rscript", script, stdout = out, stderr = FALSE)
   msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
@@ -54,10 +63,7 @@ test_that("docs-sync indexes every NAMESPACE export in the pkgdown reference ind
 })
 
 test_that("pkgdown-index half catches an export dropped from the reference index", {
-  script <- testthat::test_path("../../tools/docs-sync.R")
-  if (!file.exists(script)) {
-    skip("tools/docs-sync.R not available (R CMD check context)")
-  }
+  script <- .docs_repo_file("tools/docs-sync.R")
   tf <- .pkgdown_copy("pkgdown-tamper-")
   lines <- readLines(tf, warn = FALSE)
   hit <- grep("^[[:space:]]+- ms_sitrep$", lines)
@@ -72,10 +78,7 @@ test_that("pkgdown-index half catches an export dropped from the reference index
 })
 
 test_that("pkgdown-index half flags ghost entries with no export and no Rd", {
-  script <- testthat::test_path("../../tools/docs-sync.R")
-  if (!file.exists(script)) {
-    skip("tools/docs-sync.R not available (R CMD check context)")
-  }
+  script <- .docs_repo_file("tools/docs-sync.R")
   tf <- .pkgdown_copy("pkgdown-ghost-")
   lines <- readLines(tf, warn = FALSE)
   hit <- grep("^[[:space:]]+- ms_sitrep$", lines)
