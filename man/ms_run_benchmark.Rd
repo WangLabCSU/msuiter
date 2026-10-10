@@ -34,4 +34,15 @@ block -- a failure in either records a `cell_error` metric for that
 cell and the grid continues. Scenario-level generation failures
 (ms_simulate / the dictionary draw) abort the run: the v1 isolation
 boundary is the cell, not the scenario.
+
+Create specs with [ms_benchmark_grid()], execute with
+`ms_run_benchmark()`, store via [ms_benchmark()] -- the trio stays
+three separate functions by the U-M7-04 ergonomics ruling (no generic
+merge).
 }
+\seealso{
+Other benchmark: 
+\code{\link{ms_benchmark}()},
+\code{\link{ms_benchmark_grid}()}
+}
+\concept{benchmark}

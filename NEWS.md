@@ -2,6 +2,22 @@
 
 自 v0.1.0 起的新开发周期。
 
+## M6s · HRD workflow
+
+* `ms_hrd_report()`: HRD reporting surface -- dual-gate design with bit-exact SigMiner ground-truth replication and composite scoring, delivered TDD end-to-end (U-M6s-01, commit 2fc7e04, PR #6; R/hrd-report.R, R/hrd-reference.R; phase gate docs/ROADMAP.md:93).
+
+## M7 · Benchmark completeness
+
+* Competitor benchmark harness with the frozen G0 sampling protocol (U-M7-02, commit 2949e8a, PR #8; docs/devlog/2026-10-08-m7-competitor-harness-design.md).
+* Scoring engine: Hungarian-matched benchmark table with appended scoring verdicts (commit bcc1f31, PR #10).
+* Whole-tree Archive-aware sigminer image recipe (commit 00491db, PR #11); sigminer realigned to the CRAN-witnessed API and the image registry flipped to the build9-verified digest (commit a6f2e89, PR #12).
+* Floor-table governance for the matrix driver: floor constants derived from committed REP-100 witnesses, calibration test suite attached (U-M7-03, commit f90ea1d, PR #13; bench/m7/tools/matrix_governance.py, bench/m7/tests/test_floor_calibration.py, docs/devlog/2026-10-09-m7-benchmark-matrix.md; phase gate docs/ROADMAP.md:97).
+* Authoritative degraded benchmark matrix closed: master table 42 data rows (re-counted from bench/results/docker_m7_degraded_20261009-184833/timings_sharded_master.csv), verdict-A closure (commit f90ea1d); sealed run additionally carries judgment_m7_degraded_20261010-024833.md and bench/results/docker_m7_degraded_20261009-184833/EVIDENCE-ADDENDUM.md (commit 2be4b82).
+* Timing rows carry host and hw_profile pins beside the G0 columns; the reader keeps the 7-col legacy branch (commit cfef27c; bench/m7/competitors/timings.py).
+* docs/PERFORMANCE.md adds site-facing performance anchoring by reference only (commit dc5bda2).
+* The docs-sync guard gained the ROADMAP checkbox-truth checker (every checked M6s/M7/G completion claim must cite path:line or a commit token; commit b02ad50; tools/docs-sync.R, tests/testthat/test-docs-sync.R); benchmark trio naming settled by a controller ruling with @family cross-links (commit 24bc53f; docs/devlog/2026-10-10-m7-benchmark-ergonomics.md).
+
+
 # msuiter 0.1.0（2026-10-05）
 
 首个发布版：Rust 计算核 + R/S7 接口的最小可用核（ROADMAP v0.1 门 = M0 + M1s；M1c/M2/M3a/M4 校准与相似度层提前并入本树，随版交付）。以下各节为开发期批次记录（升级自 0.0.0.9000 开发线）。

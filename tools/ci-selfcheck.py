@@ -269,6 +269,21 @@ def main():
           "-Zsanitizer=" in job_script(sched, "sanitizer")
           or "-Zsanitizer=" in str(sani))
 
+    # ---- scheduled pkgdown site build (U-M7-04 slice-C, C5) ----------------
+    # The per-PR 13-check topology is frozen, so the site render is pinned
+    # to the weekly deep check -- and it is a HARD gate: no continue-on-error.
+    site = sched["jobs"].get("site", {})
+    check("scheduled: pkgdown site job exists", bool(site))
+    check("scheduled: site job is a hard gate (no continue-on-error)",
+          bool(site) and site.get("continue-on-error") is not True)
+    st = job_script(sched, "site")
+    check("scheduled: site job renders via pkgdown::build_site",
+          "pkgdown::build_site" in st)
+    check("scheduled: site job asserts reference index + extending article rendered",
+          "reference/index.html" in st and "articles/extending.html" in st)
+    check("scheduled: site job uploads the rendered site artifact",
+          any("upload-artifact@" in u for u in uses_list(site)))
+
     # ---- dependabot --------------------------------------------------------
     ecosystems = {u["package-ecosystem"]: u for u in dep.get("updates", [])}
     check("dependabot: cargo + github-actions ecosystems",

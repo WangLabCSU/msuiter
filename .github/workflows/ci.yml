@@ -6,7 +6,8 @@
 #                 Rust toolchain installed at the DESCRIPTION MSRV (rustc >= 1.71)
 #                 in every R job: src/rust cannot compile without cargo/rustc.
 #   rust        : cargo test --workspace, clippy -D warnings, cargo deny check
-#                 (all four sections: bans / licenses / advisories / sources).
+#                 (all four sections: bans / licenses / advisories / sources)
+#                 and cargo audit (RustSec advisories, hard-fail on findings).
 #   guards      : repo-root guard scripts (U-M0-01/02/05/06 handoff, see
 #                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07) + repo-mode testthat
 #                 (drift-guard tests skip under R CMD check; they must run from
@@ -209,6 +210,20 @@ jobs:
       - name: cargo deny check (all sections)
         working-directory: src/rust
         run: cargo deny check
+
+      # cargo-audit: the named RustSec advisory gate the ROADMAP .github line
+      # and ARCHITECTURE §9 CI line claim. Controller ruling U-M7-04 slice-A
+      # (2026-10-10): the claim is made true by implementation. Hard-fail on
+      # findings; --deny warnings only by a later controller ruling. The
+      # advisory-DB fetch is runner-side network I/O and is permitted here.
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: cargo audit (RustSec advisories, hard-fail on findings)
+        working-directory: src/rust
+        run: cargo audit
 
   guards:
     runs-on: ubuntu-latest

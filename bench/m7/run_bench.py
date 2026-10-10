@@ -41,6 +41,7 @@ import io
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -316,7 +317,13 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     def row(status: str, seconds: float, cpu: float) -> dict:
         r = {"cell": stamp, "tool": competitor, "arm": arm.name,
              "n": n, "seconds": seconds, "status": status,
-             "cpu_seconds": cpu}
+             "cpu_seconds": cpu,
+             # U-M7-04 B1a (hardware-pin machine-checkability): the runner's
+             # identity and the operator's machine-class pin ride every row
+             # — stamped by the pass that writes it, the same convention as
+             # cached seconds=0.0. Unset pin → present-but-empty column.
+             "host": socket.gethostname(),
+             "hw_profile": os.environ.get(timings.HW_PROFILE_ENV, "")}
         if status in gov.PASS_STATUSES:
             # RB-09(3)(iv): a pass under a NEW floor-table epoch for a cell
             # defect-flagged under an OLD one is a re-adjudication — it must

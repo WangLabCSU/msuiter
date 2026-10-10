@@ -1,6 +1,7 @@
 # msuiter scheduled deep checks (U-M0-07) — docs/ARCHITECTURE.md §9:
-# "valgrind + ASAN/UBSAN scheduled job". Weekly, allowed to fail: these are
-# diagnostic tripwires, not merge gates.
+# "valgrind + ASAN/UBSAN scheduled job". Weekly. valgrind and sanitizer are
+# diagnostic tripwires allowed to fail (not merge gates); site is a hard
+# gate (U-M7-04 slice-C, C5): a site that no longer builds must go red.
 #
 #   valgrind  : full R CMD check --as-cran --use-valgrind on Linux.
 #   sanitizer : RUSTFLAGS -Zsanitizer={address,undefined} over the pure numeric
@@ -9,6 +10,7 @@
 #               not instrumented, so full-workspace sanitizer runs only
 #               produce libR false positives; the numeric core is the
 #               memory-safety surface we own.
+#   site      : pkgdown::build_site render of the reference site + artifact.
 #
 # Sanitizers need -Z flags => nightly toolchain (engine/catalog compile on
 # nightly: no unsafe, budget deps only).
@@ -95,3 +97,53 @@ jobs:
         env:
           RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
         run: cargo +nightly test -p msuiter-engine -p msuiter-catalog
+
+  site:
+    # pkgdown site-build tripwire (U-M7-04 slice-C, C5). The per-PR 13-check
+    # topology is frozen, so the site render rides the weekly deep check (and
+    # manual dispatch). STRICT by design -- no continue-on-error: the
+    # docs-sync pkgdown-index half only reads _pkgdown.yml, this job proves
+    # the site really builds (Rd resolution, article render, citation parse).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # src/rust compiles during the R CMD INSTALL that build_site triggers
+      # (install keeps the reference build honest: real namespace loading).
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          needs: check          # Suggests ride in: knitr renders the article
+          extra-packages: any::pkgdown
+
+      - name: Build pkgdown site (_pkgdown.yml -> docs/)
+        shell: Rscript {0}
+        run: |
+          if (!requireNamespace("pkgdown")) {
+            stop("site check: pkgdown unavailable")
+          }
+          pkgdown::build_site()
+          must <- file.path("docs", c("reference/index.html",
+                                       "articles/extending.html"))
+          for (f in must) {
+            if (!file.exists(f)) {
+              stop(sprintf("site check: expected rendered file %s missing", f))
+            }
+          }
+
+      - name: Upload rendered site
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pkgdown-site
+          path: docs
+          retention-days: 14

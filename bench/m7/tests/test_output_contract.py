@@ -15,13 +15,16 @@ The orchestrator seam under contract (GREEN implements; RED-by-absence now):
   guard: the fairness table is not attestable without manifest+timing).
 
   authoritative outdir (final cache-hit pass): Seeds.txt, timings_m7_*.csv
-  (7-col schema), judgment_m7_*.md (fairness attestation per §4.5).
+      (9-col schema: G0 six + cpu_seconds + hardware pins host, hw_profile),
+      judgment_m7_*.md (fairness attestation per §4.5).
 """
 
 from __future__ import annotations
 
 import csv
+import os
 import shutil
+import socket
 import tempfile
 from pathlib import Path
 
@@ -53,16 +56,18 @@ def _timings_rows(results: Path) -> list:
     with files[0].open(newline="", encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         assert reader.fieldnames == ["cell", "tool", "arm", "n", "seconds",
-                                     "status", "cpu_seconds"], \
+                                     "status", "cpu_seconds",
+                                     "host", "hw_profile"], \
             f"authoritative timings header drifted: {reader.fieldnames}"
         return list(reader)
 
 
 def test_smoke_pass_emits_authoritative_file_set():
-    """§4.5: the authoritative outdir carries Seeds.txt + the 7-col timings
-    table + the fairness attestation document."""
+    """§4.5: the authoritative outdir carries Seeds.txt + the 9-col hardware-
+    pinned timings table + the fairness attestation document."""
     tmp = _tmp()
     try:
+        os.environ["M7_HW_PROFILE"] = "10 vCPU / 8 GB class (test)"
         rc = run_bench.main(_smoke_argv(tmp))
         assert rc == 0, f"smoke pass exited {rc}"
         results = tmp / "results"
@@ -79,7 +84,15 @@ def test_smoke_pass_emits_authoritative_file_set():
         assert {r["tool"] for r in rows} == {"sigminer"}
         assert all(r["status"] in ("ok", "cached") for r in rows), \
             "a green smoke pass may not leave failed cells silent"
+        # U-M7-04 B1a: the hardware pins ride every written row, so a reader
+        # of the table alone can check WHICH machine produced the numbers.
+        assert {r["host"] for r in rows} == {socket.gethostname()}, \
+            "host pin must stamp the runner's hostname on every row"
+        assert {r["hw_profile"] for r in rows} == {
+            "10 vCPU / 8 GB class (test)"}, \
+            "the operator's M7_HW_PROFILE pin must ride every row verbatim"
     finally:
+        os.environ.pop("M7_HW_PROFILE", None)
         shutil.rmtree(tmp, ignore_errors=True)
 
 
