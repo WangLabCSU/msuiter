@@ -576,16 +576,34 @@ def test_instruments_pass_the_argument_shape_linter():
 
 
 def test_a1_arm_call_matches_the_frozen_protocol_form():
-    """Protocol (docs/devlog/2026-10-10-m7-bootstrap-campaign.md §2, table
-    row A1, verbatim): sigminer::sig_fit_bootstrap_batch(counts,
-    methods="NNLS", n=R, use_parallel=FALSE, seed=S, job_id=NULL).
+    """The A1 batch call must keep the package-documented measurement form —
+    the no-worker-knob law plus the signature channel that the frozen devlog
+    row (§2 table A1) compressed away.
 
-    The batch entry has no sig parameter (formals: catalogue_matrix,
-    methods, n, min_count, p_val_thresholds, use_parallel, seed, job_id,
-    result_dir, ...) — a stray sig = sigs rides the dots into the internal
-    sig_fit and would silently reshape A1's measurement lane away from the
-    frozen protocol. Dots absorb it, so no argument linter can see this:
-    the law is structural."""
+    Chain of evidence (all command-witnessed, this lane):
+    - sigminer's own roxygen usage, verbatim (R/sig_fit_bootstrap_batch.R:56):
+      sig_fit_bootstrap_batch(V, sig = W, n = 10) -- sig is not a formal; it
+      reaches sig_fit through the dots.
+    - sig_fit.R:185 discovers it via as.list(match.call())[["sig"]] stack
+      introspection; with sig_index NULL (the default) and no sig actual,
+      sig_fit.R:186-187 run send_error("'sig' cannot be found...") +
+      send_stop("Exit.") — witnessed live when a repair pass stripped
+      sig = sigs: the smoke log showed only the 停止执行 banner, the
+      condition arriving at the wrapper as simpleError(message="") —
+      send_stop builds an empty-message condition (sigminer R/utils.R:252),
+      so this death is invisible without a condition handler.
+    - smoke-3 (pre-strip) executed the A1 probes green with sig = sigs
+      present: the stripped form was never the witnessed form.
+    - host probe (ad-hoc, campaign.rds from a smoke, R=4): the restored form
+      completes, returning the documented list expo/error/cosine/p_val.
+    - symmetry law: A2/A3 receive the same frozen generated signatures
+      (ms_fit_bootstrap(cat_sub, sigs, ...) positionally); an A1 without
+      sig would fall to sigminer's signature database — a different
+      optimisation target, ratio meaningless (and COSMIC data is never
+      committed to this repo's measurements).
+    Dots absorb the actual, so no argument matcher can see it: the law is
+    structural. The block must also keep use_parallel = FALSE (no future
+    plan installed) and job_id = NULL (no result-dir writes)."""
     text = (BOOT / "run_campaign.R").read_text()
     marker = "sigminer::sig_fit_bootstrap_batch("
     i = text.index(marker)
@@ -593,12 +611,14 @@ def test_a1_arm_call_matches_the_frozen_protocol_form():
     stop = block.find(")")                     # first rparen closes the call
     assert stop != -1, f"unterminated batch call near {marker!r}"
     block = block[:stop]
-    assert "sig =" not in block, \
-        "A1 batch call carries a sig = actual: sig_fit_bootstrap_batch " \
-        "rediscovers signatures internally — the frozen protocol form names " \
-        "no sig; a forced signature is off-protocol measurement"
-    for need in ('methods = "NNLS"', "use_parallel = FALSE", "job_id = NULL"):
-        assert need in block, f"A1 call drifted from the frozen form: {need}"
+    assert "sig = sigs" in block, \
+        "A1 batch call lost its sig actual: with sig_index NULL the batch " \
+        "dies in sig_fit at the match.call() introspection (witnessed: " \
+        "send_stop('Exit.' as an empty-message simpleError); A2/A3 share " \
+        "the same frozen signatures — A1 without sig breaks that symmetry"
+    for need in ('methods = "NNLS"', "use_parallel = FALSE", "job_id = NULL",
+                 "seed = SEED"):
+        assert need in block, f"A1 call drifted from the pinned form: {need}"
 
 
 def test_harness_carries_no_write_lines_with_append_misuse():

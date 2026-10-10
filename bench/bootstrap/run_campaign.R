@@ -233,13 +233,18 @@ timed <- function(expr) {
 }
 arm_call <- function(arm, counts_sub, cat_sub, reps, threads = N_THREADS_POOL) {
   if (arm == "A1") {
-    # Frozen protocol form (devlog §2 row A1, verbatim): the batch entry has
-    # no sig parameter -- its formals are (catalogue_matrix, methods, n,
-    # min_count, p_val_thresholds, use_parallel, seed, job_id, result_dir,
-    # ...); a stray sig = would ride the dots into the internal fit and
-    # silently reshape the measurement lane away from the protocol.
+    # Package-documented contract (sigminer roxygen usage, verbatim:
+    #   sig_fit_bootstrap_batch(V, sig = W, n = 10)): sig is not a formal --
+    # it reaches sig_fit through the dots, where sig_fit discovers it by
+    # match.call() stack introspection (sig_fit.R:185). Omitting it while
+    # sig_index stays NULL is a witnessed death, not a style choice:
+    # send_error("'sig' cannot be found...") + send_stop("Exit.") at
+    # sig_fit.R:186-187 -- observed live when a repair pass stripped this
+    # actual, with the error surfacing only as an empty-message condition.
+    # The batch is also forbidden from any worker knob here: use_parallel
+    # stays FALSE and job_id NULL (no result-dir writes).
     suppressWarnings(suppressMessages(sigminer::sig_fit_bootstrap_batch(
-      counts_sub, methods = "NNLS", n = reps,
+      counts_sub, sig = sigs, methods = "NNLS", n = reps,
       use_parallel = FALSE, seed = SEED, job_id = NULL)))
   } else {
     suppressMessages(msuiter::ms_fit_bootstrap(cat_sub, sigs,
