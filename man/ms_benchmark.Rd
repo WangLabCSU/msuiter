@@ -15,7 +15,10 @@ ms_benchmark(results, settings = list())
 An [MsBenchmark] object.
 }
 \description{
-Builds and validates an [MsBenchmark].
+Builds and validates an [MsBenchmark]. Create specs with
+[ms_benchmark_grid()], execute with [ms_run_benchmark()], store via
+`ms_benchmark()` -- the trio stays three separate functions by the
+U-M7-04 ergonomics ruling (no generic merge).
 }
 \examples{
 results <- data.frame(
@@ -24,3 +27,9 @@ results <- data.frame(
 )
 ms_benchmark(results, settings = list(seed = 1))
 }
+\seealso{
+Other benchmark: 
+\code{\link{ms_benchmark_grid}()},
+\code{\link{ms_run_benchmark}()}
+}
+\concept{benchmark}

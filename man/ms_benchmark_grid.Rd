@@ -34,5 +34,14 @@ A validated scenario list.
 One calibration-layer scenario: a burden, a sample count, an active
 signature count, and a generative arm -- all fed to [ms_simulate()]
 against a seeded draw from the bundled COSMIC v3.6 SBS96 dictionary.
-A grid is a named list of scenarios.
+A grid is a named list of scenarios. Create specs with
+`ms_benchmark_grid()`, execute with [ms_run_benchmark()], store via
+[ms_benchmark()] -- the trio stays three separate functions by the
+U-M7-04 ergonomics ruling (no generic merge).
 }
+\seealso{
+Other benchmark: 
+\code{\link{ms_benchmark}()},
+\code{\link{ms_run_benchmark}()}
+}
+\concept{benchmark}

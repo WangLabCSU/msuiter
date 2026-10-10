@@ -86,7 +86,12 @@ msuiter_validate_benchmark <- function(self) {
 
 #' Construct an MsBenchmark object
 #'
-#' Builds and validates an [MsBenchmark].
+#' Builds and validates an [MsBenchmark]. Create specs with
+#' [ms_benchmark_grid()], execute with [ms_run_benchmark()], store via
+#' `ms_benchmark()` -- the trio stays three separate functions by the
+#' U-M7-04 ergonomics ruling (no generic merge).
+#'
+#' @family benchmark
 #'
 #' @inheritParams MsBenchmark
 #' @return An [MsBenchmark] object.

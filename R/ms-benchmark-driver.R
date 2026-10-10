@@ -11,10 +11,12 @@
 #     paired-L1 (absolute and compositional) on the tau-independent
 #     Hungarian assignment + runtime.
 #
-# Naming note (recorded for PI): the M0 container constructor keeps the
-# name ms_benchmark(results, settings); the DRIVER is ms_run_benchmark()
-# in this version -- whether the two merge behind one generic is an M7
-# polish decision, not a v1 blocker.
+# Naming note (settled by the U-M7-04 slice-B ergonomics ruling): the trio
+# keeps three explicit roles -- ms_benchmark_grid() builds the scenario
+# specs, ms_run_benchmark() executes them, ms_benchmark(results, settings)
+# is the S7 container constructor; NO generic merge (YAGNI). Decision
+# record: docs/devlog/2026-10-10-m7-benchmark-ergonomics.md; the three
+# help topics cross-link via @family benchmark.
 #
 # The dict comes from the bundled COSMIC v3.6 SBS96 reference (refdb v1
 # -- shipped material); truth exposures are per-sample Dirichlet shares
@@ -25,7 +27,12 @@
 #' One calibration-layer scenario: a burden, a sample count, an active
 #' signature count, and a generative arm -- all fed to [ms_simulate()]
 #' against a seeded draw from the bundled COSMIC v3.6 SBS96 dictionary.
-#' A grid is a named list of scenarios.
+#' A grid is a named list of scenarios. Create specs with
+#' `ms_benchmark_grid()`, execute with [ms_run_benchmark()], store via
+#' [ms_benchmark()] -- the trio stays three separate functions by the
+#' U-M7-04 ergonomics ruling (no generic merge).
+#'
+#' @family benchmark
 #'
 #' @param name Unique scenario name.
 #' @param n_samples Simulated sample count (>= 4).
@@ -132,6 +139,13 @@ ms_benchmark_grid <- function(name = "scenario", n_samples = 20,
 #' cell and the grid continues. Scenario-level generation failures
 #' (ms_simulate / the dictionary draw) abort the run: the v1 isolation
 #' boundary is the cell, not the scenario.
+#'
+#' Create specs with [ms_benchmark_grid()], execute with
+#' `ms_run_benchmark()`, store via [ms_benchmark()] -- the trio stays
+#' three separate functions by the U-M7-04 ergonomics ruling (no generic
+#' merge).
+#'
+#' @family benchmark
 #'
 #' @param grid A named list of [ms_benchmark_grid()] scenarios.
 #' @param engines A named list of extract-mode engine specs (e.g.
