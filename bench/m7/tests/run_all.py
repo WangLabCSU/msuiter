@@ -41,6 +41,11 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
       (sigminer superlinear, sigprofiler amortizing)
+Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+  (S) test_hardware_pin        every authoritative row pinned to the measured
+      environment; the docker-authoritative pass refuses to file without the
+      operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
+      table from its own bytes
 """
 
 from __future__ import annotations
@@ -71,7 +76,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_hash_provenance",
            # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
            "test_matrix_governance",
-           "test_floor_calibration"]
+           "test_floor_calibration",
+           # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100 钉硬件全表):
+           "test_hardware_pin"]
 
 
 def _collect(mod_name):
