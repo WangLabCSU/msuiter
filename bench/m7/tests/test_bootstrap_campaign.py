@@ -407,6 +407,200 @@ def test_launch_ledger_appender_executes_on_the_real_filesystem_both_modes():
         shutil.rmtree(tmp.parent, ignore_errors=True)
 
 
+# -- 9. the oj() oracle-JSON scalar pull (fifth live smoke witness) ---------------------
+# Smoke #4 cleared the probes and died inside oj(): regmatches(..., perl =
+# TRUE) raised an unused-argument hard error on the target interpreter
+# (witness verbatim: 参数没有用(perl = TRUE)). The scalar pull is how the
+# harness reads gate/tier/projection back from the oracle — it must execute,
+# not merely parse.
+
+
+def test_oj_scalar_pull_executes_on_the_target_interpreter():
+    """oj() must really run on the campaign's target interpreter: named oracle
+    keys come back as scalars, an absent key as NA — through the real
+    regmatches/exec path, no mocks."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    src = BOOT / "run_campaign.R"
+    assert src.is_file(), f"missing instrument: {src}"
+    prog = _OJ_RPROG.replace("@@SRC@@", str(src).replace("'", ""))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"oj() failed to execute on the target interpreter (verbatim R " \
+        f"error in stdout; witnessed live as regmatches unused-argument " \
+        f"(perl = TRUE)):\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
+    assert r.stdout.startswith("OJ-OK["), r.stdout
+
+
+_OJ_RPROG = """
+src <- '@@SRC@@'
+env <- new.env()
+for (e in parse(src)) {
+  op <- ''
+  if (is.call(e) && length(e) >= 2L)
+    op <- tryCatch(as.character(e[[1L]]), error = function(...) '')
+  if (length(op) == 1L && op %in% c('<-', '<<-', '=') && is.symbol(e[[2L]]) &&
+      identical(as.character(e[[2L]]), 'oj')) eval(e, env)
+}
+r <- tryCatch({
+  stopifnot(exists('oj', envir = env, inherits = FALSE))
+  f <- get('oj', envir = env)
+  txt <- paste0('{', '"verdict":"pass","ratio":2.5,',
+                 '"gate":"pass","projection":"1e3","tier":"B"', '}')
+  stopifnot(identical(f(txt, 'gate'), 'pass'))
+  stopifnot(identical(f(txt, 'tier'), 'B'))
+  stopifnot(identical(f(txt, 'ratio'), '2.5'))
+  stopifnot(identical(f(txt, 'projection'), '1e3'))
+  stopifnot(is.na(f(txt, 'absent_key')))
+  'OK'
+}, error = function(e) paste0('ERR ', conditionMessage(e)))
+if (identical(r, 'OK')) { cat('OJ-OK[scalar-pull]\\n'); quit(status = 0L) }
+cat('OJ-', r, '\\n', sep = ''); quit(status = 3L)
+"""
+
+
+# -- 10. the argument-shape linter (sixth-class gate) --------------------------------
+# Three live deaths shared one root: an author-time call shape the target
+# interpreter rejects — writeLines(append = TRUE), regmatches(perl = TRUE),
+# and writeLines(file = ) ahead of smoke. Each exists() and parses fine; only
+# argument matching refuses. So the gate asks the interpreter itself:
+# match.call(f, call) — R's own matcher, the exact runtime predicate, never
+# executing the call. Probed ground truth on this host (R 4.5.2): the
+# positional form matches closures and flags 参数没有用; the named form
+# (definition = f) is itself rejected ('definition'参数无效) for every
+# callee; builtins are invalid as definition either way (skipped — the
+# instrument's primitive call sites are structural operators called
+# positionally). Partial matching stays on: commandArgs(trailing =) is a
+# witnessed legal unique-prefix match of the sole formal trailingOnly, so a
+# gate that forbade it would flag code the interpreter accepts.
+_ARGLINT_RPROG = """
+srcs <- c('@@RUN@@', '@@GEN@@')
+flags <- character(0)
+localFns <- new.env(parent = emptyenv())
+SYNTAX <- c('if', 'for', 'while', 'repeat', 'function')
+EMPTYBOX <- list(formals(vapply)[['X']])
+is_empty <- function(node) identical(node, EMPTYBOX[[1L]])
+for (s in srcs) for (e in parse(s)) {
+  if (is.call(e) && length(e) >= 3L &&
+      tryCatch(as.character(e[[1L]]), error = function(...) '') %in%
+      c('<-', '<<-', '=')) {
+    if (is.name(e[[2L]])) tryCatch(
+      assign(as.character(e[[2L]]), eval(e, localFns), envir = localFns,
+             inherits = FALSE), error = function(...) NULL)
+  }
+}
+collect_fn <- function(fnname, pkg, callnode) {
+  f <- NULL
+  if (is.null(pkg) && exists(fnname, envir = localFns, inherits = FALSE))
+    f <- get(fnname, envir = localFns, inherits = FALSE)
+  if (is.null(pkg) && is.null(f))
+    f <- tryCatch(get(fnname, mode = 'function'), error = function(...) NULL)
+  if (!is.null(pkg)) {
+    if (!(requireNamespace(pkg, quietly = TRUE) &&
+           exists(fnname, envir = asNamespace(pkg), inherits = FALSE)))
+      return(invisible(NULL))
+    f <- get(fnname, envir = asNamespace(pkg), inherits = FALSE)
+  }
+  if (is.null(f) || !is.function(f)) return(invisible(NULL))
+  if (is.primitive(f)) return(invisible(NULL))
+  for (a in as.list(callnode)[-1L])
+    if (is.name(a) && identical(as.character(a), '...'))
+      return(invisible(NULL))   # dots forwarding (say/halt bodies): the
+                                # enclosing frame binds it at runtime; static
+                                # match.call cannot see that frame
+  mc <- tryCatch({
+    match.call(f, callnode)
+    NULL
+  }, error = function(e) conditionMessage(e))
+  if (!is.null(mc))
+    flags[[length(flags) + 1L]] <<- paste0(disp, ': ', mc)
+  invisible(NULL)
+}
+collect <- function(e) {
+  if (is.name(e)) return(invisible(NULL))
+  if (is.call(e)) {
+    h <- e[[1L]]
+    if (is.name(h)) {
+      hn <- as.character(h)
+      if (!hn %in% SYNTAX) { disp <<- hn; collect_fn(hn, NULL, e) }
+    } else if (is.call(h) && length(h) == 3L && is.name(h[[1L]]) &&
+               as.character(h[[1L]]) %in% c('::', ':::')) {
+      disp <<- paste0(as.character(h[[2L]]), '::', as.character(h[[3L]]))
+      collect_fn(as.character(h[[3L]]), as.character(h[[2L]]), e)
+    }
+    for (i in seq_along(e)[-1L]) {
+      if (is_empty(e[[i]])) next
+      collect(e[[i]])
+    }
+    return(invisible(NULL))
+  }
+  if (is.list(e)) {
+    for (i in seq_along(e)) {
+      if (is_empty(e[[i]])) next
+      collect(e[[i]])
+    }
+  }
+  invisible(NULL)
+}
+disp <- ''
+for (s in srcs) for (e in parse(s)) collect(e)
+u <- unique(flags)
+if (length(u)) {
+  cat('ARGLINT-FLAGS[', paste(sort(u), collapse = ' | '), ']\\n', sep = '')
+  quit(status = 6L)
+}
+cat('ARGLINT-CLEAN\\n'); quit(status = 0L)
+"""
+
+
+def test_instruments_pass_the_argument_shape_linter():
+    """Every call in the instruments must survive the interpreter's own
+    argument matcher — the unused-argument class (writeLines-append,
+    regmatches-perl, writeLines-file) must die at the gate, not one smoke
+    iteration at a time."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    run_src = BOOT / "run_campaign.R"
+    gen_src = BOOT / "gen_campaign.R"
+    prog = (_ARGLINT_RPROG
+            .replace("@@RUN@@", str(run_src).replace("'", ""))
+            .replace("@@GEN@@", str(gen_src).replace("'", "")))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"argument-shape violations in the campaign instruments (each is a " \
+        f"live-death class: unused argument at first execution):\n" \
+        f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+    assert r.stdout.strip() == "ARGLINT-CLEAN", r.stdout
+
+
+def test_a1_arm_call_matches_the_frozen_protocol_form():
+    """Protocol (docs/devlog/2026-10-10-m7-bootstrap-campaign.md §2, table
+    row A1, verbatim): sigminer::sig_fit_bootstrap_batch(counts,
+    methods="NNLS", n=R, use_parallel=FALSE, seed=S, job_id=NULL).
+
+    The batch entry has no sig parameter (formals: catalogue_matrix,
+    methods, n, min_count, p_val_thresholds, use_parallel, seed, job_id,
+    result_dir, ...) — a stray sig = sigs rides the dots into the internal
+    sig_fit and would silently reshape A1's measurement lane away from the
+    frozen protocol. Dots absorb it, so no argument linter can see this:
+    the law is structural."""
+    text = (BOOT / "run_campaign.R").read_text()
+    marker = "sigminer::sig_fit_bootstrap_batch("
+    i = text.index(marker)
+    block = text[i:i + 400]
+    stop = block.find(")")                     # first rparen closes the call
+    assert stop != -1, f"unterminated batch call near {marker!r}"
+    block = block[:stop]
+    assert "sig =" not in block, \
+        "A1 batch call carries a sig = actual: sig_fit_bootstrap_batch " \
+        "rediscovers signatures internally — the frozen protocol form names " \
+        "no sig; a forced signature is off-protocol measurement"
+    for need in ('methods = "NNLS"', "use_parallel = FALSE", "job_id = NULL"):
+        assert need in block, f"A1 call drifted from the frozen form: {need}"
+
+
 def test_harness_carries_no_write_lines_with_append_misuse():
     """Structural law: every appending write in the R harness goes through an
     append-mode connection helper; writeLines must never be handed an

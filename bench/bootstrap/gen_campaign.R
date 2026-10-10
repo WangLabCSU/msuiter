@@ -82,9 +82,15 @@ sha256 <- function(path) {
     line <- system2(unname(hit), c("dgst", "-sha256", "-r", path),
       stdout = TRUE, stderr = FALSE)
     if (is.numeric(line)) stop("openssl dgst failed with status ", line)
-    found <- regmatches(line[[1]], "([0-9a-f]{64})", perl = TRUE)
-    if (is.na(found[[1]])) stop("openssl output carried no sha256 digest")
-    return(found[[1]])
+    # host-side regmatches is (x, m, invert) with no capture group and no
+    # perl argument (perl = TRUE is an unused-argument death, linter-
+    # witnessed); gregexpr with match.start/match.length is the probe-proven
+    # base idiom on this interpreter.
+    mm <- gregexpr("[0-9a-f]{64}", line[[1]], perl = TRUE)[[1L]]
+    if (is.na(mm[[1L]]) || mm[[1L]] < 0L)
+      stop("openssl output carried no sha256 digest")
+    return(substring(line[[1]], mm[[1L]],
+      mm[[1L]] + attr(mm, "match.length")[[1L]] - 1L))
   }
   stop("no sha256 tool on host (shasum/openssl) — declared dependency missing")
 }

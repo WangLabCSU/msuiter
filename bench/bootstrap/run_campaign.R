@@ -85,9 +85,16 @@ call_oracle_rc <- function(extra) {
     text = paste(txt, collapse = "\n"))
 }
 oj <- function(text, key) {                   # tiny fixed-schema scalar pull
-  m <- regmatches(text, sprintf('"%s": *"?([A-Za-z0-9._+-]*)"?', key),
-    perl = TRUE)
-  if (is.na(m[[1L]])) NA_character_ else m[[1L]]
+  # Capture goes through gregexpr: regmatches on this host is (x, m, invert)
+  # and returns matched text only -- it has no capture groups and no perl
+  # argument (the perl = TRUE shape died live in smoke rehearsal with
+  # 参数没有用). No-match renders as -1 here, witnessed by probe.
+  pat <- sprintf('"%s": *"?([A-Za-z0-9._+-]*)"?', key)
+  mm <- gregexpr(pat, text, perl = TRUE)[[1L]]
+  if (is.na(mm[[1L]]) || mm[[1L]] < 0L) return(NA_character_)
+  cs <- attr(mm, "capture.start"); cl <- attr(mm, "capture.length")
+  if (is.null(cs) || length(cs) < 1L || is.na(cs[[1L]])) return(NA_character_)
+  substring(text, cs[[1L]], cs[[1L]] + cl[[1L]] - 1L)
 }
 
 # -- environment attestation ---------------------------------------------------
@@ -226,8 +233,13 @@ timed <- function(expr) {
 }
 arm_call <- function(arm, counts_sub, cat_sub, reps, threads = N_THREADS_POOL) {
   if (arm == "A1") {
+    # Frozen protocol form (devlog §2 row A1, verbatim): the batch entry has
+    # no sig parameter -- its formals are (catalogue_matrix, methods, n,
+    # min_count, p_val_thresholds, use_parallel, seed, job_id, result_dir,
+    # ...); a stray sig = would ride the dots into the internal fit and
+    # silently reshape the measurement lane away from the protocol.
     suppressWarnings(suppressMessages(sigminer::sig_fit_bootstrap_batch(
-      counts_sub, sig = sigs, methods = "NNLS", n = reps,
+      counts_sub, methods = "NNLS", n = reps,
       use_parallel = FALSE, seed = SEED, job_id = NULL)))
   } else {
     suppressMessages(msuiter::ms_fit_bootstrap(cat_sub, sigs,
@@ -294,7 +306,7 @@ write_result <- function(verdict, tier, ratio_line = NULL, extra = character(0))
     "- co-tenancy census: witnesses/host_census.jsonl (verbatim docker ps)",
     if (smoke) paste0("- SMOKE REHEARSAL: small shapes, disposable numbers; ",
       "this dir supports no measurement claim"),
-    extra), file = result_md)
+    extra), con = result_md)   # writeLines is (text, con, sep, useBytes) -- no file=
 }
 
 if (identical(tier, "C")) {
