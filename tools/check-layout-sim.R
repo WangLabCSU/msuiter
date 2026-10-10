@@ -114,21 +114,24 @@ if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
 # R string-literal emitter for GENERATED code (GO-04F, windows arms):
 # Windows tempfile() hands back backslashed paths and R consumes backslash
 # escapes at PARSE time of the generated file ("'\c' is an unrecognized
-# escape", <input>:1:70 -- the sim never started there). Doubling is the
-# complete and only model this emitter supports; any input needing more
-# (quote characters, control characters, non-scalars) FAILS CLOSED, so a
-# path that cannot be represented is never silently reinterpreted.
+# escape", <input>:1:70 -- the sim never started there). The model is the
+# R-native model of the single-quoted literal: backslashes double FIRST
+# (so its escaping is never re-doubled), then a single quote is escaped
+# via backslash-quote. R has NO quote-doubling mechanism: the '' form
+# mis-lexes as two juxtaposed string constants (measured: <text>:1:16
+# unexpected string constant). Anything beyond that model (control
+# characters, non-scalars) FAILS CLOSED, so a path the model cannot
+# represent is never silently reinterpreted.
 .r_str <- function(x) {
   if (!is.character(x) || length(x) != 1L || is.na(x)) {
     stop("check-layout-sim: generated literal needs a non-missing scalar character path")
   }
-  if (grepl("'", x, fixed = TRUE) || grepl('"', x, fixed = TRUE)) {
-    stop("check-layout-sim: quote character in path -- refusing to emit an unsafe string literal")
-  }
-  if (grepl("[\r\n]", x)) {
+  if (grepl("[[:cntrl:]]", x)) {
     stop("check-layout-sim: control character in path -- refusing to emit an unsafe string literal")
   }
-  paste0("'", gsub("\\", "\\\\", x, fixed = TRUE), "'")
+  e <- gsub("\\", "\\\\", x, fixed = TRUE)
+  e <- gsub("\'", "\\'", e, fixed = TRUE)
+  paste0("'", e, "'")
 }
 
 root <- .kv("root", NULL)

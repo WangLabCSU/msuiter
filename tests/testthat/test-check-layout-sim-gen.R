@@ -11,8 +11,9 @@
 # The units drive the REAL generator (.runner_lines, extracted verbatim so
 # the emitted vector is testable) with a synthetic Windows path and require
 # the emitted vector to parse; the emitter contract (.r_str) is pinned
-# separately: backslash doubling round-trips through eval, and inputs whose
-# shape cannot be represented fail CLOSED (stop, not silent corruption).
+# separately: backslashes double FIRST, single quotes escape second
+# (R's real model -- backslash-quote; there is no quote-doubling), and
+# inputs the model cannot represent fail CLOSED (stop, not silent corruption).
 
 # Source-level extraction of the harness's top-level function definitions:
 # the harness script executes on source, so the generator is reached by
@@ -59,7 +60,7 @@ test_that("check-layout-sim: generated runner parses under a Windows-shaped conf
     info = paste0("the emitted runner must parse exactly as written; R said: ", err))
 })
 
-test_that("check-layout-sim: .r_str emits parse-stable literals and fails closed", {
+test_that("check-layout-sim: .r_str implements the doubling model and fails closed beyond it", {
   sim <- .ms_src("tools/check-layout-sim.R")
   if (is.na(sim)) {
     skip("tools/check-layout-sim.R not locatable (R CMD check context)")
@@ -70,12 +71,22 @@ test_that("check-layout-sim: .r_str emits parse-stable literals and fails closed
   expect_identical(f("/tmp/x/y"), "'/tmp/x/y'")
   # the windows path round-trips: what parses back IS the real path
   expect_identical(eval(parse(text = f(.WINPATH)))[[1L]], .WINPATH)
-  # shapes outside the doubling model fail CLOSED
-  m1 <- tryCatch({ f("a'b"); NA_character_ }, error = function(e) conditionMessage(e))
-  expect_true(grepl("quote", m1, fixed = TRUE))
-  m2 <- tryCatch({ f('a"b'); NA_character_ }, error = function(e) conditionMessage(e))
-  expect_true(grepl("quote", m2, fixed = TRUE))
-  m3 <- tryCatch({ f(NA_character_); NA_character_ },
+  # single quotes must round-trip, not be refused (controller GO-04F
+  # intent). The mechanism is R's real one -- backslash-quote: R has NO
+  # quote-doubling, the '' form mis-lexes as juxtaposed string constants
+  # (measured <text>:1:16 unexpected string constant), and the
+  # round-trip assertion below is what pins whichever mechanism emits.
+  q <- "C:\\Users\\it's\\Temp\\sim-env.txt"
+  expect_identical(eval(parse(text = f(q)))[[1L]], q)
+  # a double quote needs nothing inside a single-quoted literal and
+  # likewise round-trips
+  d <- "C:\\Users\\a\"b\\Temp\\sim-env.txt"
+  expect_identical(eval(parse(text = f(d)))[[1L]], d)
+  # beyond the model there is no safe emission: control characters and
+  # non-scalars fail CLOSED
+  m1 <- tryCatch({ f("a\ab"); NA_character_ }, error = function(e) conditionMessage(e))
+  expect_true(grepl("control", m1, fixed = TRUE))
+  m2 <- tryCatch({ f(NA_character_); NA_character_ },
                   error = function(e) conditionMessage(e))
-  expect_true(grepl("scalar", m3, fixed = TRUE))
+  expect_true(grepl("scalar", m2, fixed = TRUE))
 })
