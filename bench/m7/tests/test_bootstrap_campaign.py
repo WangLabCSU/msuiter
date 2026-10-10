@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -517,3 +518,126 @@ def test_instruments_resolve_every_called_function():
         f"— R spells it readRDS):\nstdout={r.stdout!r}\nstderr={r.stderr!r}"
     assert r.stdout.startswith("AUDIT-CLEAN"), \
         f"audit did not reach its clean verdict: {r.stdout!r}"
+
+
+# -- 8. the timed() clock path (third live smoke witness) -------------------------------
+# The probe leg died inside timed(): proc.time()[["user"]] raised a subscript
+# out of bounds — this target interpreter's proc.time() carries the RAW rusage
+# names (witnessed verbatim: "user.self" "sys.self" "elapsed" "user.child"
+# "sys.child"; the 用户/系统/流逝 print headers are print-method localisation,
+# names() is the authority). An existence audit cannot see a wrong SUBSCRIPT;
+# this unit executes the real timed() closure on a bounded computation and
+# demands real numbers: wall > 0, cpu >= 0 non-NA, two 3-element load vectors.
+
+_TIMED_RPROG = """
+src <- '@@SRC@@'
+env <- new.env()
+need <- c('timed', 'loadavg')
+for (e in parse(src)) {
+  op <- ''
+  if (is.call(e) && length(e) >= 2L)
+    op <- tryCatch(as.character(e[[1L]]), error = function(...) '')
+  if (length(op) == 1L && op %in% c('<-', '<<-', '=') && is.symbol(e[[2L]]) &&
+      as.character(e[[2L]]) %in% need) eval(e, env)
+}
+if (!all(need %in% ls(env, all.names = TRUE))) {
+  cat('TIMED-NO-FNS[', paste(setdiff(need, ls(env, all.names = TRUE)),
+      collapse = ','), ']\\n', sep = ''); quit(status = 4L)
+}
+t <- tryCatch({
+  r <- get('timed', envir = env)
+  v <- r({ s <- 0; for (i in seq_len(300000L)) s <- s + i })
+  stopifnot(is.numeric(v$wall) && length(v$wall) == 1L && !is.na(v$wall) &&
+             v$wall > 0)
+  stopifnot(is.numeric(v$cpu) && length(v$cpu) == 1L && !is.na(v$cpu) &&
+             v$cpu >= 0)
+  stopifnot(is.numeric(v$load_before) && length(v$load_before) == 3L)
+  stopifnot(is.numeric(v$load_after) && length(v$load_after) == 3L)
+  stopifnot(!all(is.na(v$load_after)))
+  paste0('w=', sprintf('%.4f', v$wall), ' c=', sprintf('%.4f', v$cpu),
+         ' lb=', paste(sprintf('%.2f', v$load_before), collapse = ','),
+         ' la=', paste(sprintf('%.2f', v$load_after), collapse = ','))
+}, error = function(e) paste0('ERR ', conditionMessage(e)))
+if (grepl('^ERR ', t)) { cat('TIMED-', t, '\\n', sep = ''); quit(status = 3L) }
+cat('TIMED-OK[', t, ']\\n', sep = ''); quit(status = 0L)
+"""
+
+
+def test_timed_helper_measures_wall_cpu_and_load_on_the_target_interpreter():
+    """timed() must produce real wall/cpu/load values on the campaign's target
+    interpreter — the clock subscripts are part of the instrument. Witnessed
+    live: sysctl vm.loadavg arrives brace-wrapped ({ 3.98 3.86 3.81 }), so a
+    naive whitespace split turns the first load element into NA."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    src = BOOT / "run_campaign.R"
+    assert src.is_file(), f"missing instrument: {src}"
+    prog = _TIMED_RPROG.replace("@@SRC@@", str(src).replace("'", ""))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"timed() failed to produce usable measurements on the target " \
+        f"interpreter (verbatim R error in stdout; witnessed live as " \
+        f"proc.time()[['user']] subscript out of bounds, then as " \
+        f"lb=NA from the brace-wrapped sysctl line):\n" \
+        f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+    assert r.stdout.startswith("TIMED-OK["), r.stdout
+    for tok in ("w=", "c=", "lb=", "la="):
+        assert tok in r.stdout, f"missing {tok} in {r.stdout!r}"
+    assert "NA" not in r.stdout, \
+        f"a measurement slot came back NA — witnesses must carry real load " \
+        f"context (loadavg parse defect class):\nstdout={r.stdout!r}"
+
+
+_LOADJSON_RPROG = """
+src <- '@@SRC@@'
+env <- new.env()
+need <- c('json_load3', 'loadavg')
+for (e in parse(src)) {
+  op <- ''
+  if (is.call(e) && length(e) >= 2L)
+    op <- tryCatch(as.character(e[[1L]]), error = function(...) '')
+  if (length(op) == 1L && op %in% c('<-', '<<-', '=') && is.symbol(e[[2L]]) &&
+      as.character(e[[2L]]) %in% need) eval(e, env)
+}
+have <- ls(env, all.names = TRUE)
+if (!all(need %in% have)) {
+  cat('LOADJSON-NO-FNS[', paste(setdiff(need, have), collapse = ','),
+      ']\\n', sep = ''); quit(status = 4L)
+}
+f <- get('json_load3', envir = env)
+la <- get('loadavg', envir = env)
+cat('LOADJSON[', f(c(NA_real_, 2, 3)), '][', f(la()), ']\\n', sep = '')
+quit(status = 0L)
+"""
+
+
+def test_load_witnesses_render_null_safe_json_on_the_target_interpreter():
+    """A witness is bytes the reader-side verifier json.loads — a bare R NA
+    (sprintf('%.3g', NA) -> 'NA') inside [ ... ] is malformed JSON and would
+    kill the campaign at the oracle long after the measurement happened.
+    loadavg vectors must therefore render through a null-safe helper, and the
+    real sysctl triple must survive that render as three finite numbers."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    src = BOOT / "run_campaign.R"
+    prog = _LOADJSON_RPROG.replace("@@SRC@@", str(src).replace("'", ""))
+    r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, \
+        f"null-safe load rendering missing on the target interpreter " \
+        f"(witness-class law; NA-in-JSON kills the reader):\n" \
+        f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+    line = next(x for x in r.stdout.splitlines() if x.startswith("LOADJSON["))
+    frags = re.findall(r"\[[^\[\]]*\]", line)
+    assert len(frags) == 2, line
+    forced = json.loads(frags[0])
+    assert forced[0] is None and forced[1:] == [2, 3], forced
+    real = json.loads(frags[1])
+    assert len(real) == 3 and all(
+        isinstance(v, (int, float)) for v in real), real
+    assert not any(v != v for v in real), real          # no NaN
+    text = src.read_text()
+    assert '"loadavg":[%.3g' not in text and '"load_before":[%.3g' not in text, \
+        "witness writers must render load vectors through the null-safe " \
+        "helper, not sprintf triplets that leak bare NA"

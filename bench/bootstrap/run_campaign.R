@@ -188,16 +188,40 @@ loadavg <- function() {
   out <- try(system2("/usr/sbin/sysctl", c("-n", "vm.loadavg"),
     stdout = TRUE, stderr = FALSE), silent = TRUE)
   if (!is.character(out) || !length(out)) return(rep(NA_real_, 3L))
-  head(as.numeric(strsplit(gsub(",", "", trimws(out[[1L]])),
-    "[[:space:]]+")[[1L]]), 3L)
+  # This host's sysctl wraps the triple in braces ({ 3.98 3.86 3.81 }) —
+  # strip non-numeric decoration before splitting (witnessed live: the
+  # naive split made the first token '{', turning the first load element
+  # into NA: lb=NA,3.80,3.79).
+  txt <- gsub("[^0-9.,[:space:]]", "", out[[1L]])
+  tok <- strsplit(txt, "[[:space:],]+")[[1L]]
+  tok <- tok[nzchar(tok)]
+  v <- suppressWarnings(as.numeric(tok))
+  v <- v[!is.na(v)]
+  if (length(v) < 3L) return(rep(NA_real_, 3L))
+  head(v, 3L)
+}
+
+# A witness must stay json.loads-able: sprintf('%.3g', NA) would write a
+# bare NA inside a JSON array. Load vectors render through this helper.
+json_load3 <- function(v) {
+  stopifnot(length(v) == 3L)
+  s <- character(3L)
+  for (i in seq_len(3L))
+    s[i] <- if (is.na(v[i])) 'null' else sprintf('%.3g', v[i])
+  paste0('[', paste(s, collapse = ','), ']')
 }
 timed <- function(expr) {
   invisible(gc(verbose = FALSE)); invisible(gc(verbose = FALSE))
-  c0 <- proc.time(); w0 <- proc.time()[["elapsed"]]
+  # proc.time() on the target interpreter carries the RAW rusage names
+  # (witnessed: user.self / sys.self / elapsed / user.child / sys.child;
+  # the translated print headers are print-method localisation, names() is
+  # the authority). One coherent snapshot per observation point.
+  c0 <- proc.time(); w0 <- c0[["elapsed"]]
   v <- force(expr)
-  wall <- proc.time()[["elapsed"]] - w0; c1 <- proc.time()
-  list(value = v, wall = wall,
-    cpu = (c1[["user"]] - c0[["user"]]) + (c1[["system"]] - c0[["system"]]),
+  c1 <- proc.time()
+  list(value = v, wall = c1[["elapsed"]] - w0,
+    cpu = (c1[["user.self"]] - c0[["user.self"]]) +
+          (c1[["sys.self"]] - c0[["sys.self"]]),
     load_before = loadavg(), load_after = loadavg())
 }
 arm_call <- function(arm, counts_sub, cat_sub, reps, threads = N_THREADS_POOL) {
@@ -221,8 +245,9 @@ probe_once <- function(arm, reps, threads) {
     append_line(file.path(wit, sprintf("probe_%s_1.jsonl", arm)),
       sprintf(paste0('{',
         '"kind":"probe","arm":"%s","shape":{"S":%d,"R":%d},',
-        '"wall":%.9g,"cpu":%.9g,"rep":%d,"loadavg":[%.3g,%.3g,%.3g]}'),
-        arm, length(probe_samples), reps, t$wall, t$cpu, rep, t$load_after))
+        '"wall":%.9g,"cpu":%.9g,"rep":%d,"loadavg":%s}'),
+        arm, length(probe_samples), reps, t$wall, t$cpu, rep,
+        json_load3(t$load_after)))
     cat(".")
   }
 }
@@ -310,11 +335,11 @@ for (arm in c("A1", "A2", "A3")) {
   if (is.na(gate_str)) gate_str <- if (fc$rc == 0L) "pass" else "breach"
   writeLines(sprintf(paste0('{', '"kind":"arm","arm":"%s","tier":"%s",',
     '"shape":{"K":%d,"S":%d,"n_sig":%d,"R":%d},',
-    '"wall":%.9g,"cpu":%.9g,"load_before":[%.3g,%.3g,%.3g],',
-    '"load_after":[%.3g,%.3g,%.3g],',
+    '"wall":%.9g,"cpu":%.9g,"load_before":%s,',
+    '"load_after":%s,',
     '"floor_projection":%.9g,"floor_ratio":%.3g,"gate":"%s"}'),
     arm, tier, K, S, N_SIG, reps_taken, t$wall, t$cpu,
-    t$load_before, t$load_after,
+    json_load3(t$load_before), json_load3(t$load_after),
     as.numeric(oj(fc$text, "projection")),
     as.numeric(oj(fc$text, "floor_ratio")), gate_str),
     file.path(wit, sprintf("arm_%s.jsonl", arm)))
