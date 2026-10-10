@@ -111,6 +111,26 @@ if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
 .Rbin <- .abs_bin("R")
 .Rscript.bin <- .abs_bin("Rscript")
 
+# R string-literal emitter for GENERATED code (GO-04F, windows arms):
+# Windows tempfile() hands back backslashed paths and R consumes backslash
+# escapes at PARSE time of the generated file ("'\c' is an unrecognized
+# escape", <input>:1:70 -- the sim never started there). Doubling is the
+# complete and only model this emitter supports; any input needing more
+# (quote characters, control characters, non-scalars) FAILS CLOSED, so a
+# path that cannot be represented is never silently reinterpreted.
+.r_str <- function(x) {
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    stop("check-layout-sim: generated literal needs a non-missing scalar character path")
+  }
+  if (grepl("'", x, fixed = TRUE) || grepl('"', x, fixed = TRUE)) {
+    stop("check-layout-sim: quote character in path -- refusing to emit an unsafe string literal")
+  }
+  if (grepl("[\r\n]", x)) {
+    stop("check-layout-sim: control character in path -- refusing to emit an unsafe string literal")
+  }
+  paste0("'", gsub("\\", "\\\\", x, fixed = TRUE), "'")
+}
+
 root <- .kv("root", NULL)
 if (is.null(root)) {
   # package name from the cwd's DESCRIPTION if present, else msuiter default
@@ -288,8 +308,16 @@ writeLines(c(paste0("LIB=", runlib),
              paste0("RESULT=", work)),
            envf)
 runner <- file.path(work, "sim-runner.R")
-writeLines(c(
-  paste0("envf <- '", envf, "'"),
+# The generated runner embeds the config-file path as an R string literal
+# (its first line). Windows tempfile() hands back backslashed paths and R
+# string literals consume backslash escapes at PARSE time -- the windows
+# arm RED of 2026-10-10 ("'\c' is an unrecognized escape in character
+# string", <input>:1:70, before the sim body ever ran). Extracting the
+# vector to .runner_lines() makes the generator unit-testable against a
+# synthetic Windows path; emission must route through .r_str()'s
+# fail-closed escaping.
+.runner_lines <- function(envf_path) c(
+  paste0("envf <- ", .r_str(envf_path)),
   ".cfgf <- local({",
   "  ls <- readLines(envf, warn = FALSE)",
   "  g <- function(k, d) {",
@@ -380,7 +408,8 @@ writeLines(c(
   "}",
   "writeLines(rows, file.path(.cfgf$result, 'sim-result.tsv'))",
   "quit(status = 0L)"
-), runner)
+)
+writeLines(.runner_lines(envf), runner)
 r3 <- .run3(.Rscript.bin, runner, "sim")
 rc <- r3$rc
 log <- r3$log
