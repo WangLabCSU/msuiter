@@ -97,7 +97,7 @@
 ### M7 · Benchmark 完备 + 论文（8–10 周）
 
 - [x] 场景网格全量（ARCH §8 升级版：纯度/caller/联合对抗/目录外/超突变臂/类别计数区间）+ 三层场景隔离 + 协议冻结（**前置设计备忘已冻结** docs/devlog/2026-10-05-benchmark-design-memo.md——API/场景轴/评分契约/验收锚/PI 裁决 D1+D2 采纳（TP-only）2026-10-05——驱动器 v1 已交付） (证据: docs/devlog/2026-10-05-benchmark-design-memo.md:3 冻结条目; bench/results/docker_m7_degraded_20261009-184833/ 全量 42 格权威运行; main@f90ea1d #13)
-- [ ] 竞品容器 harness（仅 bench/）；钉硬件 bench 全表；`ms_benchmark()` 端到端
+- [x] 竞品容器 harness（仅 bench/）；钉硬件 bench 全表；`ms_benchmark()` 端到端 (证据: bench/m7/ 竞品容器 harness（U-M7-02 #10–#12，仅 bench/ 域）; NAMESPACE:21 `ms_benchmark` 导出 + tests/testthat/test-ms-benchmark-driver.R + man/ms_benchmark.Rd; 钉硬件全表 bench/results/docker_m7_degraded_20261010-202330/timings_sharded_master.csv 42 行全 ok 零 cached（权威单一射击，shard 通行零缓存命中），reader 校验器 rc=0 空桶判决 docs/devlog/2026-10-10-m7-hardware-pin.md 「Fresh ignition — verbatim attestation」节)
 - [ ] 论文草稿（headline 依 G0 结果定 A/B）+ renv/Docker/seed 一键复现 + bioRxiv 同挂
 - [ ] pkgdown 全站 + MSU↔函数映射表 + CITATION + 性能锚定文档
 

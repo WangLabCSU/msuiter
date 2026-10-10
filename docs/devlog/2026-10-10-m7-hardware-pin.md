@@ -123,3 +123,43 @@ Single authoritative shot per RB-10: strict-serial driver, fresh cachedir
 image RepoDigests byte-exact vs registry rows. Its verbatim evidence — the
 42-cell roll-out, the nine-column table, and the reader-verifier rc=0 verdict —
 is appended to this file's next section before the checkbox may flip.
+
+### Fresh ignition — verbatim attestation (executed 2026-10-10/11, GO-05 lane)
+
+The single authoritative shot ran to completion (driver `ignition-rc=0`,
+witnessed verbatim in the background-task output). Terminal marker, verbatim
+from `/tmp/go05lane/ignite1.log`:
+
+```
+[adapter] docker: 42/42 cells ok|cached; timings -> timings_m7_degraded_20261011-042331.csv
+[scoring] benchmark_m7_20261011-042331.csv: 42 cells scored, 0 skipped -> verdict appended to judgment_m7_degraded_20261011-042331.md
+AUTHORITATIVE-RUN-COMPLETE outdir=../results/docker_m7_degraded_20261010-202330
+```
+
+Nine-column table (`bench/results/docker_m7_degraded_20261010-202330/`):
+header `cell,tool,arm,n,seconds,status,cpu_seconds,host,hw_profile`;
+42 data rows; status-column counts witnessed verbatim by substring counts
+over the committed bytes: 42 rows carry `,ok,`, zero rows carry `,cached,`
+(zero cache hits in the authoritative shard passes — every second was
+measured). Table sha256:
+
+```
+c116c8e3b7096a0c74c5591906ffc570addfbaeeabb39f24f8ffeac4e678e072  timings_sharded_master.csv
+```
+
+Reader pass (verdict spoken from the committed table's own bytes), verbatim:
+
+```
+$ python3 bench/m7/tools/verify_hardware_pin.py --table bench/results/docker_m7_degraded_20261010-202330/timings_sharded_master.csv --host "ShixiangWang-WorkSpacedeMacBook-Pro.local" --hw-profile "10 vCPU / 8 GB class"
+{"mismatched_host": [], "mismatched_hw_profile": [], "missing_host": [], "missing_hw_profile": [], "ok": true, "rows": 42, "table": "bench/results/docker_m7_degraded_20261010-202330/timings_sharded_master.csv"}
+reader-verifier-rc=0
+```
+
+Co-tenancy throughout: `docker ps` showed only `shiny-server-test`
+(`rocker/shiny:latest`, non-measurement scaffolding per governance scope);
+strict-serial fan-out=1 held (RB-08 text-seal unit green in the lane suite,
+174/174 — see the correction block above). Instrument liveness witnessed
+through the full run by the milestone-only watcher
+(`[watch] ... serial shard ... complete` boundary pairs + one
+`CELLS=<n>/42` counter line per boundary, final `[watch]
+TERMINAL-MARKER-SEEN cycles=10 cells=42/42`).
