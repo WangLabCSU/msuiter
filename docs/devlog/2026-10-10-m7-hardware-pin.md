@@ -90,6 +90,31 @@ Launch-assert liveness (RB-11(i) — the instrument executed end-to-end, not
 syntax-only): `env -u M7_HW_PROFILE sh tools/run_m7_bench.sh` printed the refusal
 and returned `launch-assert-rc=2` with zero shards started.
 
+### Correction — same-day suite re-measurement (the 157/157 above is stale)
+
+The 157/157 line above was recorded BEFORE the launch-assert lines themselves
+were added to `tools/run_m7_bench.sh`; it therefore attests a state the tree
+never held with the assert present. Two physical facts from the follow-on lane:
+
+1. The first committed form of the launch-assert used `&&` inside the driver,
+   which tripped the RB-08 fan-out text seal
+   (`test_driver_is_fan_out_free_by_text` went RED — a true positive; the seal
+   caught the assert exactly as designed). Fixed in the follow-up commit by the
+   nested-`if` form (no `&&` outside an fd-redirect anywhere in the file), with
+   the refusal re-proven live: `env -u M7_HW_PROFILE sh tools/run_m7_bench.sh`
+   again printed the refusal and exited 2 with zero shards started.
+2. The group-(T) bootstrap-campaign group was registered in the same lane, so
+   the authoritative lane count for this chain is 174 units, witnessed verbatim:
+
+```
+174/174 tests passed.
+```
+
+(/tmp/go05lane/m7_suite_after_T2.log — the group tally that covers commits
+18d2c41, 5822aab, e105351.) The number spoken in the record from now on is
+174/174; the 157/157 line stands above as the historical RED/GREEN witness for
+group (S) only, never as the lane's final tally.
+
 ## Fresh ignition (the artifact the ROADMAP flip waits on)
 
 Single authoritative shot per RB-10: strict-serial driver, fresh cachedir
