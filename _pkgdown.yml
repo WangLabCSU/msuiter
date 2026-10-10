@@ -47,6 +47,91 @@ reference:
 - title: 诊断
   contents:
   - ms_sitrep
+- title: 引擎实现
+  desc: NMF/ARD/稀疏三引擎的拟合入口（经引擎注册表调度）。
+  contents:
+  - ms_ard
+  - MsArd
+  - ms_nmf
+  - MsNmf
+  - ms_sparse
+  - MsSparse
+- title: 抽取与 k 选择
+  desc: tally/extract 通路与 k 选择证据（CV/稳定性/重建面板）。
+  contents:
+  - ms_tally
+  - ms_extract
+  - ms_select_k
+  - plot_k_cv_curve
+  - plot_k_stability
+  - plot_reconstruction_panel
+- title: 蒙特卡洛校准
+  desc: 校准网格、真实数据 sanity 与判据（含覆盖率曲线）。
+  contents:
+  - ms_calibration_grid
+  - ms_calibration_sanity
+  - ms_calibration_verdict
+  - plot_calibration_curve
+- title: 自助法与稳定性
+  desc: bootstrap 置信区间与稳定性证据图。
+  contents:
+  - ms_fit_bootstrap
+  - plot_boot_ci
+  - plot_boot_distribution
+  - plot_boot_stability
+- title: 分层、聚类与嵌入
+  desc: 高突变分层、签名聚类与暴露空间嵌入。
+  contents:
+  - ms_stratify_hypermutants
+  - MsStratification
+  - ms_cluster_signatures
+  - ms_embed
+  - plot_embedding
+- title: 相似度与暴露比较
+  desc: 校准相似度库、比较容器、暴露统计检验及其图型。
+  contents:
+  - ms_compare
+  - ms_comparison
+  - MsComparison
+  - ms_exposure_test
+  - plot_similarity_heatmap
+  - plot_exposure_heatmap
+  - plot_exposure_riverplot
+  - plot_exposure_stacked
+- title: 可视化面板
+  desc: 目录画像、COSMIC 散点、参考对比与签名目录图。
+  contents:
+  - plot_catalog_profile
+  - plot_cosmic_scatter
+  - plot_reference_comparison
+  - plot_signature_catalog
+- title: 导入与导出
+  desc: COSMIC/SigProfiler 互操作、格式转换与捆绑参考库面。
+  contents:
+  - ms_import
+  - ms_export
+  - ms_convert
+  - ms_refdb_bundled
+  - ms_refdb_manifest
+- title: 输入构造与工具
+  desc: 变体/断点输入构造、下采样、模拟与存在性检验。
+  contents:
+  - ms_segments
+  - ms_sv
+  - ms_downsample
+  - ms_simulate
+  - ms_test_presence
+- title: QC 与报告
+  desc: 质控报告与 HRD 报告面。
+  contents:
+  - ms_qc_report
+  - ms_hrd_report
+- title: 基准矩阵驱动
+  desc: 场景构造器与驱动循环（命名裁决见 docs/devlog 2026-10-10 决策记录）。
+  contents:
+  - ms_benchmark_grid
+  - ms_run_benchmark
 
-# articles 尚无：vignettes 随 M2（extending.Rmd 与配套 harness）落地后再启用，
-# 当前不引用不存在的文章。
+# articles：vignette 渲染清单（pkgdown 按名称拾取 vignettes/ 下同名源文件）。
+articles:
+  - extending
