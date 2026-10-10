@@ -338,3 +338,88 @@ def test_seed_constant_is_frozen_in_the_instruments():
         assert "20260928" in text, f"{f} lost the frozen SEED"
         assert "20260927" not in text and "20260929" not in text, \
             f"{f} carries a drifted G0 master seed"
+
+
+# -- 6. the R-side append path (RB-04D.2 write-side gap class) ---------------------------
+# The launch ledger and probe witnesses must APPEND. writeLines carries no
+# append argument: an `append = TRUE` there is an unused-argument hard error
+# (witnessed live when the first smoke rehearsal died at the ledger write
+# after a clean census pass — the (T) suite at that time never executed the
+# R-side append call sites). These units execute the real call path: the
+# ledger appender through the real filesystem for both launch modes, plus a
+# structural law that no writeLines-with-append misuse can return.
+
+_APPEND_RPROG = """
+src <- '@@SRC@@'; outdir <- '@@TMP@@'
+dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+env <- new.env()
+env$outdir <- outdir
+env$utc <- function() '2026-10-11T00:00:00'
+need <- c('append_line', 'append_ledger')
+for (e in parse(src)) {
+  op <- ''
+  if (is.call(e) && length(e) >= 2L)
+    op <- tryCatch(as.character(e[[1L]]), error = function(...) '')
+  if (length(op) == 1L && op %in% c('<-', '<<-', '=') && is.symbol(e[[2L]]) &&
+      as.character(e[[2L]]) %in% need) eval(e, env)
+}
+if (!exists('append_ledger', envir = env, inherits = FALSE)) {
+  cat('APPEND-LEDGER-NO-FN\\n'); quit(status = 4L)
+}
+f <- get('append_ledger', envir = env)
+r <- tryCatch({ f('pilot'); f('full'); 'OK' },
+              error = function(e) paste0('ERR ', conditionMessage(e)))
+p <- file.path(outdir, 'campaign_launches.jsonl')
+txt <- if (file.exists(p))
+  paste(readLines(p, warn = FALSE), collapse = '|') else '<absent>'
+if (identical(r, 'OK')) {
+  cat('APPEND-LEDGER-OK[', txt, ']\\n', sep = ''); quit(status = 0L)
+}
+cat('APPEND-LEDGER-', r, '[', txt, ']\\n', sep = ''); quit(status = 3L)
+"""
+
+
+def test_launch_ledger_appender_executes_on_the_real_filesystem_both_modes():
+    """append_ledger must run its REAL write path for both the smoke-mode and
+    the full-mode launch records (unused-argument defects must not hide
+    behind the pre-registration ceremony)."""
+    rscript = shutil.which("Rscript")
+    assert rscript, "Rscript absent — skip-not-skip: the missing tool is seen"
+    src = BOOT / "run_campaign.R"
+    assert src.is_file(), f"missing instrument: {src}"
+    tmp = _tmp() / "ledger"
+    prog = (_APPEND_RPROG.replace("@@SRC@@", str(src).replace("'", ""))
+            .replace("@@TMP@@", str(tmp)))
+    try:
+        r = subprocess.run([rscript, "--vanilla", "-e", prog],
+                           capture_output=True, text=True)
+        assert r.returncode == 0, \
+            f"append_ledger real-fs run failed (the verbatim R error is in " \
+            f"stdout; smoke witnessed unused-argument class live):\n" \
+            f"stdout={r.stdout!r}\nstderr={r.stderr!r}"
+        assert r.stdout.startswith("APPEND-LEDGER-OK["), r.stdout
+        assert '"mode":"pilot"' in r.stdout and '"mode":"full"' in r.stdout, \
+            f"both-mode launch records missing: {r.stdout!r}"
+        assert "2026-10-11T00:00:00" in r.stdout, \
+            f"ledger lines must carry the frozen ts through utc(): {r.stdout!r}"
+    finally:
+        shutil.rmtree(tmp.parent, ignore_errors=True)
+
+
+def test_harness_carries_no_write_lines_with_append_misuse():
+    """Structural law: every appending write in the R harness goes through an
+    append-mode connection helper; writeLines must never be handed an
+    append= argument (its absence from writeLines is an error, witnessed)."""
+    src = BOOT / "run_campaign.R"
+    text = src.read_text()
+    assert "append = TRUE" not in text and "append=TRUE" not in text, \
+        "writeLines has no append argument — a call site carrying it " \
+        "hard-errors the moment it executes"
+    assert 'file(path, open = "a")' in text, \
+        "the harness must own an append-mode connection helper"
+    assert "append_line <- function" in text, \
+        "the append-mode connection must be a named helper (defined, not " \
+        "inlined at one site)"
+    assert text.count("append_line(") >= 2, \
+        "the helper must serve every append site (ledger + probes): found " \
+        f"{text.count('append_line(')} call site(s)"

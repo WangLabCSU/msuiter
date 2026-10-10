@@ -107,6 +107,16 @@ wit <- file.path(outdir, "witnesses")
 dir.create(wit, showWarnings = FALSE)
 utc <- function() format(Sys.time(), "%Y-%m-%dT%H:%M:%S", tz = "UTC")
 
+# writeLines carries NO append argument: handing it one is an
+# unused-argument hard error (witnessed live when the first smoke rehearsal
+# died at the ledger write after a clean census pass). Every appending write
+# therefore goes through an append-mode connection.
+append_line <- function(path, lines) {
+  con <- file(path, open = "a")
+  on.exit(close(con))
+  writeLines(lines, con)
+}
+
 # -- census gate (protocol §3): no live measurement container -------------------
 # Status arrives via the file-capture form ONLY: system2(stdout=TRUE) reports
 # a failed command as a warning plus empty text, which would let a broken
@@ -136,9 +146,9 @@ writeLines(sprintf('{"kind":"census","ts":"%s","live_measurement":[],"ps":[%s]}'
 say("[campaign] census OK (", length(ps), " container line(s), none measurement)")
 
 # -- launch ledger ---------------------------------------------------------------
-append_ledger <- function(mode_name) writeLines(
-  sprintf('{"kind":"launch","mode":"%s","ts":"%s"}', mode_name, utc()),
-  file.path(outdir, "campaign_launches.jsonl"), append = TRUE)
+append_ledger <- function(mode_name) append_line(
+  file.path(outdir, "campaign_launches.jsonl"),
+  sprintf('{"kind":"launch","mode":"%s","ts":"%s"}', mode_name, utc()))
 gate <- call_oracle_rc(c("--launch-gate", "--mode", "pilot"))
 if (gate$rc != 0L) abort("launch-gate refused (rc ", gate$rc, "): ", gate$text)
 append_ledger(if (smoke) "pilot" else "probe")
@@ -208,11 +218,11 @@ probe_once <- function(arm, reps, threads) {
   invisible(arm_call(arm, sub, cs, reps, threads))          # warmup, untimed
   for (rep in seq_len(3L)) {
     t <- timed(arm_call(arm, sub, cs, reps, threads))
-    writeLines(sprintf(paste0('{',
-      '"kind":"probe","arm":"%s","shape":{"S":%d,"R":%d},',
-      '"wall":%.9g,"cpu":%.9g,"rep":%d,"loadavg":[%.3g,%.3g,%.3g]}'),
-      arm, length(probe_samples), reps, t$wall, t$cpu, rep, t$load_after),
-      file.path(wit, sprintf("probe_%s_1.jsonl", arm)), append = TRUE)
+    append_line(file.path(wit, sprintf("probe_%s_1.jsonl", arm)),
+      sprintf(paste0('{',
+        '"kind":"probe","arm":"%s","shape":{"S":%d,"R":%d},',
+        '"wall":%.9g,"cpu":%.9g,"rep":%d,"loadavg":[%.3g,%.3g,%.3g]}'),
+        arm, length(probe_samples), reps, t$wall, t$cpu, rep, t$load_after))
     cat(".")
   }
 }
