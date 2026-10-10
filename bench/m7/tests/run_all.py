@@ -46,6 +46,12 @@ Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
       environment; the docker-authoritative pass refuses to file without the
       operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
       table from its own bytes
+Bootstrap campaign instrument (U-M7-04 GO-05, charter SCOPE B,
+pre-registration law docs/devlog/2026-10-10-m7-bootstrap-campaign.md):
+  (T) test_bootstrap_campaign  deterministic frozen generator (double-run byte
+      identity + seal), decisive tier ladder, anchor gates, SCIENCE-FIRST
+      reader-side verifier (inflated claim / failed anchor / self-adjudicating
+      probe / unpinned table all refused), single-full-shot ledger law
 """
 
 from __future__ import annotations
@@ -78,7 +84,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_matrix_governance",
            "test_floor_calibration",
            # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100 钉硬件全表):
-           "test_hardware_pin"]
+           "test_hardware_pin",
+           # U-M7-04 GO-05: bootstrap-vs-sigminer campaign instrument (SCOPE B):
+           "test_bootstrap_campaign"]
 
 
 def _collect(mod_name):
