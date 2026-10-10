@@ -74,3 +74,15 @@ any of the three topics cross-links the other two under
 *Other benchmark*, and each description states the trio's roles in one
 sentence. The open question is closed; the functions and signatures are
 unchanged, so no user-visible API movement occurs.
+
+## Attestation addendum (controller, 2026-10-10)
+
+Post-merge attestation of main@bc3e8ca completed dual-level:
+- Watch terminal: MAIN-ATTEST-DONE total=13 fails=0
+- Direct probe: run 38051414937 completed/success, jobs total=13 done=13 fails=0 (updated 2026-10-10T13:30:38Z)
+
+Follow-up ruling: commit c1dd956 (.r_str escape-model completion; supersedes the
+certified stop-on-any-quote model with backslash-escaped quotes per R semantics,
+control chars still fail closed) lands via this follow-up branch. Prior TDD
+evidence: red GEN-BAD=1 (stop-path verbatim), green GEN-BAD=0, in-check Status
+2 WARNINGs / 4 NOTEs (pre-existing tolerated set), DONE.
