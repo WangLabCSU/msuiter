@@ -59,6 +59,11 @@ shape WITHOUT spending the RB-10 single authoritative shot:
       entry is non-shot by the reader predicate, probe-grade result.md is
       claim-free with the oracle verbatim, dirty-outdir and mispaired modes
       refused executed, anchor gates frozen
+  (V) test_anchor_gate        the amended anchor median clause: CI-noise
+      envelope K_CI x larger half-width with the EPS zero floor, constants
+      frozen a-prior; both directions pinned (near-zero-in-noise passes,
+      true divergence fails, both-zero auto-passes, boundaries exact) and the
+      attested probe witnesses adjudicate offline (the shot stays unspent)
 """
 
 from __future__ import annotations
@@ -95,7 +100,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-04 GO-05: bootstrap-vs-sigminer campaign instrument (SCOPE B):
            "test_bootstrap_campaign",
            # GO-05 follow-on: anchor-probe calibration mode (RB-10-safe):
-           "test_anchor_probe"]
+           "test_anchor_probe",
+           # GO-05 amendment: CI-noise-envelope anchor gate (TDD, a-prior):
+           "test_anchor_gate"]
 
 
 def _collect(mod_name):

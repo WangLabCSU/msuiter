@@ -125,7 +125,8 @@ def _fixture_campaign(tmp: str, *, anchors: bool = True,
     if ledger is not None:
         (d / "campaign_launches.jsonl").write_text(ledger, encoding="utf-8")
     if anchors:
-        # A2 sits 1% off A1 everywhere: far inside MEDIAN_REL_TOL, overlap full.
+        # A2 sits 1% off A1 everywhere: far inside the K_CI noise envelope,
+        # overlap full.
         base = lambda i, j: 1.0 + ((i * 50 + j) % 7) * 0.05
         (d / "witnesses" / "anchor_A1.jsonl").write_text(
             _anchor_lines(base), encoding="utf-8")
@@ -361,5 +362,9 @@ def test_probe_refuses_dirty_outdir_and_mispairings_executed() -> None:
 
 def test_anchor_gate_constants_are_frozen() -> None:
     vc = Path(VC).read_text(encoding="utf-8")
-    assert ("MIN_OVERLAP, MIN_MEDIAN_OK, MEDIAN_REL_TOL = 0.90, 0.95, 0.15" in vc), \
+    # Amended a-prior set (controller ruling @09:45, GO-05): fractions held,
+    # median clause now the K_CI noise envelope with the EPS zero floor.
+    assert ("MIN_OVERLAP, MIN_MEDIAN_OK = 0.90, 0.95" in vc) \
+        and ("K_CI = 1.0" in vc) and ("EPS = 0.005" in vc) \
+        and ("MEDIAN_REL_TOL" not in vc), \
         "anchor gate constants refitted"

@@ -42,7 +42,15 @@ S_FULL, N_SIG, K_FULL = 1000, 50, 1000
 R_TIER_A, R_TIER_B = 1000, 200
 CAP_SECONDS = 21600                                  # six hours, the pre-registered cap
 ANCHOR_S, ANCHOR_R = 25, 200
-MIN_OVERLAP, MIN_MEDIAN_OK, MEDIAN_REL_TOL = 0.90, 0.95, 0.15
+MIN_OVERLAP, MIN_MEDIAN_OK = 0.90, 0.95
+# GO-05 amendment (controller ruling @09:45, RB-09 doctrine): the median clause
+# is a CI-noise envelope, not a flat relative tolerance -- a relative tolerance
+# explodes at near-zero estimands, which is a property of the definition, not
+# of the data. Both constants are fixed a-prior; see
+# docs/devlog/2026-10-11-go05-anchor-gate-amendment.md for the verbatim
+# retired outcome and the K_CI/EPS a-prior provenance.
+K_CI = 1.0                                             # envelope multiple
+EPS = 0.005                                            # both-below auto-pass floor
 CLAIM_REL_TOL = 1e-9
 ARMS = ("A1", "A2", "A3")
 # Base bytes every lawful campaign dir must carry, whatever its verdict. The
@@ -111,9 +119,15 @@ def anchor_gates(a1: list[dict], a2: list[dict]) -> dict:
         r2 = m2[key(r1)]
         if not (float(r1["hi"]) < float(r2["lo"]) or float(r2["hi"]) < float(r1["lo"])):
             overlap += 1
-        m1 = float(r1["median"])
-        base = max(abs(m1), 1e-12)
-        if abs(m1 - float(r2["median"])) / base <= MEDIAN_REL_TOL:
+        a1m, a2m = float(r1["median"]), float(r2["median"])
+        hw1 = (float(r1["hi"]) - float(r1["lo"])) / 2.0
+        hw2 = (float(r2["hi"]) - float(r2["lo"])) / 2.0
+        # CI-noise-envelope clause (amended; constants fixed a-prior above):
+        # the two bootstrap medians must sit within K_CI of the larger CI
+        # half-width; a pair with both medians under EPS is indistinguishable
+        # from zero and auto-passes the median leg.
+        if (abs(a1m) < EPS and abs(a2m) < EPS) \
+                or abs(a1m - a2m) <= K_CI * max(hw1, hw2):
             median_ok += 1
     n = len(a1)
     of, mf = overlap / n, median_ok / n
