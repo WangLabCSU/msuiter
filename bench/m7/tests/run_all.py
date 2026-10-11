@@ -52,6 +52,13 @@ pre-registration law docs/devlog/2026-10-10-m7-bootstrap-campaign.md):
       identity + seal), decisive tier ladder, anchor gates, SCIENCE-FIRST
       reader-side verifier (inflated claim / failed anchor / self-adjudicating
       probe / unpinned table all refused), single-full-shot ledger law
+Anchor-probe mode (GO-05 follow-on): calibrating the anchor gate at the full
+shape WITHOUT spending the RB-10 single authoritative shot:
+  (U) test_anchor_probe       probe rides the full shape table, quits before
+      the probe stage (no probes/tier/timed arms/timings/ratio), its ledger
+      entry is non-shot by the reader predicate, probe-grade result.md is
+      claim-free with the oracle verbatim, dirty-outdir and mispaired modes
+      refused executed, anchor gates frozen
 """
 
 from __future__ import annotations
@@ -86,7 +93,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100 钉硬件全表):
            "test_hardware_pin",
            # U-M7-04 GO-05: bootstrap-vs-sigminer campaign instrument (SCOPE B):
-           "test_bootstrap_campaign"]
+           "test_bootstrap_campaign",
+           # GO-05 follow-on: anchor-probe calibration mode (RB-10-safe):
+           "test_anchor_probe"]
 
 
 def _collect(mod_name):

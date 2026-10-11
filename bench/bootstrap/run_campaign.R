@@ -9,6 +9,11 @@
 # Usage:
 #   Rscript --vanilla run_campaign.R -- --outdir DIR --mode full
 #   Rscript --vanilla run_campaign.R -- --outdir /tmp/... --mode pilot --smoke
+#   Rscript --vanilla run_campaign.R -- --outdir /tmp/... --mode full --anchor-probe
+#     (GO-05: the RB-10-safe anchor-gate calibration at the full shape table.
+#      It runs data bytes, census and the anchor stage only -- no probes, no
+#      tier, no timed arms -- and its ledger entry is a non-shot calibration
+#      record, so the single authoritative full shot stays unspent.)
 # The frozen campaign profile (M7_HW_PROFILE) must be exported verbatim; the
 # harness refuses otherwise (hardware-pin law, same shape as the docker
 # authority gate). Heavy arms are single authoritative shots (RB-10): a second
@@ -37,6 +42,7 @@ flag <- function(name, required = TRUE, default = NA_character_) {
 outdir <- flag("--outdir")
 mode <- flag("--mode")                            # full | pilot
 smoke <- !is.na(match("--smoke", args))            # valueless switch
+anchorProbe <- !is.na(match("--anchor-probe", args))  # valueless switch (GO-05)
 tierOverride <- flag("--tier", required = FALSE)
 capArg <- flag("--cap", required = FALSE)
 stopifnot(mode %in% c("full", "pilot"))
@@ -62,6 +68,13 @@ abort <- function(...) {
   cat("[campaign] HALT: ", paste0(...), "\n", sep = "")
   quit(status = 2L)
 }
+
+# The probe calibrates the anchor gate AT the authoritative shape, so it must
+# ride the full table: --mode full, never --smoke (smoke numbers would say
+# nothing about the shot it exists to protect).
+if (anchorProbe && (smoke || mode != "full")) abort(
+  "--anchor-probe rides the full shape table: pair --mode full only, ",
+  "never --smoke or --mode pilot")
 
 # -- the oracle (single source of laws) --------------------------------------
 dashes <- commandArgs(trailing = FALSE)
@@ -109,10 +122,16 @@ if (!grepl("^R version 4\\.5\\.", R.version$version.string)) abort(
 
 if (smoke && dir.exists(outdir) && length(list.files(outdir, all.files = TRUE))) abort(
   "--smoke needs a fresh/empty outdir (rehearsals never inherit bytes)")
+if (anchorProbe && dir.exists(outdir) && length(list.files(outdir, all.files = TRUE))) abort(
+  "--anchor-probe needs a fresh/empty outdir (calibrations never inherit bytes)")
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 wit <- file.path(outdir, "witnesses")
 dir.create(wit, showWarnings = FALSE)
 utc <- function() format(Sys.time(), "%Y-%m-%dT%H:%M:%S", tz = "UTC")
+host_name <- function() {
+  hn <- try(system2("hostname", stdout = TRUE, stderr = FALSE), silent = TRUE)
+  if (is.character(hn) && length(hn)) trimws(hn[[1L]]) else "unknown-host"
+}
 
 # writeLines carries NO append argument: handing it one is an
 # unused-argument hard error (witnessed live when the first smoke rehearsal
@@ -156,9 +175,18 @@ say("[campaign] census OK (", length(ps), " container line(s), none measurement)
 append_ledger <- function(mode_name) append_line(
   file.path(outdir, "campaign_launches.jsonl"),
   sprintf('{"kind":"launch","mode":"%s","ts":"%s"}', mode_name, utc()))
-gate <- call_oracle_rc(c("--launch-gate", "--mode", "pilot"))
-if (gate$rc != 0L) abort("launch-gate refused (rc ", gate$rc, "): ", gate$text)
-append_ledger(if (smoke) "pilot" else "probe")
+# The probe's ledger entry: deliberately NO mode key -- the reader's shot
+# counter counts e["mode"] == "full" only, so this entry is invisible to the
+# single-full-shot law (pinned by tests/test_anchor_probe.py) while still
+# recording that a calibration pass ran here.
+append_probe_ledger <- function() append_line(
+  file.path(outdir, "campaign_launches.jsonl"),
+  sprintf('{"kind":"anchor-probe","grade":"calibration","ts":"%s"}', utc()))
+if (!anchorProbe) {
+  gate <- call_oracle_rc(c("--launch-gate", "--mode", "pilot"))
+  if (gate$rc != 0L) abort("launch-gate refused (rc ", gate$rc, "): ", gate$text)
+  append_ledger(if (smoke) "pilot" else "probe")
+}
 arms_present <- all(file.exists(file.path(wit,
   sprintf("arm_%s.jsonl", c("A1", "A2", "A3")))))
 if (mode == "full" && !smoke && arms_present) abort(
@@ -268,6 +296,92 @@ probe_once <- function(arm, reps, threads) {
     cat(".")
   }
 }
+# -- correctness anchor (share-normalized, protocol §5 + addendum) --------------------
+qcell <- function(x) stats::quantile(x, c(.025, .5, .975), names = FALSE)
+write_anchor <- function(path, recs) writeLines(vapply(seq_len(nrow(recs)),
+  function(i) sprintf(paste0('{', '"sample":"%s","sig":"%s",',
+    '"lo":%.12g,"hi":%.12g,"median":%.12g}'),
+    recs$sample[i], recs$sig[i], recs$lo[i], recs$hi[i], recs$median[i]),
+    character(1L), USE.NAMES = FALSE), path)
+anchor_a1 <- function() {
+  set.seed(SEED, kind = "Mersenne-Twister", normal.kind = "Inversion",
+    sample.kind = "Rejection")
+  rows <- lapply(anchor_samples, function(sm) {
+    o <- suppressWarnings(suppressMessages(sigminer::sig_fit_bootstrap(
+      counts[, sm, drop = TRUE], sig = sigs, n = R_ANCHOR,
+      method = "NNLS")))
+    e <- o$expo                                  # signatures x replicates
+    q <- vapply(seq_len(nrow(e)), function(i) qcell(as.numeric(e[i, ])),
+      numeric(3L), USE.NAMES = FALSE)             # 3 x signatures
+    scale <- if (sum(q[2L, ]) > 0) sum(q[2L, ]) else 1
+    data.frame(sample = sm, sig = rownames(e), lo = q[1L, ] / scale,
+      hi = q[3L, ] / scale, median = q[2L, ] / scale)
+  })
+  do.call(rbind, rows)
+}
+anchor_a2 <- function() {
+  sub <- counts[, anchor_samples, drop = FALSE]
+  f <- suppressMessages(msuiter::ms_fit_bootstrap(
+    build_catalog(sub, anchor_samples), sigs, method = "nnls",
+    n_boot = R_ANCHOR, seed = SEED, n_threads = N_THREADS_POOL,
+    return_draws = TRUE))
+  dr <- attr(f@exposures, "boot_draws")          # signatures x samples x boot
+  rows <- lapply(anchor_samples, function(sm) {
+    d <- dr[, sm, , drop = FALSE]
+    dim(d) <- c(N_SIG, R_ANCHOR)
+    q <- vapply(seq_len(N_SIG), function(i) qcell(as.numeric(d[i, ])),
+      numeric(3L), USE.NAMES = FALSE)            # 3 x signatures
+    scale <- if (sum(q[2L, ]) > 0) sum(q[2L, ]) else 1
+    data.frame(sample = sm, sig = colnames(sigs), lo = q[1L, ] / scale,
+      hi = q[3L, ] / scale, median = q[2L, ] / scale)
+  })
+  do.call(rbind, rows)
+}
+
+# -- anchor-probe mode (GO-05): the RB-10-safe calibration lens -------------------------
+# The probe-grade result.md: it names the shape and the oracle verbatim and
+# speaks no verdict, no tier, no ratio -- a file the reader can only read as
+# non-claiming (pinned both ways by tests/test_anchor_probe.py).
+write_probe_result <- function(anch_text) {
+  seal <- paste(readLines(file.path(outdir, "seal.json"), warn = FALSE),
+    collapse = " ")
+  writeLines(c(
+    "# bootstrap-vs-sigminer campaign — anchor-probe (not a claim)", "",
+    "- grade: anchor-probe — the anchor gate observed at the full shape;",
+    "  no probes, no tier, no timed arms ran in this dir, and no RB-10 shot",
+    "  was consumed: it supports no measurement of any kind",
+    sprintf("- shape: K=%d S=%d n_sig=%d | anchor: S_ANCHOR=%d R_ANCHOR=%d",
+      K, S, N_SIG, S_ANCHOR, R_ANCHOR),
+    "- anchor witnesses: witnesses/anchor_A1.jsonl witnesses/anchor_A2.jsonl",
+    paste0("- anchor oracle (verbatim): ", anch_text),
+    paste0("- seed: ", SEED, " (G0 master) | data seal: ", seal),
+    paste0("- host: ", host_name(), "  R: ", R.version.string,
+      "  hw_profile: ", CAMPAIGN_HW_PIN),
+    "- co-tenancy census: witnesses/host_census.jsonl (verbatim docker ps)"),
+    con = file.path(outdir, "result.md"))
+}
+
+# Every law above this point (attestation, census, generator+seal, anchor
+# defs) is shared with the authoritative path; everything below it is left
+# unrun. The reader pass adjudicates the probe dir; the run exits zero so a
+# red anchor gate stays REPORTABLE (it is information, not a harness fault).
+if (anchorProbe) {
+  append_probe_ledger()
+  say("[campaign] ANCHOR-PROBE (full shape K=", K, " S=", S, " n_sig=", N_SIG,
+    "; anchor gate observation only — the RB-10 shot stays unspent)")
+  write_anchor(file.path(wit, "anchor_A1.jsonl"), anchor_a1())
+  write_anchor(file.path(wit, "anchor_A2.jsonl"), anchor_a2())
+  anch <- call_oracle_rc("--anchor-check")
+  say("[campaign] anchor oracle rc=", anch$rc, " ", anch$text)
+  write_probe_result(anch$text)
+  rc <- call_oracle_rc(character(0))
+  say("[campaign] reader verifier rc=", rc$rc, " ", rc$text)
+  if (rc$rc != 0L) quit(status = 1L)
+  say("[campaign] PROBE-COMPLETE outdir=", outdir,
+    " anchor-ok=", identical(anch$rc, 0L))
+  quit(status = 0L)
+}
+
 say("[campaign] probes (S=", S_PROBE, ", R=", paste(R_PROBE, collapse = "/"),
   ", warmup + 3 timed; medians adjudicated by the oracle):")
 for (arm in c("A1", "A2", "A3")) for (rp in R_PROBE) probe_once(arm, rp,
@@ -284,10 +398,6 @@ writeLines(dec$text, file.path(wit, "tier_decision.json"))
 say("[campaign] tier decision: ", tier)
 
 result_md <- file.path(outdir, "result.md")
-host_name <- function() {
-  hn <- try(system2("hostname", stdout = TRUE, stderr = FALSE), silent = TRUE)
-  if (is.character(hn) && length(hn)) trimws(hn[[1L]]) else "unknown-host"
-}
 write_result <- function(verdict, tier, ratio_line = NULL, extra = character(0)) {
   seal <- paste(readLines(file.path(outdir, "seal.json"), warn = FALSE),
     collapse = " ")
@@ -387,46 +497,9 @@ writeLines(sprintf(paste0('{', '"kind":"invariance","point":%s,',
 say("[campaign] thread-invariance witness: ok=", inv_ok)
 
 # -- correctness anchor (share-normalized, protocol §5 + addendum) -------------------
-qcell <- function(x) stats::quantile(x, c(.025, .5, .975), names = FALSE)
-write_anchor <- function(path, recs) writeLines(vapply(seq_len(nrow(recs)),
-  function(i) sprintf(paste0('{', '"sample":"%s","sig":"%s",',
-    '"lo":%.12g,"hi":%.12g,"median":%.12g}'),
-    recs$sample[i], recs$sig[i], recs$lo[i], recs$hi[i], recs$median[i]),
-    character(1L), USE.NAMES = FALSE), path)
-anchor_a1 <- function() {
-  set.seed(SEED, kind = "Mersenne-Twister", normal.kind = "Inversion",
-    sample.kind = "Rejection")
-  rows <- lapply(anchor_samples, function(sm) {
-    o <- suppressWarnings(suppressMessages(sigminer::sig_fit_bootstrap(
-      counts[, sm, drop = TRUE], sig = sigs, n = R_ANCHOR,
-      method = "NNLS")))
-    e <- o$expo                                  # signatures x replicates
-    q <- vapply(seq_len(nrow(e)), function(i) qcell(as.numeric(e[i, ])),
-      numeric(3L), USE.NAMES = FALSE)             # 3 x signatures
-    scale <- if (sum(q[2L, ]) > 0) sum(q[2L, ]) else 1
-    data.frame(sample = sm, sig = rownames(e), lo = q[1L, ] / scale,
-      hi = q[3L, ] / scale, median = q[2L, ] / scale)
-  })
-  do.call(rbind, rows)
-}
-anchor_a2 <- function() {
-  sub <- counts[, anchor_samples, drop = FALSE]
-  f <- suppressMessages(msuiter::ms_fit_bootstrap(
-    build_catalog(sub, anchor_samples), sigs, method = "nnls",
-    n_boot = R_ANCHOR, seed = SEED, n_threads = N_THREADS_POOL,
-    return_draws = TRUE))
-  dr <- attr(f@exposures, "boot_draws")          # signatures x samples x boot
-  rows <- lapply(anchor_samples, function(sm) {
-    d <- dr[, sm, , drop = FALSE]
-    dim(d) <- c(N_SIG, R_ANCHOR)
-    q <- vapply(seq_len(N_SIG), function(i) qcell(as.numeric(d[i, ])),
-      numeric(3L), USE.NAMES = FALSE)            # 3 x signatures
-    scale <- if (sum(q[2L, ]) > 0) sum(q[2L, ]) else 1
-    data.frame(sample = sm, sig = colnames(sigs), lo = q[1L, ] / scale,
-      hi = q[3L, ] / scale, median = q[2L, ] / scale)
-  })
-  do.call(rbind, rows)
-}
+# (the anchor defs are hoisted above the anchor-probe dispatch: both the
+# authoritative path and the calibration probe share the same anchor code --
+# the probe exists to measure THIS gate at THIS shape, not a lookalike)
 say("[campaign] anchor (", S_ANCHOR, " samples x R=", R_ANCHOR,
   ", share-normalized per the §5 addendum): ")
 write_anchor(file.path(wit, "anchor_A1.jsonl"), anchor_a1())
