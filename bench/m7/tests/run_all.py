@@ -64,6 +64,13 @@ shape WITHOUT spending the RB-10 single authoritative shot:
       frozen a-prior; both directions pinned (near-zero-in-noise passes,
       true divergence fails, both-zero auto-passes, boundaries exact) and the
       attested probe witnesses adjudicate offline (the shot stays unspent)
+  (W) test_tier_probe         the consumed/report-only fit split: tonight's
+      verbatim A2 bytes report, never veto (golden regression), the decision
+      is byte-invariant to report-only states, the non-physical A1 law and
+      the missing-witness refusal still bite, the floor gate falls back to
+      the committed governance table or hard-refuses, the frozen probe shape
+      is untouched, and the --tier-probe rehearsal mode carries (U)-group
+      discipline (guards executed, claim-free md, shot-counter invisible)
 """
 
 from __future__ import annotations
@@ -102,7 +109,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # GO-05 follow-on: anchor-probe calibration mode (RB-10-safe):
            "test_anchor_probe",
            # GO-05 amendment: CI-noise-envelope anchor gate (TDD, a-prior):
-           "test_anchor_gate"]
+           "test_anchor_gate",
+           # GO-05 ruling @10:45: consumed/report-only fits + tier-probe (TDD):
+           "test_tier_probe"]
 
 
 def _collect(mod_name):

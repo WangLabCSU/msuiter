@@ -43,6 +43,7 @@ outdir <- flag("--outdir")
 mode <- flag("--mode")                            # full | pilot
 smoke <- !is.na(match("--smoke", args))            # valueless switch
 anchorProbe <- !is.na(match("--anchor-probe", args))  # valueless switch (GO-05)
+tierProbe <- !is.na(match("--tier-probe", args))      # valueless switch (GO-05)
 tierOverride <- flag("--tier", required = FALSE)
 capArg <- flag("--cap", required = FALSE)
 stopifnot(mode %in% c("full", "pilot"))
@@ -74,6 +75,13 @@ abort <- function(...) {
 # nothing about the shot it exists to protect).
 if (anchorProbe && (smoke || mode != "full")) abort(
   "--anchor-probe rides the full shape table: pair --mode full only, ",
+  "never --smoke or --mode pilot")
+
+# The tier-probe rehearses the decision path (census, sealed data, probes,
+# decide) at the authoritative shape, so it rides the same law: --mode full,
+# never --smoke (smoke probe bytes would rehearse nothing the shot depends on).
+if (tierProbe && (smoke || mode != "full")) abort(
+  "--tier-probe rides the full shape table: pair --mode full only, ",
   "never --smoke or --mode pilot")
 
 # -- the oracle (single source of laws) --------------------------------------
@@ -124,6 +132,8 @@ if (smoke && dir.exists(outdir) && length(list.files(outdir, all.files = TRUE)))
   "--smoke needs a fresh/empty outdir (rehearsals never inherit bytes)")
 if (anchorProbe && dir.exists(outdir) && length(list.files(outdir, all.files = TRUE))) abort(
   "--anchor-probe needs a fresh/empty outdir (calibrations never inherit bytes)")
+if (tierProbe && dir.exists(outdir) && length(list.files(outdir, all.files = TRUE))) abort(
+  "--tier-probe needs a fresh/empty outdir (rehearsals never inherit bytes)")
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 wit <- file.path(outdir, "witnesses")
 dir.create(wit, showWarnings = FALSE)
@@ -182,10 +192,19 @@ append_ledger <- function(mode_name) append_line(
 append_probe_ledger <- function() append_line(
   file.path(outdir, "campaign_launches.jsonl"),
   sprintf('{"kind":"anchor-probe","grade":"calibration","ts":"%s"}', utc()))
+# The tier-probe's ledger entry: the same non-shot discipline -- a calibration
+# record with NO mode key, invisible to the reader's shot counter (pinned by
+# tests/test_tier_probe.py) while recording that the decision path was
+# rehearsed here against the frozen shape.
+append_tier_probe_ledger <- function() append_line(
+  file.path(outdir, "campaign_launches.jsonl"),
+  sprintf('{"kind":"tier-probe","grade":"calibration","ts":"%s"}', utc()))
 if (!anchorProbe) {
   gate <- call_oracle_rc(c("--launch-gate", "--mode", "pilot"))
   if (gate$rc != 0L) abort("launch-gate refused (rc ", gate$rc, "): ", gate$text)
-  append_ledger(if (smoke) "pilot" else "probe")
+  # A tier rehearsal is calibration, not a launch: like the anchor probe it
+  # writes its own no-mode ledger entry and never touches the shot ledger.
+  if (!tierProbe) append_ledger(if (smoke) "pilot" else "probe")
 }
 arms_present <- all(file.exists(file.path(wit,
   sprintf("arm_%s.jsonl", c("A1", "A2", "A3")))))
@@ -396,6 +415,50 @@ tier <- oj(dec$text, "tier")
 if (!is.na(tierOverride)) tier <- tierOverride
 writeLines(dec$text, file.path(wit, "tier_decision.json"))
 say("[campaign] tier decision: ", tier)
+
+# -- tier-probe mode (GO-05): the decision-path rehearsal, zero claim bytes -------------
+# Tonight's halt was the safety system working: the tier oracle refused, and
+# the shot stayed unspent. This rehearsal rides the exact death path --
+# census, sealed generator bytes, probes, decide -- at the FULL frozen shape,
+# then quits before any timed arm, before the full-shot ledger gate, and
+# before a single claim-bearing artifact. The probe-grade result.md names the
+# shape and the decide oracle VERBATIM and speaks no verdict, no ratio, no
+# tier of its own -- a file the reader can only read as non-claiming (pinned
+# both ways by tests/test_tier_probe.py). The reader pass adjudicates the
+# rehearsal dir; the exit is zero whatever the oracle reports about the
+# probe fits, because a report is information, not a harness fault.
+write_tier_result <- function(dec_text) {
+  seal <- paste(readLines(file.path(outdir, "seal.json"), warn = FALSE),
+    collapse = " ")
+  writeLines(c(
+    "# bootstrap-vs-sigminer campaign — tier-probe (not a claim)", "",
+    "- grade: tier-probe — the decision path rehearsed at the full shape;",
+    "  the probe witnesses are real measurements at the frozen probe shape,",
+    "  but no timed arm ran here, no floor gate was adjudicated, and no",
+    "  RB-10 shot was consumed: this dir supports no measurement of any kind",
+    sprintf("- shape: K=%d S=%d n_sig=%d | probe: S_PROBE=%d R_PROBE=%s",
+      K, S, N_SIG, S_PROBE, paste(R_PROBE, collapse = "/")),
+    "- probe witnesses: witnesses/probe_A1_*.jsonl (the consumed leg) and the",
+    "  report-only A2/A3 legs, adjudicated by the oracle line below",
+    paste0("- decide oracle (verbatim): ", dec_text),
+    paste0("- seed: ", SEED, " (G0 master) | data seal: ", seal),
+    paste0("- host: ", host_name(), "  R: ", R.version.string,
+      "  hw_profile: ", CAMPAIGN_HW_PIN),
+    "- co-tenancy census: witnesses/host_census.jsonl (verbatim docker ps)"),
+    con = file.path(outdir, "result.md"))
+}
+if (tierProbe) {
+  append_tier_probe_ledger()
+  say("[campaign] TIER-PROBE (full shape K=", K, " S=", S, " n_sig=", N_SIG,
+    "; decision-path observation only — the RB-10 shot stays unspent)")
+  write_tier_result(dec$text)
+  rv <- call_oracle_rc(character(0))
+  say("[campaign] reader verifier rc=", rv$rc, " ", rv$text)
+  if (rv$rc != 0L) quit(status = 1L)
+  say("[campaign] TIER-PROBE-COMPLETE outdir=", outdir,
+    " tier=", tier, " decision-ok=", identical(dec$rc, 0L))
+  quit(status = 0L)
+}
 
 result_md <- file.path(outdir, "result.md")
 write_result <- function(verdict, tier, ratio_line = NULL, extra = character(0)) {
