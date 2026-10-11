@@ -232,3 +232,74 @@ and re-reads it through `vc._parse_result_md`).
 - The frozen dir and every byte in it are unmodified; this note cites them
   only. The single-shot ledger across the tree still counts zero `mode:full`
   entries for this lane.
+
+## 9. The §5 residual adjudicated: the UNMEASURABLE floor leg (controller ruling @12:50)
+
+The controller's own witness battery passed this amendment (§8's rehearsal
+included), then ruled the §5 residual **shot-blocking** and issued the final
+amendment before any shot authorization. The ruling's hazard, verbatim-style:
+
+> THE HAZARD: two same-seed observations of byte-identical sealed data gave
+> A2's probe fit **opposite rate signs**. A 3× floor built on such a fit is a
+> coin flip; aborting the one lawful shot on it is the decide defect
+> transplanted into the timed path.
+
+| observation | sealed bytes | seed | A2 probe-fit rate | A2 probe-fit p |
+|---|---|---|---|---|
+| frozen shot (`…_20261011T024301Z`, §2) | identical | 20260928 | `-0.0002200000000000002` | `0.179` |
+| tier-probe rehearsal (§7) | identical | 20260928 | `+8.000000000000007e-05` | `0.1636` |
+
+The per-rep cost at the frozen probe shape (S=5, R∈{10,20}) sits under wall
+jitter, so the two-shape solve is sign-random — the fit is *provably
+uninformative*, not merely unlucky. The ruled contract, laws (1)–(5):
+
+1. **Oracle.** `--floor-check` where the arm's probe fit comes back
+   `fit_status == NON_IDENTIFIABLE` returns
+   `{"ok": true, "floor_gate": "unmeasurable", "arm": …, "reason":
+   "probe-fit non-identifiable at probe scale", "fit": <verbatim report
+   entry>}` with the **new dedicated rc 3**. rc 2 stays reserved for the
+   genuine hard refusals (missing args, missing witnesses, structural); the
+   rc 0/4 probe-fit rung — including the `<=` boundary — is byte-untouched.
+2. **Instrument.** The floor site accepts `{0, 4}` plus rc 3: the rc-3
+   branch records the arm witness via the dedicated top-level writer
+   `write_unmeasurable_gate()` — `"gate":
+   "UNMEASURED(probe-fit non-identifiable)"` verbatim, the oracle's reason
+   as `gate_reason`, and `floor_projection`/`floor_ratio` as literal `null`
+   (there is no number; none is invented) — then the campaign **continues**.
+   Every other rc still aborts verbatim on the untouched `abort` line;
+   rc 3 is inert at all ten other oracle sites (pinned by the accept-set
+   occurrence count). The rc-4 breach keeps the verbatim HALT-AND-REPORT
+   quit-3 — the one way a floor gate still kills, and it stays loaded.
+3. **A1.** The consumed law is untouched; the (W) group still pins it.
+4. **MEASURED-true.** The `measured-true-holds` law (ratio ≥ 100 + anchor)
+   is byte-untouched — it consumes the gate nowhere. The leg is *disclosed*:
+   marker verbatim in the arm witness, a `- floor gate UNMEASURED on: …`
+   line in the shot's own result.md, and the leg named in the reader's
+   `floor-gates` check detail.
+5. **No fabricated equivalence.** `CAMPAIGN_FLOOR_CLASSES` stays committed
+   EMPTY; the unmeasurable path supersedes the §5 governance-table fallback
+   (which the campaign never exercised and will not need).
+
+**The one interpretation, on the record.** Law (4)'s "MEASURED-true path …
+does not consume the floor gate" holds verbatim for the 100×/anchor hold
+law, which this amendment did not touch. Read as also freezing the reader's
+`floor-gates` replay check at `gate == "pass"` alone, the ruling would be
+self-defeating: the ruled scenario (A2 leg unmeasurable → continue → complete
+→ MEASURED-true claim) would be rc-1'd by the reader *after* the ledger
+append — the gate borrowing its veto after the fact, with the shot consumed.
+The internally-consistent reading implements the gate contract: the check
+accepts `"pass"` or the **verbatim** pre-registered marker, anything else —
+`breach`, `unmeasurable`, a case-flipped forgery — still fails the claim
+(pinned, (X6)). If the controller reads law (4) otherwise, the witness
+battery gates before any shot burns, so nothing is spent to discover it.
+
+**TDD record.** Group (X) of the m7 suite,
+`tests/test_floor_gate_unmeasurable.py`, seven units, RED witnessed first
+against the unamended instruments (`/tmp/go05lane/red_x_witness.log`:
+2/7, the five law-new units failing with the frozen rc-2 error verbatim),
+then 7/7 green; (W) re-greened 10/10 under the amended oracle
+(`green_w_x.log`). The W5 bad-fit leg was repinned from rc 2 to the
+superseding rc 3 class, keeping its hard-refusal twin (missing bytes) at
+rc 2 — the ladder's two classes, separated with the ruling's own wedges.
+No push. The tier-probe rehearsal was not re-fired; the frozen dir was not
+touched.

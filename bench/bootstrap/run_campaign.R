@@ -510,6 +510,26 @@ if (!smoke) {
   append_ledger("full")
 }
 say("[campaign] full arms (R=", reps_taken, "):")
+
+# -- the UNMEASURABLE floor leg (controller ruling @12:50, laws (1)-(2)) --------------
+# A probe fit that is usable bytes yet provably non-identifiable at the probe
+# scale cannot ground the pre-registered 3x floor: the same sealed data gave
+# A2's rate opposite signs across two same-seed observations. The leg is
+# neither pass nor breach -- it records. The only numbers it owns are the
+# ones actually timed; floor_projection/floor_ratio are null, because there
+# is no number and none is invented here.
+write_unmeasurable_gate <- function(arm, tier, K, S, N_SIG, reps, t, reason) {
+  writeLines(sprintf(paste0('{', '"kind":"arm","arm":"%s","tier":"%s",',
+    '"shape":{"K":%d,"S":%d,"n_sig":%d,"R":%d},',
+    '"wall":%.9g,"cpu":%.9g,"load_before":%s,',
+    '"load_after":%s,',
+    '"floor_projection":null,"floor_ratio":null,',
+    '"gate":"UNMEASURED(probe-fit non-identifiable)","gate_reason":"%s"}'),
+    arm, tier, K, S, N_SIG, reps, t$wall, t$cpu,
+    json_load3(t$load_before), json_load3(t$load_after), reason),
+    file.path(wit, sprintf("arm_%s.jsonl", arm)))
+}
+unmeasured <- c()                     # arms whose floor leg the oracle declared UNMEASURABLE
 fits <- list()
 cs_full <- NULL                       # built once, shared by the pool arms
 for (arm in c("A1", "A2", "A3")) {
@@ -519,20 +539,31 @@ for (arm in c("A1", "A2", "A3")) {
   t <- timed(arm_call(arm, counts, cs_full, reps_taken, threads))
   fc <- call_oracle_rc(c("--floor-check", "--arm", arm,
     "--observed", sprintf("%.9g", t$wall), "--reps", reps_taken))
-  if (!fc$rc %in% c(0L, 4L)) abort("floor oracle failed (rc ", fc$rc, "): ",
+  if (!fc$rc %in% c(0L, 3L, 4L)) abort("floor oracle failed (rc ", fc$rc, "): ",
     fc$text)
-  gate_str <- oj(fc$text, "gate")
-  if (is.na(gate_str)) gate_str <- if (fc$rc == 0L) "pass" else "breach"
-  writeLines(sprintf(paste0('{', '"kind":"arm","arm":"%s","tier":"%s",',
-    '"shape":{"K":%d,"S":%d,"n_sig":%d,"R":%d},',
-    '"wall":%.9g,"cpu":%.9g,"load_before":%s,',
-    '"load_after":%s,',
-    '"floor_projection":%.9g,"floor_ratio":%.3g,"gate":"%s"}'),
-    arm, tier, K, S, N_SIG, reps_taken, t$wall, t$cpu,
-    json_load3(t$load_before), json_load3(t$load_after),
-    as.numeric(oj(fc$text, "projection")),
-    as.numeric(oj(fc$text, "floor_ratio")), gate_str),
-    file.path(wit, sprintf("arm_%s.jsonl", arm)))
+  if (fc$rc == 3L) {
+    # Ruling @12:50: an UNMEASURABLE floor leg the oracle has declared -- the
+    # probe fit is provably non-identifiable at the probe scale, so any 3x
+    # floor built on it would be a coin flip. The gate loses its say on this
+    # arm; it may not borrow a veto over the one lawful shot (that would be
+    # the decide defect transplanted into the timed path). Record and continue.
+    unmeasured <- c(unmeasured, arm)
+    write_unmeasurable_gate(arm, tier, K, S, N_SIG, reps_taken, t,
+      oj(fc$text, "reason"))
+  } else {
+    gate_str <- oj(fc$text, "gate")
+    if (is.na(gate_str)) gate_str <- if (fc$rc == 0L) "pass" else "breach"
+    writeLines(sprintf(paste0('{', '"kind":"arm","arm":"%s","tier":"%s",',
+      '"shape":{"K":%d,"S":%d,"n_sig":%d,"R":%d},',
+      '"wall":%.9g,"cpu":%.9g,"load_before":%s,',
+      '"load_after":%s,',
+      '"floor_projection":%.9g,"floor_ratio":%.3g,"gate":"%s"}'),
+      arm, tier, K, S, N_SIG, reps_taken, t$wall, t$cpu,
+      json_load3(t$load_before), json_load3(t$load_after),
+      as.numeric(oj(fc$text, "projection")),
+      as.numeric(oj(fc$text, "floor_ratio")), gate_str),
+      file.path(wit, sprintf("arm_%s.jsonl", arm)))
+  }
   fits[[arm]] <- t$value
   if (fc$rc == 4L) {
     # HALT-AND-REPORT: no rerun, no floor refit, no averaging away (RB-10).
@@ -602,7 +633,11 @@ write_result(verdict, tier = tier,
     if (!anchor_ok) paste0("- the anchor witness is committed with the ",
       "failure named: witnesses/anchor_A*.jsonl; the oracle said ",
       anch$text),
-    if (!inv_ok) "- witnesses/invariance_A2_A3.jsonl names the broken leg"))
+    if (!inv_ok) "- witnesses/invariance_A2_A3.jsonl names the broken leg",
+    if (length(unmeasured)) paste0(
+      "- floor gate UNMEASURED on: ", paste(unmeasured, collapse = ", "),
+      " (probe-fit non-identifiable at probe scale, the pre-registered leg; ",
+      "the arm witness carries the marker and the oracle reason verbatim)")))
 rc <- call_oracle_rc(character(0))
 say("[campaign] reader verifier rc=", rc$rc, " ", rc$text)
 if (rc$rc != 0L) quit(status = 1L)

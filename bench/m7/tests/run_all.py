@@ -71,6 +71,15 @@ shape WITHOUT spending the RB-10 single authoritative shot:
       the committed governance table or hard-refuses, the frozen probe shape
       is untouched, and the --tier-probe rehearsal mode carries (U)-group
       discipline (guards executed, claim-free md, shot-counter invisible)
+  (X) test_floor_gate_unmeasurable  the @12:50 unmeasurable floor leg: a
+      probe fit provably non-identifiable at the probe scale carries the
+      dedicated rc 3 with its verbatim fit entry (tonight's golden A2 bytes),
+      never a fabricated floor; rc 2 stays reserved for missing/structural
+      bytes, rc 0/4 byte-untouched; the instrument accepts {0,3,4}, records
+      the verbatim UNMEASURED marker plus the oracle reason, and CONTINUES
+      (dedicated writer executed on the target interpreter); the reader
+      tolerates only the verbatim marker and discloses the leg, while
+      breach and any forged string still fail a MEASURED claim
 """
 
 from __future__ import annotations
@@ -111,7 +120,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # GO-05 amendment: CI-noise-envelope anchor gate (TDD, a-prior):
            "test_anchor_gate",
            # GO-05 ruling @10:45: consumed/report-only fits + tier-probe (TDD):
-           "test_tier_probe"]
+           "test_tier_probe",
+           # GO-05 ruling @12:50: unmeasurable floor leg, rc 3 (TDD):
+           "test_floor_gate_unmeasurable"]
 
 
 def _collect(mod_name):

@@ -17,10 +17,13 @@ says "A1 gates the budget". Hence:
                   tier/cap/projections are INVARIANT to every A2/A3 fit
                   state (pristine, non-identifiable, structurally unusable,
                   absent) -- pinned as byte-equality below.
-  --floor-check   gate from the arm's probe fit; if that fit is unusable,
-                  the gate falls back to the committed governance floor
-                  table and NEVER to a non-physical fit; with no committed
-                  class the check is a hard refusal (rc 2), never a pass.
+  --floor-check   gate from the arm's probe fit; a physically clean fit
+                  verdicts rc 0/4 exactly as before; a provably
+                  non-identifiable fit is the UNMEASURABLE leg (dedicated
+                  rc 3, ruling @12:50 -- the gate records, it never vetoes;
+                  group (X) owns that law); missing or structural bytes
+                  still hard-refuse (rc 2) via the committed governance-
+                  table ladder and NEVER on a fabricated floor.
 
 Frozen-shape bar: S_PROBE/R_PROBE and the protocol SS2 sampling constants
 are untouchable -- no R-bump, no identifiability-eps, no rate-sign carve-out.
@@ -164,10 +167,18 @@ def test_floor_check_falls_back_never_on_bad_fit() -> None:
         assert body["gate"] == "pass" and body["floor_source"] == "probe-fit"
         bad = ap._vc_cli("--campaign", str(d), "--floor-check", "--arm", "A2",
                          "--observed", "0.5", "--reps", "200")
-        assert bad.returncode == 2, \
-            f"unusable fit with no committed class must hard-refuse: {bad.stdout}"
-        why = json.loads(bad.stdout)["error"]
-        assert "governance floor" in why and "A2" in why
+        assert bad.returncode == 3, \
+            f"tonight's non-identifiable leg is the @12:50 UNMEASURABLE class: {bad.stdout}"
+        why = json.loads(bad.stdout)
+        assert why["ok"] is True and why["floor_gate"] == "unmeasurable" \
+            and why["arm"] == "A2"
+        absent = _decide_fixture(tmp, "w5h", {"A1": _clean(*A1_CLEAN)})
+        hard = ap._vc_cli("--campaign", str(absent), "--floor-check",
+                          "--arm", "A2", "--observed", "0.5", "--reps", "200")
+        assert hard.returncode == 2, \
+            f"no bytes at all stays a hard refusal, never an unmeasurable pass: {hard.stdout}"
+        err = json.loads(hard.stdout)["error"]
+        assert "governance floor" in err and "A2" in err
 
 
 # -- (W6) the frozen-shape bar -------------------------------------------------------
