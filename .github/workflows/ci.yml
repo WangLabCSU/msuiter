@@ -67,14 +67,14 @@ jobs:
           - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # guards job is dropped where Makevars expects it, so R CMD INSTALL
       # never touches the network (a --as-cran WARNING otherwise, and no
       # vendor.tar.xz is ever committed — ADR 0002 §3.3).
       - name: Fetch vendored offline tarball (built by guards job)
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: vendor-tarball
           path: src/rust
@@ -87,7 +87,7 @@ jobs:
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
@@ -112,7 +112,7 @@ jobs:
       # into two guarded steps so the input is physically absent unless set;
       # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
       # Bioc Suggests chain, round-3 audit).
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r != '4.3'
         with:
           needs: check
@@ -131,7 +131,7 @@ jobs:
       # CRAN-only extras with their own Suggests-free resolution -- keeps the
       # Bioc Suggests chain out of the solve while making the build work;
       # tests stay skipped here (_R_CHECK_FORCE_SUGGESTS_=false off-CRAN).
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r == '4.3'
         with:
           needs: check
@@ -146,7 +146,7 @@ jobs:
             any::testthat, any::withr, any::ggplot2,
             any::ggalluvial, any::uwot
 
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           args: 'c("--no-manual", "--as-cran")'
           # error-on (hyphenated) is the action's input name: an `error_on`
@@ -169,12 +169,12 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # extendr-api 0.9 build.rs unwraps R_HOME at build time: the bare
       # cargo jobs need R installed and R_HOME exported (CI audit
       # 2026-10-06: exit 101 NotPresent without this).
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: release
           use-public-rspm: true
@@ -188,7 +188,7 @@ jobs:
           rustup update stable --no-self-update
           rustup default stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
         with:
           workspaces: src/rust
 
@@ -201,7 +201,7 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2
         with:
           tool: cargo-deny
 
@@ -217,7 +217,7 @@ jobs:
       # findings; --deny warnings only by a later controller ruling. The
       # advisory-DB fetch is runner-side network I/O and is permitted here.
       - name: Install cargo-audit
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2
         with:
           tool: cargo-audit
 
@@ -228,7 +228,7 @@ jobs:
   guards:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
       # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
@@ -254,7 +254,7 @@ jobs:
       - name: CI selfcheck (workflow YAML + referenced paths + pins)
         run: python3 tools/ci-selfcheck.py
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: 'release'
           use-public-rspm: true
@@ -277,14 +277,14 @@ jobs:
           cp /tmp/msuiter-vendor.tar.xz vendor.tar.xz
 
       - name: Upload vendor tarball (consumed by R-CMD-check jobs)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: vendor-tarball
           path: vendor.tar.xz
           retention-days: 1
           if-no-files-found: error
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr) for repo-mode devtools::test()
           extra-packages: any::devtools
@@ -306,12 +306,12 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # extendr-api 0.9 build.rs unwraps R_HOME at build time: the bare
       # cargo jobs need R installed and R_HOME exported (CI audit
       # 2026-10-06: exit 101 NotPresent without this).
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: release
           use-public-rspm: true
@@ -334,7 +334,7 @@ jobs:
       - name: Install rustc 1.71.0 (rustup)
         run: rustup toolchain install 1.71.0 --profile minimal
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
         with:
           workspaces: src/rust
           key: msrv-1.71.0
@@ -374,19 +374,19 @@ jobs:
     # ARCHITECTURE §9). Rust coverage is not gated (also ARCHITECTURE §9).
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Rust toolchain at MSRV
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: 'release'
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: coverage
           extra-packages: any::covr
@@ -426,7 +426,7 @@ jobs:
           fi
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@f9fe539f5290016afa014f8ef31597d3a61c2dea # v7
         with:
           files: cobertura.xml
           flags: r

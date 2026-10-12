@@ -32,7 +32,7 @@ jobs:
     outputs:
       tarball: ${{ steps.name.outputs.tarball }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # MSRV 钉定（ADR 0002 §4 证明语义）。runner 自带 rustup。
       - name: Install Rust (MSRV)
@@ -48,7 +48,7 @@ jobs:
           sh tools/vendor.sh --check
           cp /tmp/msuiter-vendor.tar.xz src/rust/vendor.tar.xz
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: release
           use-public-rspm: true
@@ -60,7 +60,7 @@ jobs:
           R CMD build . --no-manual --no-build-vignettes
           echo "tarball=$(ls msuiter_*.tar.gz)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: source-tarball
           path: ${{ steps.build.outputs.tarball }}
@@ -83,7 +83,7 @@ jobs:
             rust_targets: "x86_64-pc-windows-msvc x86_64-pc-windows-gnu"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install Rust (MSRV + targets)
         shell: bash
@@ -94,7 +94,7 @@ jobs:
           cargo --version && rustc --version
           rustup target list --installed
 
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: release
           use-public-rspm: true
@@ -103,7 +103,7 @@ jobs:
       - name: Install Imports (S7, rlang)
         run: Rscript -e 'install.packages(c("S7", "rlang"), repos = "https://cloud.r-project.org")'
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: source-tarball
           path: pkg
@@ -128,7 +128,7 @@ jobs:
           stopifnot(all(c("ms_variants", "ms_tally", "ms_extract", "MsSignature")
                         %in% getNamespaceExports("msuiter")))
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: binary-${{ matrix.os }}
           path: msuiter_*.*
@@ -138,9 +138,9 @@ jobs:
     needs: [build-source, build-binaries]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           merge-multiple: true
