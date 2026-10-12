@@ -39,6 +39,17 @@
   p
 }
 .UNSET <- function(name, default = "") default   # ambient: nothing exported
+# Capability probe: can THIS machine actually execute a POSIX shebang stub
+# the same way the helper executes its xcrun candidate (system2, absolute
+# path)? Windows runners fabricate the file fine but cannot interpret its
+# shebang, so the probe -- not an OS label -- is the honest gate for the two
+# probe-adoption units (the windows CI arm of 2026-10-13 proved an os.type
+# label guard cannot be trusted to fire where the executor is missing).
+.stub.execs <- function(path) {
+  rc <- tryCatch(suppressWarnings(system2(path)),
+                 error = function(e) 101L)
+  identical(as.integer(rc), 0L)
+}
 
 test_that("SDKROOT self-discovery: an explicitly set SDKROOT is never touched", {
   sim <- .ms_src("tools/check-layout-sim.R")
@@ -59,15 +70,12 @@ test_that("SDKROOT self-discovery: an explicitly set SDKROOT is never touched", 
 })
 
 test_that("SDKROOT self-discovery: unset SDKROOT adopts a healthy xcrun probe", {
-  # The fixture executes a POSIX shebang stub; windows runners cannot
-  # faithfully run the darwin probe. This path is exercised for real by the
-  # macOS CI arm and the local macOS battery. Stated as a registered skip
-  # reason rather than skip_on_os: the check-layout-sim Skip Law (ledger in
-  # tools/check-layout-sim.R) admits only described reasons, not testthat's
-  # generic "On Windows".
-  if (identical(.Platform$os.type, "windows")) {
-    skip("POSIX shebang stub executor not installed on this platform")
-  }
+  # This unit must EXECUTE a POSIX shebang stub (the fabricated xcrun
+  # probe). A capability probe -- not an OS label -- decides: where the
+  # executor is missing, this is a registered skip whose reason the
+  # check-layout-sim Skip Law admits (tools/check-layout-sim.R admits
+  # described reasons, not testthat's generic "On Windows"). The adoption
+  # path itself runs for real on the macOS CI arm and the local battery.
   sim <- .ms_src("tools/check-layout-sim.R")
   if (is.na(sim)) {
     skip("tools/check-layout-sim.R not locatable (R CMD check context)")
@@ -75,15 +83,18 @@ test_that("SDKROOT self-discovery: unset SDKROOT adopts a healthy xcrun probe", 
   env <- .sim_defs(sim, ".sdkroot_default")
   f <- get(".sdkroot_default", envir = env)
   sdk <- .fake.sdk()
+  stub <- .xcrun.stub(sdk)
+  if (!.stub.execs(stub)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = .UNSET, os = "darwin",
-           xcrun = .xcrun.stub(sdk), clt.sdk = "/no/such/clt/sdk")
+           xcrun = stub, clt.sdk = "/no/such/clt/sdk")
   expect_identical(out, sdk)
 })
 
 test_that("SDKROOT self-discovery: an empty-string SDKROOT counts as unset", {
-  if (identical(.Platform$os.type, "windows")) {
-    skip("POSIX shebang stub executor not installed on this platform")
-  }
+  # Same capability gate as the adoption unit above: the unit needs to
+  # execute the POSIX shebang stub to observe adoption at all.
   sim <- .ms_src("tools/check-layout-sim.R")
   if (is.na(sim)) {
     skip("tools/check-layout-sim.R not locatable (R CMD check context)")
@@ -91,8 +102,12 @@ test_that("SDKROOT self-discovery: an empty-string SDKROOT counts as unset", {
   env <- .sim_defs(sim, ".sdkroot_default")
   f <- get(".sdkroot_default", envir = env)
   sdk <- .fake.sdk()
+  stub <- .xcrun.stub(sdk)
+  if (!.stub.execs(stub)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = function(name, default = "") "", os = "darwin",
-           xcrun = .xcrun.stub(sdk), clt.sdk = "/no/such/clt/sdk")
+           xcrun = stub, clt.sdk = "/no/such/clt/sdk")
   expect_identical(out, sdk)
 })
 
