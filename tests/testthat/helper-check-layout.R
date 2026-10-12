@@ -68,3 +68,27 @@
   }
   p
 }
+
+# Source-level extraction of the harness's top-level function definitions
+# (shared by test-check-layout-sim-gen.R and test-check-layout-sim-sdkroot.R):
+# the harness script executes on source, so a targeted helper is reached by
+# parsing the file and evaluating only the targeted assignment expressions in
+# a clean base-env child. Fail-closed: a requested symbol that no top-level
+# assignment provides is a STOP, never a silent partial extraction.
+.sim_defs <- function(file, names) {
+  env <- new.env(parent = baseenv())
+  found <- character()
+  for (e in parse(file = file)) {
+    if (is.call(e) && identical(as.character(e[[1L]]), "<-") &&
+        is.name(e[[2L]]) && as.character(e[[2L]]) %in% names) {
+      eval(e, envir = env)
+      found <- unique(c(found, as.character(e[[2L]])))
+    }
+  }
+  miss <- setdiff(names, found)
+  if (length(miss)) {
+    stop(paste0("harness generator symbols not extractable: ",
+                paste(miss, collapse = ", ")))
+  }
+  env
+}

@@ -270,7 +270,51 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
 # fallback path drives the native build (configure + rust): on this dev
 # machine it needs the SDKROOT=...MacOSX.sdk prefix because the CLT SDK 27
 # libSystem.B.tbd trips tapi (measured 2026-10-10); CI's checked toolchain
-# preflights green, so the fallback is effectively dev-local.
+# preflights green, so the fallback is effectively dev-local. When SDKROOT is
+# not exported the harness now self-discovers an ambient default ahead of the
+# provisioning INSTALL (.sdkroot_default: xcrun --show-sdk-path probe, then
+# the standard CLT SDK dir, gated on usr/include presence); an explicitly
+# exported SDKROOT -- e.g. the devlog-pinned MacOsX26.5.sdk -- always wins,
+# untouched.
+# U-M8 release-eng: SDKROOT ambient default for the provisioning INSTALL's
+# native build. Pure + probes injected, so the shared .sim_defs extraction
+# lets tests/testthat/test-check-layout-sim-sdkroot.R drive every branch
+# offline. Contract: proposes a darwin SDKROOT only while it is currently
+# unset/empty -- an explicit override returns NA so callers leave the
+# environment exactly as found; NA also answers when nothing trustworthy is
+# discoverable (the branch CI's checked toolchain walks). The proposed-dir
+# gate (dir + usr/include) rejects dangling aliases and half-provisioned CLTs
+# before clang could ever follow them.
+.sdkroot_default <- function(getenv = Sys.getenv,
+                             os = .Platform$os.type,
+                             xcrun = "/usr/bin/xcrun",
+                             clt.sdk = "/Library/Developer/CommandLineTools/MacOSX.sdk") {
+  if (!identical(os, "darwin")) return(NA_character_)
+  cur <- try(getenv("SDKROOT", ""), silent = TRUE)
+  if (!inherits(cur, "try-error") && is.character(cur) &&
+      length(cur) == 1L && nzchar(cur)) {
+    return(NA_character_)                    # explicit override wins, untouched
+  }
+  .usable.sdk <- function(p) {
+    is.character(p) && length(p) == 1L && nzchar(p) && dir.exists(p) &&
+      dir.exists(file.path(p, "usr", "include"))
+  }
+  probe <- NA_character_
+  if (file.exists(xcrun)) {
+    of <- tempfile("sdkroot-probe-")
+    rc <- tryCatch(suppressWarnings(suppressMessages(
+             system2(xcrun, "--show-sdk-path", stdout = of, stderr = "/dev/null"))),
+           error = function(e) 1L)
+    if (identical(rc, 0L) && file.exists(of)) {
+      hit <- trimws(readLines(of, warn = FALSE))
+      hit <- hit[nzchar(hit)]
+      if (length(hit) == 1L && .usable.sdk(hit[1L])) probe <- hit[1L]
+    }
+    if (file.exists(of)) unlink(of)
+  }
+  if (is.na(probe) && .usable.sdk(clt.sdk)) probe <- clt.sdk
+  probe
+}
 .provision_lib <- function() {
   cand <- if (nzchar(lib)) c(lib, .libPaths()) else .libPaths()
   for (l in cand) {
@@ -281,10 +325,26 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
   }
   new <- tempfile(paste0("rlib-", pkg, "-"))
   dir.create(new, recursive = TRUE)   # INSTALL refuses a missing --library dir
+  # SDKROOT ambient default for the native build (block 2b). This build's
+  # system2 cannot carry an env vector (measured, .run3), so the value rides
+  # the harness process instead of the spawn -- scoped to the one INSTALL
+  # below: set only when discovery has something to offer (which by
+  # .sdkroot_default's contract requires SDKROOT to be currently unset/empty)
+  # and reverted in the finally arm, which fires on every exit path including
+  # an error mid-spawn. (sys.onExit exists but this 4.5.2 build's signature
+  # has no local= arm -- measured -- so its attach-frame is not leaned on.)
   # --library= (NOT -l=): this build warns "unknown option" on -l= and then
   # silently targets the USER library (measured near-miss 2026-10-10).
-  ins <- .run3(.Rbin, c("CMD", "INSTALL", "--no-byte-compile", "--no-docs",
-                      paste0("--library=", new), root), "install")
+  .install <- function() .run3(.Rbin, c("CMD", "INSTALL", "--no-byte-compile",
+                                        "--no-docs",
+                                        paste0("--library=", new), root), "install")
+  sdk <- .sdkroot_default()
+  ins <- if (is.na(sdk)) .install() else {
+    cat("check-layout-sim: SDKROOT unset -- self-discovered ", sdk,
+        " (provisioning INSTALL only)\n", sep = "")
+    Sys.setenv(SDKROOT = sdk)
+    tryCatch(.install(), finally = Sys.unsetenv("SDKROOT"))
+  }
   if (!identical(ins$rc, 0L)) {
     cat(ins$log, sep = "\n")
     cat("check-layout-sim: ERROR provisioning R CMD INSTALL failed (rc ",

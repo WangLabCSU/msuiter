@@ -14,27 +14,9 @@
 # separately: backslash doubling round-trips through eval, and inputs whose
 # shape cannot be represented fail CLOSED (stop, not silent corruption).
 
-# Source-level extraction of the harness's top-level function definitions:
-# the harness script executes on source, so the generator is reached by
-# parsing the file and evaluating only the targeted assignment expressions
-# in a clean base-env child.
-.sim_defs <- function(file, names) {
-  env <- new.env(parent = baseenv())
-  found <- character()
-  for (e in parse(file = file)) {
-    if (is.call(e) && identical(as.character(e[[1L]]), "<-") &&
-        is.name(e[[2L]]) && as.character(e[[2L]]) %in% names) {
-      eval(e, envir = env)
-      found <- unique(c(found, as.character(e[[2L]])))
-    }
-  }
-  miss <- setdiff(names, found)
-  if (length(miss)) {
-    stop(paste0("harness generator symbols not extractable: ",
-                paste(miss, collapse = ", ")))
-  }
-  env
-}
+# Source-level extraction of the harness's top-level function definitions
+# lives in helper-check-layout.R (.sim_defs), shared with
+# test-check-layout-sim-sdkroot.R since U-M8 release-eng item 3.
 
 # The measured windows-shape: segments whose leading characters are
 # invalid escape introducers (\U \A \c), mirroring the real arm's path.
