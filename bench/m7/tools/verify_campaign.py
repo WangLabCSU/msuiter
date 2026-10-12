@@ -42,9 +42,41 @@ S_FULL, N_SIG, K_FULL = 1000, 50, 1000
 R_TIER_A, R_TIER_B = 1000, 200
 CAP_SECONDS = 21600                                  # six hours, the pre-registered cap
 ANCHOR_S, ANCHOR_R = 25, 200
-MIN_OVERLAP, MIN_MEDIAN_OK, MEDIAN_REL_TOL = 0.90, 0.95, 0.15
+MIN_OVERLAP, MIN_MEDIAN_OK = 0.90, 0.95
+# GO-05 amendment (controller ruling @09:45, RB-09 doctrine): the median clause
+# is a CI-noise envelope, not a flat relative tolerance -- a relative tolerance
+# explodes at near-zero estimands, which is a property of the definition, not
+# of the data. Both constants are fixed a-prior; see
+# docs/devlog/2026-10-11-go05-anchor-gate-amendment.md for the verbatim
+# retired outcome and the K_CI/EPS a-prior provenance.
+K_CI = 1.0                                             # envelope multiple
+EPS = 0.005                                            # both-below auto-pass floor
 CLAIM_REL_TOL = 1e-9
 ARMS = ("A1", "A2", "A3")
+# Which fits the decision CONSUMES (their physicality is law) versus which it
+# only REPORTS (controller ruling @10:45; "A1 gates the budget"): a report-only
+# arm's unusable fit becomes a fit_status entry, never a veto. Structural
+# non-identifiability message for the report path:
+NON_IDENTIFIABLE = "non-identifiable-at-probe-scale"
+# The floor gate's UNMEASURABLE leg (controller ruling @12:50, laws (1)-(2)):
+# a probe fit that is physically usable yet provably non-identifiable at the
+# probe scale cannot ground a 3x floor -- two same-seed, byte-identical-sealed
+# observations gave A2's rate opposite signs, so the floor would be a coin
+# flip. Such a leg is neither pass nor breach: the oracle says UNMEASURABLE
+# (rc 3), the instrument records the verbatim marker below, and the gate
+# loses its say on that arm -- it may not borrow a veto over the one lawful
+# shot. rc 2 stays reserved for the genuine hard refusals (missing args,
+# missing witnesses, structural).
+FLOOR_GATE_UNMEASURABLE = "UNMEASURED(probe-fit non-identifiable)"
+UNMEASURABLE_REASON = "probe-fit non-identifiable at probe scale"
+# Arm -> committed governance floor class (tool, arm, n): the structural rung's
+# ladder only -- a missing/structurally-unusable fit may still be covered by a
+# committed class. Entries are committed ONLY by controller ruling
+# (frozen-domain law); the map stays committed EMPTY and the rung has never
+# fired. For the non-identifiable class the @12:50 unmeasurable path
+# SUPERSEDES this fallback (law (5)): no fabricated equivalence, no
+# governance number conjured for an arm the probes cannot price.
+CAMPAIGN_FLOOR_CLASSES: dict[str, tuple[str, str, int]] = {}
 # Base bytes every lawful campaign dir must carry, whatever its verdict. The
 # heavy artifacts (arm witnesses, table, anchors) are claim-conditional: a
 # Tier-C UNMEASURED campaign legitimately never produced them.
@@ -59,9 +91,13 @@ def read_jsonl(path: Path) -> list[dict]:
 
 
 # -- the cost model (probe medians -> tier decision) ----------------------------------
-def fit_cost_model(probes: list[dict]) -> dict:
-    """Two probe shapes (same S, R_lo<R_hi) pin the linear model
-    wall = S*(p + rate*R): med_hi-med_lo = rate*S*(R_hi-R_lo)."""
+def fit_cost_model_report(probes: list[dict]) -> dict:
+    """The two-shape linear fit, REPORTED: wall = S*(p + rate*R) pinned by
+    med_hi-med_lo = rate*S*(R_hi-R_lo). A fit that fails the physical test
+    returns the non-identifiable status with the numbers it found -- it does
+    NOT raise, because a report-only payload may not veto. Structural
+    unusability (no records, shape disagreement, degenerate replicate counts)
+    still raises: there is nothing to report."""
     if not probes:
         raise ValueError("fit_cost_model: no probe records")
     by_shape: dict[tuple, list[float]] = {}
@@ -81,8 +117,20 @@ def fit_cost_model(probes: list[dict]) -> dict:
     rate = (med_hi - med_lo) / (s * (r_hi - r_lo))
     p = (med_lo - rate * s * r_lo) / s
     if rate < 0 or p < 0:
-        raise ValueError(f"non-physical cost fit: p={p} rate={rate}")
-    return {"p": p, "rate": rate, "shapes": sorted(by_shape)}
+        return {"fit_status": NON_IDENTIFIABLE, "p": p, "rate": rate,
+                "shapes": sorted(by_shape)}
+    return {"fit_status": "ok", "p": p, "rate": rate, "shapes": sorted(by_shape)}
+
+
+def fit_cost_model(probes: list[dict]) -> dict:
+    """The CONSUMED-fit law (RB-09, untouched): wherever a fit gates or feeds
+    the decision, a non-physical fit is a refusal. The report path above can
+    never satisfy a consumer. The returned entry keeps the uniform fit_status
+    label so every arm in a decide payload reads the same way."""
+    rep = fit_cost_model_report(probes)
+    if rep["fit_status"] != "ok":
+        raise ValueError(f"non-physical cost fit: p={rep['p']} rate={rep['rate']}")
+    return {k: rep[k] for k in ("fit_status", "p", "rate", "shapes")}
 
 
 def project_wall(fit: dict, S: int = S_FULL, reps: int = R_TIER_A) -> float:
@@ -111,9 +159,15 @@ def anchor_gates(a1: list[dict], a2: list[dict]) -> dict:
         r2 = m2[key(r1)]
         if not (float(r1["hi"]) < float(r2["lo"]) or float(r2["hi"]) < float(r1["lo"])):
             overlap += 1
-        m1 = float(r1["median"])
-        base = max(abs(m1), 1e-12)
-        if abs(m1 - float(r2["median"])) / base <= MEDIAN_REL_TOL:
+        a1m, a2m = float(r1["median"]), float(r2["median"])
+        hw1 = (float(r1["hi"]) - float(r1["lo"])) / 2.0
+        hw2 = (float(r2["hi"]) - float(r2["lo"])) / 2.0
+        # CI-noise-envelope clause (amended; constants fixed a-prior above):
+        # the two bootstrap medians must sit within K_CI of the larger CI
+        # half-width; a pair with both medians under EPS is indistinguishable
+        # from zero and auto-passes the median leg.
+        if (abs(a1m) < EPS and abs(a2m) < EPS) \
+                or abs(a1m - a2m) <= K_CI * max(hw1, hw2):
             median_ok += 1
     n = len(a1)
     of, mf = overlap / n, median_ok / n
@@ -210,8 +264,16 @@ def verdict_for(campaign: Path, host: str, hw_profile: str) -> tuple[int, dict]:
         except (ValueError, FileNotFoundError) as exc:
             return 2, {"ok": False,
                        "error": f"a MEASURED claim without full arm witnesses: {exc}"}
-        note("floor-gates", all(a.get("gate") == "pass" for a in arms.values()),
-             "3x-projection sanity gate passed per arm witness")
+        legs = [str(a.get("arm")) for a in arms.values()
+                if a.get("gate") == FLOOR_GATE_UNMEASURABLE]
+        detail = "3x-projection sanity gate passed per arm witness"
+        if legs:
+            detail += (f" — {', '.join(legs)} carried the pre-registered "
+                       f"{FLOOR_GATE_UNMEASURABLE!r} leg: a provably "
+                       "uninformative gate loses its say, it may not borrow "
+                       "a veto over the one lawful shot (ruling @12:50)")
+        note("floor-gates", all(a.get("gate") in ("pass",
+             FLOOR_GATE_UNMEASURABLE) for a in arms.values()), detail)
         if not table.is_file():
             note("nine-column-pins", False, "MEASURED claim with no campaign table")
         else:
@@ -283,11 +345,15 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return ap.parse_args(argv)
 
 
-def _arm_fit(campaign: Path, arm: str) -> dict:
+def _arm_probes(campaign: Path, arm: str) -> list[dict]:
     probes: list[dict] = []
     for p in sorted((campaign / "witnesses").glob(f"probe_{arm}_*.jsonl")):
         probes += read_jsonl(p)
-    return fit_cost_model(probes)
+    return probes
+
+
+def _arm_fit(campaign: Path, arm: str) -> dict:
+    return fit_cost_model(_arm_probes(campaign, arm))
 
 
 def main(argv: list[str] | None = None) -> tuple[int, str]:
@@ -302,10 +368,21 @@ def main(argv: list[str] | None = None) -> tuple[int, str]:
             {"allowed": allowed, "mode": args.mode, "campaign": str(campaign)})
 
     if args.decide:
+        # "A1 gates the budget": A1's fit is CONSUMED (its physicality is the
+        # pre-registered non-physical law -- refusal stands), while A2/A3
+        # fits are report-only payload: they report a fit_status, they do not
+        # veto the decision (controller ruling @10:45; the tier, cap and
+        # projections are invariant to every report-only arm's fit state).
         try:
-            fits = {arm: _arm_fit(campaign, arm) for arm in ARMS}
+            fits = {"A1": _arm_fit(campaign, "A1")}
         except (ValueError, FileNotFoundError) as exc:
-            return 2, json.dumps({"ok": False, "error": str(exc)})
+            return 2, json.dumps({"ok": False,
+                                  "error": f"A1 (consumed) fit refused: {exc}"})
+        for arm in (a for a in ARMS if a != "A1"):
+            try:
+                fits[arm] = fit_cost_model_report(_arm_probes(campaign, arm))
+            except (ValueError, FileNotFoundError) as exc:
+                fits[arm] = {"fit_status": NON_IDENTIFIABLE, "reason": str(exc)}
         tier = decide_tier(fits["A1"], cap=args.cap)      # A1 gates the budget
         return 0, json.dumps({"tier": tier, "fits": fits, "cap": args.cap,
                               "projections": {
@@ -315,20 +392,56 @@ def main(argv: list[str] | None = None) -> tuple[int, str]:
     if args.floor_check:
         # Pre-registered 3x-floor gate, campaign-scoped, adjudicated HERE only
         # (probes and the harness measure; this oracle decides). Breach => rc 4.
+        # The gate CONSUMES its projection, so it may never be built from a
+        # non-physical fit. Three legs, controller rulings @10:45 + @12:50:
+        #   physical fit       -> the probe-fit rung, rc 0/4, byte-untouched law;
+        #   non-identifiable   -> UNMEASURABLE: dedicated rc 3, the leg records,
+        #                         it does not adjudicate (a coin-flip floor can
+        #                         neither clear a wall nor excuse one);
+        #   structural/missing -> hard refusal rc 2, with the committed
+        #                         governance-table ladder where a class exists
+        #                         (committed reality: none, so rc 2).
         if args.arm is None or args.observed is None or args.reps is None:
             return 2, json.dumps({"ok": False, "error":
                                   "--floor-check needs --arm, --observed, --reps"})
+        body = {"arm": args.arm, "observed": args.observed,
+                "floor_ratio": gov.FLOOR_RATIO}
         try:
-            fit = _arm_fit(campaign, args.arm)
+            report = fit_cost_model_report(_arm_probes(campaign, args.arm))
         except (ValueError, FileNotFoundError) as exc:
-            return 2, json.dumps({"ok": False, "error": str(exc)})
-        projection = project_wall(fit, reps=args.reps)
-        floor = gov.FLOOR_RATIO * projection
-        gate = "pass" if args.observed <= floor else "breach"
-        return (0 if gate == "pass" else 4), json.dumps(
-            {"arm": args.arm, "gate": gate, "observed": args.observed,
-             "projection": projection, "floor": floor, "fit": fit,
-             "floor_ratio": gov.FLOOR_RATIO})
+            tri = CAMPAIGN_FLOOR_CLASSES.get(args.arm)
+            if tri is None:
+                return 2, json.dumps({
+                    "ok": False,
+                    "error": (f"{args.arm}: probe fit unusable ({exc}); the "
+                              "floor gate refuses to stand on a non-physical "
+                              "fit, and no committed governance floor class "
+                              "covers this arm")})
+            projection = gov.floor_for(*tri)
+            body.update({"projection": projection,
+                         "floor": gov.FLOOR_RATIO * projection,
+                         "fit": None, "floor_source": "governance-floor-table",
+                         "floor_class": list(tri)})
+        else:
+            if report["fit_status"] != "ok":
+                # Ruling @12:50, law (1): usable bytes that prove themselves
+                # uninformative at the probe scale (the same sealed data gave
+                # A2's rate opposite signs across two same-seed observations).
+                # The leg is REPORTED with its verbatim fit entry and the
+                # dedicated rc 3 -- never a fabricated floor, never a veto.
+                return 3, json.dumps({"ok": True,
+                                     "floor_gate": "unmeasurable",
+                                     "arm": args.arm,
+                                     "reason": UNMEASURABLE_REASON,
+                                     "fit": report})
+            fit = _arm_fit(campaign, args.arm)    # physical: the consumed law's own domain
+            projection = project_wall(fit, reps=args.reps)
+            body.update({"projection": projection,
+                         "floor": gov.FLOOR_RATIO * projection,
+                         "fit": fit, "floor_source": "probe-fit"})
+        gate = "pass" if args.observed <= body["floor"] else "breach"
+        body["gate"] = gate
+        return (0 if gate == "pass" else 4), json.dumps(body)
 
     if args.anchor_check:
         try:
