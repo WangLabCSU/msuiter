@@ -59,6 +59,10 @@ test_that("SDKROOT self-discovery: an explicitly set SDKROOT is never touched", 
 })
 
 test_that("SDKROOT self-discovery: unset SDKROOT adopts a healthy xcrun probe", {
+  # The fixture executes a POSIX shebang stub; windows runners cannot
+  # faithfully run the darwin probe. This path is exercised for real by the
+  # macOS CI arm and the local macOS battery.
+  skip_on_os("windows")
   sim <- .ms_src("tools/check-layout-sim.R")
   if (is.na(sim)) {
     skip("tools/check-layout-sim.R not locatable (R CMD check context)")
