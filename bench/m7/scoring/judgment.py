@@ -41,7 +41,7 @@ def _prf_table(rows: list) -> list:
              "| precision | recall | f1 | | | | | |",
              "|---|---|---|---|---|---|---|---|"]
     for r in rows:
-        lines.append(f"| {r['tool']} | {r['version']} | {r['arm']} | "
+        lines.append(f"| {r['tool']} | {r['version']} | {_n(r['arm'])} | "
                      f"{_n(r['N'])} | {r['n_samples']} | "
                      f"{r['tp']} | {r['fp']} | {r['fn']} |")
         lines.append(f"| {_fmt6(r['precision'])} | {_fmt6(r['recall'])} | "
