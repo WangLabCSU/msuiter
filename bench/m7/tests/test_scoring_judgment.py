@@ -107,6 +107,38 @@ def test_verdict_separates_judge_arms_from_sensitivity_report_columns():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_prf_table_labels_n_bearing_rollup_rows_without_str_none():
+    """Backlog 'renderer N-row fix' (release-blocking, U-M7-02 triage).
+
+    N-bearing rows (``n_rollup``) carry no arm label, and the paired
+    arm_rollup rows carry no N. Both must print the absent-label placeholder
+    '—' (the one ``_n()`` already gives the N column), never a leaked
+    Python ``str(None)``. Numerics are unaffected by this — it pins the
+    display projection only (the CSV layer renders absent fields as '',
+    pinned by test_scoring_determinism)."""
+    tmp = Path(tempfile.mkdtemp(prefix="m7jdn_"))
+    try:
+        assert _smoke(tmp) == 0
+        text = _judgment_text(tmp / "results")
+        verdict = text[text.find("Scoring verdict"):]
+        data = [[c.strip() for c in ln.strip().strip("|").split("|")]
+                for ln in verdict.splitlines()
+                if ln.strip().startswith("|")
+                and not set(ln) <= {"|", "-", " "}]
+        assert data, "the verdict half must contain rendered table rows"
+        for cells in data:
+            assert "None" not in cells, \
+                f"a rendered table cell leaked str(None): {cells}"
+        n_rows = [c for c in data if len(c) == 8 and c[3] in ("100", "1000")]
+        assert n_rows, "the smoke grid must produce N-bearing rollup rows"
+        for c in n_rows:
+            assert c[2] == "—", \
+                f"N-bearing rows must print the absent-label placeholder " \
+                f"in the stratum column, got: {c}"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def test_append_is_a_pure_text_operation_on_the_judgment_file():
     """append_verdict_sections is callable standalone (the emitter is a pure
     function of report+meta), idempotent-checked by content, and never
