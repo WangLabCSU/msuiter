@@ -37,6 +37,8 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
   (P) test_matrix_governance  exact-stamp parsing (no substring classes),
       judgment refuse-to-claim, pre-flight co-tenant refusal, worker census,
       pre-registered 3x-floor gate
+  (S) test_action_pins      action-pin law helper: tag form, attested SHA form,
+      mutable/short-SHA rejection (M8 supply-chain hardening)
   (R) test_floor_calibration  RB-09 calibrated floor table: per-class
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
@@ -71,7 +73,8 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_hash_provenance",
            # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
            "test_matrix_governance",
-           "test_floor_calibration"]
+           "test_floor_calibration",
+           "test_action_pins"]
 
 
 def _collect(mod_name):
