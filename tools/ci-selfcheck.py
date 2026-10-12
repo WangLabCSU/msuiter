@@ -23,6 +23,10 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import action_pins
+
 try:
     import yaml
 except ImportError:
@@ -156,8 +160,10 @@ def main():
 
     check("rcmdcheck args --as-cran + --no-manual",
           "--as-cran" in str(rjob) and "--no-manual" in str(rjob))
-    check("r-lib check action used", "r-lib/actions/check-r-package@v2"
-          in uses_list(ci))
+    check("r-lib check action used",
+          any(u.startswith("r-lib/actions/check-r-package")
+              and action_pins.has_major(u, c, 2)
+              for u, c in action_pins.uses_pairs(ci_text)))
     # The action's input is `error-on` (hyphen): an `error_on` key is
     # silently dropped and the action defaults to the warning gate, which
     # contradicts the stated error-level contract (CI audit 2026-10-07).
@@ -241,11 +247,13 @@ def main():
               for s in codecov_steps))
 
     # ---- action pinning (major version) -----------------------------------
-    bad = [u for w in (ci, sched) for u in uses_list(w)
-           if not re.search(r"@v\d+$", u)]
-    check("all actions pinned to a major version (@vN)", not bad, str(bad))
+    pairs = (action_pins.uses_pairs(ci_text)
+             + action_pins.uses_pairs(txt(SCHED)))
+    bad = [f"{u} #{c}" for u, c in pairs
+           if not action_pins.is_acceptably_pinned(u, c)]
+    check("all actions pinned (major tag or attested SHA)", not bad, str(bad))
     check("r-lib actions @v2",
-          all(u.endswith("@v2") for w in (ci, sched) for u in uses_list(w)
+          all(action_pins.has_major(u, c, 2) for u, c in pairs
               if u.startswith("r-lib/actions/")))
 
     # ---- scheduled.yml -----------------------------------------------------
