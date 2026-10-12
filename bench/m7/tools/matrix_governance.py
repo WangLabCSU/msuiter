@@ -577,6 +577,45 @@ def nonpass_rows(rows) -> list[dict]:
     return [r for r in rows if r["status"] not in PASS_STATUSES]
 
 
+# -- (4a) hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件全表) --------
+# B1a made the pins possible ("unset → present-but-empty"); a table with empty
+# pin columns still does not attest its machine, and the ROADMAP's full-table
+# clause is only true of a table where EVERY row carries the pin of the
+# measured environment. This is the machine-checkable face of the EVIDENCE-
+# ADDENDUM §4 forward path: the table alone (plus the two expectations a reader
+# can re-measure) answers "which machine produced these numbers". The pure
+# verdict names offenders by cell; the authoring gate in run_bench.main turns
+# an unattested authoritative table into a refusal, never a file.
+def hardware_pin_verdict(rows, *, host: str, hw_profile: str) -> dict:
+    """Adjudicate a timings table's hardware pins against the measured
+    environment: every row's ``host``/``hw_profile`` must be present AND equal
+    to the expectation. Offenders are named per cell (diagnosed, never
+    averaged away); a zero-row table attests nothing and is not ok."""
+    host, hw_profile = (host or "").strip(), (hw_profile or "").strip()
+    missing_host, missing_profile = [], []
+    mismatched_host, mismatched_profile = [], []
+    for r in rows:
+        cell = r["cell"]
+        row_host = (r.get("host") or "").strip()
+        row_profile = (r.get("hw_profile") or "").strip()
+        if not row_host:
+            missing_host.append(cell)
+        elif row_host != host:
+            mismatched_host.append(cell)
+        if not row_profile:
+            missing_profile.append(cell)
+        elif row_profile != hw_profile:
+            mismatched_profile.append(cell)
+    complete = not (missing_host or missing_profile
+                    or mismatched_host or mismatched_profile)
+    return {"rows": len(rows),
+            "missing_host": missing_host,
+            "missing_hw_profile": missing_profile,
+            "mismatched_host": mismatched_host,
+            "mismatched_hw_profile": mismatched_profile,
+            "ok": bool(rows) and complete and bool(host) and bool(hw_profile)}
+
+
 # -- (4b) defect ledger + re-adjudication lineage (RB-09(3)(iv)) --------------------
 # A defect-floor flag is law for the floor-table epoch that raised it. When a
 # cell flagged under an OLD epoch later passes under a NEW one (the RB-09

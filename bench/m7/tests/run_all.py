@@ -41,6 +41,45 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
       (sigminer superlinear, sigprofiler amortizing)
+Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+  (S) test_hardware_pin        every authoritative row pinned to the measured
+      environment; the docker-authoritative pass refuses to file without the
+      operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
+      table from its own bytes
+Bootstrap campaign instrument (U-M7-04 GO-05, charter SCOPE B,
+pre-registration law docs/devlog/2026-10-10-m7-bootstrap-campaign.md):
+  (T) test_bootstrap_campaign  deterministic frozen generator (double-run byte
+      identity + seal), decisive tier ladder, anchor gates, SCIENCE-FIRST
+      reader-side verifier (inflated claim / failed anchor / self-adjudicating
+      probe / unpinned table all refused), single-full-shot ledger law
+Anchor-probe mode (GO-05 follow-on): calibrating the anchor gate at the full
+shape WITHOUT spending the RB-10 single authoritative shot:
+  (U) test_anchor_probe       probe rides the full shape table, quits before
+      the probe stage (no probes/tier/timed arms/timings/ratio), its ledger
+      entry is non-shot by the reader predicate, probe-grade result.md is
+      claim-free with the oracle verbatim, dirty-outdir and mispaired modes
+      refused executed, anchor gates frozen
+  (V) test_anchor_gate        the amended anchor median clause: CI-noise
+      envelope K_CI x larger half-width with the EPS zero floor, constants
+      frozen a-prior; both directions pinned (near-zero-in-noise passes,
+      true divergence fails, both-zero auto-passes, boundaries exact) and the
+      attested probe witnesses adjudicate offline (the shot stays unspent)
+  (W) test_tier_probe         the consumed/report-only fit split: tonight's
+      verbatim A2 bytes report, never veto (golden regression), the decision
+      is byte-invariant to report-only states, the non-physical A1 law and
+      the missing-witness refusal still bite, the floor gate falls back to
+      the committed governance table or hard-refuses, the frozen probe shape
+      is untouched, and the --tier-probe rehearsal mode carries (U)-group
+      discipline (guards executed, claim-free md, shot-counter invisible)
+  (X) test_floor_gate_unmeasurable  the @12:50 unmeasurable floor leg: a
+      probe fit provably non-identifiable at the probe scale carries the
+      dedicated rc 3 with its verbatim fit entry (tonight's golden A2 bytes),
+      never a fabricated floor; rc 2 stays reserved for missing/structural
+      bytes, rc 0/4 byte-untouched; the instrument accepts {0,3,4}, records
+      the verbatim UNMEASURED marker plus the oracle reason, and CONTINUES
+      (dedicated writer executed on the target interpreter); the reader
+      tolerates only the verbatim marker and discloses the leg, while
+      breach and any forged string still fail a MEASURED claim
 """
 
 from __future__ import annotations
@@ -71,7 +110,19 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_hash_provenance",
            # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
            "test_matrix_governance",
-           "test_floor_calibration"]
+           "test_floor_calibration",
+           # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100 钉硬件全表):
+           "test_hardware_pin",
+           # U-M7-04 GO-05: bootstrap-vs-sigminer campaign instrument (SCOPE B):
+           "test_bootstrap_campaign",
+           # GO-05 follow-on: anchor-probe calibration mode (RB-10-safe):
+           "test_anchor_probe",
+           # GO-05 amendment: CI-noise-envelope anchor gate (TDD, a-prior):
+           "test_anchor_gate",
+           # GO-05 ruling @10:45: consumed/report-only fits + tier-probe (TDD):
+           "test_tier_probe",
+           # GO-05 ruling @12:50: unmeasurable floor leg, rc 3 (TDD):
+           "test_floor_gate_unmeasurable"]
 
 
 def _collect(mod_name):
