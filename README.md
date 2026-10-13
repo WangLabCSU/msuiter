@@ -21,7 +21,7 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 | [docs/research/06-s7-class-system.md](docs/research/06-s7-class-system.md) | S7 object system: status, design patterns, engine-registry blueprint |
 | [docs/research/07-algorithm-zoo.md](docs/research/07-algorithm-zoo.md) | Exhaustive layered algorithm zoo + integrated-method opportunities |
 | [docs/research/08-fact-check-audit.md](docs/research/08-fact-check-audit.md) | Fact-check audit of the dossier (discrepancy resolutions) |
-| [docs/CAPABILITY-MATRIX.md](docs/CAPABILITY-MATRIX.md) | **Capability coverage matrix** — the authoritative completeness checklist (9 layers, per-capability methods/engines/defaults/visualization/milestones) |
+| [docs/CAPABILITY-MATRIX.md](docs/CAPABILITY-MATRIX.md) | **Capability coverage matrix** — the authoritative completeness checklist (8 layers L-A..L-H, per-capability methods/engines/defaults/visualization/milestones) |
 | [docs/reviews/00-synthesis.md](docs/reviews/00-synthesis.md) | **Five-expert independent review synthesis (adopt/reject verdicts)** |
 | [docs/reviews/01–05](docs/reviews/01-computational-biologist.md) | Independent adversarial reviews: computational biologist / Rust-R engineer / ML statistician / software engineer / Nature editor |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Modular architecture: Rust workspace + S7 package, ADRs, unified method framework, MSU-* methods |
@@ -39,8 +39,8 @@ msuiter is the fully modernized successor of [sigminer](https://github.com/Shixi
 ## Development
 
 **Install (v0.1)**: from GitHub with rustc >= 1.71 —
-`remotes::install_github("<org>/msuiter")` (the source build compiles the vendored Rust core offline; CRAN-style `R CMD INSTALL` works from the release tarball). r-universe binaries: enable the repo at `<org>.r-universe.dev`, then
-`install.packages("msuiter", repos = c("https://<org>.r-universe.dev", "https://cloud.r-project.org"))`. No CRAN yet (v1.0 target).
+`remotes::install_github("WangLabCSU/msuiter")` (the source build compiles the vendored Rust core offline; CRAN-style `R CMD INSTALL` works from the release tarball). r-universe binaries: enable the repo at `WangLabCSU.r-universe.dev`, then
+`install.packages("msuiter", repos = c("https://WangLabCSU.r-universe.dev", "https://cloud.r-project.org"))`. No CRAN yet (v1.0 target).
 
 **Dev install**: [rustup](https://rustup.rs) (MSRV 1.71) + R >= 4.3 with [rextendr](https://extendr.github.io/rextendr/) — then `devtools::load_all()` is all you need; the Rust workspace under `src/rust/` compiles automatically.
 

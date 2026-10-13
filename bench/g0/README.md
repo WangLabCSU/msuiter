@@ -7,8 +7,9 @@
 >
 > 状态：harness 开建完成并通过独立审核修复（2026-09-28：NB 分支 EM 数学
 > 错误 P0-1、敏感性臂泄漏 P0-2、冻结空间缩水 P0-3 及 P1/P2 批全部落改）；
-> 自校验测试 36/36 通过；正式 G0 执行
-> （primary/degraded × docker × cosmic-file）**未开跑**，等 F5 执行环境落实。
+> 自校验测试以全表绿为准（`python3 -m tests.run_all`）；degraded lane 已闭环——degraded 权威运行
+> 2026-10-08 verdict=A（证据 `bench/results/docker_degraded_pi_20261007-212438/`，见 docs/ROADMAP.md
+> G0 行）；primary lane（primary × docker × cosmic-file）**未开跑**，等 F5 执行环境落实。
 
 ## 1. 冻结协议要点（本 harness 的实现依据）
 
@@ -50,7 +51,7 @@ bench/g0/
 │   ├── run_stl.R           STL 容器 runner（bootstrap nboot=200 + 过滤）
 │   ├── Dockerfile.sigfit   r-ver 4.3.3 + rstan + sigfit@v2.2.0
 │   └── Dockerfile.stl      r-ver 4.3.3 + signature.tools.lib@v2.5.2
-├── tests/                  python3 -m tests.run_all（36 项，不强制 pytest）
+├── tests/                  python3 -m tests.run_all（全表绿为准，不强制 pytest）
 ├── results/                入 git：Seeds.txt、coverage_*.csv、judgment_*.md、
 │                           timings_*.csv、diagnostic_lrt_nb.csv
 └── cache/                  gitignored：counts、truth、cell 输入/输出中间产物
@@ -76,7 +77,7 @@ bench/g0/
 ```bash
 cd bench/g0
 
-# ① 自校验（约 15 s；36 项测试全过为 harness 可用条件）
+# ① 自校验（约 15 s；tests 全表绿为 harness 可用条件）
 python3 -m tests.run_all
 
 # ② 管线 smoke（mock adapter + synthetic provider；只验证 harness 自身）

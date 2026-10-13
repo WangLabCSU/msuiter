@@ -16,7 +16,12 @@
 * Timing rows carry host and hw_profile pins beside the G0 columns; the reader keeps the 7-col legacy branch (commit cfef27c; bench/m7/competitors/timings.py).
 * docs/PERFORMANCE.md adds site-facing performance anchoring by reference only (commit dc5bda2).
 * The docs-sync guard gained the ROADMAP checkbox-truth checker (every checked M6s/M7/G completion claim must cite path:line or a commit token; commit b02ad50; tools/docs-sync.R, tests/testthat/test-docs-sync.R); benchmark trio naming settled by a controller ruling with @family cross-links (commit 24bc53f; docs/devlog/2026-10-10-m7-benchmark-ergonomics.md).
+* Rollup-row label rendering fix: N-bearing rollup rows render the stratum label through the absent-label placeholder instead of str(None) (commit 8d5ef8d, merged as c3a04ff, PR #16; bench/m7/scoring/judgment.py, bench/m7/tests/test_scoring_judgment.py); the same merge carried the .r_str escape-model completion -- backslash-escaped quotes with fail-closed controls (commit b36d064; tools/check-layout-sim.R, docs/devlog/2026-10-10-m7-benchmark-ergonomics.md).
+* GO-05 bootstrap-vs-sigminer campaign instrument: single-authoritative-shot campaign harness (bench/bootstrap/gen_campaign.R generator + run_campaign.R launcher) adjudicated end-to-end by the shared law oracle bench/m7/tools/verify_campaign.py -- anchor-probe calibration mode, CI-noise-envelope anchor gate, floor-gate rc law with the dedicated unmeasurable leg, and --tier-probe rehearsal (commit bfa7376, PR #18; docs/devlog/2026-10-10-m7-bootstrap-campaign.md, docs/devlog/2026-10-11-go05-anchor-gate-amendment.md, docs/devlog/2026-10-11-go05-tier-oracle-amendment.md).
 
+## M8 · Release engineering
+
+* Release-engineering batch: all third-party GitHub Actions pinned to full commit SHAs with the human tag kept in the trailing comment (annotated-tag pins re-derived to the peeled commit, peel-verified), .git/.pytest_cache excluded from R CMD build tarballs, and an SDKROOT self-discovery fallback for the check-layout-sim provisioning INSTALL (commit 2c1431f, PR #17; tools/action_pins.py, tools/check-layout-sim.R, .Rbuildignore).
 
 # msuiter 0.1.0（2026-10-05）
 
