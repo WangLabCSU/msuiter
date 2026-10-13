@@ -56,7 +56,7 @@
 │   重采样/共识聚类/HMM/GMM · SBS/DBS/**MNV/complex 路由**/ID83 ·        │
 │   twobit 快路径 · exactPcf                                            │
 └──────────────────────────────────────────────────────────────────────┘
-   外部工具（SigProfiler*/MuSiCal/mmsig/…）→ bench/adapters/ 容器化对照，
+   外部工具（SigProfiler*/MuSiCal/mmsig/…）→ bench/g0/adapters/、bench/m7/adapters/ 容器化对照，
    永不进入 ms_* API（D9）
 ```
 

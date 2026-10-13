@@ -1,6 +1,6 @@
 # tools/kl-crosscheck · U-M1s-14 KL 数值协议等价对拍
 
-**msuiter 自研 KL-NMF（`src/rust/engine/src/nmf.rs::fit_kl_with_init`）vs R NMF 包 brunet 算法**的一次性固定平台实验（不进 CI 门；依据 `docs/ARCHITECTURE.md` §7.1 条目 1 / D11 / A8、`docs/ROADMAP.md` M1s 的 U-M1s-14 行）。验收口径：同初始化、同迭代数下 `‖ΔW‖_F/‖W_R‖_F < 1e-10`（H 同）+ 目标轨迹逐元素相对差 < 1e-12。
+**msuiter 自研 KL-NMF（`src/rust/engine/src/nmf.rs::fit_kl_with_init`）vs R NMF 包 brunet 算法**的一次性固定平台实验（不进 CI 门；依据 `docs/ARCHITECTURE.md` §7 条目 1 / D11 / A8、`docs/ROADMAP.md` M1s 的 U-M1s-14 行）。验收口径：同初始化、同迭代数下 `‖ΔW‖_F/‖W_R‖_F < 1e-10`（H 同）+ 目标轨迹逐元素相对差 < 1e-12。
 
 **结论（2026-09-30，本机）**：**PASS —— 数值协议等价成立**。端点（T=50/200）相对差 0.9e-15 – 6.4e-15，比 1e-10 判据低 5 个量级；全部数字见 `result.md`（脚本自动生成、数字全录）。
 

@@ -47,7 +47,7 @@ G0 先导实验（W1–2，作者本人）→ Framing ADR ——独立于代码�
 |---|---|---|---|---|---|
 | U-M0-01 | rextendr 脚手架 + Cargo workspace | `DESCRIPTION`/`Makevars.in`/`src/rust/`（workspace：FFI 壳 crate 在根 + `engine/`、`catalog/` 成员，rextendr 约定）/`R/msuiter-package.R`/`zzz.R` | 【工程】依赖=收缩清单（extendr-api default-features=false、ndarray、rayon、memmap2；**无 rand**，D2/ARCH §2）；engine+catalog `#![forbid(unsafe_code)]`；deny ban 方向规则；cargo test 空转绿 + check 绿 | — | 2–3 d |
 | U-M0-02 | **M0 spike**（W1 截止） | 真实 cargo vendor + xz 字节数报告；rustc 1.71 × {Linux, macOS, Windows} 构建证明；twobit 两案（crate over `Cursor<Mmap>` vs 自研 reader）byte-swap/大端验证 → 两条 ADR | 【工程】数字落 ADR（D4/D7）；vendor 超预算 → 依赖再收缩决策记录 | 01 | 3 d |
-| U-M0-03 | S7 类骨架（无 `.state`） | `R/classes/*.R`：MsVariants/MsCatalog/MsSignature/MsFit/MsRefDb/MsEngine/MsBenchmark 七类 + validator；互引一律快照摘要（维度+通道表哈希+refdb 版本，A5） | 【工程】坏标签/维度/NA 必抛错且错误 class 断言；saveRDS/load 后全泛型行为测试（D8/D12） | 01 | 3 d |
+| U-M0-03 | S7 类骨架（无 `.state`） | `R/classes/*.R`（delivered as flat `R/classes-*.R` per ARCHITECTURE §3.1 flat-module law; load order via DESCRIPTION `Collate`）：MsVariants/MsCatalog/MsSignature/MsFit/MsRefDb/MsEngine/MsBenchmark 七类 + validator；互引一律快照摘要（维度+通道表哈希+refdb 版本，A5） | 【工程】坏标签/维度/NA 必抛错且错误 class 断言；saveRDS/load 后全泛型行为测试（D8/D12） | 01 | 3 d |
 | U-M0-04 | 引擎注册表 + 契约测试 | `register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`（A17） | 【工程】字符串糖解析失败时列全部可用引擎名；non-certified 告警逻辑 | 03 | 2 d |
 | U-M0-05 | 通道注册表单一事实来源 | `data-raw/build_channels.R` → R data + Rust 常量 + 构建期与 COSMIC 文件断言一致 + docs-sync CI | 【工程】drift 即红（D5） | 01 | 2 d |
 | U-M0-06 | 自研 RNG 模块 | `engine/rng.rs`：PCG64 + SplitMix64 种子流布局（per-replicate/rank/fold 计数器流，A6；布局写进论文 Methods） | 【逐位】跨版本 golden：固定 seed → 固定前 N 个 u64 | 01 | 2 d |
@@ -71,8 +71,8 @@ G0 先导实验（W1–2，作者本人）→ Framing ADR ——独立于代码�
 | U-M1s-07 | DBS78 + MNV 路由 | `catalog/dbs.rs`（Q-链规则）+ `catalog/mnv.rs`（2–5bp/>5bp/complex indel/double indel 路由表 + 拆分 VCF 相邻记录重连 + skip ledger 进 provenance，A11） | 【逐位】SPMG DBS/MNV/complex golden；路由失败模式显式 | 06, 13 | 3 d |
 | U-M1s-08 | 2bit 快路径 | `catalog/genome.rs`（按 U-M0-02 spike ADR 定案实现） | 【工程】byte-swap/大端验证 + 与 BSgenome 对拍 | 02 | 2 d |
 | U-M1s-09 | FFI 导出 | `ms_tally_rust()` / `ms_extract_rust()`；`docs/ffi-surface.md` 冻结（per-release 评审工件） | 【工程】surface diff 进 PR 模板检查项 | 09(M0), 06/07 | 1 d |
-| U-M1s-10 | `ms_variants()` | `R/io/variants.R`：VCF/BCF/MAF/TSV 读时校验 → MsVariants；somaticness 信号（caller/normal 溯源、VAF floor、FILTER 透传） | 【工程】validator 坏输入全测试（L-A M1s 行） | 03 | 2 d |
-| U-M1s-11 | `ms_tally()` | `R/catalog/tally.R` 泛型分发 + MsCatalog 装配；注解缓存最小集（转录链，支撑 SBS192/384） | 【工程】目录 vs sigminer/MP 玩具交叉验证 | 09(M0), 10 | 2–3 d |
+| U-M1s-10 | `ms_variants()` | `R/io/variants.R`（delivered as `R/io-variants.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`）：VCF/BCF/MAF/TSV 读时校验 → MsVariants；somaticness 信号（caller/normal 溯源、VAF floor、FILTER 透传） | 【工程】validator 坏输入全测试（L-A M1s 行） | 03 | 2 d |
+| U-M1s-11 | `ms_tally()` | `R/catalog/tally.R`（delivered as `R/catalog-tally.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`）泛型分发 + MsCatalog 装配；注解缓存最小集（转录链，支撑 SBS192/384） | 【工程】目录 vs sigminer/MP 玩具交叉验证 | 09(M0), 10 | 2–3 d |
 | U-M1s-12 | `ms_extract()` 单方法 | 单方法 KL 提取 + `print/format`（共识-CV 流水线在 M2） | 【工程】端到端冒烟（玩具数据 cosine 合理区间） | 11 | 2 d |
 | U-M1s-13 | 金标准夹具基建 | fixture 生成脚本 + golden 文件管理 + 刷新脚本（PR 检查项联动，A15） | 【工程】夹具可复现生成 | 05 | 1 d |
 | U-M1s-14 | KL 一次性对拍 | vs R NMF brunet 固定平台实验，`‖ΔW‖/‖W‖<1e-10` | 【等价】报告落 devlog/ADR，**不进 CI 门**（D11/A8） | 02 | 1 d |
@@ -156,6 +156,8 @@ G0 先导实验（W1–2，作者本人）→ Framing ADR ——独立于代码�
 **Kill criteria**（ARCH §10，触发任一 → 停当前轨道，向用户汇报 pivot 选项）：先导实验证伪；Cornet 正式发表压制相关性组件；M3b 前无队列合作；竞品发布校准 CI；滑期 >100%；无 co-maintainer。
 
 ## 6. 启动检查单（第 1 周即行动）
+
+> [2026-10-13] Week-1 kickoff snapshot; boxes intentionally left unchecked as authored. These gates/units are tracked authoritatively in [docs/ROADMAP.md](ROADMAP.md) (M0 checklist rows, G-gate 排程 rows, G0 行) — the ROADMAP supersedes this checklist.
 
 - [ ] **G0 协议冻结并开跑**（作者 + signature 专家；两周窗口，结果写 Framing ADR）
 - [ ] **U-M0-01 脚手架** + **U-M0-02 spike**（spike W1 硬截止——vendor 数字决定后续一切构建决策）

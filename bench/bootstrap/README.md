@@ -35,3 +35,15 @@ Smoke rehearsals (`--mode pilot --smoke`, small shapes, disposable numbers)
 must also run with no measurement container live; their outdirs live under
 /tmp and never support a claim. Re-read a committed campaign any time with
 `python3 bench/m7/tools/verify_campaign.py --campaign <dir>`.
+
+Rehearsal and override switches (arg definitions in `run_campaign.R`):
+`--tier-probe` is a valueless switch that rehearses the decision path
+(census, sealed data bytes, probes, oracle `--decide`) at the authoritative
+full shape table and stops before any timed arm, printing
+`TIER-PROBE-COMPLETE`; it is admitted only paired with `--mode full` (never
+`--smoke` or `--mode pilot`), requires a fresh/empty `--outdir`, and writes
+only its own `{"kind":"tier-probe","grade":"calibration"}` ledger entry, so
+the single authoritative RB-10 shot stays unspent. `--tier <value>` is an
+operator override applied after the oracle verdict (it replaces the
+oracle-returned tier). `--cap <value>` is forwarded verbatim as `--cap` to
+the oracle's `--decide` invocation in `bench/m7/tools/verify_campaign.py`.

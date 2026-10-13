@@ -303,3 +303,22 @@ superseding rc 3 class, keeping its hard-refusal twin (missing bytes) at
 rc 2 — the ladder's two classes, separated with the ruling's own wedges.
 No push. The tier-probe rehearsal was not re-fired; the frozen dir was not
 touched.
+
+---
+
+## Errata (appended 2026-10-13, docs-correctness sweep; narrative above untouched)
+
+Section 2 cites the frozen witness outdir as
+`bench/results/bootstrap_vs_sigminer_20261011T024301Z/`. That path is
+lane-relative, not a committed trunk path: verified 2026-10-13, the outdir
+exists **uncommitted** inside the GO-05 lane worktree named in this file's
+header (worktree `agent-a266f2d2cd8559ec4`, branch `go-05-anchor-probe`), at
+`bench/results/bootstrap_vs_sigminer_20261011T024301Z/` beneath that
+worktree root (`campaign_launches.jsonl`, `campaign.rds`, `seal.json`,
+`Seeds.txt`, `witnesses/`); it is not present under the repository's
+committed `bench/results/` tree, and no `bootstrap_vs_sigminer_*` copy
+exists under `/tmp/go05lane/` — the lane's `/tmp/go05lane/` evidence
+verified today is the shot log cited above,
+`/tmp/go05lane/shot_20261011T024301Z.log`. A committed replication of the
+frozen witness bytes is a follow-on item; until then, read the Section 2
+citation as lane-worktree-relative evidence.
