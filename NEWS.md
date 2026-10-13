@@ -24,6 +24,15 @@ A new development cycle since v0.1.0.
 
 * Release-engineering batch: all third-party GitHub Actions pinned to full commit SHAs with the human tag kept in the trailing comment (annotated-tag pins re-derived to the peeled commit, peel-verified), .git/.pytest_cache excluded from R CMD build tarballs, and an SDKROOT self-discovery fallback for the check-layout-sim provisioning INSTALL (commit 2c1431f, PR #17; tools/action_pins.py, tools/check-layout-sim.R, .Rbuildignore).
 
+## P5 · Catalog currency (sigminer v3 parity)
+
+* Catalog-currency instrument: a provenance sidecar + updater/verifier that makes msuiter's pinned COSMIC catalog snapshot mechanically verifiable against the official COSMIC v3.6 release line, fully offline-testable via injected sources (parity plan docs/research/09 section 5, phase P5; governance shape of the refdb chain in R/refdb.R, data-raw/build_refdb.R).
+  * `ms_catalog_registry()` (R/catalog-currency.R, R/catalog-currency-governance.R): reads and fail-closed validates the committed digest sidecar `inst/catalog-currency/catalog_registry.rds` (schema-gated, every digests/URL/label field validated, the login-gated matrix-bytes leg recorded UNMEASURED -- never fabricated).
+  * `ms_catalog_currency_update()` (R/catalog-currency-harvest.R): fetches or injects the two official JSON source documents, extracts the carrier payloads byte-faithfully, and writes the byte-idempotent cache (verbatim payload bytes + an integrity record + a review candidate sidecar); `--source`/`offline` make it network-free by construction (D3 law: digests, URLs, version labels and shape facts only, never COSMIC numerics).
+  * `ms_catalog_currency()` (R/catalog-currency.R): the offline verdict engine resolving the pinned / latest / available legs with the precedence law `inconsistent > corrupt > no-cache > drift > behind > ok` and the `current/behind/ahead/unknown` version axis; cross-checks the pinned facts against the live `ms_refdb_manifest()`.
+  * Operator CLI `tools/catalog-currency.R` (subcommands `verify|update|registry|help`, exit 0 = ok, 1 = non-ok verdict, 2 = usage) with `tools/catalog-currency/README.md`; builder `data-raw/build_catalog_registry.R`.
+  * TDD suite `tests/testthat/test-catalog-currency.R` + `tests/testthat/helper-catalog-currency.R` + the synthetic-only fixture `tests/testthat/fixtures/catalog-currency/downloads_page_synthetic.html`; digest stability, drift detection, pinned-vs-latest resolution, corrupt/missing cache, offline fixture path and argument-validation errors covered.
+
 # msuiter 0.1.0 (2026-10-05)
 
 The first release: the minimal usable core of the Rust compute kernel + the R/S7 interface (the ROADMAP v0.1 gate = M0 + M1s; the M1c/M2/M3a/M4 calibration and similarity layers were pulled forward into this tree and ship with the release). The sections below are the development-period batch records (promoted from the 0.0.0.9000 development line).

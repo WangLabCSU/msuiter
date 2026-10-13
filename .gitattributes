@@ -7,3 +7,14 @@
 # COSMIC_v3.6_SBS_GRCh37.txt). The .rds manifest is binary but shares the
 # same bundle and the same byte-pinning discipline.
 inst/reference/** -text
+
+# Byte-pinned test fixtures ----------------------------------------------------
+# test-catalog-currency.R compares the golden downloads page against the
+# helper-generated page byte for byte (writeBin/readBin raw bytes); with
+# core.autocrlf=true Windows checkouts the html arrived CRLF-rewritten and
+# the unit died on per-line \r deltas (PR #26 CI audit 2026-10-14:
+# windows-latest/R-release testthat failure at test-catalog-currency.R:504,
+# all other arms green). The .txt specimen
+# shares the same hazard family. Pin the whole fixtures tree to raw bytes,
+# same discipline as the refdb pins above.
+tests/testthat/fixtures/** -text

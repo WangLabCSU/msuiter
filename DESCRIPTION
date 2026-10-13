@@ -17,6 +17,7 @@ Imports: S7,
 Suggests: BSgenome.Hsapiens.UCSC.hg19,
     ggplot2,
     ggalluvial,
+    jsonlite,
     uwot,
     knitr,
     rmarkdown,
@@ -37,6 +38,9 @@ Collate:
     'classes-fit.R'
     'classes-refdb.R'
     'refdb.R'
+    'catalog-currency-governance.R'
+    'catalog-currency-harvest.R'
+    'catalog-currency.R'
     'classes-engines.R'
     'engines-registry.R'
     'engines-ard.R'
