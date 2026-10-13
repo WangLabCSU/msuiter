@@ -226,7 +226,14 @@ class CosmicFileProvider:
     """
 
     def __init__(self, path: str | os.PathLike):
-        path = Path(os.environ.get("G0_SIGNATURES_PATH", path))
+        # An explicit path always wins; the environment is the fallback the
+        # harness route (provider_by_name passes '') relies on. The former
+        # os.environ.get(G0_SIGNATURES_PATH, path) let an ambient value
+        # silently shadow an explicit file -- see the two env-shadowing
+        # gates in tests/test_provider.py (2026-10-13).
+        if not path:
+            path = os.environ.get("G0_SIGNATURES_PATH", "")
+        path = Path(path)
         if not path.exists():
             raise ProviderError(
                 f"signature file not found: {path} "
