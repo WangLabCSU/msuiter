@@ -1,62 +1,62 @@
-# 评审 02：Rust/R 系统开发专家（独立评审，2026-09-28）
+# The review 02: the Rust/R systems-development expert (an independent review, 2026-09-28)
 
-> 评审人设定：extendr 系 R 包 CRAN 维护者，深谙 R C API、跨平台打包、cargo vendoring。关键主张经 upstream 一手复核（extendr-macros wrapper 源码、crates.io extendr-api 0.9.0、docs.rs rand/twobit、CRAN Using Rust 页）。
-> **总裁决：有条件通过（conditional go）。** R/算法/许可层契约密度罕见地高，但 **Rust 运行时层契约（随机数、并发、panic、FFI 边界、分发预算）几乎整体缺席**——这是"数量级加速 + 可复现"叙事的地基。
+> The reviewer persona: a CRAN maintainer of extendr-family R packages, deeply versed in the R C API, cross-platform packaging and cargo vendoring. The load-bearing claims were re-checked first-hand against upstream (the extendr-macros wrapper source, crates.io extendr-api 0.9.0, docs.rs rand/twobit, the CRAN Using Rust page).
+> **The overall verdict: conditional pass (conditional go).** The contract density of the R/algorithm/licensing layers is rarefaction-grade high, but **the contracts of the Rust runtime layer (the random numbers, the concurrency, the panics, the FFI boundary, the distribution budget) are almost wholly absent** — and that is the ground of the "orders-of-magnitude speedup + reproducibility" narrative.
 
 ## P0
 
-### 1.【P0】复现性契约建在流沙上：`rand` 的输出跨版本不保证一致
-- docs.rs 原文：`SmallRng` **"Non-portable: any future library version may replace the algorithm"**，复现请用 `rand_pcg/rand_xoshiro`；rand 0.9 是破坏性大版本且 crates 已滚到 0.10.x——审稿期内一次 `cargo update`，"种子全链路可复现"静默失效。
-- **修改**：不碰 rand 的 RNG 面。自写 PCG64（~60 行）+ 自写 multinomial/Dirichlet（rand_distr 本就没有 multinomial）；种子协议 = 用户 seed → SplitMix64 → per-(replicate, rank, fold) 计数器流，流布局写进论文 Methods；Cargo.lock + vendor 钉死；CI 跨版本 golden 测试。
+### 1.[P0] The reproducibility contract is built on quicksand: `rand`'s output carries no across-version consistency guarantee
+- The docs.rs original sentence: `SmallRng` **"Non-portable: any future library version may replace the algorithm"**; for reproducibility one should use `rand_pcg/rand_xoshiro`; rand 0.9 is a destructively major version and crates has already rolled to 0.10.x — during the reviewing window one `cargo update` silently voids the "seed-reproducible across the whole chain".
+- **The fix**: do not touch rand's RNG surface. Self-write PCG64 (~60 lines) + self-write the multinomial/Dirichlet (rand_distr has no multinomial to begin with); the seed protocol = the user seed → SplitMix64 → the per-(replicate, rank, fold) counter streams, with the stream layout written into the paper's Methods; Cargo.lock + vendor pinned; the across-version CI golden tests.
 
 ## P1
 
-### 2.【P1】CRAN 2 线程合规与 fork 安全机制未落地，各有一个 set-once 陷阱
-- rayon 全局池 lazy set-once：`RAYON_NUM_THREADS` 只在首次并行调用读一次；常驻池被 `mcfork`（Bioc 生态常用）fork 后成尸体；CRAN 要求安装期 cargo 限 `-j 1/2`，rextendr 默认 Makevars 不做。
-- **修改**：**放弃全局池**——每个顶层 FFI 调用内 `ThreadPoolBuilder::new().num_threads(n).build()` + scoped `install()`（~100µs 可忽略）；n 来自 R 端 `getOption("msuiter.threads")`（`_R_CHECK_LIMIT_CORES_` 下默认 2）；Makevars.in 显式 `CARGO_BUILD_JOBS=2`；文档写 BiocParallel `threads=1` 兼容。
+### 2.[P1] The CRAN 2-thread compliance and the fork-safety mechanism are not landed, each carrying a set-once trap
+- The rayon global pool is lazy set-once: `RAYON_NUM_THREADS` is read once only at the first parallel call; a resident pool turned into a corpse after a `mcfork` (common in the Bioc ecosystem) fork; CRAN requires the install-time cargo be capped at `-j 1/2`, which the rextendr default Makevars does not do.
+- **The fix**: **abandon the global pool** — inside every top-level FFI call `ThreadPoolBuilder::new().num_threads(n).build()` + a scoped `install()` (~100µs, negligible); n comes from the R side `getOption("msuiter.threads")` (defaulting to 2 under `_R_CHECK_LIMIT_CORES_`); Makevars.in explicitly `CARGO_BUILD_JOBS=2`; document the BiocParallel `threads=1` compatibility.
 
-### 3.【P1】FP 决定论缺口：线程数不能改变数值结果
-- 并行归约顺序随线程数变 → 2 线程（检查）与 16 线程（用户）产出 bit 级不同结果——复现性声明被戳穿。
-- **修改**：并行只存在于独立单元之间（replicate/样本/bootstrap），单元内 kernel 单线程固定归约顺序；CI 硬测试：同 seed 在 threads∈{1,4} 输出 `identical()`。
+### 3.[P1] The FP determinism gap: the thread count must not change the numerical result
+- The parallel reduction order varies with the thread count → 2 threads (the checks) and 16 threads (the user) produce bit-level different results — the reproducibility claim gets pierced.
+- **The fix**: parallelism exists only across the independent units (the replicate/sample/bootstrap); within a unit the kernel is single-threaded with a fixed reduction order; the hard CI test: the same seed over threads∈{1,4} outputs `identical()`.
 
-### 4.【P1】句柄注册表 + `.state` 是为不存在的能力付的复杂度：把 FFI 改成无状态
-- `MsSignature` 是拟合**最终产物**——全是现成矩阵，Rust 侧无状态可驻留；基因组 mmap+解析是微秒级。句柄的代价：externalptr 不进 RDS → 用户 load 后一碰 `.state` 触发**静默重拟合**；泄漏；fork 风险；破坏 waldo 比较。
-- **修改**：v1 FFI 全部无状态（`ms_tally_rust(2bit_path, ...)` 进程内 mmap 算完释放；`ms_extract_rust(counts, params, seeds)` 一次进出）；**从 S7 类删除 `.state`**；caugi 模式只保留"只读属性"美学；未来需可续算再引入句柄 + `reg.finalizer` + 显式 `ms_close()` + 重连报错（绝不静默重算）。
+### 4.[P1] The handle registry + `.state` is complexity paid for a capability that does not exist: make the FFI stateless
+- `MsSignature` is the fitting's **final product** — all ready-made matrices, with no state to reside on the Rust side; the genome mmap+parse is microsecond-grade. The price of the handles: an externalptr does not enter RDS → a user's load followed by one touch of `.state` triggers a **silent refit**; leaks; fork risk; it breaks the waldo comparisons.
+- **The fix**: make the v1 FFI wholly stateless (`ms_tally_rust(2bit_path, ...)` computes over an in-process mmap then releases; `ms_extract_rust(counts, params, seeds)` goes in and out once); **delete `.state` from the S7 class**; keep of the caugi pattern only the "read-only property" aesthetics; should resumable computation ever be needed, introduce the handle + `reg.finalizer` + an explicit `ms_close()` + a reconnect error (never a silent recompute).
 
-### 5.【P1】手写 randomized SVD/Cholesky 恰好在最难的 benchmark 场景退化
-- NNDSVD 需要的前导奇异三元组在 Wu 2022 r=0.8–0.95（旗舰场景）下奇异间隙塌缩，power iterations 不足则误差放大；签名近共线（SBS1/5）时 `G=PᵀP` 病态，无 pivot Cholesky 会负开方；KL 分母零通道 ε 放置直接决定 NaN 是否出厂。
-- **修改**：randomized SVD 固定 q≥3 power iterations + oversampling ≥16 + "exact Gram-SVD 对照" property test（1536² Gram 完全可行）；NNLS Gram 用 **pivot 化 LDLᵀ** + `ε·‖G‖` ridge + KKT 残差断言；KL 分母 `max(·,ε)`、`log(ε+·)`，ε 值进文档与 TDD。
+### 5.[P1] The hand-written randomized SVD/Cholesky degrade exactly in the hardest benchmark scenario
+- The leading singular triplet needed by NNDSVD has its singular gaps collapse under Wu 2022 r=0.8–0.95 (the flagship scenario), and insufficient power iterations amplify the error; when the signatures are near-collinear (SBS1/5) `G=PᵀP` is ill-conditioned and a pivot-less Cholesky takes a negative square root; the placement of ε in the KL denominator's zero channels directly decides whether NaN ships out of the factory.
+- **The fix**: the randomized SVD gets fixed q≥3 power iterations + oversampling ≥16 + an "exact Gram-SVD cross-check" property test (the 1536² Gram is fully doable); the NNLS Gram uses a **pivoted LDLᵀ** + the `ε·‖G‖` ridge + the KKT residual assertion; the KL denominator gets `max(·,ε)`, `log(ε+·)`, with the ε value entering the documentation and the TDD.
 
-### 6.【P1】Ctrl-C：长跑 Rust 调用不可中断
-- `R_CheckUserInterrupt` 只允许主线程调用（rayon worker 里是 UB）。
-- **修改**：主线程在并行 chunk 边界轮询 `R_CheckUserInterrupt`；worker 内只查 `AtomicBool` 取消标志；导出契约：可中断且中断后无残留（与无状态设计协同自动成立）。
+### 6.[P1] Ctrl-C: a long-running Rust call is uninterruptible
+- `R_CheckUserInterrupt` may be called only from the main thread (it is UB inside a rayon worker).
+- **The fix**: the main thread polls `R_CheckUserInterrupt` at the parallel chunk boundaries; the workers check only an `AtomicBool` cancellation flag; the exported contract: interruptible, and with no residue after the interrupt (which falls out automatically together with the stateless design).
 
-### 7.【P1】分发预算没有数字：vendor 体积、MSRV、安装期行为排在 M8 才"审计"
-- 估算：vendor 展开 ~15–25MB、xz 后 ~4–8MB，叠加后易顶破 CRAN 10MB 指导线需 waiver；**好消息：extendr-api 0.9.0 官方 MSRV = 1.71**（符合 CRAN 两年 cargo 要求）；rust-toolchain.toml 绝不能进 tarball。
-- **修改**：体积/MSRV 审计**提前到 M0 spike**（一周出真实 vendor + xz 字节数 + rustc 1.71 构建证明）；`extendr-api default-features=false` 只留 ndarray；按 P0-1 砍 rand 树；Makevars 按 string2path 模式（vendor.tar.xz + cargo_vendor_config.toml + CARGO_NET_OFFLINE + -j2 + cleanup）；DESCRIPTION `SystemRequirements: cargo, rustc (>= 1.71)`。
+### 7.[P1] The distribution budget has no numbers: the vendor volume, the MSRV and the install-time behavior are parked to M8 to be "audited"
+- The estimate: the vendor expansion ~15–25MB, ~4–8MB after xz, which stacked easily pokes through the CRAN 10MB guidance line and needs a waiver; **the good news: extendr-api 0.9.0's official MSRV = 1.71** (meeting CRAN's two-year cargo requirement); rust-toolchain.toml must never enter the tarball.
+- **The fix**: pull the volume/MSRV audit **forward to the M0 spike** (one week to produce the real vendor + xz byte counts + a rustc 1.71 build proof); `extendr-api default-features=false` keeping only ndarray; cut the rand tree per P0-1; Makevars on the string2path pattern (vendor.tar.xz + cargo_vendor_config.toml + CARGO_NET_OFFLINE + -j2 + cleanup); DESCRIPTION `SystemRequirements: cargo, rustc (>= 1.71)`.
 
 ## P2
 
-### 8.【P2】"与 R NMF brunet bit 级对齐"是做不到的验收标准
-- R brunet 走平台 BLAS（Accelerate/OpenBLAS/参考），乘加顺序随厂商变——3 OS CI 上天然 flaky。
-- **修改**：两级验收——对拍 R NMF 用相对容差（`‖ΔW‖/‖W‖ < 1e-10`，同 seed 收敛点）；bit 级 golden 只锁**自己实现的历史版本**。
+### 8.[P2] "Bit-level alignment with R NMF brunet" is an unachievable acceptance standard
+- R brunet goes through the platform BLAS (Accelerate/OpenBLAS/reference), and the multiply-add order varies with the vendor — inherently flaky across a 3-OS CI.
+- **The fix**: two-level acceptance — for the R NMF cross-check use a relative tolerance (`‖ΔW‖/‖W‖ < 1e-10`, the same-seed convergence point); the bit-level golden locks only **your own implementation's historical versions**.
 
-### 9.【P2】FFI 边界缺硬契约：memory order、NA/NaN、i32 边界
-- R column-major vs ndarray row-major——**96×96 方形矩阵会静默转置**；`NA_integer_`=INT_MIN 会被 `as usize` 变合法大数；"非负"校验不配 `anyNA()` 就漏。
-- **修改**：①过界矩阵统一显式 column-major 视图 + 方形转置探测器单测（非对称 golden 往返）；②NA 契约 = R validator 强制 `anyNA()` 拒绝，Rust 端 `debug_assert!` 且不产出 NaN；③索引 i32→usize + bounds check，越界返回 R error。
+### 9.[P2] The FFI boundary lacks hard contracts: the memory order, the NA/NaN, the i32 boundary
+- R column-major vs ndarray row-major — **a 96×96 square matrix will silently transpose**; `NA_integer_`=INT_MIN becomes a legitimate large number under `as usize`; a "non-negative" validation that does not pair with `anyNA()` leaks.
+- **The fix**: ① crossing-boundary matrices get a uniform explicit column-major view + a square-transposition detector unit test (an asymmetric golden round-trip); ② the NA contract = the R validator enforces an `anyNA()` rejection, the Rust side `debug_assert!`s and produces no NaN; ③ the indices i32→usize + a bounds check, out-of-bounds returning an R error.
 
-### 10.【P2】panic 策略应写进文档
-- 已核实 extendr-macros wrapper 用 `catch_unwind(AssertUnwindSafe(...))` 把 panic 转 R error——不打穿 FFI。但错误路径 `throw_r_error → Rf_error → longjmp` **跳过 Rust 栈析构**：kernel 深处调 throwing helper 会漏堆缓冲；rayon worker panic 传播回调用线程再被接住，但"部分完成输出"状态需定义。
-- **修改**："kernel 返回 `Result<_, MsError>`，只在 ffi crate 边界转 R error；禁止 kernel 内调 throwing API；任何 panic → 整调用报错、无部分结果"。R 侧测试错误路径得到 condition 且会话可继续。
+### 10.[P2] The panic policy should be written into the documentation
+- Verified that the extendr-macros wrapper uses `catch_unwind(AssertUnwindSafe(...))` to turn panics into R errors — it does not punch through the FFI. But the error path `throw_r_error → Rf_error → longjmp` **skips the Rust stack unwinding**: calling a throwing helper deep in the kernel leaks heap buffers; a rayon worker panic propagates back to the calling thread and gets caught, but the "partially complete output" state needs defining.
+- **The fix**: "the kernel returns `Result<_, MsError>`, converting to an R error only at the ffi crate boundary; calling throwing APIs inside the kernel is forbidden; any panic → the whole call errors, no partial results". The R-side tests assert the error paths yield a condition and the session remains continuable.
 
-### 11.【P2】twobit crate 定位自相矛盾
-- twobit 0.2.2 是 `Read + Seek` 泛型 reader：`open()` 带缓冲普通读（百万变体随机访问=百万级小读）、`open_and_read()` 整文件进 RAM（hg38 ~800MB）——**自己不做 mmap**；byte-swap（大端）文件支持未见说明。
-- **修改**：二选一进 ADR：(a) `TwoBitFile` over `Cursor<Mmap>`（memmap2 + Cursor 组合），按染色体排序分批、每个 4bit 字只解一次，vendor 钉死 =0.2.2；(b) 自研 ~300 行 reader + 对拍 `rtracklayer::import`。任一方案先验证 byte-swap/重复 chrom/N/softmask 语义。
+### 11.[P2] The twobit crate positioning is self-contradictory
+- twobit 0.2.2 is a `Read + Seek` generic reader: `open()` does buffered ordinary reads (a million-variant random access = a million small reads), `open_and_read()` pulls the whole file into RAM (hg38 ~800MB) — **it does not mmap itself**; the byte-swap (big-endian) file support is unexplained.
+- **The fix**: put the two-way choice into an ADR: (a) `TwoBitFile` over `Cursor<Mmap>` (the memmap2 + Cursor composition), batched by chromosome order, each 4bit word decoded once, vendor-pinned =0.2.2; (b) a self-developed ~300-line reader + a cross-check against `rtracklayer::import`. Either road first validates the byte-swap/duplicate-chrom/N/softmask semantics.
 
-### 12.【P2】workspace 三 crate 划分方向对，缺两条护栏
-- **修改**：依赖方向单一（ffi→catalog→engine，禁反向）；engine/catalog `#![forbid(unsafe_code)]`，unsafe 限定在 ffi crate 并逐条 SAFETY 注释；cargo deny 加 ban 规则禁止 engine/catalog 依赖 extendr-api。
+### 12.[P2] The workspace three-crate split goes the right direction, missing two guardrails
+- **The fix**: a single dependency direction (ffi→catalog→engine, the reverse forbidden); the engine/catalog get `#![forbid(unsafe_code)]`, unsafe confined to the ffi crate with a per-site SAFETY comment; cargo deny adds ban rules forbidding the engine/catalog from depending on extendr-api.
 
-## 总体裁决与亮点
-- **Conditional go**。Rust 运行时层条款（RNG 版本契约、并发/fork/中断、panic/longjmp、FFI 硬契约、分发预算数字）必须 M0 写进 ADR，不是 M8 交学费。
-- **三件做得好**：FFI 三面收敛（索引不回字符串/边界一次规范化/小导出面）；Rust/R 工程事实调研准确可执行（无"上 CRAN 很容易"幻觉）；S7 成本模型实测成纪律（6µs/17µs → API 边界铁律）——"在我审过的 extendr+S7 提案里第一次见到"。
-- Sources: docs.rs SmallRng；CRAN Using Rust；crates.io extendr-api 0.9.0（MSRV 1.71）；extendr-macros wrappers.rs；docs.rs twobit。
+## The overall verdict and the highlights
+- **Conditional go**. The clauses of the Rust runtime layer (the RNG version contract, the concurrency/fork/interrupt, the panic/longjmp, the FFI hard contracts, the distribution-budget numbers) must be written into the ADRs at M0, not paying the tuition at M8.
+- **The three things done well**: the three-surface FFI convergence (the indices do not return strings / one normalization at the boundary / a small export surface); the Rust/R engineering research is accurate and actionable (no "getting onto CRAN is easy" illusion); the S7 cost model measured into a discipline (6µs/17µs → the API-boundary iron law) — "the first time I have seen it in an extendr+S7 proposal I have reviewed".
+- Sources: docs.rs SmallRng; CRAN Using Rust; crates.io extendr-api 0.9.0 (MSRV 1.71); extendr-macros wrappers.rs; docs.rs twobit.

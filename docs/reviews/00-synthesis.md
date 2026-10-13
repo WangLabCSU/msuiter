@@ -1,75 +1,75 @@
-# 五专家评审综合裁决（Synthesis，2026-09-28）
+# The five-expert review synthesis adjudication (Synthesis, 2026-09-28)
 
-> 五份独立评审见本目录 01–05。本文档是主编的采纳裁决——每条评审意见归入 **采纳（立即改文档）/ 采纳（排期进路线图）/ 部分采纳 / 不采纳（记录理由）**。评审原文保留不改，本文档是唯一生效口径；与评审冲突处以本文档为准。
+> The five independent reviews are in this directory, 01–05. This document is the editor-in-chief's adoption adjudication — every review opinion is sorted into **adopt (fix the documents at once) / adopt (schedule it into the roadmap) / partly adopt / do not adopt (the reason recorded)**. The review originals are preserved unchanged; this document is the single effective caliber; where it conflicts with a review, this document prevails.
 
-## 1. 五份评审的一句话结论
+## 1. The one-sentence conclusions of the five reviews
 
-| 评审 | 结论 |
+| The review | The conclusion |
 |---|---|
-| 01 计算生物学家 | **有条件信任**——科学层三个主角声明（MSU-Fit 覆盖率、MSU-Corr、多证据 K）会被一页纸击穿；HRD/RNA 工作流按现状属临床危险与不诚实；M0–M8 时间线不现实 |
-| 02 Rust/R 专家 | **Conditional go**——Rust 运行时层契约（RNG 版本、并发/fork、panic、FFI 边界、分发预算）几乎整体缺席，必须在 M0 成文 |
-| 03 ML/统计学家 | **Major revision**——统计声明普遍比协议强 1–2 级；把"校准过/分布自由/无损/首个"降级到协议实际支撑的水平 |
-| 04 软件开发专家 | **有条件通过**——"论文愿望清单"不是交付计划；无 v1 切线、逐位验收与 clean-room 对撞、并行化与确定性冲突 |
-| 05 Nature 编辑 | **当前定位 = Genome Biology/NC，不是 Nature Methods**——唯一够顶刊的统计贡献是"exposure 推断的校准统计学"；8 个 MSU-* 砍到 2–3 个；三段式需重排 |
+| 01 the computational biologist | **conditional trust** — the three flagship claims of the science layer (MSU-Fit coverage, MSU-Corr, the multi-evidence K) would be pierced by a single page; the HRD/RNA workflows as they stand are clinically dangerous and dishonest; the M0–M8 timelines are unrealistic |
+| 02 the Rust/R expert | **conditional go** — the contracts of the Rust runtime layer (the RNG version, concurrency/fork, panics, the FFI boundary, the distribution budget) are almost wholly missing and must be written up at M0 |
+| 03 the ML/statistician | **major revision** — the statistical claims are generally 1–2 grades stronger than the protocols support; downgrade "calibrated / distribution-free / lossless / first" to the level the protocols actually support |
+| 04 the software-development expert | **conditional pass** — the "paper wishlist" is not a delivery plan; there is no v1 cut line, the bit-for-bit acceptance collides with the clean-room policy, as do the parallelization and the determinism |
+| 05 the Nature editor | **the current positioning = Genome Biology/NC, not Nature Methods** — the only statistical contribution big enough for the top journal is "the calibrated statistics of exposure inference"; cut the 8 MSU-* down to 2–3; the three-act structure needs re-ordering |
 
-## 2. 交叉印证（≥2 位评审独立指出 = 必须改）
+## 2. The cross-corroboration (≥2 reviewers independently raised it = must change)
 
-1. **CI/校准声明缺 estimand**（01#1、03#2、05#2/5/7）
-2. **Conformal"分布自由"在 N 异质下数学不成立**（01#11d、03#1）
-3. **MSU-Corr 会被读作 Cornet 衍生**：gauge 不可辨识、缺 baseline、缺 ablation、m 协议缺失（01#7、03#3、05#2/风险1）
-4. **确定性声明缺线程数不变性**（02#3、04#3）
-5. **"逐位"混淆离散语义与浮点内核，且与 clean-room 策略对撞**（02#8、04#2）
-6. **时间线低估 ~3×、无最小 v1**（01 附注、04#1、05 风险3）
-7. **句柄/.state 是为不存在的能力付的复杂度**（02#4、04#11）
-8. **K 选择缺默认仲裁规则**（01#9、03#4）
-9. **"首个/无损/分布自由"过度声明**（01#11、03 全文）
-10. **8 个 MSU-* 稀释贡献**（04 隐含、05#2 明确）
+1. **The CI/calibration claims lack an estimand** (01#1, 03#2, 05#2/5/7)
+2. **The conformal "distribution-free" is mathematically untenable under heterogeneous N** (01#11d, 03#1)
+3. **MSU-Corr will be read as a Cornet derivative**: the gauge is unidentifiable, the baseline is missing, the ablation is missing, the m protocol is missing (01#7, 03#3, 05#2/risk 1)
+4. **The determinism claims lack thread-count invariance** (02#3, 04#3)
+5. **"Bit-for-bit" conflates the discrete semantics with the floating-point kernels, and collides with the clean-room strategy** (02#8, 04#2)
+6. **The timelines are underestimated by ~3×, no minimal v1** (01's annex note, 04#1, 05 risk 3)
+7. **The handles/.state are complexity paid for a capability that does not exist** (02#4, 04#11)
+8. **The K selection lacks a default adjudication rule** (01#9, 03#4)
+9. **The "first/lossless/distribution-free" over-claims** (01#11, 03 throughout)
+10. **The 8 MSU-* dilute the contribution** (04 implicit, 05#2 explicit)
 
-## 3. 采纳裁决（立即改文档）
+## 3. The adoption adjudications (fix the documents at once)
 
-| # | 裁决 | 采纳内容 | 落点 |
+| # | The adjudication | The adopted content | The landing site |
 |---|---|---|---|
-| A1 | 采纳 | **统计契约**：estimand 三层（presence=LRT χ²₁；magnitude=support-conditional 绝对 exposure；清零=决策规则单独测复合覆盖率）；多项与 NB 双生成模型校准；coverage 随 N×Shannon 曲线；Fisher 区间 interior-only；"boundary parameters get tests, not intervals" | ARCH §7 |
-| A2 | 采纳 | **Conformal 降维**：Mondrian by TMB bin + studentized score；声明改写为 per-stratum empirical coverage；quantile 表随包发布 | ARCH §5/§7 |
-| A3 | 采纳 | **方法命名收缩**：只保留 **MSU-Fit / MSU-LowCount / MSU-Infer** 三个命名方法（headline 簇）；提取流水线/相关性引擎/损伤节奏/张量/目录 IR 全部降为**框架组件**（去 MSU- 前缀） | ARCH §5 |
-| A4 | 采纳 | **相关性引擎降级**：预注册可证伪声明（r∈{0.8,0.9,0.95} 上同时击败 MvNMF+correlated refit 与原版 Cornet）；gauge-fixed 报告（禁解读嵌入向量）；m<K 经 held-out；体积正则与嵌入分离 ablation；五模态降为 SBS+DBS 演示 | ARCH §5/ROADMAP v1.x（推迟项） |
-| A5 | 采纳 | **无状态 FFI**：删除句柄注册表与 `.state` 属性；S7 内嵌对象改为**快照摘要**（维度+通道表哈希+refdb 版本）；caugi 模式只留只读美学 | ARCH §2/§3 |
-| A6 | 采纳 | **自研 RNG**：PCG64 + SplitMix64 流布局（写进论文 Methods），不依赖 rand 的 RNG 面（跨版本不保证）；跨版本 golden 测试 | ARCH §2 |
-| A7 | 采纳 | **并发契约**：并行只在独立单元间；单元内固定归约顺序；线程数不变性 identical() 测试；per-call ThreadPool（弃全局池）；`msuiter.threads` option（检查期 2）；Makevars -j2；R_CheckUserInterrupt 主线程 chunk 边界 + worker AtomicBool | ARCH §2/§9 |
-| A8 | 采纳 | **双层验收术语**：**语义逐位**（通道算术/协议步骤/平局规则/默认参数——整数与标签 golden，硬验收）vs **数值协议等价**（浮点内核——固定种子+容差）；R NMF brunet 对拍 = 固定平台一次性实验，不进 CI 门 | ARCH §7/ROADMAP |
-| A9 | 采纳 | **基准升级**：加 purity/caller/类别专属计数区间（SV 10–10³、CN 10–10⁴）/超突变臂/联合对抗 cell/目录外签名 cell；校准-选择-评估三层场景隔离（不同生成器）；**主指标 = Hungarian 一对一**（贪心+阈扫为附录，分裂惩罚）；协议冻结随包发布 | ARCH §8 |
-| A10 | 采纳 | **K 仲裁规则**：层级决策（SUITOR argmin → 稳定性 veto → Wilcoxon 降诊断）；Hungarian unmatched 的 split/merge 语义；meta-rule 全网格评估 | ARCH §7 |
-| A11 | 采纳 | **目录完备性契约**：MNV 2–5/>5、complex/double indel 路由表 + skip ledger；拆分 VCF 的 DBS 重连算法；MNV golden fixtures；complex 事件显式路由 | ARCH §7/ROADMAP M1s/M1c |
-| A12 | 采纳 | **工作流范围安全**：HRDetect 系数模式 **WGS-only** + allele-specific CN caller 白名单 + WES 标 experimental；RNA 工作流最小 caller 要求 + 伪影面板 + matched-DNA 验证 estimand + research-use 标注 | ARCH §7/ROADMAP M6s |
-| A13 | 采纳 | **refdb 治理**：precedence（默认 bundled 优先、provenance 钉版本）；schema_version 前向拒绝；更新钉 commit SHA + manifest 烧录 + fail-closed；更新测试 fixture 化；**v1 只捆绑人类 SBS/DBS/ID**；缺失 build = `build_independent: true` 声明（relabel 而非 derived）+ 查询时如实提示 | ARCH §6 |
-| A14 | 采纳 | **API 定型**：`method = ms_nmf(...)` S7 对象一等公民 + 字符串糖；自定义泛型一律 `ms_` 前缀（hardhat 命名仅文档概念）；新增 §3.5 Error & lifecycle（rlang class/i-j-c/禁裸 stop/lifecycle 政策/ffi-surface.md 冻结流程） | ARCH §3 |
-| A15 | 采纳 | **CI 补全**：矩阵加 R 4.3（至少 Linux）+ devel（允许失败）；valgrind/ASAN scheduled job；CI 基准门降为 sanity bound（<5s），加速比验收移入钉硬件 bench；dependabot + cargo audit；codecov（R≥85%，Rust 报告不设门）；fixture 刷新脚本 + PR 模板检查项；rhub/--as-cran 预提交 | ARCH §9 |
-| A16 | 采纳 | **路线图双轨**：v0.1（~6 周：SBS96/192/384/1536+DBS78、KL-NMF+NNLS、单方法、CI、r-universe）→ v0.2（~12 周：+ID83、K 选择、拟合三法、bootstrap CI、refdb v1、viz 6 图）→ v1.0（~5–6 月：MSU-Fit 校准、HRD 报告、pkgdown）；**ID89/Infer/Tempo/Tensor/Lda/Supervised/CN-SV 拟合/RNA/therapy 推迟 v1.x**；M8 拆 M8a/M8b | ROADMAP v3 |
-| A17 | 采纳 | **治理**：registry 加 engine_version/contract_version/certified 三态；non-certified 引擎 benchmark 告警 + 信任边界声明；月度反向依赖矩阵；CONTRIBUTING/CoC/模板 | ARCH §3.4 |
-| A18 | 采纳 | **超突变者正名**：`ms_stratify_hypermutants()`（分类+排除+强制 refit，非"归一化"）；common/rare 升格为 atlas 工作流；Cornet 10–40× 重标定降为相关性引擎内部超参（sweep 验证 + de-rescale + 禁用于 NMF 路径） | ARCH §5/§7 |
-| A19 | 采纳 | **论文重定位**：headline = **"Calibrated inference of mutational signature exposures"**（Framing A）+ 生态支撑（B）；**两周先导覆盖实验（2 工具 × TMB 网格）作为 kill-criterion gate 前置于任何叙事写作**；案例升级三路径（治疗记录/RNA-only/低计数 panel）需队列合作；kill criteria 七条全收 | ARCH §10/ROADMAP G 门 |
-| A20 | 采纳 | 其余：β=1 默认即多项 MLE（删"三噪声"宣传或给协议）；零伪计数政策；SUITOR fold/填补语义逐位复刻（语义层）；DM 加 hurdle/结构零；twobit over `Cursor<Mmap>` ADR；column-major+NA FFI 硬契约；panic=Result+边界转 error；workspace 依赖方向断言 + `forbid(unsafe_code)`；MSU↔函数映射表 + `ms_sitrep()`；docs-sync CI；ADR 独立成目录 | 各处 |
+| A1 | adopt | **The statistical contract**: the three-layer estimand (presence=the LRT χ²₁; magnitude=the support-conditional absolute exposure; zeroing=a decision rule with separately measured composite coverage); the calibration under both the multinomial and NB generative models; the coverage as a curve of N×Shannon; the Fisher intervals interior-only; "boundary parameters get tests, not intervals" | ARCH §7 |
+| A2 | adopt | **The conformal down-scoping**: Mondrian by TMB bin + a studentized score; the claim rewritten as the per-stratum empirical coverage; the quantile tables shipped with the package | ARCH §5/§7 |
+| A3 | adopt | **The method-naming contraction**: keep only the **MSU-Fit / MSU-LowCount / MSU-Infer** named methods (the headline cluster); the extraction pipeline / the correlation engine / the damage tempo / the tensor / the catalog IR all demote to **framework components** (losing the MSU- prefix) | ARCH §5 |
+| A4 | adopt | **The correlation-engine downgrade**: pre-registered falsiable claims (simultaneously beating MvNMF+correlated refit and the original Cornet over r∈{0.8,0.9,0.95}); the gauge-fixed reporting (the embedding vectors are forbidden to interpret); m<K via held-out; the volume regularization and the embedding separated by ablation; the five modalities reduced to the SBS+DBS demonstration | ARCH §5/ROADMAP v1.x (the deferred items) |
+| A5 | adopt | **The stateless FFI**: delete the handle registry and the `.state` property; the S7 embedded object becomes a **snapshot summary** (the dimensions + the channel-table hash + the refdb version); keep of the caugi pattern only the read-only aesthetics | ARCH §2/§3 |
+| A6 | adopt | **The self-developed RNG**: the PCG64 + SplitMix64 stream layout (written into the paper's Methods), independent of rand's RNG surface (which carries no across-version guarantee); the across-version golden tests | ARCH §2 |
+| A7 | adopt | **The concurrency contract**: parallelism only across independent units; a fixed reduction order within a unit; the thread-invariance identical() tests; the per-call ThreadPool (abandoning the global pool); the `msuiter.threads` option (2 during checks); Makevars -j2; R_CheckUserInterrupt at the main-thread chunk boundaries + the workers' AtomicBool | ARCH §2/§9 |
+| A8 | adopt | **The two-layer acceptance terminology**: **the semantic bit-for-bit** (the channel arithmetic / the protocol steps / the tie rules / the default parameters — the integer and label goldens, a hard acceptance) vs **the numerical protocol equivalence** (the floating-point kernels — fixed seed + tolerance); the R NMF brunet cross-check = a one-off fixed-platform experiment, not into the CI gate | ARCH §7/ROADMAP |
+| A9 | adopt | **The benchmarking upgrade**: add purity/caller/class-specific count intervals (SV 10–10³, CN 10–10⁴) / the hypermutant arm / the joint adversarial cell / the off-catalog signature cell; the three-layer calibration-selection-evaluation scenario isolation (different generators); **the primary metric = the Hungarian one-to-one** (the greedy + the threshold sweep as an appendix, splitting penalised); the protocol frozen and shipped with the package | ARCH §8 |
+| A10 | adopt | **The K adjudication rule**: the hierarchical decision (SUITOR argmin → the stability veto → the Wilcoxon downgraded to diagnostics); the split/merge semantics of the Hungarian unmatched; the meta-rule evaluated over the full grid | ARCH §7 |
+| A11 | adopt | **The catalog-completeness contract**: the MNV 2–5/>5, complex/double-indel routing table + the skip ledger; the DBS reconnection algorithm for split VCFs; the MNV golden fixtures; the explicit routing of complex events | ARCH §7/ROADMAP M1s/M1c |
+| A12 | adopt | **The workflow-scope safety**: the HRDetect coefficient mode **WGS-only** + the allele-specific-CN-caller whitelist + WES marked experimental; the RNA workflow's minimal caller requirements + the pseudogene panel + the matched-DNA-validation estimand + the research-use annotation | ARCH §7/ROADMAP M6s |
+| A13 | adopt | **The refdb governance**: the precedence (by default the bundled one prevails, the provenance pins the version); the schema_version forward rejection; updates pinned to a commit SHA + a burned-in manifest + fail-closed; the update tests fixture-ized; **v1 bundles only the human SBS/DBS/ID**; a missing build = a `build_independent: true` declaration (a relabel, not derived) + an honest notice at query time | ARCH §6 |
+| A14 | adopt | **The API freezing**: `method = ms_nmf(...)` as a first-class S7 object + the string sugar; the custom generics uniformly `ms_`-prefixed (the hardhat naming stays a documentation concept only); the new §3.5 Error & lifecycle (the rlang class/i-j-c/bare stop forbidden/the lifecycle policy/the ffi-surface.md freezing procedure) | ARCH §3 |
+| A15 | adopt | **The CI completion**: the matrix adds R 4.3 (Linux at least) + devel (allowed to fail); the valgrind/ASAN scheduled job; the CI benchmarking gate downgraded to a sanity bound (<5s), the speedup-ratio acceptance moved into the pinned-hardware bench; dependabot + cargo audit; codecov (R≥85%, Rust reports without a gate); the fixture refresh script + the PR-template check item; the rhub/--as-cran pre-submission | ARCH §9 |
+| A16 | adopt | **The dual-track roadmap**: v0.1 (~6 weeks: SBS96/192/384/1536+DBS78, KL-NMF+NNLS, a single method, CI, r-universe) → v0.2 (~12 weeks: +ID83, the K selection, the three fitting methods, bootstrap CIs, refdb v1, 6 viz figures) → v1.0 (~5–6 months: the MSU-Fit calibration, the HRD report, pkgdown); **ID89/Infer/Tempo/Tensor/Lda/Supervised/CN-SV fitting/RNA/therapy deferred to v1.x**; M8 split into M8a/M8b | ROADMAP v3 |
+| A17 | adopt | **The governance**: the registry gains the engine_version/contract_version/certified tri-states; the non-certified engines get a benchmarking warning + a trust-boundary statement; the monthly reverse-dependency matrix; CONTRIBUTING/CoC/templates | ARCH §3.4 |
+| A18 | adopt | **The honest hypermutator naming**: `ms_stratify_hypermutants()` (classify+exclude+forced refit, not "normalization"); common/rare promoted into the atlas workflow; the Cornet 10–40× recalibration demoted to a correlation-engine-internal hyperparameter (sweep-verified + de-rescaled + forbidden on the NMF path) | ARCH §5/§7 |
+| A19 | adopt | **The paper repositioning**: the headline = **"Calibrated inference of mutational signature exposures"** (Framing A) + the ecosystem support (B); **the two-week pilot coverage experiment (2 tools × a TMB grid) front-loaded before any narrative writing as a kill-criterion gate**; the case studies upgraded by three paths (treatment records/RNA-only/low-count panels) needing cohort collaborators; all seven kill criteria accepted | ARCH §10/ROADMAP the G gates |
+| A20 | adopt | The rest: β=1 as the default is the multinomial MLE (delete the "three-noise" marketing or provide the protocol); the zero-pseudo-count policy; the SUITOR fold/imputation semantics replicated bit-for-bit (the semantic layer); hurdle/structural zeros for the DM; the twobit over `Cursor<Mmap>` ADR; the column-major+NA hard FFI contract; panic=Result with the boundary converting to error; the workspace dependency-direction assertions + `forbid(unsafe_code)`; the MSU↔function mapping table + `ms_sitrep()`; the docs-sync CI; the ADRs split into their own directory | everywhere |
 
-## 4. 部分采纳 / 不采纳
+## 4. Partly adopt / do not adopt
 
-| 评审意见 | 裁决 | 理由 |
+| The review opinion | The adjudication | The reason |
 |---|---|---|
-| 04#1 建议把 SUITOR CV 推迟到 v0.2 可选 | **部分采纳** | MSU-Fit headline 依赖校准叙事但 K 选择规则依赖 CV——v0.1 不含 CV，v0.2 作为开关加入（与 04 一致）；但 K 仲裁规则文档化在 v0.2 一次写全 |
-| 05"只命名 MSU-Fit/LowCount/Infer" | **采纳但保留组件名** | 组件仍需工程名（extraction pipeline 等），只是不再以"方法"身份出现在论文 abstract |
-| 01#3 把 MNV 修提出 M1 | **采纳** | MNV 路由是语义正确性问题（不修则 DBS/SBS 目录系统性失真），不属于可推迟功能；落点为 M1s（见 A11） |
-| 05"MSU-Tensor 砍出 abstract" | **采纳 + 保留探索位** | TensorSignatures 生物学动机真实；降为 exploratory（held-out likelihood 选 K + Kruskal 检查），v1.x 排期 |
-| 04#9 ADR 独立目录 | **采纳（轻量）** | 建立 docs/adr/，先把 D1–D16 迁入（裁决落地时已有 16 条，含 D15/D16）；研究文档加 archival 声明 |
-| 02#11 twobit 自研 ~300 行 reader | **部分采纳** | M0 spike 两条路都试（crate over Cursor\<Mmap\> vs 自研），以 byte-swap/大端验证结果定 ADR；默认倾向 crate |
+| 04#1 suggests deferring the SUITOR CV to v0.2 optional | **partly adopt** | the MSU-Fit headline leans on the calibration narrative but the K-selection rules lean on the CV — v0.1 has no CV, v0.2 adds it as a switch (agreeing with 04); but the K-adjudication-rule documentation is written in full once at v0.2 |
+| 05 "name only MSU-Fit/LowCount/Infer" | **adopt but keep the component names** | the components still need engineering names (the extraction pipeline etc.), they just no longer appear as "methods" in the paper abstract |
+| 01#3 lifts the MNV fix into M1 | **adopt** | the MNV routing is a semantic-correctness issue (without the fix the DBS/SBS catalogs are systematically distorted), not a deferrable feature; it lands at M1s (see A11) |
+| 05 "cut MSU-Tensor out of the abstract" | **adopt + keep the exploration slot** | the TensorSignatures biological motivation is real; it demotes to exploratory (held-out likelihood for the K + the Kruskal checks), scheduled for v1.x |
+| 04#9 the ADRs into their own directory | **adopt (lightweight)** | establish docs/adr/, migrate D1–D16 in first (16 entries already existed when the adjudication landed, incl. D15/D16); the research documents gain the archival statement |
+| 02#11 the self-developed ~300-line twobit reader | **partly adopt** | the M0 spike tries both roads (the crate over Cursor\<Mmap\> vs self-developed), deciding the ADR by the byte-swap/big-endian validation results; the default inclination is the crate |
 
-## 5. 编辑建议的组织行动项（需要作者本人决策/推进，非文档可解决）
+## 5. The organizing action items of the editorial suggestions (needing the author's own decisions/driving, not solvable by documents)
 
-1. **两周先导覆盖实验**（G0 门）：2 个竞品工具 × TMB 网格的名义 vs 实际覆盖率——验证"竞品 CI 失准"叙事地基，先于一切论文写作。
-2. **统计学 co-author**（conformal/CoDA 理论部分）+ **临床/队列合作者**（治疗记录 / RNA-only / FFPE panel 三选一）——M3 前锁定，否则案例注定装饰性（编辑 kill criterion #4）。
-3. **co-maintainer**：M1s 前找到（bus factor + CRAN + 审稿三重需要；即 G1 门）。
-4. 每季度复核竞争格局（Cornet/MuSiCal/SPA 的发表动态），触发 ROADMAP 的 kill criteria 重估。
+1. **The two-week pilot coverage experiment** (the G0 gate): the nominal vs actual coverage of 2 competing tools × a TMB grid — verifying the ground of the "the competitors' CIs are miscalibrated" narrative, before all paper writing.
+2. **The statistics co-author** (the conformal/CoDA theory parts) + **the clinical/cohort collaborator** (one of the treatment records / RNA-only / FFPE panel) — locked before M3, otherwise the case studies are destined to be decorative (the editorial kill criterion #4).
+3. **The co-maintainer**: found before M1s (the bus factor + CRAN + the reviewing triple need; i.e. the G1 gate).
+4. Review the competitive landscape quarterly (the publication dynamics of Cornet/MuSiCal/SPA), triggering the ROADMAP's kill-criteria reassessment.
 
-## 6. 文档生效
+## 6. The documents in effect
 
-- ARCHITECTURE.md **v2.2**（本文档裁决的落地版）
-- ROADMAP.md **v3**（双轨 + G 门）
-- 评审原文 01–05 保留为证据与论文 rebuttal 素材
+- ARCHITECTURE.md **v2.2** (the implementation of this document's adjudications)
+- ROADMAP.md **v3** (the dual track + the G gates)
+- The review originals 01–05 are kept as the evidence and the paper's rebuttal material
