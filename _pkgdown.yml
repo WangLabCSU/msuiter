@@ -113,6 +113,9 @@ reference:
   - ms_convert
   - ms_refdb_bundled
   - ms_refdb_manifest
+  - ms_catalog_registry
+  - ms_catalog_currency
+  - ms_catalog_currency_update
 - title: Input construction and utilities
   desc: The variant/breakpoint input constructors, downsampling, simulation and the presence test.
   contents:
