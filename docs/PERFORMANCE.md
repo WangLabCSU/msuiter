@@ -65,21 +65,48 @@ The canonical class targets, verbatim from `docs/ARCHITECTURE.md:315-321`:
 | bootstrap（10³×10³） | sigminer 串行 | ≥100× |
 ```
 
-## UNMEASURED: bootstrap vs sigminer
+## MEASURED: bootstrap vs sigminer -- the >=100x target measured FALSE
 
 The targets table's final row (`docs/ARCHITECTURE.md:321`) sets the bootstrap
-benchmark against sigminer's serial bootstrapper at ≥100×:
+benchmark against sigminer's serial bootstrapper at >=100x:
 
 ```
-| bootstrap（10³×10³） | sigminer 串行 | ≥100× |
+| bootstrap (10³×10³) | sigminer serial | ≥100× |
 ```
 
-**Status: UNMEASURED.** No committed artifact in this repository
-measures msuiter's bootstrapper against sigminer serial, so this
-document deliberately states **no number** for that row — a figure
-there would be fabricated. The measurement is a later dispatched
-bench task (pinned hardware, per the caveat below); until its result
-lands and is cited here, the row stays open.
+**Status: MEASURED -- the >=100x row is false as a claim and must never be
+quoted as achieved.** The RB-10 authoritative single-shot campaign
+(`bench/results/bootstrap_vs_sigminer_20261013T175859Z/result.md`,
+committed read-only in this PR) adjudicated the row on the pinned campaign
+host:
+
+| quantity | measured value |
+|---|---|
+| tier | B |
+| ratio (A1 bootstrap / A2 sigminer serial) | 1.536600758177e+01 (15.37x) |
+| verdict | **MEASURED-false 15.37x** |
+| secondary A1/A3 (pool-scaling isolation) | 14.2209x |
+
+Evidence chain, all committed inside the outdir: seed 20260928 (G0 master;
+shape K=1000 S=1000 n_sig=50); the data seal `{"sha256":
+"cc094225d599a6765dbc7958a445609459ded0f32f2481f87c5cb9e8762b3263", ...}`
+with generator `gen_campaign.R` argv recorded verbatim in `seal.json`;
+`campaign.rds` re-hashes to the sealed digest (byte-idempotent derivation
+attested: the 2026-10-11 rehearsal outdir carries the identical rds digest
+from three days earlier under the frozen seed and argv); one probe launch
+and exactly one full launch in `campaign_launches.jsonl` (the RB-10
+single-shot law -- no refiring); co-tenancy attestation in
+`witnesses/host_census.jsonl` plus the wrapper's load1 census (all samples
+strictly below the 1.5 bar, bar never relaxed); the CI-noise-envelope
+anchor gate adjudicated the paired anchor witnesses green
+(`median_ok_frac` 1.0 over 1250 cells).
+
+What "MEASURED-false" means precisely: the campaign's oracle compares the
+timed ratio against the >=100x table claim and returns `false` -- the
+claim is refuted by measurement at this shape on this pinned host, roughly
+one order of magnitude short. The row above is kept because ARCHITECTURE
+is the target registry, not an achievements registry; this document is now
+the place that records what the target actually measured.
 
 ## Pinned-host caveat
 

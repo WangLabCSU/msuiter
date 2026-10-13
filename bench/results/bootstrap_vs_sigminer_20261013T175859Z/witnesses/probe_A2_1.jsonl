@@ -1,0 +1,6 @@
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":10},"wall":1.581,"cpu":1.583,"rep":1,"loadavg":[2.05,1.84,1.96]}
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":10},"wall":1.591,"cpu":1.593,"rep":2,"loadavg":[2.05,1.84,1.96]}
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":10},"wall":1.577,"cpu":1.579,"rep":3,"loadavg":[1.96,1.82,1.96]}
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":20},"wall":1.602,"cpu":1.603,"rep":1,"loadavg":[1.96,1.82,1.96]}
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":20},"wall":1.567,"cpu":1.568,"rep":2,"loadavg":[2.13,1.86,1.97]}
+{"kind":"probe","arm":"A2","shape":{"S":5,"R":20},"wall":1.609,"cpu":1.61,"rep":3,"loadavg":[2.13,1.86,1.97]}

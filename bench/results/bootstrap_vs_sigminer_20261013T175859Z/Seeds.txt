@@ -1,0 +1,6 @@
+# campaign data provenance (gen_campaign.R)
+- seed: 20260928
+- shape: k=1000 s=1000 n_sig=50 n_active=6 scale=280
+- rng: Mersenne-Twister / Inversion / Rejection (pinned above)
+- R: 4.5.2.[Not] Part in a Rumble
+- sha256: cc094225d599a6765dbc7958a445609459ded0f32f2481f87c5cb9e8762b3263
