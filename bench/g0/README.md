@@ -60,6 +60,8 @@ bench/g0/
 
 - **The COSMIC signature matrices are never checked into the repository** (the D3 conservative stance, the same handling logic as the
   `tools/channel-reference`). No COSMIC value exists, is embedded or is derived inside the repository.
+  > Preserved red-line original (authoritative, verbatim): 「COSMIC 签名矩阵绝不入库（D3 保守姿态，同
+  > `tools/channel-reference` 的处理逻辑）。仓库内不存在、不嵌入、不派生任何 COSMIC 数值。」
 - The dual-provider design:
   - `synthetic` (the default): the Dirichlet synthetic signatures (the construction formula documented in
     `g0/providers.py`, the slot labels keep using SBS1/2/13/5/40 but the values are non-COSMIC),
