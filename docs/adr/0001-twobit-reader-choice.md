@@ -1,73 +1,73 @@
-# ADR 0001：2bit 读取器选型——采用 `twobit` crate（over `Cursor<Mmap>`）
+# ADR 0001: the 2bit reader selection — adopting the `twobit` crate (over `Cursor<Mmap>`)
 
-- 状态：accepted（2026-09-28）
-- 裁决单元：U-M0-02 M0 spike（W1 硬截止）
-- 上游依据：ARCHITECTURE.md §0 D7、§2（catalog/genome.rs 条目）；reviews/00-synthesis.md §4 末条（02#11：两案都试，以 byte-swap/大端验证结果定案，默认倾向 crate）
-- 解锁：workspace 依赖预算中 `twobit` 的预留位（D7）；`catalog/genome.rs`（U-M1s-08）
+- Status: accepted (2026-09-28)
+- Adjudication unit: the U-M0-02 M0 spike (the W1 hard deadline)
+- The upstream basis: ARCHITECTURE.md §0 D7, §2 (the catalog/genome.rs entries); reviews/00-synthesis.md §4 the last row (02#11: try both roads, decide the ADR by the byte-swap/big-endian validation results, the default inclination the crate)
+- Unlocked: the reserved slot of `twobit` in the workspace dependency budget (D7); `catalog/genome.rs` (U-M1s-08)
 
-## 1. 背景
+## 1. The background
 
-`ms_tally()` 的 Rust 快路径需要按染色体随机访问 2bit 参考基因组（进程内 mmap 即用即释，D12 无状态）。D7 预留两案，本 ADR 以实验证据裁决：
+The Rust fast path of `ms_tally()` needs to random-access the 2bit reference genome by chromosome (an in-process mmap, used-then-released, D12 stateless). D7 reserved the two roads, and this ADR adjudicates them by experimental evidence:
 
-- **方案 A（crate）**：第三方 `twobit` crate 包裹内存映射缓冲（`Cursor<Mmap>` 形态）。
-- **方案 B（自研）**：244 行自研 reader（零新增依赖）。
+- **Plan A (the crate)**: the third-party `twobit` crate wrapped over a memory-mapping buffer (the `Cursor<Mmap>` form).
+- **Plan B (self-developed)**: a 244-line self-developed reader (zero new dependency).
 
-## 2. 实验设置（可复现）
+## 2. The experiment setup (reproducible)
 
-实验 crate 位于 `tools/spike/twobit-spike/`（随本 ADR 入库作可复现证据；独立 `Cargo.toml` + `[workspace]` 隔离，非包 workspace 成员，R 包 tarball 经 `.Rbuildignore` 排除），三个组件：
+The experiment crate sits at `tools/spike/twobit-spike/` (checked into the repository together with this ADR as reproducible evidence; an independent `Cargo.toml` + `[workspace]` isolation, not a member of the package workspace, excluded from the R package tarball via `.Rbuildignore`), with three components:
 
-1. **夹具生成器**（`src/fixture.rs`）：从逻辑内容确定性生成完整 2bit 文件（magic 0x1A412743、version 0、多染色体索引、4-bit 打包碱基 T=0/C=1/A=2/G=3 首碱基居高位、N block、mask block、reserved），同时产出**大端布局变体**（全部 u32 字段字节序翻转）与逐位真值（序列含 N 替换、soft-mask 小写变体、block 坐标、chrom 尺寸）。夹具覆盖：尺寸非 4 倍数（chr1=1003、chrM=17、chr2=4000）；N block 在位置 0、中部、跨文件尾、相邻两块；soft block 与 N block 重叠（N 优先，与 crate 的后处理次序一致）。
-2. **两案 reader**：A = `twobit::TwoBitFile::from_buf(...)`（含 `Cursor<&Mmap>` 实测）；B = 自研原型（`src/own.rs`，244 行，同为 `AsRef<[u8]>` 零拷贝解析 + 按染色体偏移随机访问）。
-3. **测试矩阵**（`tests/spike.rs`，7 条）：{小端, 大端} × {crate, 自研} 全量真值逐位比对（全序列 + 8 个窗口/染色体 + N/soft block 坐标 + chrom 尺寸 + softmask 开关）＋ 双 reader 互检 ＋ `Cursor<&Mmap>` 形态（真实文件 mmap）＋ 坏 magic 拒绝。
+1. **The fixture generator** (`src/fixture.rs`): deterministically generates complete 2bit files from logical content (the magic 0x1A412743, version 0, multi-chromosome index, the 4-bit packed bases T=0/C=1/A=2/G=3 with the first base in the high bits, the N block, the mask block, the reserved), while also producing a **big-endian layout variant** (every u32 field byte-swapped) and the bit-for-bit ground truth (the sequences with the N substitution, the soft-mask lowercase variant, the block coordinates, the chrom sizes). The fixtures cover: sizes that are not multiples of 4 (chr1=1003, chrM=17, chr2=4000); the N block at position 0, in the middle, spanning the file end, two adjacent blocks; the soft block overlapping the N block (N takes precedence, consistent with the crate's post-processing order).
+2. **The two-plan reader**: A = `twobit::TwoBitFile::from_buf(...)` (including the measured `Cursor<&Mmap>`); B = the self-developed prototype (`src/own.rs`, 244 lines, likewise an `AsRef<[u8]>` zero-copy parse + random access by chromosome offset).
+3. **The test matrix** (`tests/spike.rs`, 7 entries): the full ground-truth bit-for-bit comparison of {little-endian, big-endian} × {crate, self-developed} (the whole sequences + 8 windows/chromosome + the N/soft block coordinates + the chrom sizes + the softmask toggle) + the cross-check of the two readers + the `Cursor<&Mmap>` form (a real file mmap) + the bad-magic rejection.
 
-**byte-swap/大端验证口径**：同一逻辑内容的小端与大端文件必须被 reader 正确解析且输出逐位一致（大端主机正确性的可检验代理）。`twobit` crate 通过 magic 及其反序值（0x4327411A）自动检测并翻转全部 u32 字段。
+**The byte-swap/big-endian validation caliber**: the little-endian and the big-endian file of the same logical content must both be parsed correctly by the reader and agree bit-for-bit in output (a checkable proxy for big-endian host correctness). The `twobit` crate auto-detects via the magic and its reversed value (0x4327411A) and flips all the u32 fields.
 
-## 3. 实验结果
+## 3. The experiment results
 
-| 测试 | rustc 1.97.1（stable） | rustc 1.71.0（MSRV） |
+| The test | rustc 1.97.1 (stable) | rustc 1.71.0 (MSRV) |
 |---|---|---|
-| crate × 小端 = 真值 | pass | pass |
-| crate × 大端 = 真值 | pass | pass |
-| 自研 × 小端 = 真值 | pass | pass |
-| 自研 × 大端 = 真值 | pass | pass |
-| crate ≡ 自研（双布局，序列+block 坐标） | pass | pass |
-| crate over `Cursor<&Mmap>`（双布局，真实文件 mmap） | pass | pass |
-| 双 reader 拒绝坏 magic | pass | pass |
+| the crate × little-endian = ground truth | pass | pass |
+| the crate × big-endian = ground truth | pass | pass |
+| the self-developed × little-endian = ground truth | pass | pass |
+| the self-developed × big-endian = ground truth | pass | pass |
+| the crate ≡ the self-developed (both layouts, the sequences + the block coordinates) | pass | pass |
+| the crate over `Cursor<&Mmap>` (both layouts, a real file mmap) | pass | pass |
+| the two readers reject the bad magic | pass | pass |
 
-`cargo test` 7/7 全绿（两套工具链各跑一遍）。过程中发现并修复的口径问题：索引记录 `nameSize` 按 UCSC 规范为 **1 字节**（非 u32）——crate 实现正确，夹具初版有误已修正，两者在该语义上一致。
+`cargo test` 7/7 all green (each of the two toolchains ran a pass). The caliber issue discovered and fixed along the way: the index record's `nameSize` is **1 byte** per the UCSC specification (not a u32) — the crate implementation is correct, the fixture's first version was wrong and has been corrected, the two agreeing on this semantics.
 
-## 4. 裁决维度
+## 4. The adjudication dimensions
 
-| 维度 | 方案 A：twobit 0.2.2 | 方案 B：自研 |
+| The dimension | Plan A: twobit 0.2.2 | Plan B: self-developed |
 |---|---|---|
-| License（D1） | **MIT**（Bethune & Smirnov），非 GPL ✓ | 无 |
-| 运行时依赖 | **0 个** | 0 个 |
-| MSRV | 无声明；**实测 1.71.0 编译+测试通过**（随行 libc 0.2.189、memmap2 0.9.11 亦通过） | 实测 1.71 通过 |
-| API 契合（Cursor<Mmap> 流式 + 按染色体随机访问） | `TwoBitFile::from_buf(&mmap)`（`Cursor<&Mmap>: Read+Seek`，零拷贝）；header/index 一次解析，序列按偏移随机访问；`read_sequence(range)`/`chrom_names/sizes`/`hard_masked_blocks`/`soft_masked_blocks`/`base_counts`/`enable_softmask` | 同等能力已原型验证，但全部自担维护 |
-| 大端/byte-swap | 内建检测，实验逐位通过 | 自实现，实验逐位通过 |
-| 维护活跃度 | 0.2.2 发布于 **2026-03-27**（一年内更新，修复大端读等）；2020 年起 5 个版本；repo github.com/jbethune/rust-twobit；crates.io 下载 ~14.8k | 生命周期成本全部自担 |
-| 体积/影响面 | 24.7 KB 源码，1554 行，vendor 增量 ~0.09 MB 未压缩（xz 后 +0.017 MB，见 ADR 0002） | 0 |
-| 注意点 | crate 内部含 `unsafe { String::from_utf8_unchecked }`（ASCII 可证安全）；仅存在于依赖内部，engine/catalog 仍 `#![forbid(unsafe_code)]`；错误走 `Result`（坏 magic 实测干净拒绝，不 panic） | 无 |
+| License (D1) | **MIT** (Bethune & Smirnov), not GPL ✓ | none |
+| Runtime dependencies | **0** | 0 |
+| MSRV | no declaration; **measured: compiles + tests pass on 1.71.0** (the accompanying libc 0.2.189 and memmap2 0.9.11 likewise pass) | measured pass on 1.71 |
+| The API fit (the Cursor<Mmap> streaming + the random access by chromosome) | `TwoBitFile::from_buf(&mmap)` (`Cursor<&Mmap>: Read+Seek`, zero-copy); the header/index parsed once, the sequences random-accessed by offset; `read_sequence(range)`/`chrom_names/sizes`/`hard_masked_blocks`/`soft_masked_blocks`/`base_counts`/`enable_softmask` | equivalent capability prototype-verified, but the whole maintenance self-carried |
+| The big-endian/byte-swap | built-in detection, the experiment passes bit-for-bit | self-implemented, the experiment passes bit-for-bit |
+| Maintenance activity | 0.2.2 released on **2026-03-27** (an update within the year, fixing the big-endian reads among others); 5 versions since 2020; the repo github.com/jbethune/rust-twobit; ~14.8k crates.io downloads | the whole lifecycle cost self-carried |
+| The size/impact surface | 24.7 KB of source, 1554 lines, the vendor increment ~0.09 MB uncompressed (+0.017 MB after xz, see ADR 0002) | 0 |
+| The watch-outs | the crate internally contains `unsafe { String::from_utf8_unchecked }` (provably safe under ASCII); it exists only inside the dependency, engine/catalog still `#![forbid(unsafe_code)]`; errors go through `Result` (the bad magic is cleanly rejected per the measurement, no panic) | none |
 
-## 5. 决策
+## 5. The decision
 
-**采用方案 A：`twobit` crate（version 0.2.2，`twobit = "0.2.2"`）**。默认倾向 crate 的先验被证据确认：license 干净、零运行时依赖、MSRV 实测达标、API 与 ARCH §2 的 `Cursor<Mmap>` 形态逐字吻合、维护活跃。
+**Adopt plan A: the `twobit` crate (version 0.2.2, `twobit = "0.2.2"`)**. The prior inclination toward the crate is confirmed by the evidence: a clean license, zero runtime dependencies, the measured MSRV meets the bar, the API matches the `Cursor<Mmap>` form of ARCH §2 word for word, active maintenance.
 
-依赖解锁记录（D7 预留位）：
-- `src/rust/Cargo.toml` `[workspace.dependencies]` 新增 `twobit = "0.2.2"`；
-- `src/rust/catalog/Cargo.toml` 声明 `twobit = { workspace = true }`（genome.rs 实现属 U-M1s-08，本单元不动其余部分）；
-- `deny.toml`：审核修正后全量 `cargo deny check` 绿——licenses 白名单补 `Unicode-3.0`（unicode-ident 的 `(MIT OR Apache-2.0) AND Unicode-3.0`）、三个 crate manifest 补 `license = "Apache-2.0"`（消除 unlicensed）、advisories 采 `unmaintained = "workspace"` 策略（paste RUSTSEC-2024-0421 经 extendr-api 0.9 传递、我方不可修，不阻断；升级 extendr-api 时复查全量 check，清单进 U-M0-08 CONTRIBUTING）；ban 规则不受影响。
+The dependency-unlock record (the D7 reserved slot):
+- `src/rust/Cargo.toml` `[workspace.dependencies]` adds `twobit = "0.2.2"`;
+- `src/rust/catalog/Cargo.toml` declares `twobit = { workspace = true }` (the genome.rs implementation belongs to U-M1s-08, this unit does not touch the rest);
+- `deny.toml`: after the review corrections the full `cargo deny check` is green — the licenses whitelist adds `Unicode-3.0` (the `(MIT OR Apache-2.0) AND Unicode-3.0` of unicode-ident), the three crate manifests add `license = "Apache-2.0"` (clearing the unlicensed), the advisories adopt the `unmaintained = "workspace"` policy (the paste RUSTSEC-2024-0421 arrives transitively via extendr-api 0.9, unfixable by us, and does not block; when upgrading extendr-api re-check the full check, the checklist goes into the U-M0-08 CONTRIBUTING); the ban rules are unaffected.
 
-**回退条款**：依赖随 vendor 钉死（ADR 0002），供应链风险有界。若上游停止维护且阻塞升级，方案 B 的自研原型（244 行 + 本 ADR 接口契约，`tools/spike/twobit-spike/src/own.rs`）为已验证的回退路径，切换只影响 `catalog/genome.rs`。
+**The rollback clause**: the dependency is pinned via the vendor (ADR 0002), the supply-chain risk bounded. Should the upstream go unmaintained and block upgrades, the self-developed prototype of plan B (244 lines + this ADR's interface contract, `tools/spike/twobit-spike/src/own.rs`) is the verified fallback path, and switching affects only `catalog/genome.rs`.
 
-## 6. U-M1s-08 接口契约（自研回退或封装时遵守）
+## 6. The U-M1s-08 interface contract (to be observed on the self-developed fallback or wrapping)
 
-- 输入：`AsRef<[u8]>` 缓冲（mmap 即用即释，D12 无状态）；header/index 一次解析，序列按 `(offset, i/4)` 随机访问。
-- 字节序：magic==0x1A412743 → 原样；magic==0x4327411A → 全部 u32 字段 swap；索引 `nameSize` 为 1 字节。
-- 解码：2 bit/碱基，字节内首碱基居高位，T=0/C=1/A=2/G=3；N block 解码后置 'N'，soft block 再小写化（次序固定）；N block 的打包位为 don't-care。
-- 错误：`Result<_, E>`，格式错误不 panic；版本 ≠0 拒绝。
+- The input: an `AsRef<[u8]>` buffer (an mmap used-then-released, D12 stateless); the header/index parsed once, the sequences random-accessed by `(offset, i/4)`.
+- The byte order: magic==0x1A412743 → as is; magic==0x4327411A → all the u32 fields swapped; the index `nameSize` is 1 byte.
+- The decoding: 2 bit/base, the first base in a byte in the high bits, T=0/C=1/A=2/G=3; after decoding, the N block positions get 'N', the soft block positions then get lowercased (the order fixed); the packed bits of the N block are don't-care.
+- The errors: `Result<_, E>`, a format error does not panic; a version ≠0 is rejected.
 
-## 7. 残留
+## 7. The residues
 
-- 本实验仅 macOS arm64（R 4.5.2，xz 5.6.4，rustc 1.71.0/1.97.1）；Linux/Windows 上的大端无关性由同一测试矩阵在 U-M0-07 CI 矩阵承接（测试可移植，实验 crate 已随本 ADR 入库，`tools/spike/twobit-spike/` 内 `cargo test` 直接复跑）。
-- 实验 crate 发布 tarball 不含（`/tools/spike` 已入 `.Rbuildignore`）；`tests/spike.rs` 的比对口径在 U-M1s-08 落地为 `catalog/genome.rs` 的正式测试（与 BSgenome 对拍另计）。
+- This experiment covered macOS arm64 only (R 4.5.2, xz 5.6.4, rustc 1.71.0/1.97.1); the big-endian irrelevance on Linux/Windows is carried over by the same test matrix in the U-M0-07 CI matrix (the tests are portable, the experiment crate is checked in with this ADR, `cargo test` inside `tools/spike/twobit-spike/` re-runs directly).
+- The experiment crate is not in the release tarball (`/tools/spike` is in `.Rbuildignore`); the comparison caliber of `tests/spike.rs` lands at U-M1s-08 as the formal tests of `catalog/genome.rs` (the BSgenome cross-check counted separately).

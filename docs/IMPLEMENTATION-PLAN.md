@@ -1,166 +1,166 @@
-# msuiter 实施计划（IMPLEMENTATION-PLAN）—— ROADMAP v3 的可执行分解
+# msuiter implementation plan (IMPLEMENTATION-PLAN) -- the executable decomposition of ROADMAP v3
 
-> 版本：**v1（2026-09-28）**。上游权威：[ROADMAP.md](ROADMAP.md)（版本轨道与里程碑唯一权威定义）、[ARCHITECTURE.md](ARCHITECTURE.md) §0 D1–D16（宪法）、[CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md)（完备性权威检查表）。
-> 本文档**不引入新范围**：把 ROADMAP 的里程碑翻译为**工作单元（U-\*）**——每个单元有交付物路径、验收标准（引用 D 条款）、依赖与估算。与 ROADMAP/矩阵冲突处以上游为准并走 docs-sync 修正。
-> 执行方式：每个工作单元按 [.agents/skills/msuiter-team/SKILL.md](../.agents/skills/msuiter-team/SKILL.md) 的 PI 团队工作流跑一轮；devlog 文件名使用单元 ID（`docs/devlog/YYYY-MM-DD-<U-ID>.md`，随首个单元建目录）。
+> Version: **v1 (2026-09-28)**. Upstream authorities: [ROADMAP.md](ROADMAP.md) (the sole authoritative definition of the version tracks and milestones), [ARCHITECTURE.md](ARCHITECTURE.md) §0 D1–D16 (the constitution), [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) (the completeness authoritative checklist).
+> This document introduces no new scope: it translates the ROADMAP's milestones into work units (U-*), each carrying deliverable paths, acceptance criteria (citing the D clauses), dependencies and estimates. Any conflict with the ROADMAP/matrix is resolved in favor of the upstream source and goes through docs-sync for correction.
+> Execution: each work unit runs one round per the PI team workflow of [.agents/skills/msuiter-team/SKILL.md](../.agents/skills/msuiter-team/SKILL.md); the devlog file name uses the unit ID (`docs/devlog/YYYY-MM-DD-<U-ID>.md`, the directory is created with the first unit).
 
 ---
 
-## 1. 执行总则
+## 1. General rules of execution
 
-1. **单元循环**（每单元一轮）：读状态 → PI 分解（≤3 工作片）→ 涉及算法语义/统计声明的单元先出设计备忘（signature 专家 + 计算生物学家并行，落 devlog，PI 裁决后再实现）→ TDD 实现（先测试后实现）→ PI 集成自检（`cargo test` / testthat / 验收标准逐条打勾）→ 独立审核（只喂交付物，PASS/REVISE ≤2 轮）→ devlog + 勾选 ROADMAP + 更新 CAPABILITY-MATRIX 状态列。
-2. **验收术语前置标注**（D11）：每单元验收标准标注三类——【逐位】语义逐位 golden（通道算术/协议步骤/平局规则/默认参数，整数与标签，硬验收）｜【等价】数值协议等价（固定种子+容差，一次性平台实验，不进 CI 门）｜【工程】可执行验收（测试全绿/构建产物/文档存在）。
-3. **并行规则**：Rust track（engine/catalog crate）与 R track（S7/io/泛型）并行推进；同 track 内按依赖串行；FFI 契约（U-M0-09）冻结前 R track 不做内核调用对接。
-4. **范围铁律**：只做当前单元（msuiter-team 硬约束 1）；实施中发现的设计缺陷与"顺手优化"记 devlog 遗留，不扩单元。触及 D1–D16、G 门或 kill criteria 的偏差 → 停下向用户汇报，不自行改宪法。
-5. **进度治理**：估算单位为"专注工作日"（单人 + AI agents 的诚实口径，已吸收评审 ~3× 上调结论；单元日数是预算而非承诺）。每周五 PI 巡检重排下周；里程碑验收时复核 kill criteria；**连续两周滑期即触发估算重估**（kill criterion"滑期>100%"的早期预警线）。
-6. **状态记录**：单元级进度以 devlog 为准，里程碑级勾选以 ROADMAP checkbox 为准，能力状态以 CAPABILITY-MATRIX 为准——本文件不另设状态列（避免双事实来源）。
+1. The unit loop (one round per unit): read the state -> PI decomposition (≤3 work slices) -> for units touching algorithm semantics/statistical claims, issue a design memo first (the signature expert + the computational-biologist in parallel, landing in the devlog, implementing only after the PI adjudication) -> TDD implementation (tests before the implementation) -> the PI integration self-check (`cargo test` / testthat / the acceptance criteria ticked one by one) -> the independent audit (fed only with the deliverables, PASS/REVISE ≤2 rounds) -> the devlog + ticking the ROADMAP + updating the CAPABILITY-MATRIX status column.
+2. Acceptance-term ahead annotation (D11): each unit's acceptance criteria is annotated with one of three classes -- [bit-for-bit]: the semantics replicated bit-for-bit with golden tests (the channel arithmetic / the protocol steps / the tie-breaking rules / the default parameters, the integers and the labels, the hard acceptance) | [equivalence]: the numerical protocol equivalence (the fixed seed + the tolerance, a one-off platform experiment, not entering the CI gate) | [engineering]: an executable acceptance (all tests green / the build artifacts / the documentation's presence).
+3. The parallelism rule: the Rust track (the engine/catalog crate) and the R track (S7/io/the generics) advance in parallel; within a track, serial by the dependencies; before the FFI contracts (U-M0-09) are frozen, the R track makes no kernel-call hookup.
+4. The scope iron law: only the current unit (the msuiter-team hard constraint 1); design defects discovered during the implementation and "while-at-it optimisations" are recorded in the devlog's leftovers, without expanding the unit. A deviation touching D1–D16, the G gates or the kill criteria -> stop and report to the user, do not amend the constitution on your own.
+5. The progress governance: the estimation unit is a "focused working day" (the honest caliber for one person + AI agents, having absorbed the review's ~3× upward adjustment; a unit's day count is a budget, not a commitment). Every Friday the PI re-plans the next week; at a milestone's acceptance the kill criteria are re-reviewed; **two consecutive weeks of slippage trigger a re-estimation** (the early-warning line of the "slippage >100%" kill criterion).
+6. The state record: the unit-level progress is governed by the devlog, the milestone-level ticking by the ROADMAP checkboxes, the capability status by the CAPABILITY-MATRIX -- this file sets no separate status column (avoiding a dual source of truth).
 
-## 2. 工作单元依赖图（v0.1 段）
+## 2. The work-unit dependency graph (the v0.1 segment)
 
 ```
-U-M0-01 脚手架 ─┬─ U-M0-03 S7 骨架 ── U-M0-04 注册表 ─┐
-                ├─ U-M0-05 通道表 ────────────────────┼─→ R track（U-M1s-10/11/12）
-                ├─ U-M0-06 自研 RNG ─── U-M1s-04 重采样┤
-                └─ U-M0-09 FFI 硬契约 ── U-M1s-09 导出 ┘
-U-M0-02 spike（W1 硬截止）─ ADR（2bit 两案 / vendor 体积）─→ U-M1s-08 2bit 快路径
-U-M1s Rust track：U-M1s-01 linalg/NNLS → 02 KL-MM → 03 NNDSVDa → 05 线程不变性
-U-M1s catalog：  U-M1s-13 夹具基建（依赖 05）→ 06 SBS → 07 DBS+MNV
-G0 先导实验（W1–2，作者本人）→ Framing ADR ——独立于代码轨道，不阻塞 M0/M1s
+U-M0-01 scaffolding ─┬─ U-M0-03 S7 skeletons ── U-M0-04 registry table ─┐
+                     ├─ U-M0-05 channel tables ──────────────────────────┼─→ the R track (U-M1s-10/11/12)
+                     ├─ U-M0-06 self-developed RNG ─── U-M1s-04 resampling┤
+                     └─ U-M0-09 FFI hard contracts ── U-M1s-09 exports ──┘
+U-M0-02 spike (the W1 hard deadline) ─ ADR (the 2bit two options / the vendor bytes) ─→ U-M1s-08 the 2bit fast path
+U-M1s the Rust track: U-M1s-01 linalg/NNLS → 02 KL-MM → 03 NNDSVDa → 05 thread-invariance
+U-M1s the catalog:   U-M1s-13 the fixture infrastructure (depends on 05) → 06 SBS → 07 DBS+MNV
+the G0 pilot experiment (W1–2, the author himself) → the Framing ADR — independent of the code tracks, not blocking M0/M1s
 ```
 
-无编号横切件：U-M0-07（CI 矩阵）、U-M0-08（治理文件）、U-M0-10（ADR 目录迁移）无代码依赖，随时并行。
+The unnumbered cross-cutting items: U-M0-07 (the CI matrix), U-M0-08 (the governance files), U-M0-10 (the ADR directory migration) have no code dependency and run in parallel at any time.
 
-## 3. v0.1 逐周排程（~6 周：M0 工程地基 + M1s 引擎与目录核心）
+## 3. The v0.1 week-by-week schedule (~6 weeks: M0 the engineering foundations + M1s the engine and the catalog core)
 
-| 周 | 轨道并行内容 | 说明 |
+| Week | The tracks' parallel content | Notes |
 |---|---|---|
-| **W1** | U-M0-01 脚手架｜U-M0-02 spike（**W1 硬截止**）｜U-M0-08 治理文件｜U-M0-10 ADR 迁移｜**G0 开跑** | spike 与脚手架是全计划关键路径；G0 协议冻结并开始实验 |
-| **W2** | U-M0-03 S7 骨架｜U-M0-05 通道表｜U-M0-06 RNG｜U-M0-07 CI | **G0 收尾**：报告 + Framing ADR（决定 M7 论文 headline，不阻塞代码） |
-| **W3** | U-M0-04 注册表｜U-M0-09 FFI 契约 + `ms_sitrep()`｜**M0 验收评审**；Rust track 预热 U-M1s-01 | FFI 契约冻结 = R track 解锁点；G1 co-maintainer 邀请应已发出 |
-| **W4** | U-M1s-01 NNLS｜02 KL-MM｜03 NNDSVDa｜04 重采样｜05 线程不变性｜13 夹具基建｜06 SBS 启动 | engine crate 完备周 |
-| **W5** | U-M1s-07 DBS+MNV｜08 2bit 快路径｜09 FFI 导出｜10 `ms_variants()`｜11 `ms_tally()` | 语义正确性重点周（MNV 路由失真 = SBS/DBS 系统性错误，A11） |
-| **W6** | U-M1s-12 `ms_extract()` 单方法｜14 KL 一次性对拍｜钉硬件 bench｜**v0.1 发布门** | 缓冲与修整日保留在本周 |
+| **W1** | U-M0-01 scaffolding, U-M0-02 spike (**the W1 hard deadline**), U-M0-08 the governance files, U-M0-10 the ADR migration, **the G0 kick-off** | The spike and the scaffolding are the plan's critical path; the G0 protocol is frozen and the experiment begins |
+| **W2** | U-M0-03 the S7 skeletons, U-M0-05 the channel tables, U-M0-06 the RNG, U-M0-07 the CI | **the G0 close-out**: the report + the Framing ADR (deciding the M7 paper headline, not blocking the code) |
+| **W3** | U-M0-04 the registry table, U-M0-09 the FFI contracts + `ms_sitrep()`, **the M0 acceptance review**; the Rust track warms up with U-M1s-01 | The FFI-contract freezing = the R-track's unlock point; the G1 co-maintainer invitation should have gone out |
+| **W4** | U-M1s-01 NNLS, 02 KL-MM, 03 NNDSVDa, 04 resampling, 05 thread-invariance, 13 the fixture infrastructure, 06 the SBS start | The engine-crate completion week |
+| **W5** | U-M1s-07 DBS+MNV, 08 the 2bit fast path, 09 the FFI exports, 10 `ms_variants()`, 11 `ms_tally()` | The semantic-correctness focus week (an MNV routing distortion = the systematic SBS/DBS error, A11) |
+| **W6** | U-M1s-12 `ms_extract()` single-method, 14 the one-off KL cross-check, the hardware-pinned bench, **the v0.1 release gate** | The buffer and polish days are reserved in this week |
 
-### 3.1 M0 工作单元表（预算 2 周 + W3 收尾验收）
+### 3.1 The M0 work-unit table (the 2-week budget + the W3 closing acceptance)
 
-| ID | 单元 | 关键交付物 | 验收（D11 标注） | 依赖 | 估算 |
+| ID | Unit | The key deliverables | Acceptance (the D11 annotation) | The dependencies | The estimate |
 |---|---|---|---|---|---|
-| U-M0-01 | rextendr 脚手架 + Cargo workspace | `DESCRIPTION`/`Makevars.in`/`src/rust/`（workspace：FFI 壳 crate 在根 + `engine/`、`catalog/` 成员，rextendr 约定）/`R/msuiter-package.R`/`zzz.R` | 【工程】依赖=收缩清单（extendr-api default-features=false、ndarray、rayon、memmap2；**无 rand**，D2/ARCH §2）；engine+catalog `#![forbid(unsafe_code)]`；deny ban 方向规则；cargo test 空转绿 + check 绿 | — | 2–3 d |
-| U-M0-02 | **M0 spike**（W1 截止） | 真实 cargo vendor + xz 字节数报告；rustc 1.71 × {Linux, macOS, Windows} 构建证明；twobit 两案（crate over `Cursor<Mmap>` vs 自研 reader）byte-swap/大端验证 → 两条 ADR | 【工程】数字落 ADR（D4/D7）；vendor 超预算 → 依赖再收缩决策记录 | 01 | 3 d |
-| U-M0-03 | S7 类骨架（无 `.state`） | `R/classes/*.R`（delivered as flat `R/classes-*.R` per ARCHITECTURE §3.1 flat-module law; load order via DESCRIPTION `Collate`）：MsVariants/MsCatalog/MsSignature/MsFit/MsRefDb/MsEngine/MsBenchmark 七类 + validator；互引一律快照摘要（维度+通道表哈希+refdb 版本，A5） | 【工程】坏标签/维度/NA 必抛错且错误 class 断言；saveRDS/load 后全泛型行为测试（D8/D12） | 01 | 3 d |
-| U-M0-04 | 引擎注册表 + 契约测试 | `register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`（A17） | 【工程】字符串糖解析失败时列全部可用引擎名；non-certified 告警逻辑 | 03 | 2 d |
-| U-M0-05 | 通道注册表单一事实来源 | `data-raw/build_channels.R` → R data + Rust 常量 + 构建期与 COSMIC 文件断言一致 + docs-sync CI | 【工程】drift 即红（D5） | 01 | 2 d |
-| U-M0-06 | 自研 RNG 模块 | `engine/rng.rs`：PCG64 + SplitMix64 种子流布局（per-replicate/rank/fold 计数器流，A6；布局写进论文 Methods） | 【逐位】跨版本 golden：固定 seed → 固定前 N 个 u64 | 01 | 2 d |
-| U-M0-07 | CI 体系 | `.github/`：3 OS × {release, oldrel, R-4.3(Linux), devel} 矩阵、rcmdcheck --as-cran、cargo test/clippy/deny(ban)/audit、valgrind+ASAN scheduled、dependabot、codecov（A15）；**接线认领（U-M0-01/02/05/06 交接）**：tools/check-dep-direction.sh、tools/vendor.sh --check、tools/rng-kat.py、tools/docs-sync.R、deny 全量四节、matrixmultiply ≥0.3.10 钉版保护（dependabot 策略）、rustc 1.71 × Linux/Windows 构建证明（ADR 0002 §4.4/§5 残留）、**仓库模式 testthat**（drift 守卫类测试在 R CMD check 语境会 skip——CI 必须在 checkout 上跑 `devtools::test()` 全量，含 test-channels-sync/reference） | 【工程】矩阵全绿 | 01 | 2 d |
-| U-M0-08 | 治理文件 | CONTRIBUTING（含第三方引擎接入清单）/CoC/issue 与 PR 模板（含 FFI-surface 变化与 fixture 刷新检查项）/README 骨架/NEWS.md/`_pkgdown.yml` | 【工程】存在且模板可渲染 | — | 1 d |
-| U-M0-09 | FFI 硬契约落地 + sitrep | 无状态导出骨架（D12：无句柄/无 `.state`）；column-major"转置探测器"单测；anyNA 拒绝；`Result<_, MsError>` 边界转 condition；`R_CheckUserInterrupt` chunk 轮询；per-call ThreadPool + `msuiter.threads` option（检查期默认 2）；`ms_sitrep()`；`docs/ffi-surface.md` 建立 | 【工程】探测器/错误路径/中断测试过；panic → 整调用报错无部分结果 | 01 | 3 d |
-| U-M0-10 | ADR 目录迁移 | `docs/adr/` 建立，D1–D16 迁入（synthesis §4 轻量采纳项） | 【工程】16 条齐且与 ARCH §0 一致 | — | 0.5 d |
+| U-M0-01 | the rextendr scaffolding + the Cargo workspace | `DESCRIPTION`/`Makevars.in`/`src/rust/` (the workspace: the FFI shell crate at the root + the `engine/`, `catalog/` members, the rextendr convention) /`R/msuiter-package.R`/`zzz.R` | [engineering] the dependencies = the shrunk list (extendr-api default-features=false, ndarray, rayon, memmap2; **no rand**, D2/ARCH §2); the engine+catalog `#![forbid(unsafe_code)]`; the deny ban direction rules; cargo test's empty spin green + check green | — | 2–3 d |
+| U-M0-02 | **the M0 spike** (the W1 deadline) | the real cargo vendor + the xz byte-count report; the rustc 1.71 × {Linux, macOS, Windows} build proofs; the twobit two options (the crate over `Cursor<Mmap>` vs the self-developed reader) with byte-swap/big-endian validation → two ADRs | [engineering] the numbers land in the ADRs (D4/D7); a vendor over budget -> a dependency-re-shrinking decision recorded | 01 | 3 d |
+| U-M0-03 | the S7 class skeletons (no `.state`) | `R/classes/*.R` (delivered as flat `R/classes-*.R` per ARCHITECTURE §3.1 flat-module law; load order via DESCRIPTION `Collate`): the seven classes MsVariants/MsCatalog/MsSignature/MsFit/MsRefDb/MsEngine/MsBenchmark + the validators; all cross-references are snapshot summaries (the dimensions + the channel-table hash + the refdb version, A5) | [engineering] a bad label/dimension/NA must throw and the error's class is asserted; the full-generic behaviour tests after saveRDS/load (D8/D12) | 01 | 3 d |
+| U-M0-04 | the engine registry table + the contract tests | `register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)` (A17) | [engineering] when the string-sugar parsing fails, list all the available engine names; the non-certified warning logic | 03 | 2 d |
+| U-M0-05 | the channel-registry single source of truth | `data-raw/build_channels.R` → the R data + the Rust constants + the build-time consistency assertion against the COSMIC files + the docs-sync CI | [engineering] drift goes red (D5) | 01 | 2 d |
+| U-M0-06 | the self-developed RNG module | `engine/rng.rs`: the PCG64 + SplitMix64 stream layout (the per-replicate/rank/fold counter streams, A6; the layout written into the paper's Methods) | [bit-for-bit] the cross-version golden: a fixed seed → the fixed first N u64 | 01 | 2 d |
+| U-M0-07 | the CI system | `.github/`: the 3 OS × {release, oldrel, R-4.3(Linux), devel} matrix, rcmdcheck --as-cran, cargo test/clippy/deny(ban)/audit, valgrind+ASAN scheduled, dependabot, codecov (A15); **the wiring claim (handed off from U-M0-01/02/05/06)**: tools/check-dep-direction.sh, tools/vendor.sh --check, tools/rng-kat.py, tools/docs-sync.R, the deny full four sections, the matrixmultiply ≥0.3.10 pinned-version protection (the dependabot policy), the rustc 1.71 × Linux/Windows build proofs (the ADR 0002 §4.4/§5 leftovers), **the repo-mode testthat** (the drift-guard-class tests skip under the R CMD check context -- the CI must run the full `devtools::test()` on a checkout, incl. test-channels-sync/reference) | [engineering] the whole matrix green | 01 | 2 d |
+| U-M0-08 | the governance files | CONTRIBUTING (incl. the third-party-engine onboarding checklist)/CoC/the issue and PR templates (incl. the FFI-surface-change and fixture-refresh check items)/the README skeleton/NEWS.md/`_pkgdown.yml` | [engineering] present and the templates renderable | — | 1 d |
+| U-M0-09 | the FFI hard contracts landed + sitrep | the stateless export skeletons (D12: no handle/no `.state`); the column-major "transpose-detector" unit probe; the anyNA rejection; the `Result<_, MsError>` boundary converted to a condition; the `R_CheckUserInterrupt` chunk polling; the per-call ThreadPool + the `msuiter.threads` option (the default 2 during checks); `ms_sitrep()`; the establishment of `docs/ffi-surface.md` | [engineering] the detector/error-path/interrupt tests pass; a panic -> the whole call errors with no partial result | 01 | 3 d |
+| U-M0-10 | the ADR directory migration | the establishment of `docs/adr/`, D1–D16 migrated in (the synthesis §4 lightweight-adoption item) | [engineering] all 16 entries present and consistent with ARCH §0 | — | 0.5 d |
 
-**M0 验收门**（ROADMAP 原文）：check 全绿；S7 校验测试过；RNG golden 过；vendor 体积数字进 ADR。
+**The M0 acceptance gate** (the ROADMAP's original wording): check fully green; the S7 validation tests pass; the RNG golden passes; the vendor byte counts land in the ADRs.
 
-### 3.2 M1s 工作单元表（预算 4 周）
+### 3.2 The M1s work-unit table (the 4-week budget)
 
-| ID | 单元 | 关键交付物 | 验收（D11 标注） | 依赖 | 估算 |
+| ID | Unit | The key deliverables | Acceptance (the D11 annotation) | The dependencies | The estimate |
 |---|---|---|---|---|---|
-| U-M1s-01 | linalg + NNLS | `engine/linalg.rs`（pivot 化 Cholesky/LDLᵀ、三角解）+ `engine/nnls.rs`（Lawson-Hanson on Gram：pivot LDLᵀ + ε‖G‖ ridge） | 【工程】KKT 断言 + 病态 Gram 测试（ARCH §9） | 01 | 2 d |
-| U-M1s-02 | KL-MM MU 核 | `engine/nmf.rs` β=1 默认（=多项 MLE，D6）；ε 策略（分母 `max(·,ε)`/`log(ε+·)`）成文 | 【等价】vs R NMF brunet 见 U-M1s-14；【工程】KL 单调性 + ε 行为测试 | 01 | 3 d |
-| U-M1s-03 | NNDSVDa 初始化 | `engine/nndsvd.rs` 随机化 SVD：q≥3 power iterations + oversampling≥16 | 【工程】exact Gram-SVD 对照 property test | 01 | 2 d |
-| U-M1s-04 | 多项重采样 | `engine/resample.rs` + RNG 计数器流接入 | 【逐位】固定 seed 采样序列 golden | 06 | 1–2 d |
-| U-M1s-05 | 线程不变性 | per-call ThreadPool 接入引擎；单元间并行/单元内固定归约顺序（A7） | 【工程】同 seed 在 threads∈{1,N} 输出 `identical()`，CI 硬测试 | 02/04 | 2 d |
-| U-M1s-06 | SBS 通道家族 | `catalog/sbs.rs` SBS96/192/384/1536 字节算术 | 【逐位】SPMG 对拍 golden（research/04 §1） | 05, 13 | 3 d |
-| U-M1s-07 | DBS78 + MNV 路由 | `catalog/dbs.rs`（Q-链规则）+ `catalog/mnv.rs`（2–5bp/>5bp/complex indel/double indel 路由表 + 拆分 VCF 相邻记录重连 + skip ledger 进 provenance，A11） | 【逐位】SPMG DBS/MNV/complex golden；路由失败模式显式 | 06, 13 | 3 d |
-| U-M1s-08 | 2bit 快路径 | `catalog/genome.rs`（按 U-M0-02 spike ADR 定案实现） | 【工程】byte-swap/大端验证 + 与 BSgenome 对拍 | 02 | 2 d |
-| U-M1s-09 | FFI 导出 | `ms_tally_rust()` / `ms_extract_rust()`；`docs/ffi-surface.md` 冻结（per-release 评审工件） | 【工程】surface diff 进 PR 模板检查项 | 09(M0), 06/07 | 1 d |
-| U-M1s-10 | `ms_variants()` | `R/io/variants.R`（delivered as `R/io-variants.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`）：VCF/BCF/MAF/TSV 读时校验 → MsVariants；somaticness 信号（caller/normal 溯源、VAF floor、FILTER 透传） | 【工程】validator 坏输入全测试（L-A M1s 行） | 03 | 2 d |
-| U-M1s-11 | `ms_tally()` | `R/catalog/tally.R`（delivered as `R/catalog-tally.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`）泛型分发 + MsCatalog 装配；注解缓存最小集（转录链，支撑 SBS192/384） | 【工程】目录 vs sigminer/MP 玩具交叉验证 | 09(M0), 10 | 2–3 d |
-| U-M1s-12 | `ms_extract()` 单方法 | 单方法 KL 提取 + `print/format`（共识-CV 流水线在 M2） | 【工程】端到端冒烟（玩具数据 cosine 合理区间） | 11 | 2 d |
-| U-M1s-13 | 金标准夹具基建 | fixture 生成脚本 + golden 文件管理 + 刷新脚本（PR 检查项联动，A15） | 【工程】夹具可复现生成 | 05 | 1 d |
-| U-M1s-14 | KL 一次性对拍 | vs R NMF brunet 固定平台实验，`‖ΔW‖/‖W‖<1e-10` | 【等价】报告落 devlog/ADR，**不进 CI 门**（D11/A8） | 02 | 1 d |
+| U-M1s-01 | linalg + NNLS | `engine/linalg.rs` (the pivoted Cholesky/LDLᵀ, the triangular solve) + `engine/nnls.rs` (Lawson-Hanson on the Gram: the pivot LDLᵀ + the ε‖G‖ ridge) | [engineering] the KKT assertions + the ill-conditioned Gram tests (ARCH §9) | 01 | 2 d |
+| U-M1s-02 | the KL-MM MU kernel | `engine/nmf.rs` the β=1 default (= the multinomial MLE, D6); the ε policy (the denominator `max(·,ε)`/`log(ε+·)`) documented | [equivalence] vs R NMF brunet, see U-M1s-14; [engineering] the KL monotonicity + the ε-behaviour tests | 01 | 3 d |
+| U-M1s-03 | the NNDSVDa initialisation | `engine/nndsvd.rs` the randomised SVD: q≥3 power iterations + oversampling≥16 | [engineering] the exact Gram-SVD cross-check property test | 01 | 2 d |
+| U-M1s-04 | the multinomial resampling | `engine/resample.rs` + the RNG counter-stream wiring | [bit-for-bit] the sampling sequence for a fixed seed is golden | 06 | 1–2 d |
+| U-M1s-05 | the thread-invariance | the per-call ThreadPool wired into the engines; parallelism between units / a fixed reduction order within a unit (A7) | [engineering] the same seed gives `identical()` outputs for threads∈{1,N}, a hard CI test | 02/04 | 2 d |
+| U-M1s-06 | the SBS channel families | `catalog/sbs.rs` the byte arithmetic of SBS96/192/384/1536 | [bit-for-bit] the SPMG cross-check golden (research/04 §1) | 05, 13 | 3 d |
+| U-M1s-07 | DBS78 + the MNV routing | `catalog/dbs.rs` (the Q-chain rules) + `catalog/mnv.rs` (the 2–5bp/>5bp/complex indel/double indel routing table + the re-join of adjacent records across split VCFs + the skip ledger into the provenance, A11) | [bit-for-bit] the SPMG DBS/MNV/complex golden; the explicit routing failure modes | 06, 13 | 3 d |
+| U-M1s-08 | the 2bit fast path | `catalog/genome.rs` (implemented per the U-M0-02 spike ADR's chosen option) | [engineering] the byte-swap/big-endian validation + the cross-check against BSgenome | 02 | 2 d |
+| U-M1s-09 | the FFI exports | `ms_tally_rust()` / `ms_extract_rust()`; the freezing of `docs/ffi-surface.md` (the per-release review artifact) | [engineering] the surface diff becomes a PR-template check item | 09(M0), 06/07 | 1 d |
+| U-M1s-10 | `ms_variants()` | `R/io/variants.R` (delivered as `R/io-variants.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`): the VCF/BCF/MAF/TSV read-time validation → MsVariants; the somaticness signals (the caller/normal provenance, the VAF floor, the FILTER pass-through) | [engineering] the full validator tests on bad inputs (the L-A M1s row) | 03 | 2 d |
+| U-M1s-11 | `ms_tally()` | `R/catalog/tally.R` (delivered as `R/catalog-tally.R` per ARCHITECTURE §3.1 flat-module law; DESCRIPTION `Collate`) the generic dispatch + the MsCatalog assembly; the minimal annotation-cache set (the transcript chain, supporting SBS192/384) | [engineering] the catalog cross-validated vs sigminer/MP toys | 09(M0), 10 | 2–3 d |
+| U-M1s-12 | `ms_extract()` single-method | the single-method KL extraction + `print/format` (the consensus-CV pipeline belongs to M2) | [engineering] the end-to-end smoke (a toy-data cosine within a reasonable band) | 11 | 2 d |
+| U-M1s-13 | the golden-standard fixture infrastructure | the fixture generation scripts + the golden-file management + the refresh scripts (the PR-check-item linkage, A15) | [engineering] the fixtures reproducibly generated | 05 | 1 d |
+| U-M1s-14 | the one-off KL cross-check | the fixed-platform experiment vs R NMF brunet, `‖ΔW‖/‖W‖<1e-10` | [equivalence] the report lands in the devlog/ADR, **not entering the CI gate** (D11/A8) | 02 | 1 d |
 
-**v0.1 发布门**（ROADMAP 原文）：目录生成 ≥50× SPMG（钉硬件 bench；CI 只 sanity bound <5s）；NMF ≥100× R NMF；夹具全绿；r-universe 可安装；CAPABILITY-MATRIX M1s 相关行更新；NEWS + GitHub Release。
+**The v0.1 release gate** (the ROADMAP's original wording): the catalog generation ≥50× SPMG (the hardware-pinned bench; the CI carries only the <5s sanity bound); the NMF ≥100× R NMF; all fixtures green; installable from r-universe; the CAPABILITY-MATRIX's M1s-related rows updated; NEWS + the GitHub Release.
 
-## 4. v0.2 / v1.0 中粒度单元（开工前随当时状态细化，依赖图届时更新）
+## 4. The medium-granularity units of v0.2 / v1.0 (refined against the then-current state before starting; the dependency graph updated at that time)
 
-### 4.1 v0.2（再 ~12 周）
+### 4.1 v0.2 (a further ~12 weeks)
 
-**M1c · 目录完备 + ID83（3 周）**
+**M1c · the catalog completeness + ID83 (3 weeks)**
 
-| ID | 单元 | 验收要点 |
+| ID | Unit | The acceptance essentials |
 |---|---|---|
-| U-M1c-01 | ID83（SPMG 语义逐位复刻：重复游走/MH 前向优先/封顶/Q 规则）+ ID83 golden | 【逐位】 |
-| U-M1c-02 | GMM 分层器 `ms_stratify_hypermutants()`（分类 + 排除 de novo + 强制 refit，A18） | 【工程】+ 分层场景测试 |
-| U-M1c-03 | CN 输入与 CN48 特征空间（`ms_segments()` allele-specific caller 映射；CAPABILITY-MATRIX L-A/L-B M1c 行） | 【逐位】CN48 标签 |
-| U-M1c-04 | SV 输入与 SV32（`ms_sv()` BEDPE/SV VCF + `catalog/pcf.rs` exactPcf clustered；矩阵 M1c 行） | 【逐位】SV32 标签 |
+| U-M1c-01 | ID83 (the bit-for-bit replication of the SPMG semantics: the repeated walk / the MH forward-priority / the capping / the Q rule) + the ID83 golden | [bit-for-bit] |
+| U-M1c-02 | the GMM stratifier `ms_stratify_hypermutants()` (the classification + the de novo exclusion + the forced refit, A18) | [engineering] + the stratification-scenario tests |
+| U-M1c-03 | the CN input and the CN48 feature space (the `ms_segments()` allele-specific caller mapping; the CAPABILITY-MATRIX L-A/L-B M1c rows) | [bit-for-bit] the CN48 labels |
+| U-M1c-04 | the SV input and SV32 (the `ms_sv()` BEDPE/SV VCF + the `catalog/pcf.rs` exactPcf clustered; the matrix M1c row) | [bit-for-bit] the SV32 labels |
 
-**M2 · 统一提取流水线（5 周）**
+**M2 · the unified extraction pipeline (5 weeks)**
 
-| ID | 单元 | 验收要点 |
+| ID | Unit | The acceptance essentials |
 |---|---|---|
-| U-M2-01 | `engine/consensus.rs`：余弦距离 + 矩形 Hungarian + unmatched 的 split/merge 显式语义（兼容 Islam 阈值扫描，A10） | 【工程】Hungarian 暴力对拍 |
-| U-M2-02 | SUITOR CV 可选开关（fold 按序取模 + 条件均值填补语义【逐位】）+ `ms_select_k()` 默认仲裁规则成文并实现（CV argmin → 稳定性 veto → Wilcoxon 仅诊断，A10） | 仲裁规则文档 = 契约 |
-| U-M2-03 | `ms_extract()` 默认共识-CV 流水线装配（分层 → ensemble → 共识 → 仲裁 → NNLS refit；Wilcoxon 仅诊断） | 端到端测试 |
-| U-M2-04 | `ms_ard()`（SignatureAnalyzer ARD，Rust） | 【工程】+ 退化测试 |
-| U-M2-05 | `ms_sparse()`（体积正则 mvNMF + L1，Rust） | 【工程】 |
-| U-M2-06 | 注册表接入 MsNmf/MsArd/MsSparse + 契约测试全过 + `vignettes/extending.Rmd` | 第三方扩展路径可走通 |
-| U-M2-07 | 端到端合成测试（cosine>0.95）+ Islam 2022 协议复现（贪心 max-cosine ≥0.90） | 【逐位】协议步骤 |
+| U-M2-01 | `engine/consensus.rs`: the cosine distance + the rectangular Hungarian + the explicit split/merge semantics for the unmatched (compatible with the Islam threshold sweep, A10) | [engineering] the Hungarian brute-force cross-check |
+| U-M2-02 | the SUITOR CV as an optional switch (the folds taken by sequence modulo + the conditional-mean imputation semantics [bit-for-bit]) + the `ms_select_k()` default adjudication rule documented and implemented (the CV argmin → the stability veto → the Wilcoxon diagnostic-only, A10) | the adjudication-rule document = the contract |
+| U-M2-03 | the `ms_extract()` default consensus-CV pipeline assembly (the stratification → the ensemble → the consensus → the adjudication → the NNLS refit; the Wilcoxon diagnostic-only) | the end-to-end tests |
+| U-M2-04 | `ms_ard()` (the SignatureAnalyzer ARD, in Rust) | [engineering] + the degeneration tests |
+| U-M2-05 | `ms_sparse()` (the volume-regularised mvNMF + L1, in Rust) | [engineering] |
+| U-M2-06 | the registry table wired for MsNmf/MsArd/MsSparse + all contract tests passing + `vignettes/extending.Rmd` | the third-party extension path walkable |
+| U-M2-07 | the end-to-end synthetic tests (cosine>0.95) + the Islam 2022 protocol reproduction (the greedy max-cosine ≥0.90) | [bit-for-bit] the protocol steps |
 
-**M3a · 拟合三法 + bootstrap（4 周）**
+**M3a · the fitting three methods + bootstrap (4 weeks)**
 
-| ID | 单元 | 验收要点 |
+| ID | Unit | The acceptance essentials |
 |---|---|---|
-| U-M3a-01 | `engine/likelihood.rs`：多项/NB LL + ϵ 步进 + χ²₁ LRT + Fisher（内点支撑 only） | 【工程】 |
-| U-M3a-02 | `ms_fit()` 三法：nnls / likelihood_bidirectional（MuSiCal 语义）【等价：数值轨迹】/ lrt | 双层标注分法验收 |
-| U-M3a-03 | `ms_fit_bootstrap()`（Rust 并行）+ `ms_test_presence()`（NB χ²₁ LRT + BH） | 种子确定性 + 跨线程一致 |
-| U-M3a-04 | QP / em / 暴露稀疏化清零规则（矩阵 L-D v0.2 行） | 【工程】 |
-| U-M3a-05 | 每突变分配 + unassigned 残差伪签名 + TSB 检验 + de novo→目录分解注释（矩阵 L-D/L-E v0.2 行） | 【工程】 |
-| U-M3a-06 | refdb v1：人类 SBS/DBS/ID 捆绑 + precedence/schema_version/manifest/build_independent 治理（A13） | fixture 化更新路径，检查期零联网 |
+| U-M3a-01 | `engine/likelihood.rs`: the multinomial/NB LL + the ϵ stepping + the χ²₁ LRT + Fisher (the interior support only) | [engineering] |
+| U-M3a-02 | `ms_fit()` three methods: nnls / likelihood_bidirectional (the MuSiCal semantics) [equivalence: the numerical trajectory] / lrt | the two-layer annotation, per-method acceptance |
+| U-M3a-03 | `ms_fit_bootstrap()` (Rust parallel) + `ms_test_presence()` (the NB χ²₁ LRT + BH) | the seed determinism + the cross-thread consistency |
+| U-M3a-04 | QP / em / the exposure-sparsification zeroing rules (the matrix L-D v0.2 row) | [engineering] |
+| U-M3a-05 | the per-mutation assignment + the unassigned-residual pseudosignature + the TSB test + the de novo→catalog decomposition annotation (the matrix L-D/L-E v0.2 rows) | [engineering] |
+| U-M3a-06 | refdb v1: the bundled human SBS/DBS/ID + the precedence/schema_version/manifest/build_independent governance (A13) | the fixture-ised update path, zero networking during checks |
 
-**v0.2 验收门**：Jiang 协议（活性>0 匹配 + Combined Score）对标进入第一梯队合理区间；refdb v1 发布；矩阵更新。
+**The v0.2 acceptance gate**: the Jiang-protocol benchmarking (an activity>0 match + the Combined Score) lands in the first tier's reasonable band; refdb v1 released; the matrix updated.
 
-### 4.2 v1.0（再 ~3–4 月）
+### 4.2 v1.0 (a further ~3–4 months)
 
-**M3b · MSU-Fit 校准统计（6 周；G2 门须在此期间达成）**
-- U-M3b-01 estimand 三层落地（D13/A1）：presence LRT / support-conditional 绝对 exposure CI（BCa 或分层 calibrated-percentile）/ 清零复合覆盖率。
-- U-M3b-02 多项 + NB 双生成模型校准：coverage × N × Shannon 曲线；Fisher 内点区间；真实数据降采样 sanity 协议。
-- U-M3b-03 G0 结果写入叙事决策（Framing A/B ADR 定稿）。
+**M3b · the MSU-Fit calibration statistics (6 weeks; the G2 gate must be reached within this period)**
+- U-M3b-01 the three estimand layers landed (D13/A1): the presence LRT / the support-conditional absolute exposure CI (BCa or the layered calibrated-percentile) / the zeroing compound coverage.
+- U-M3b-02 the multinomial + NB dual generative-model calibration: the coverage × N × Shannon curves; the Fisher interior intervals; the real-data downsampling sanity protocol.
+- U-M3b-03 the G0 outcome written into the narrative decision (the Framing A/B ADR finalised).
 
-**M4 · 相似度校准库 + viz（3 周）**
-- U-M4-01 `ms_compare()` 校准相似度库：多度量 + 解析/经验零分布 + Hungarian 主指标 / Islam 贪心 / Jiang 活性三协议参考实现【逐位】。
-- U-M4-02 `ms_qc_report()` + `ms_downsample()` + `ms_import/ms_export` 首批（SigProfiler txt / COSMIC txt / WTSI 长格式）。
-- U-M4-03 viz 首批 8 图型（COSMIC 调色板、规范序、矢量输出）+ exposure UMAP 初版 + `ms_convert()`。
+**M4 · the similarity calibration library + viz (3 weeks)**
+- U-M4-01 the `ms_compare()` calibrated-similarity library: the multi-metric + the analytic/empirical null distributions + the Hungarian primary metric / Islam greedy / Jiang activity three-protocol reference implementations [bit-for-bit].
+- U-M4-02 `ms_qc_report()` + `ms_downsample()` + the first batch of `ms_import/ms_export` (the SigProfiler txt / the COSMIC txt / the WTSI long format).
+- U-M4-03 the first viz batch of 8 figure types (the COSMIC palette, the canonical order, vector output) + the first exposure-UMAP version + `ms_convert()`.
 
-**M6s · HRD 工作流（3 周；范围安全契约生效，A12）**
-- U-M6s-01 `ms_hrd_report()`：HRDetect 系数模式 **WGS-only** + allele-specific CN caller 白名单（Battenberg/ASCAT/FACETS/PURPLE/SEQUENZA）+ WES 标 experimental + 参考忠实性测试（系数【逐位】）+ 不确定性报告。
+**M6s · the HRD workflow (3 weeks; the scope-safety contract in force, A12)**
+- U-M6s-01 `ms_hrd_report()`: the HRDetect coefficient mode **WGS-only** + the allele-specific CN caller whitelist (Battenberg/ASCAT/FACETS/PURPLE/SEQUENZA) + WES marked experimental + the reference-fidelity test (the coefficients [bit-for-bit]) + the uncertainty reporting.
 
-**M7 · Benchmark 完备 + 论文（8–10 周）**
-- U-M7-01 场景网格全量（ARCH §8 升级版）+ 校准/选择/评估三层场景隔离 + 协议冻结随包发布。
-- U-M7-02 竞品容器 harness（仅 `bench/`）+ 钉硬件 bench 全表 + `ms_benchmark()` 端到端。
-- U-M7-03 论文草稿（headline 依 G0 Framing ADR）+ renv/Docker/seed 一键复现 + bioRxiv 同挂。
-- U-M7-04 pkgdown 全站 + MSU↔函数映射表 + CITATION + 性能锚定文档。
+**M7 · the benchmark completeness + the paper (8–10 weeks)**
+- U-M7-01 the full scenario grid (ARCH §8 upgraded edition) + the calibration/selection/evaluation three-layer scenario isolation + the protocol freeze shipped with the package.
+- U-M7-02 the competitor-container harness (`bench/` only) + the hardware-pinned bench full table + `ms_benchmark()` end-to-end.
+- U-M7-03 the paper draft (the headline per the G0 Framing ADR) + the renv/Docker/seed one-command reproduction + the bioRxiv co-posting.
+- U-M7-04 the full pkgdown site + the MSU↔function mapping table + CITATION + the performance-anchoring documentation.
 
-**M8 · 发布工程**
-- U-M8-01（M8a 材料周）：cargo vendor 终审 + r-universe + GitHub Releases 二进制 + nf-core module PR。
-- U-M8-02（M8b，墙钟 4–8 周滚动）：CRAN 提交与迭代。
+**M8 · the release engineering**
+- U-M8-01 (the M8a materials week): the cargo vendor final review + r-universe + the GitHub Releases binaries + the nf-core module PR.
+- U-M8-02 (M8b, a wall clock of 4–8 weeks rolling): the CRAN submission and its iteration.
 
-**v1.0 验收门**：CRAN 提交启动；论文三板块素材（架构/性能/应用）齐备（ARCH §10）。
+**The v1.0 acceptance gate**: the CRAN submission launched; the paper's three pillar materials (the architecture / the performance / the applications) all prepared (ARCH §10).
 
-## 5. G 门与 kill criteria 排程（作者本人行动，团队不可代办）
+## 5. The G gates and the kill criteria schedule (the author's own actions, not delegable to the team)
 
-| 门 | 时机 | 行动 | 产出/判定 |
+| The gate | The timing | The action | The outcome/decision |
 |---|---|---|---|
-| **G0** | **立即（W1–W2，与 M0 并行）** | 先导覆盖实验：2 个竞品工具 × TMB 网格的名义 vs 实际覆盖率。工具默认候选 MuSiCal / SigProfilerAssignment，协议冻结时由 signature 专家简报定稿 | G0 报告 + **Framing A/B ADR**；先于一切论文叙事写作（U-M7-03 的前置条件） |
-| **G1** | M1s 内（≤W6） | co-maintainer 候选名单与邀请（bus factor + CRAN + 审稿三重需要） | DESCRIPTION co-maintainer 落实；未达成 = kill criterion |
-| **G2** | M3b 期间/结束前 | 统计学 co-author（conformal/CoDA 理论）+ 临床/队列合作者（治疗记录 / RNA-only / FFPE panel 三选一）锁定 | 合作约定；否则案例注定装饰性，主动接受 GB/NC 上限 |
-| **G3** | 每季度（下次 ~2026-12） | 竞争格局复核（Cornet/MuSiCal/SPA 动态）+ kill criteria 重估 | 复核备忘落 devlog |
+| **G0** | **immediately (W1–W2, in parallel with M0)** | the pilot coverage experiment: the nominal vs actual coverage of 2 competing tools × the TMB grid. The default tool candidates are MuSiCal / SigProfilerAssignment, finalised at the protocol freeze by the signature-expert brief | the G0 report + the **Framing A/B ADR**; preceding all paper-narrative writing (the precondition of U-M7-03) |
+| **G1** | within M1s (≤W6) | the co-maintainer candidate list and the invitations (the threefold need: the bus factor + CRAN + reviewers) | the DESCRIPTION co-maintainer landed; unmet = a kill criterion |
+| **G2** | during / before the close of M3b | the statistics co-author (the conformal/CoDA theory) + the clinical/cohort collaborator (the treatment records / RNA-only / FFPE panel, one of the three) locked in | the collaboration agreement; otherwise the case study is destined to be decorative and the GB/NC ceiling is actively accepted |
+| **G3** | each quarter (the next ~2026-12) | the competitive-landscape re-review (the Cornet/MuSiCal/SPA dynamics) + the kill-criteria re-estimation | the review memo lands in the devlog |
 
-**Kill criteria**（ARCH §10，触发任一 → 停当前轨道，向用户汇报 pivot 选项）：先导实验证伪；Cornet 正式发表压制相关性组件；M3b 前无队列合作；竞品发布校准 CI；滑期 >100%；无 co-maintainer。
+**The kill criteria** (ARCH §10; any one triggers → stop the current track, report the pivot options to the user): the pilot experiment falsifies; Cornet formally publishes and presses down the correlation component; no cohort collaboration before M3b; a competitor releases calibrated CIs; the slippage >100%; no co-maintainer.
 
-## 6. 启动检查单（第 1 周即行动）
+## 6. The kickoff checklist (act in week 1)
 
-> [2026-10-13] Week-1 kickoff snapshot; boxes intentionally left unchecked as authored. These gates/units are tracked authoritatively in [docs/ROADMAP.md](ROADMAP.md) (M0 checklist rows, G-gate 排程 rows, G0 行) — the ROADMAP supersedes this checklist.
+> [2026-10-13] Week-1 kickoff snapshot; boxes intentionally left unchecked as authored. These gates/units are tracked authoritatively in [docs/ROADMAP.md](ROADMAP.md) (M0 checklist rows, G-gate schedule rows, the G0 row) — the ROADMAP supersedes this checklist.
 
-- [ ] **G0 协议冻结并开跑**（作者 + signature 专家；两周窗口，结果写 Framing ADR）
-- [ ] **U-M0-01 脚手架** + **U-M0-02 spike**（spike W1 硬截止——vendor 数字决定后续一切构建决策）
-- [ ] U-M0-08 治理文件 + U-M0-10 ADR 目录迁移（无代码依赖，可立即并行）
-- [ ] G1 co-maintainer 候选名单启动（作者日历项）
-- [ ] 首个工作单元启动时建立 `docs/devlog/`（首个 devlog = U-M0-01）
+- [ ] **the G0 protocol frozen and kicked off** (the author + the signature expert; a two-week window, the outcome written into the Framing ADR)
+- [ ] **U-M0-01 the scaffolding** + **U-M0-02 the spike** (the spike's W1 hard deadline -- the vendor numbers determine every subsequent build decision)
+- [ ] U-M0-08 the governance files + U-M0-10 the ADR directory migration (no code dependency, immediately parallel)
+- [ ] the G1 co-maintainer candidate list started (an author calendar item)
+- [ ] `docs/devlog/` established when the first work unit starts (the first devlog = U-M0-01)

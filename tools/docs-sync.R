@@ -32,7 +32,7 @@ options(warn = 1)
 
 .extract_lh_table_apis <- function() {
   lines <- readLines(.rd("CAPABILITY-MATRIX.md"), warn = FALSE)
-  start <- grep("^#{2,3} L-H API 表面", lines)
+  start <- grep("^#{2,3} L-H API surface", lines)
   if (length(start) != 1L) {
     stop("docs-sync: could not locate the L-H API surface table heading",
          call. = FALSE)
@@ -138,7 +138,7 @@ cat("docs-sync: OK -- no API-surface drift\n")
   section_of <- function(i) lines[max(heads[heads <= i])]
   in_scope   <- function(sec) grepl("M6s", sec) ||
                               grepl("M7\\b", sec, perl = TRUE) ||
-                              grepl("G 门", sec, fixed = TRUE)
+                              grepl("G-gates", sec, fixed = TRUE)
   checked <- grep(.checkbox_line, lines, perl = TRUE)
   bad <- character(0)
   n   <- 0L

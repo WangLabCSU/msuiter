@@ -1,50 +1,50 @@
-# ADR 0002：vendor 体积预算与 MSRV 构建证明（U-M0-02 spike）
+# ADR 0002: the vendor size budget and the MSRV build proof (the U-M0-02 spike)
 
-- 状态：accepted（2026-09-28）
-- 裁决单元：U-M0-02 M0 spike（W1 硬截止）
-- 上游依据：ARCHITECTURE.md §0 D4、§2 构建条目 8（Makevars.in 按 string2path 模式 + vendor.tar.xz + offline + CARGO_BUILD_JOBS=2 + cleanup；MSRV 目标 1.71）；IMPLEMENTATION-PLAN.md §3.1 U-M0-02
-- 关联：ADR 0001（twobit 解锁，最终依赖树含 twobit 0.2.2）
+- Status: accepted (2026-09-28)
+- Adjudication unit: the U-M0-02 M0 spike (the W1 hard deadline)
+- The upstream basis: ARCHITECTURE.md §0 D4, §2 build entry 8 (Makevars.in on the string2path pattern + vendor.tar.xz + offline + CARGO_BUILD_JOBS=2 + cleanup; the MSRV target 1.71); IMPLEMENTATION-PLAN.md §3.1 U-M0-02
+- Related: ADR 0001 (the twobit unlock, the final dependency tree containing twobit 0.2.2)
 
-## 1. 实验环境（本机证明范围）
+## 1. The experiment environment (this machine's proof scope)
 
-macOS arm64（Darwin 25.6.0）、R 4.5.2、xz 5.6.4、cargo/rustc stable 1.97.1、rustc 1.71.0（rustup 最小 profile）。**平台残留：Linux/Windows 构建证明由 U-M0-07 CI 矩阵承接，本 ADR 不覆盖。**
+macOS arm64 (Darwin 25.6.0), R 4.5.2, xz 5.6.4, cargo/rustc stable 1.97.1, rustc 1.71.0 (rustup minimal profile). **Platform residue: the Linux/Windows build proofs are carried by the U-M0-07 CI matrix, not covered by this ADR.**
 
-## 2. vendor 体积数字（最终依赖树，含 twobit）
+## 2. The vendor size numbers (the final dependency tree, with twobit)
 
-命令（在 `src/rust/`，lock 状态 = Cargo.lock v3，matrixmultiply 钉 0.3.9，见 §4）：
+The command (in `src/rust/`, the lock state = Cargo.lock v3, matrixmultiply pinned to 0.3.9, see §4):
 
 ```sh
 cd src/rust
 cargo vendor vendor
 find vendor -type f -print0 | xargs -0 stat -f%z | awk '{s+=$1} END {print s}'
 tar -cf /tmp/vendor.tar vendor && stat -f%z /tmp/vendor.tar
-tar -cJf /tmp/vendor.tar.xz vendor && stat -f%z /tmp/vendor.tar.xz   # xz -6 默认档
+tar -cJf /tmp/vendor.tar.xz vendor && stat -f%z /tmp/vendor.tar.xz   # xz -6 default level
 ```
 
-| 口径 | 字节数 | MiB |
+| The caliber | The byte count | MiB |
 |---|---|---|
-| `vendor/` 未压缩（22 crates，970 文件） | **10,674,351** | 10.18 |
-| tar（未压缩） | 13,832,192 | 13.20 |
-| **tar.xz（`tar -cJf`，xz -6）** | **1,125,136** | **1.07** |
+| `vendor/` uncompressed (22 crates, 970 files) | **10,674,351** | 10.18 |
+| tar (uncompressed) | 13,832,192 | 13.20 |
+| **tar.xz (`tar -cJf`, xz -6)** | **1,125,136** | **1.07** |
 
-参考基线（加入 twobit 前的 21 crates：10,580,063 / 13,652,480 / 1,107,780 字节）；`xz -9e` 与默认 `-6` 差 <0.1%（1,102,288 vs 1,102,296 @ 基线），采用默认档即可。压缩比 ≈ 12.3:1。
+The reference baseline (the 21 crates before adding twobit: 10,580,063 / 13,652,480 / 1,107,780 bytes); `xz -9e` vs the default `-6` differ <0.1% (1,102,288 vs 1,102,296 @ the baseline), adopting the default level suffices. Compression ratio ≈ 12.3:1.
 
-**增量记录（按本节纪律追加）**：
+**The incremental record (appended per this section's discipline)**:
 
-| 日期 | 单元 | 新增 vendor 内容 | 未压缩增量 | xz 增量 | 新基线（未压缩 / tar / xz） |
+| The date | The unit | The new vendor content | The uncompressed increment | The xz increment | The new baseline (uncompressed / tar / xz) |
 |---|---|---|---|---|---|
-| 2026-09-28 | U-M0-09 | rayon 1.10.0 + rayon-core 1.12.1（FFI per-call 线程池，ARCH §2 预算内依赖；lock 钉版因 ≥1.11 需 rustc 1.80，方法同 §4） | +1,851,707 B | +282,452 B | **12,526,058 / 16,516,096 / 1,407,588** |
-| 2026-09-30 | U-M1s-08/09 合并记录 | memmap2 0.9.11 + libc 0.2.189（libc 为 memmap2 传递依赖，全平台生成绑定约 4.4 MB）。**归因修正（审核）**：两 crate 实际于 U-M1s-06/07/08（commit 6885078）以 catalog dev-dependency 入 lock——cargo vendor 含 dev-deps，故预算当时已变；U-M1s-09（ms_tally_rust）再把 memmap2 升为根 crate 主依赖。两个未记录事件折叠为本行。**纪律缺口声明：增量未按本节纪律记录，首次由 v0.1 发布预备的 --check 演练发现（基线过期 +37.6%）**；上溯行「22 crates（U-M0-02 基线）」标签同理宜读作「当时 lock 实况」（syn 双版本等演进未逐行记录） | +4,712,247 B | +456,028 B | **17,238,305 / 22,952,960 / 1,863,616** |
+| 2026-09-28 | U-M0-09 | rayon 1.10.0 + rayon-core 1.12.1 (the FFI per-call thread pool, a dependency within the ARCH §2 budget; the lock pinning because ≥1.11 needs rustc 1.80, the method same as §4) | +1,851,707 B | +282,452 B | **12,526,058 / 16,516,096 / 1,407,588** |
+| 2026-09-30 | the U-M1s-08/09 merged record | memmap2 0.9.11 + libc 0.2.189 (libc is a transitive dependency of memmap2, the all-platform generated bindings about 4.4 MB). **The attribution correction (audit)**: the two crates in fact entered the lock as a catalog dev-dependency at U-M1s-06/07/08 (commit 6885078) — cargo vendor includes dev-deps, so the budget had already changed at that point; U-M1s-09 (ms_tally_rust) then raised memmap2 to a root-crate main dependency. The two unrecorded events are folded into this row. **The discipline-gap declaration: the increments were not recorded per this section's discipline, discovered first by the --check rehearsal of the v0.1 release preparation (the baseline stale +37.6%)**; the upward-tracing row "22 crates (the U-M0-02 baseline)" label should likewise be read as "the lock's actual state then" (evolutions such as the syn dual version were not recorded line by line) | +4,712,247 B | +456,028 B | **17,238,305 / 22,952,960 / 1,863,616** |
 
-当前生效基线 = 上表末行；`tools/vendor.sh --check` 的内置常量随之更新（xz 口径仍保留 ±0.1% 版本容差带）。
+The current effective baseline = the last row of the above table; the built-in constants of `tools/vendor.sh --check` are updated accordingly (the xz caliber still keeps the ±0.1% version-tolerance band).
 
-| 2026-10-05 | v0.1 发布门禁（release.yml 启用） | **基线重锚定至 MSRV 1.71 工具链**：审计发现 vendor 产物为 cargo 版本相对——本地 1.92 产出 17,238,305 B，release 门（MSRV 1.71）产出 **16,911,999 B**（差 326,306 B 为 cargo 打包行为差异，依赖集 33 项不变）。基线自此钉定发布门工具链；本地默认工具链跑 --check 会显示 DRIFT（by design），验证命令 = `rustup run 1.71.0 sh tools/vendor.sh --check` | −326,306 B | −4,633,600 B | **16,911,999 / 18,319,360 / 1,744,176** |
+| 2026-10-05 | the v0.1 release gate (release.yml activation) | **The baseline re-anchored to the MSRV 1.71 toolchain**: the audit found the vendor artifacts are cargo-version-relative — the local 1.92 yields 17,238,305 B, the release gate (MSRV 1.71) yields **16,911,999 B** (the difference of 326,306 B is a cargo packaging-behavior difference, the 33-item dependency set unchanged). The baseline is henceforth pinned to the release-gate toolchain; running --check on the local default toolchain shows DRIFT (by design), the verification command = `rustup run 1.71.0 sh tools/vendor.sh --check` | −326,306 B | −4,633,600 B | **16,911,999 / 18,319,360 / 1,744,176** |
 
-**预算判断**：vendor.tar.xz 当前 ≈ 1.71 MB（MSRV 1.71 基线），加全包源码（src/rust 13 KB + R/ 侧 ~48 KB 量级）仍远低于 CRAN 5 MB 包体积指导线；后续新增依赖每 ~0.1 MB xz 增量需在本 ADR 追加记录，超出预算即触发依赖再收缩决策（ARCH §11 风险条目）。
+**The budget judgement**: vendor.tar.xz currently ≈ 1.71 MB (the MSRV 1.71 baseline), plus the whole package source (src/rust 13 KB + the R/-side ~48 KB order of magnitude) still far below the CRAN 5 MB package-size guidance line; for subsequent new dependencies every ~0.1 MB xz increment requires an appended record in this ADR, and going over budget triggers the dependency-re-contraction decision (the ARCH §11 risk entry).
 
-## 3. Offline 与 CRAN 模式构建证明
+## 3. Offline and the CRAN-mode build proofs
 
-### 3.1 纯 cargo offline（vendor 目录直用）
+### 3.1 Pure cargo offline (the vendor directory used directly)
 
 ```sh
 mkdir -p .cargo && cp vendor-config.toml .cargo/config.toml
@@ -53,31 +53,31 @@ CARGO_HOME="$PWD/.cargo" CARGO_NET_OFFLINE=true cargo test  --workspace --offlin
 rm -rf .cargo
 ```
 
-`CARGO_NET_OFFLINE=true` 下任何联网尝试都会使 cargo 报错退出；实测 build/test 全绿 → **offline 构建可行**。
+Under `CARGO_NET_OFFLINE=true` any networking attempt makes cargo error-exit; the measured build/test all green → **offline build is feasible**.
 
-### 3.2 R 侧 CRAN 模式（vendor.tar.xz 接线，string2path 模式全链路）
+### 3.2 The R-side CRAN mode (the vendor.tar.xz wiring, the full string2path chain)
 
 ```sh
-cp /tmp/vendor.tar.xz src/rust/vendor.tar.xz        # Makevars/config.R 期望位置
+cp /tmp/vendor.tar.xz src/rust/vendor.tar.xz        # the Makevars/config.R expected location
 env -u NOT_CRAN -u DEBUG R CMD INSTALL . -l /tmp/msuiter-testlib
 ```
 
-实测输出关键证据（exit 0，`* DONE (msuiter)`，安装后 `library(msuiter)` 加载成功）：
+The key evidence of the measured output (exit 0, `* DONE (msuiter)`, and after the installation `library(msuiter)` loads successfully):
 
-- `tools/config.R` 检测 `src/rust/vendor.tar.xz` 存在 → 注入 CRAN flags `cargo build -j 2 --offline --lib --release`（`CARGO_BUILD_JOBS=2` 同步生效）；
-- Makevars 从 tarball 解包 `vendor/` 至 `src/vendor`，复制 `vendor-config.toml` → `src/.cargo/config.toml`（`=== Using offline vendor tarball ===`）；
-- `--print=native-static-libs` RUSTFLAGS 生效；`cargo run --bin document` 生成 wrappers；
-- `rust_clean` 清理 `src/.cargo`、`src/vendor` 与 `rust/target`（CRAN 模式 cleanup 契约成立）。
+- `tools/config.R` detects that `src/rust/vendor.tar.xz` exists → injects the CRAN flags `cargo build -j 2 --offline --lib --release` (`CARGO_BUILD_JOBS=2` synchronously in effect);
+- Makevars unpacks `vendor/` from the tarball into `src/vendor`, copies `vendor-config.toml` → `src/.cargo/config.toml` (`=== Using offline vendor tarball ===`);
+- the `--print=native-static-libs` RUSTFLAGS take effect; `cargo run --bin document` generates the wrappers;
+- `rust_clean` cleans `src/.cargo`, `src/vendor` and `rust/target` (the CRAN-mode cleanup contract holds).
 
-同一命令换 1.71 工具链再跑一遍亦通过（见 §4）。
+Re-running the same command with the 1.71 toolchain also passes (see §4).
 
-### 3.3 vendor 产物入库策略
+### 3.3 The vendor-artifact check-in strategy
 
-`vendor/` 与 `vendor.tar.xz` **不入 git**（根 `.gitignore` 与 `src/rust/.gitignore` 均已覆盖，`git check-ignore` 验证通过）；spike 后两产物已从工作区删除。发布期（U-M8-01）由 `tools/vendor.sh` 重新生成并附入 CRAN tarball（脚本输出三口径字节数，供 U-M0-07 CI 与本 ADR 基线做漂移对照）。`vendor-config.toml`（离线模板）入库且不再变动。
+`vendor/` and `vendor.tar.xz` **do not enter git** (both the root `.gitignore` and `src/rust/.gitignore` already cover them, verified via `git check-ignore`); after the spike the two artifacts were deleted from the workspace. At release time (U-M8-01) `tools/vendor.sh` regenerates and attaches them into the CRAN tarball (the script prints the byte counts under the three calibers, for drift comparison against the U-M0-07 CI and this ADR's baseline). `vendor-config.toml` (the offline template) does enter the repository and no longer changes.
 
-## 4. MSRV 证明（rustc 1.71.0）
+## 4. The MSRV proof (rustc 1.71.0)
 
-### 4.1 基线 lock：失败（确切记录）
+### 4.1 The baseline lock: failure (recorded exactly)
 
 ```text
 $ cargo +1.71.0 build --workspace
@@ -85,17 +85,17 @@ error: package `matrixmultiply v0.3.11` cannot be built because it requires
 rustc 1.75.0 or newer, while the currently active rustc version is 1.71.0
 ```
 
-根因：ndarray 0.16.1 的传递依赖 `matrixmultiply` 0.3.11 在其 Cargo.toml 显式声明 `rust-version = "1.75.0"`（0.3.10 同）；其余 22 个依赖（含 syn 2.0.119/3.0.6、proc-macro2 1.0.107、once_cell 1.21.4、portable-atomic 1.15.0、twobit 0.2.2、memmap2 0.9.11）实测均在 1.71 可编译。
+The root cause: ndarray 0.16.1's transitive dependency `matrixmultiply` 0.3.11 declares `rust-version = "1.75.0"` explicitly in its Cargo.toml (the same for 0.3.10); the other 22 dependencies (including syn 2.0.119/3.0.6, proc-macro2 1.0.107, once_cell 1.21.4, portable-atomic 1.15.0, twobit 0.2.2, memmap2 0.9.11) are all measured compilable at 1.71.
 
-### 4.2 修复：lockfile 钉版（不放宽 MSRV）
+### 4.2 The fix: lockfile pinning (without relaxing the MSRV)
 
 ```sh
-cargo update -p matrixmultiply@0.3.11 --precise 0.3.9   # 0.3.9 无 rust-version 声明
-cargo +1.71.0 build --workspace   # exit 0（冷构建）
+cargo update -p matrixmultiply@0.3.11 --precise 0.3.9   # 0.3.9 has no rust-version declaration
+cargo +1.71.0 build --workspace   # exit 0 (a cold build)
 cargo +1.71.0 test  --workspace   # 1 passed (ffi_links_engine_and_catalog)
 ```
 
-### 4.3 1.71 × CRAN 模式端到端
+### 4.3 The 1.71 × CRAN-mode end-to-end
 
 ```sh
 env -u NOT_CRAN -u DEBUG R_ENVIRON_USER=/tmp/empty-renviron \
@@ -104,21 +104,21 @@ env -u NOT_CRAN -u DEBUG R_ENVIRON_USER=/tmp/empty-renviron \
 # Using cargo 1.71.0 / rustc 1.71.0 → offline vendor tarball → -j 2 --offline --release → * DONE (msuiter)
 ```
 
-**结论**：MSRV 1.71 声明成立，无需放宽 D4/§2；代价是 Cargo.lock 内一条钉版（matrixmultiply = 0.3.9，已入库）。
+**The conclusion**: the MSRV 1.71 declaration holds, no need to relax D4/§2; the cost is one pinning inside Cargo.lock (matrixmultiply = 0.3.9, already checked in).
 
-### 4.4 MSRV 维护约束（进 CI/流程注意，U-M0-07 承接）
+### 4.4 The MSRV maintenance constraints (entering the CI/process notices, carried by U-M0-07)
 
-1. **matrixmultiply 不得随 `cargo update` 升至 ≥0.3.10**（1.75+）；dependabot/lock 检查需保留该钉版或等价 rust-version 门。
-2. **Cargo.lock 必须保持 version 3**（v4 需 cargo ≥1.78 才能读取）；当前即为 v3。
-3. 本机复现坑：`~/.Renviron` 注入 `PATH="/Users/wsx/miniconda3/bin/:${PATH}"`，R 子进程内 conda 自带 cargo 1.92.0 会遮蔽前置的工具链目录（Makevars 将 `~/.cargo/bin` 追加在 PATH 尾部，无法纠正）。本机验证 MSRV 时需 `R_ENVIRON_USER=/tmp/empty-renviron` + 1.71 bin 前置 PATH；CI 镜像无 conda rust，不受影响。
+1. **matrixmultiply must not, along `cargo update`, rise to ≥0.3.10** (1.75+); the dependabot/lock check must retain that pin or an equivalent rust-version gate.
+2. **Cargo.lock must stay version 3** (v4 needs cargo ≥1.78 to be read); it is currently v3.
+3. The this-machine reproduction pitfall: `~/.Renviron` injects `PATH="/Users/wsx/miniconda3/bin/:${PATH}"`, and inside the R subprocess the conda-bundled cargo 1.92.0 shadows the prepended toolchain directory (Makevars appends `~/.cargo/bin` to the PATH tail and cannot correct it). To verify the MSRV on this machine one needs `R_ENVIRON_USER=/tmp/empty-renviron` + the 1.71 bin prepended to the PATH; the CI images have no conda rust, unaffected.
 
-## 5. 验收对照（U-M0-02 【工程】项）
+## 5. The acceptance cross-check (the U-M0-02 [engineering] items)
 
-| 项 | 结果 |
+| The item | The result |
 |---|---|
-| 真实 vendor + xz 字节数落 ADR | §2（1,125,136 B xz） |
-| offline 构建证明 | §3.1 通过 |
-| CRAN 模式接线证明 | §3.2 通过（stable 与 1.71 各一遍） |
-| rustc 1.71 构建结论 | §4 通过（matrixmultiply 钉 0.3.9；确切错误与版本已记录） |
-| 三平台构建证明 | **残留**：macOS arm64 已证；Linux/Windows 由 U-M0-07 CI 矩阵承接 |
-| vendor 超预算 → 依赖再收缩决策 | 不触发（1.07 MB ≪ 预算） |
+| the real vendor + xz byte counts landed into the ADR | §2 (1,125,136 B xz) |
+| the offline build proof | §3.1 pass |
+| the CRAN-mode wiring proof | §3.2 pass (one pass each on the stable and on the 1.71) |
+| the rustc 1.71 build conclusion | §4 pass (matrixmultiply pinned to 0.3.9; the exact error and version recorded) |
+| the three-platform build proofs | **Residue**: macOS arm64 proved; the Linux/Windows carried by the U-M0-07 CI matrix |
+| the vendor over budget → the dependency re-contraction decision | not triggered (1.07 MB ≪ budget) |

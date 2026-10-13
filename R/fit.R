@@ -342,7 +342,7 @@
 #' @param connected NULL (default; no rejoin) or a vector of distinct
 #'   1-based signature indices (dictionary column order) forming the
 #'   connected-signature group -- the clock-like background signatures
-#'   (e.g. the SBS1/SBS5 pair) of the MSU-Fit "connected 组配置"
+#'   (e.g. the SBS1/SBS5 pair) of the MSU-Fit "the connected-group configuration"
 #'   (ARCHITECTURE section 5). The rejoined signatures are FIXED at their
 #'   initial full-NNLS solution after the method refit (`FixAndRefit`) and
 #'   the remaining signatures are re-optimized against the residual.

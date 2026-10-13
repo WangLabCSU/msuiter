@@ -1,58 +1,58 @@
-# 评审 03：机器学习/统计学专家（独立评审，2026-09-28）
+# The review 03: the machine-learning/statistics expert (an independent review, 2026-09-28)
 
-> 评审人设定：矩阵分解/主题模型/变分推断/conformal prediction/成分数据分析方向资深研究者，方法学审稿人，拒稿优先。
-> **总裁决：Major revision（若为论文）/ 设计可救（若为工程档案）。** 四个旗舰 MSU 方法的统计声明普遍比档案实际规定的内容强 1–2 个等级——把 §5 表格里每个形容词（"校准过""分布自由""无损""首个"）降级到协议实际支撑的水平，这张表就能活下来。
+> The reviewer persona: a senior researcher in matrix factorization / topic models / variational inference / conformal prediction / compositional data analysis, a methodological reviewer, rejection-first.
+> **The overall verdict: Major revision (if a paper) / the design is salvageable (if an engineering archive).** The statistical claims of the four flagship MSU methods are generally 1–2 grades stronger than what the archive actually specifies — downgrade every adjective in the §5 table ("calibrated", "distribution-free", "lossless", "first") to the level the protocols actually support, and the table survives.
 
 ## P0
 
-### 1.【P0】MSU-LowCount 的 conformal"分布自由覆盖保证"在跨 TMB 场景下数学上不成立
-- Split conformal 只要求 calibration 与 test **exchangeable**；panel/ctDNA 样本总突变数 N 跨 1–2 个数量级，残差分布以 ~1/√N 依赖 N——N=50 与 N=500 不 exchangeable，标准 marginal interval 被高 N 主导、在低 N 端系统性 miscalibrated。"distribution-free"指对生成分布 free，**不是对 exchangeability free**；校准集若来自 NB 模拟器，保证只在"模拟=真实"时迁移。nonconformity score 与预测对象（fraction? counts? presence set?）都没定义。
-- **修改**：**Mondrian conformal by TMB bin**（分层 per-stratum guarantee）+ N 缩放/studentized score；预测对象与 score 定义写进 §5；声明改写为 "per-TMB-stratum conformal intervals with empirical coverage verified on stratified simulations and retrospective real panel data"；quantile 表按 bin 预计算随包发布 + dispersion misspecification 敏感性曲线。
+### 1.[P0] MSU-LowCount's conformal "distribution-free coverage guarantee" is mathematically untenable in the cross-TMB scenario
+- Split conformal requires only that the calibration and the test data are **exchangeable**; the total mutation count N of panel/ctDNA samples spans 1–2 orders of magnitude, and the residual distribution depends on N as ~1/√N — N=50 and N=500 are not exchangeable, the standard marginal interval is dominated by the high-N side and is systematically miscalibrated at the low-N end. "distribution-free" means free of the generative distribution, **not free of exchangeability**; if the calibration set comes from an NB simulator, the guarantee transfers only when "simulation = reality". Neither the nonconformity score nor the prediction target (fraction? counts? presence set?) is defined.
+- **The fix**: **Mondrian conformal by TMB bin** (a stratified per-stratum guarantee) + an N-scaled/studentized score; the prediction target and the score definition written into §5; the claim rewritten as "per-TMB-stratum conformal intervals with empirical coverage verified on stratified simulations and retrospective real panel data"; the quantile tables pre-computed per bin and shipped with the package + a dispersion-misspecification sensitivity curve.
 
-### 2.【P0】MSU-Fit 覆盖率校准 CI：estimand、interval 类型、边界质量、校准泄漏四件事全部未定义
-- (a) fraction vs 绝对计数两个 estimand 的 bootstrap 分布完全不同；(b) 结构性零 → percentile bootstrap 覆盖率按构造退化，小 exposure 强偏态；(c) percentile/basic/BCa 边界行为差异巨大，档案只写 "bootstrap CI"；(d) post-selection：CI 是支撑条件下的，无条件覆盖被选择效应污染（winner's curse），必须校准**整个流程**（LRT 选择+CI+清零）；(e) 清零后输出不再是 CI——如实标注 truncation 或并入点估计重新校准；(f) 合成校准对真实 overdispersion/batch 的迁移无证据。
-- **修改**：estimand = **支撑条件下的绝对 exposure**（另报成分版）；BCa 或按 N×Shannon 熵分层的 calibrated-percentile；以流程整体为校准对象，报告 coverage 随 N 与 flatness 曲线；真实数据 sanity 协议（高 TMB 降采样 → CI 是否以名义频率覆盖全量估计）；声明降级为 "empirically coverage-calibrated in simulation under NB-calibrated noise, with sensitivity to dispersion misspecification"。
+### 2.[P0] MSU-Fit's coverage-calibrated CI: the four matters — estimand, interval type, boundary mass, calibration leakage — are all undefined
+- (a) The bootstrap distributions of the fraction vs the absolute-count estimands are wholly different; (b) structural zeros → the percentile bootstrap coverage degenerates by construction, a strong bias regime for small exposures; (c) the percentile/basic/BCa boundary behaviors differ hugely, and the archive only writes "bootstrap CI"; (d) post-selection: the CI is support-conditional, the unconditional coverage is contaminated by the selection effect (winner's curse), so the calibration must target the **whole procedure** (the LRT selection + the CI + the zeroing); (e) after zeroing the output is no longer a CI — label the truncation honestly or fold it into the point estimate and recalibrate; (f) there is no evidence that synthetic calibration transfers to real overdispersion/batch.
+- **The fix**: estimand = **the support-conditional absolute exposure** (also report the compositional version); BCa or a calibrated-percentile stratified by N×Shannon entropy; the calibration object is the whole procedure, reporting the coverage as curves over N and flatness; a real-data sanity protocol (down-sample a high-TMB sample → does the CI cover the full-volume estimate at the nominal frequency); the claim downgraded to "empirically coverage-calibrated in simulation under NB-calibrated noise, with sensitivity to dispersion misspecification".
 
-### 3.【P0】MSU-Corr：log-linear 嵌入存在精确 gauge 不可辨识；m 选择协议缺失；双重正则未论证
-- 精确非辨识：任意 c∈R^m 使 (α,L,U)→(α−Lc, L, U+c) 保持 h 不变，再加 (LQ,UQ) 旋转自由度——**嵌入向量本身不可解读**，Gaussian prior 只选代表点；W 的可辨识性依赖"log H 低秩+偏置"强结构假设，误设偏差去向无定理保证（Cornet 证据是合成基准不是 identifiability 定理）；MvNMF 体积正则反而有 Leplat–Gillis 定理谱系——两者"联合"无任何联合理论或 ablation；**m=K 默认使跨 K 的 held-out 比较发生在灵活性不同的模型类之间，与 SUITOR 定 K 直接冲突**；σ²=mean((L,U)²) 与先验惩罚构成自引用反馈，L=U=0 驻点稳定性未知。
-- **修改**：(a) 论文只报告 gauge-fixed 量（h、W、重构），禁止嵌入向量直接解读；(b) m 经 held-out likelihood（复用 entry-wise mask）或 W 稳定性选择，K 扫描时固定 m；(c) 体积正则与嵌入作为**消融轴分开报告**；(d) 补 baseline 矩阵：重标定目录上的 plain KL-NMF、纯 MvNMF、精确 Cornet、相关性感知 refit、Wu 2022 生成器下全部对比。
+### 3.[P0] MSU-Corr: the log-linear embedding carries an exact gauge unidentifiability; the m-selection protocol is missing; the dual regularization is unargued
+- Exact non-identifiability: for any c∈R^m, (α,L,U)→(α−Lc, L, U+c) leaves h unchanged, plus the (LQ,UQ) rotation freedom — **the embedding vectors themselves are not interpretable**, the Gaussian prior only selects a representative point; the identifiability of W depends on the strong structural assumption "log H low-rank + sparse-leaning", and no theorem guarantees where the misspecification bias goes (the Cornet evidence is a synthetic benchmark, not an identifiability theorem); the MvNMF volume regularization by contrast has a Leplat–Gillis theorem lineage — the "joint" of the two carries no joint theory or ablation; **the m=K default makes the cross-K held-out comparison happen between model classes of differing flexibility, in direct collision with SUITOR's fixing of K**; σ²=mean((L,U)²) plus the prior penalty form a self-referential feedback, and the stability of the L=U=0 stationary point is unknown.
+- **The fix**: (a) the paper reports only gauge-fixed quantities (h, W, the reconstruction), direct interpretation of the embedding vectors forbidden; (b) m selected via held-out likelihood (reusing the entry-wise mask) or W stability, with m fixed during the K sweep; (c) the volume regularization and the embedding reported **as separate ablation axes**; (d) add the baseline matrix: plain KL-NMF on the recalibrated catalog, pure MvNMF, exact Cornet, correlation-aware refit, all compared under the Wu 2022 generator.
 
 ## P1
 
-### 4.【P1】K 选择多证据表没有 decision rule；Wilcoxon 是伪复制检验；矩形 Hungarian 语义未定义
-- 三证据冲突时管线无法继续；MuSiCal 式相邻 K Wilcoxon 把 50 个共享同一数据的 replicate 当独立证据——p 值 anti-conservative，只能作诊断；SBS5/40 近重复簇下 cosine silhouette（不满足三角不等式）不可靠；replicate 有效 K 不一致时 unmatched 对计 split 还是 merge 未定义；ARD 17/20 误报的阈值校准未提。
-- **修改**：层级决策规则（SUITOR argmin 主规则 → 稳定性 veto → Wilcoxon 降为诊断）；Hungarian unmatched 语义显式定义（split/merge 分开计数，兼容 Islam 阈值扫描）；meta-rule 本身在全网格上评估（meta-rule 也会 overfit benchmark）。
+### 4.[P1] The multi-evidence K-selection table has no decision rule; the Wilcoxon is a pseudo-replication test; the rectangular-Hungarian semantics are undefined
+- When the three evidences conflict the pipeline cannot proceed; the MuSiCal-style adjacent-K Wilcoxon treats the 50 replicates sharing the same data as independent evidence — the p-value is anti-conservative, usable only as a diagnostic; under the SBS5/40 near-duplicate clusters the cosine silhouette (which does not satisfy the triangle inequality) is unreliable; when the replicates' effective Ks disagree, whether an unmatched pair counts as a split or a merge is undefined; the threshold calibration of the ARD 17/20 mis-reports goes unmentioned.
+- **The fix**: a hierarchical decision rule (SUITOR argmin as the main rule → the stability veto → the Wilcoxon demoted to diagnostics); the Hungarian-unmatched semantics defined explicitly (split/merge counted separately, compatible with the Islam threshold sweep); the meta-rule itself evaluated over the full grid (the meta-rule can also overfit the benchmark).
 
-### 5.【P1】Benchmark 存在校准泄漏通道与对抗性场景缺口；贪心协议奖励签名分裂
-- LTH/λ̃/σ²/conformal quantile/CI 校准/ARD 阈值全部要在合成数据上校准——若与评估同生成器（甚至同种子族），benchmark 就是训练集报告；最难的真实 cell 是**联合对抗**（目录误设+高相关+平坦签名+低 TMB 同时）；Islam 贪心协议下把一个真签名分裂成两个 ≥0.90 近重复，两个都计 TP——**分裂被奖励**。
-- **修改**：三层隔离——校准场景、模型选择场景、评估场景（不同生成器：SigProfilerSimulator/SynSig/PCAWG 锚定真实混合）；评估网格加联合对抗 cell 与目录外签名 cell；**主指标 = Hungarian 一对一**，贪心+阈值扫描为鲁棒性附录；分裂行为加显式惩罚或 dedup 统计；发表前冻结协议（pre-registration 式）随包发布。
+### 5.[P1] Benchmark: calibration-leakage channels and an adversarial-scenario gap; the greedy protocol rewards signature splitting
+- The LTH/λ̃/σ²/conformal quantile/CI calibration/ARD thresholds are all calibrated on synthetic data — if that uses the same generator (or even the same seed family) as the evaluation, the benchmark is a training-set report; the hardest realistic cell is the **joint adversarial** one (catalog misspecification + high correlation + flat signatures + low TMB at once); under the Islam greedy protocol, splitting one true signature into two ≥0.90 near-duplicates counts both as TP — **the split is rewarded**.
+- **The fix**: three-layer isolation — the calibration scenario, the model-selection scenario, the evaluation scenario (different generators: SigProfilerSimulator/SynSig/PCAWG-anchored realistic mixtures); add the joint-adversarial cell and the off-catalog-signature cell to the evaluation grid; **the primary metric = the Hungarian one-to-one**, the greedy + threshold sweep as a robustness appendix; an explicit penalty or a dedup statistic for the splitting behavior; freeze the protocol before publication (pre-registration style) and ship it with the package.
 
-### 6.【P1】Fisher 信息区间在边界退化，"LRT 选支撑 + 支撑上 Fisher CI"是 post-selection 推断
-- Wald/Fisher 在单纯形边界无效（负下界+虚精度），与 LRT 的 χ²₁（边界渐近，正确）不是一回事——档案把两者并列"双模式"造成错觉。
-- **修改**：Fisher 区间仅限内点支撑且显式标注条件性；边界一律 LRT + bootstrap；"boundary parameters get tests, not intervals" 写进文档。
+### 6.[P1] The Fisher information interval degenerates at the boundary, and "LRT selects the support + Fisher CI on the support" is post-selection inference
+- Wald/Fisher are invalid at the simplex boundary (negative lower bound + illusory precision), and are not the same thing as the LRT's χ²₁ (boundary-asymptotic, correct) — the archive listing the two side by side as "dual modes" creates an illusion.
+- **The fix**: the Fisher interval confined to interior support and explicitly labeled as conditional; the boundary gets LRT + bootstrap across the board; "boundary parameters get tests, not intervals" written into the documentation.
 
-### 7.【P1】MSU-Catalog IR "无损投影 SBS96↔1536" 的双向箭头在一个方向上不成立
-- 1536→96 是聚合无损；**96→1536 在 catalog 层面不可辨识**（除非回到变异级重算）；ID89 是重新定义的分类法，83→89 映射未必良定义（partition 不互为 refine）。
-- **修改**：措辞改为 "lossless coarse-graining (fine→coarse) + variant-level recomputation (coarse→fine requires variants)"；ID83↔89 显式映射表 + 标注不可映射通道；逐对审计双向箭头（SBS192/288 同理受链信息缺失影响）。
+### 7.[P1] The MSU-Catalog IR's "lossless projection SBS96↔1536" bidirectional arrow fails in one direction
+- 1536→96 is lossless aggregation; **96→1536 is unidentifiable at the catalog level** (unless one goes back to variant-level recomputation); ID89 is a re-defined classification scheme, and the 83→89 mapping is not necessarily well-defined (the partitions do not refine one another).
+- **The fix**: the wording becomes "lossless coarse-graining (fine→coarse) + variant-level recomputation (coarse→fine requires variants)"; an explicit ID83↔89 mapping table + labeling the unmappable channels; audit every bidirectional arrow pair by pair (SBS192/288 likewise suffer the missing chain information).
 
-### 8.【P1】MSU-Tensor：BIC 对潜因子模型不可靠，张量可辨识性只字未提
-- BIC 在 latent factor 模型上已知不一致（参数计数≠有效自由度）；标准替代是 Bai–Ng 型准则或 held-out predictive likelihood；Kruskal 唯一性条件（Σk_ranks ≥ 2R+2）从未讨论；先例 TensorSignatures 已死，同样的模型复杂度陷阱没有结构性理由不重蹈。
-- **修改**：收缩范围——K 从 SBS 分析迁移固定，新增模式一次只加一个；K/秩选择改 held-out predictive likelihood + 稳定性，BIC 降为诊断；给出 rank 配置的 Kruskal 条件检查；或诚实定位为 exploratory engine。
+### 8.[P1] MSU-Tensor: BIC is unreliable for latent-factor models, and tensor identifiability goes not even one word mentioned
+- BIC is known to be inconsistent on latent-factor models (the parameter count ≠ the effective degrees of freedom); the standard replacements are Bai–Ng-type criteria or a held-out predictive likelihood; the Kruskal uniqueness condition (Σk_ranks ≥ 2R+2) is never discussed; the precedent TensorSignatures already died, and there is no structural reason the same model-complexity trap would not be re-fallen into.
+- **The fix**: contract the scope — K migrated fixed from the SBS analysis, one new modality added at a time; the K/rank selection becomes a held-out predictive likelihood + stability, the BIC demoted to diagnostics; give the Kruskal condition check for the rank configuration; or honestly position it as an exploratory engine.
 
 ## P2
 
-### 9.【P2】KL 管线零通道与 ε 策略未成文
-- 真正的雷是 MU 更新中 0/0 防护与 musicatk 式 "+ε 伪计数"（低 TMB 系统性抬高稀疏通道、污染 exposure）。**修改**：明文"目录层零伪计数 + NNDSVDa 正初值 + 数值防护只进除法"，并把"无伪计数"写进与 musicatk 的对比测试。
+### 9.[P2] The zero channels and the ε strategy of the KL pipeline are unwritten
+- The real mine is the 0/0 guard in the MU updates and the musicatk-style "+ε pseudo-count" (a low TMB systematically lifts the sparse channels and pollutes the exposure). **The fix**: an explicit "no pseudo-count at the catalog layer + NNDSVDa positive initial values + numerical guards enter only the divisions", and write "no pseudo-count" into the comparison test against musicatk.
 
-### 10.【P2】β≠1"三种噪声模型"没有选择协议
-- β=1 为默认（=多项 MLE）并如此声明；保留 β 旋钮则给 CV/profile 协议；否则删宣传语。过散由 NB（拟合侧）处理，职责划分写清。
+### 10.[P2] The β≠1 "three-noise model" has no selection protocol
+- β=1 as the default (= the multinomial MLE) and declared as such; if the β knob is kept, provide a CV/profile protocol; otherwise delete the marketing language. The overdispersion is handled by the NB (the fitting side), and the division of duties written clearly.
 
-### 11.【P2】MSU-Infer 不处理 structural zeros
-- DM 对 sampling zeros 自然，对 structural zeros 需 hurdle/两点分布；Morrill 2025 也没解决——扩展清单显式加 zero-inflation/hurdle；不确定性传播落地为多重插补协议（bootstrap draws 上的 measurement-error 回归）。
+### 11.[P2] MSU-Infer does not handle structural zeros
+- The DM is natural for sampling zeros, but needs a hurdle/two-point distribution for structural zeros; Morrill 2025 does not solve it either — add zero-inflation/hurdle to the extension list explicitly; land the uncertainty propagation as a multiple-imputation protocol (a measurement-error regression over the bootstrap draws).
 
-### 12.【P2】SUITOR 复刻保真度
-- fold 按 index 取模分配（非随机——对基因组聚簇的真实 catalog 这正是原设计）与条件均值填补的 ECM 语义必须逐位复刻，否则 CV 误差与已发表校准不可比；K×10 folds×300 restarts 成本预算进文档 + 与原 R 包 golden 对拍。
+### 12.[P2] The SUITOR replication's fidelity
+- The fold assignment by index modulo (not random — for a genome-clustered real catalog that is exactly the original design) and the ECM semantics of the conditional-mean imputation must be replicated bit for bit, otherwise the CV error is not comparable to the published calibration; the K×10 folds×300 restarts cost budget into the documentation + a golden cross-check against the original R package.
 
-## 结论与亮点
-- **Major revision / 设计可救**：架构分层、S7 注册表、许可纪律、协议复刻一流；问题集中在"统计声明与统计协议之间的落差"，全部可用"改写声明+补协议+补 baseline"解决，无需推翻架构。
-- **三件做得好**：术语与协议的源码级诚实（主动纠 MWPruning/MDL 不存在）；identifiability 意识方向正确（体积正则与 Cornet 两条腿 + 退化 property test）；明确不做清单与边界纪律。
+## The conclusion and the highlights
+- **Major revision / the design is salvageable**: the architecture layering, the S7 registry, the licensing discipline and the protocol replication are first-class; the problems concentrate in "the gap between the statistical claims and the statistical protocols", all solvable by "rewrite the claim + supply the protocol + supply the baseline", with no need to overturn the architecture.
+- **The three things done well**: the term-level and protocol-level source-grade honesty (proactively correcting that MWPruning/MDL do not exist); the identifiability awareness goes the right direction (the volume regularization and the Cornet two legs + the degenerate property test); the explicit won't-do list and the boundary discipline.
