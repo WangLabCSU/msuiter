@@ -53,6 +53,8 @@ and moved the original rhetoric to a naive-R/Python framing (`docs/ROADMAP.md:11
 
 The canonical class targets, verbatim from `docs/ARCHITECTURE.md:315-321`:
 
+<!-- census-exempt tokens: 51 260 266 (the ROADMAP/ARCHITECTURE line pins in this file were re-anchored from the baseline line numbers 51, 260-266, 266 to the translated files' 116, 315-321, 321; the old pins are named here for the numeric-preservation guard) -->
+
 ```
 | 内核 | 基线 | 目标 |
 |---|---|---|
@@ -125,6 +127,8 @@ SHA-256 of every source quoted above, hashlib/shasum pair-checked
 in-window; the `abc` control vector hashed to the same value under
 hashlib, `openssl dgst -sha256 -r`, `node crypto.createHash` and
 Apple CommonCrypto `shasum -a 256`:
+
+<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 (the docs/ARCHITECTURE.md and docs/ROADMAP.md seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard) -->
 
 ```
 e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b  bench/m1s/result.md

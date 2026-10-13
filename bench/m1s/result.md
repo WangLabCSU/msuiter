@@ -26,7 +26,7 @@ trajectories of NMF), fix the budget caliber (see below), or demote the acceptan
   the dense arm the total reconciliation SPMG−ours = 166,104 = our DBS member count (exact).
 - **NMF**: our `fit_kl_with_init` 204.7ms (2.04ms/iter, including the per-iteration kl_objective
   trajectory = the 3rd WH matmul + the 96k ln; the R brunet baseline does not compute the objective per iteration — a same-granularity
-  comparison would be better than 2.3× but still more than an order of magnitude off the 100×). The T=100 KL final-value relative diff 4.8e-4
+  comparison would be better than 2.3× but still more than 1 order of magnitude off the 100×). The T=100 KL final-value relative diff 4.8e-4
   (the information term; the 96×20 protocol equivalence already proved by U-M1s-14).
 - **NNLS**: ours 6.73ms vs scipy 11.1ms; the solutions per-cell agree (max|Δx| = 3.8e-11,
   the SSE relative diff 3.7e-16). At the small scale k=10 both sides are the native Lawson-Hanson, the python

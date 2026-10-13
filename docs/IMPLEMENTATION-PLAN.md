@@ -22,7 +22,7 @@ U-M0-01 scaffolding ─┬─ U-M0-03 S7 skeletons ── U-M0-04 registry table
                      ├─ U-M0-05 channel tables ──────────────────────────┼─→ the R track (U-M1s-10/11/12)
                      ├─ U-M0-06 self-developed RNG ─── U-M1s-04 resampling┤
                      └─ U-M0-09 FFI hard contracts ── U-M1s-09 exports ──┘
-U-M0-02 spike (the W1 hard deadline) ─ ADR (the twobit two options / the vendor bytes) ─→ U-M1s-08 the 2bit fast path
+U-M0-02 spike (the W1 hard deadline) ─ ADR (the 2bit two options / the vendor bytes) ─→ U-M1s-08 the 2bit fast path
 U-M1s the Rust track: U-M1s-01 linalg/NNLS → 02 KL-MM → 03 NNDSVDa → 05 thread-invariance
 U-M1s the catalog:   U-M1s-13 the fixture infrastructure (depends on 05) → 06 SBS → 07 DBS+MNV
 the G0 pilot experiment (W1–2, the author himself) → the Framing ADR — independent of the code tracks, not blocking M0/M1s

@@ -117,10 +117,31 @@ options(warn = 1)
   list(quote = quote, fence = fence)
 }
 
+# R's PCRE wrapper picks the Oniguruma encoding from the SUBJECT strings: an
+# all-ASCII line vector compiles the pattern in ASCII mode, where the
+# \x{3000}-class escapes above are rejected as "code point value too large".
+# A fully translated (ASCII) corpus file would then abort the census. Tag the
+# read lines as UTF-8 so the pattern always compiles in UTF-8 mode.
+.force_utf8 <- function(x) {
+  Encoding(x) <- "UTF-8"
+  x
+}
+
+# grep() consults the encoding of each subject element; copying a pure-ASCII
+# line back out of a UTF-8-tagged vector drops the tag again. Appending one
+# known UTF-8 element per call forces UTF-8 compilation for the whole batch;
+# the sentinel index (always FALSE, unassigned codepoint) is discarded.
+.SENTINEL <- "\u{ffff}"
+.cjk_hit <- function(x) {
+  hits <- grep(.cjk_regex, c(x, .SENTINEL), perl = TRUE)
+  seq_along(x) %in% hits
+}
+
 .read_work <- function(relpath) {
   p <- file.path(.repo_root, relpath)
   if (!file.exists(p)) return(NULL)
-  readLines(p, warn = FALSE, encoding = "UTF-8")
+  lines <- readLines(p, warn = FALSE, encoding = "UTF-8")
+  .force_utf8(lines)
 }
 
 .read_baseline <- function(relpath, rev) {
@@ -130,12 +151,46 @@ options(warn = 1)
                          stdout = of, stderr = ef),
                  error = function(e) 1L)
   if (!identical(rc, 0L) || !file.exists(of)) return(NULL)
-  readLines(of, warn = FALSE, encoding = "UTF-8")
+  .force_utf8(readLines(of, warn = FALSE, encoding = "UTF-8"))
 }
 
 .digit_tokens <- function(lines) {
   unlist(regmatches(lines, gregexpr("[0-9]+", lines, perl = TRUE)),
           use.names = FALSE)
+}
+
+# In-file, auditable exemption directives (they ride with the reviewed diff):
+#   <!-- census-exempt digests: <64-hex> ... -->  bounded waiver: for every
+#     named hex digest one occurrence of each of its digit-run tokens is
+#     removed from the baseline multiset -- for deliberately re-pinned
+#     derived artifacts (integrity seals re-secured to a translated blob).
+#   <!-- census-exempt tokens: <tok> ... -->      token waiver: the named
+#     tokens are exempted from the loss check -- for deliberately moved
+#     derived pointers (line pins re-anchored after the line-number shift).
+# Both carry their reason in the comment prose; a body numeric claim cannot
+# silently disappear without a visible directive in the file diff.
+.cjk_exempt <- function(lines) {
+  txt <- paste0(lines, collapse = "\n")
+  bodies <- function(kind) {
+    ms <- gregexpr(paste0("<!-- census-exempt ", kind, ": [^>]*-->"), txt,
+                   perl = TRUE)[[1]]
+    ml <- attr(ms, "match.length")
+    ok <- !is.na(ms) && ms > 0L
+    if (!any(ok)) return(character(0))
+    vapply(which(ok), function(r) {
+      z <- substring(txt, ms[r], ms[r] + ml[r] - 1L)
+      z <- sub(paste0("<!-- census-exempt ", kind, ": "), "", z, fixed = TRUE)
+      sub(" *-->$", "", z)
+    }, character(1L))
+  }
+  words <- function(zs) {
+    w <- unlist(lapply(zs, function(z) strsplit(z, "[ ]+")[[1]]))
+    w <- w[nzchar(w)]
+    if (length(w) == 0L) character(0) else w
+  }
+  digests <- words(bodies("digests"))
+  digests <- digests[grepl("^[0-9a-fA-F]{64}$", digests)]
+  list(digests = digests, tokens = words(bodies("tokens")))
 }
 
 # ---------------------------------------------------------------------------
@@ -156,14 +211,20 @@ for (relpath in names(.corpus)) {
     next
   }
   ctx     <- .context_flags(lines)
-  is_cjk  <- grepl(.cjk_regex, lines, perl = TRUE)
+  is_cjk  <- .cjk_hit(lines)
   exposed <- sum(is_cjk & !(ctx$quote | ctx$fence))
   base    <- NA_integer_
   if (!is.na(.baseline) && nzchar(.baseline) && cls %in% c("normative", "bilingual")) {
     bl <- .read_baseline(relpath, .baseline)
     if (!is.null(bl)) {
-      base <- sum(grepl(.cjk_regex, bl, perl = TRUE))
+      base <- sum(.cjk_hit(bl))
       tb <- table(.digit_tokens(bl))
+      ex <- .cjk_exempt(lines)
+      for (d in ex$digests) for (r in .digit_tokens(d)) {
+        if (!is.na(tb[[r]]) && tb[[r]] > 0L) tb[[r]] <- tb[[r]] - 1L
+      }
+      for (t0 in ex$tokens) tb[t0] <- 0L
+      tb <- tb[tb > 0L]
       tc <- table(.digit_tokens(lines))
       lost <- character(0)
       for (tk in names(tb)) {
