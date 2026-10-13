@@ -218,7 +218,7 @@
 #'
 #' **Acceptance.** `pass = all(within) && !systematic_inversion`, where
 #' `within` is per level: |S(N) - synthetic(N)| <= `tolerance`, OR S(N)
-#' inside the wider floor band [0.90, 1.00] (the memo's "取宽者" union);
+#' inside the wider floor band [0.90, 1.00] (the memo's "the wider one" union);
 #' without a synthetic curve, the floor band alone. A level-to-level drop
 #' steeper than `tolerance` is an inversion; the inversion is systematic
 #' when a strict majority of steps invert.
