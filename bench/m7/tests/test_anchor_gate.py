@@ -40,8 +40,13 @@ import tools.verify_campaign as vc                              # noqa: E402
 REPO = Path(__file__).resolve().parents[3]
 VERIFY_CLI = REPO / "bench" / "m7" / "tools" / "verify_campaign.py"
 # The attested offline witness set for the RB-10 anchor (controller contract
-# item (5)); digests pinned so V6 can never silently measure a drifted file.
-ATTESTED_DIR = Path("/tmp/go05lane/probe2_20261011T014912Z")
+# item (5)), committed as fixtures so the gate is measurable on every clean
+# checkout: a witness missing from the repo is a HARD FAIL, never a silent
+# skip (a /tmp-resident attestation is one macOS sweep away from zombiing V6).
+# Digests pinned so V6 can never silently measure a drifted file.
+ATTESTED_DIR = Path(__file__).resolve().parent / "fixtures"
+ATTESTED_WITNESS_NAMES = ("go05_probe2_anchor_A1.jsonl",
+                          "go05_probe2_anchor_A2.jsonl")
 ATTESTED_A1_SHA = ("1fa9ed3e5c099930635e4aabcefb40baaf36330d5405be"
                    "4db864085cc4895090")
 ATTESTED_A2_SHA = ("d2d9fb2fb63825a5d79870ebd19f732e574fdbf2c0c12d"
@@ -158,11 +163,11 @@ def test_envelope_and_eps_boundaries_pinned():
 
 # -- (V6) offline adjudication of the attested probe witnesses (contract item (6)) -------
 def test_attested_probe_witnesses_adjudicate_green():
-    a1p, a2p = (ATTESTED_DIR / "witnesses" / n for n in
-                ("anchor_A1.jsonl", "anchor_A2.jsonl"))
-    if not (a1p.is_file() and a2p.is_file()):
-        print(f"  [skip] attested witnesses absent at {ATTESTED_DIR}")
-        return
+    a1p, a2p = (ATTESTED_DIR / n for n in ATTESTED_WITNESS_NAMES)
+    for p in (a1p, a2p):
+        assert p.is_file(), (
+            f"attested witness {p} missing from the repo fixtures: this gate "
+            "must never degrade to a silent skip (contract item (6))")
     assert hashlib.sha256(a1p.read_bytes()).hexdigest() == ATTESTED_A1_SHA
     assert hashlib.sha256(a2p.read_bytes()).hexdigest() == ATTESTED_A2_SHA
     a1 = vc.read_jsonl(a1p)
@@ -181,8 +186,12 @@ def test_attested_probe_witnesses_adjudicate_green():
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
         (d / "witnesses").mkdir()
-        for p in (a1p, a2p):
-            (d / "witnesses" / p.name).write_bytes(p.read_bytes())
+        # the oracle's --anchor-check resolves the canonical witness names, so
+        # the fixture files (repo-distinct, run-labelled) are staged under the
+        # canonical reader-schema names in the temp campaign dir
+        for p, canon in zip((a1p, a2p),
+                            ("anchor_A1.jsonl", "anchor_A2.jsonl")):
+            (d / "witnesses" / canon).write_bytes(p.read_bytes())
         proc = subprocess.run(
             [sys.executable, str(VERIFY_CLI), "--campaign", str(d),
              "--anchor-check"], capture_output=True, text=True, timeout=60)

@@ -1,0 +1,4 @@
+cell,tool,arm,n,seconds,status,cpu_seconds,host,hw_profile
+bootstrap__sigminer_serial__K1000S1000,sigminer,A1,1000,4920.841,ok,4920.266,ShixiangWang-WorkSpacedeMacBook-Pro.local,host-R campaign | Apple Silicon | 10 cores | hw.ncpu=10 hw.memsize=25769803776 | R 4.5.2
+bootstrap__msuiter_pool__K1000S1000,msuiter,A2,1000,320.242,ok,351.996,ShixiangWang-WorkSpacedeMacBook-Pro.local,host-R campaign | Apple Silicon | 10 cores | hw.ncpu=10 hw.memsize=25769803776 | R 4.5.2
+bootstrap__msuiter_single__K1000S1000,msuiter,A3,1000,346.03,ok,345.94,ShixiangWang-WorkSpacedeMacBook-Pro.local,host-R campaign | Apple Silicon | 10 cores | hw.ncpu=10 hw.memsize=25769803776 | R 4.5.2

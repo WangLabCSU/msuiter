@@ -1,0 +1,1 @@
+{"kind":"arm","arm":"A1","tier":"B","shape":{"K":1000,"S":1000,"n_sig":50,"R":200},"wall":4920.841,"cpu":4920.266,"load_before":[3.2,3.44,3.47],"load_after":[3.2,3.44,3.47],"floor_projection":5187.6,"floor_ratio":3,"gate":"pass"}
