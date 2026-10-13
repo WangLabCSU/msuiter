@@ -134,8 +134,12 @@ if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
   paste0("'", e, "'")
 }
 
-root <- .kv("root", NULL)
-if (is.null(root)) {
+# GO-05 fix: the documented optional --root= (usage, line 32) must survive an
+# argument-less launch; .kv's NULL default spells "required", so the sentinel
+# for "absent" here is NA, which the self-locating fallback below already
+# speaks (witnessed RED: tests/testthat/test-check-layout-sim.R boot unit).
+root <- .kv("root", NA_character_)
+if (is.na(root)) {
   # package name from the cwd's DESCRIPTION if present, else msuiter default
   desc0 <- file.path(getwd(), "DESCRIPTION")
   pkgguess <- "msuiter"
@@ -151,7 +155,13 @@ if (is.null(root)) {
     quit(status = 2L)
   }
 }
-desc <- readLines(file.path(root, "DESCRIPTION"), warn = FALSE)
+desc_tf <- file.path(root, "DESCRIPTION")
+if (!file.exists(desc_tf)) {
+  cat("check-layout-sim: ERROR no DESCRIPTION under --root= (", desc_tf,
+      ") -- not a package root\n", sep = "")
+  quit(status = 2L)
+}
+desc <- readLines(desc_tf, warn = FALSE)
 pg <- grep("^Package:[[:space:]]*", desc)
 vg <- grep("^Version:[[:space:]]*", desc)
 if (!length(pg) || !length(vg)) {

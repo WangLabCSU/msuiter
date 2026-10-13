@@ -463,7 +463,8 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
         f"- cells: {len(rows)} total — "
         + ", ".join(f"{k}: {v}" for k, v in sorted(tally.items())),
         f"- timings table: timings_m7_{args.profile}_{ts}.csv "
-        "(G0 six-column prefix + cpu_seconds; every measured second attributable)",
+        "(G0 six-column prefix + cpu_seconds + hardware pins host/hw_profile; "
+        "every measured second attributable, every row attests its machine)",
         "",
     ]
     lineage_rows = [r for r in rows if r.get("re_adjudication")]
@@ -542,6 +543,25 @@ def main(argv=None) -> int:
         plan["commit"] = git_sha()
         print(json.dumps(plan, sort_keys=True, indent=1))
         return 0
+
+    # Hardware-pin authority gate (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench
+    # 全表): the authoritative pass (docker adapter, final shard-free pass)
+    # REFUSES TO FILE without the operator's machine-class pin — a table
+    # born with empty pin columns would recite "hardware-pinned" while
+    # attesting nothing (B1a's present-but-empty optionality law stays for
+    # probes, shards, and mock plumbing). Refuse-to-claim's authoring twin:
+    # the unattested table is never born. Fail-fast: exit 2 before any
+    # filesystem effect; the plan printer above stays ungated (intent is
+    # plannable on any machine).
+    if args.adapter == "docker" and args.shard_tag is None:
+        if not (os.environ.get(timings.HW_PROFILE_ENV) or "").strip():
+            print(f"[hardware-pin] REFUSED: authoritative docker pass needs "
+                  f"{timings.HW_PROFILE_ENV} (the operator's machine-class "
+                  f"pin, e.g. '10 vCPU / 8 GB class') — without it every "
+                  f"hw_profile column would be empty and the table could "
+                  f"not attest its machine (U-M7-04 GO-05)",
+                  file=sys.stderr)
+            return 2
 
     outdir.mkdir(parents=True, exist_ok=True)
     for sub in ("counts", "truth", "cells"):

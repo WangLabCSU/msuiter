@@ -44,6 +44,22 @@ PROFILE=${M7_PROFILE:-degraded}
 ADAPTER=${M7_ADAPTER:-docker}
 COMPETITORS=${M7_COMPETITORS:-sigminer,sigprofiler}
 PROVIDER=${M7_PROVIDER:-synthetic}
+
+# Hardware-pin launch assert (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+# run_bench.main refuses to FILE the authoritative final pass without the
+# operator's machine-class pin; catching that here, at launch, saves hours
+# of shard measurement from dying at the last invocation. The driver is
+# convenience; the run_bench authority gate remains the authoritative seal.
+# Written as nested tests on purpose: a `&&` here would trip the RB-08
+# fan-out text seal (test_driver_is_fan_out_free_by_text), as it did once.
+if [ "$ADAPTER" = "docker" ]; then
+  if [ -z "${M7_HW_PROFILE:-}" ]; then
+    echo "M7_HW_PROFILE unset: the authoritative final pass would refuse to" \
+         "file (U-M7-04 GO-05) — export the machine-class pin before ignition" >&2
+    exit 2
+  fi
+fi
+
 CACHE=cache/bench_${PROFILE}_${ADAPTER}
 SH_OUT="$CACHE/shard_out"
 rm -rf "$SH_OUT"; mkdir -p "$SH_OUT/logs"
