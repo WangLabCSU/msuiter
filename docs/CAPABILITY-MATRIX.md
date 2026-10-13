@@ -1,182 +1,253 @@
-# msuiter 功能覆盖矩阵（CAPABILITY-MATRIX）
+# msuiter capability coverage matrix (CAPABILITY-MATRIX)
 
-> 版本：v1（2026-09-28）。**本矩阵是平台完备性的权威检查表**——系统枚举 mutational signature 分析的完整功能空间（数据 → 表征 → 识别 → 定量 → 推断 → 可视化 → 应用工作流 → 挖掘 → 平台层），逐能力标注：主流/先进方法、对等引擎（ms_* API）、默认方法、可视化交付、交付里程碑。每完成一个里程碑更新一次；任何"我们覆盖了 X"的声明以本矩阵为准。
-> 状态图例：✅ 已设计（架构就绪）· 🔶 部分（v1 有基础版）· ⏳ 推迟 v1.x · 🔭 探索性 · ❌ 明确不做（Non-goals）
-> 里程碑代号（唯一权威定义见 [ROADMAP.md](ROADMAP.md)）：**M0** 工程地基（v0.1）· **M1s** 引擎与目录核心（v0.1）· **M1c** 目录完备+ID83（v0.2）· **M2** 统一提取流水线（v0.2）· **M3a** 拟合三法+bootstrap（v0.2）· **M3b** MSU-Fit 校准统计（v1.0）· **M4** 相似度库+viz（v1.0）· **M6s** HRD 工作流（v1.0）· **M7** benchmark 完备+论文 · **M8** 发布工程。无 M5、无 M6（评审裁决取消，见 reviews/00 A4/A16）。
+> Version: v1 (2026-09-28). **This matrix is the authoritative checklist of platform
+> completeness** -- it enumerates, systematically, the full capability space of
+> mutational signature analysis (data -> representation -> identification ->
+> quantification -> inference -> visualization -> application workflows ->
+> mining -> platform layer) and annotates each capability with: the
+> mainstream/advanced methods, the engine-equivalent (the ms_* API), the
+> default method, the visualization deliverable, the delivery milestone. Update
+> once per completed milestone; any claim of "we cover X" is adjudicated
+> against this matrix.
+> Status legend: ✅ designed (architecture ready) · 🔶 partial (a baseline
+> version in v1) · ⏳ deferred to v1.x · 🔭 exploratory · ❌ explicitly not done
+> (non-goal)
+> Milestone codenames (the sole authoritative definitions are in
+> [ROADMAP.md](ROADMAP.md)): **M0** engineering foundations (v0.1) · **M1s**
+> engine-and-catalog core (v0.1) · **M1c** catalog completeness + ID83
+> (v0.2) · **M2** unified extraction pipeline (v0.2) · **M3a** fitting three
+> methods + bootstrap (v0.2) · **M3b** MSU-Fit calibration statistics
+> (v1.0) · **M4** similarity library + viz (v1.0) · **M6s** HRD workflow
+> (v1.0) · **M7** benchmark completeness + the paper · **M8** release
+> engineering. There is no M5 and no M6 (cancelled by review adjudication,
+> see reviews/00 A4/A16).
 
-**如何回答"msuiter 覆盖了什么"**：用户三层需求 → ①识别与定量 = L-C + L-D；②基本可视化 = L-F；③应用场景工作流与可视化挖掘 = L-G；"没想到的" = L-A/L-B/L-E/L-H + 各层标注的 ⚡ 项。
+**How to answer "what does msuiter cover"**: the three user tiers of needs ->
+① identification and quantification = L-C + L-D; ② basic visualization = L-F;
+③ application-scenario workflows and visual data mining = L-G; "what you did
+not think of" = L-A/L-B/L-E/L-H + the ⚡ items annotated per layer.
 
 ---
 
-## L-A 数据获取、QC 与预处理
+## L-A data acquisition, QC and preprocessing
 
-| 能力 | 主流/先进方法 | 对等引擎（ms_* API） | 默认 | 可视化 | 里程碑 |
+| Capability | Mainstream/advanced methods | Engine-equivalent (ms_* API) | Default | Viz | Milestone |
 |---|---|---|---|---|---|
-| 变异读取：多样本 VCF/BCF、GDC MAF、TSV、Xena | hts-specs v4.5；left-align + 多等位拆分 | `ms_variants()`（读时校验） | ✅ | — | M1s |
-| 体细胞可信度：caller/normal 溯源、VAF floor、FILTER 透传 | 领域实践 | MsVariants validator | ✅ | 低 VAF 灵敏度曲线 | M1s |
-| CNV 输入：ASCAT/ABSOLUTE/Battenberg/FACETS/PURPLE/SEQUENZA/PCAWG/CNVkit（allele-specific） | SPMG 8-caller 映射 | `ms_segments()` | ✅ | CN profile/circos | M1c(v0.2) |
-| SV 输入：BEDPE、SV VCF、caller 输出 | 链→类推导 | `ms_sv()` | ✅ | SV profile | M1c(v0.2) |
-| 参考基因组：BSgenome 兼容 + 2bit 快路径；GRCh37/38、T2T、mm9/10/39、rn6/7、自定义 | SPMG 预编码字节串思想 | `genome =` 参数 | ✅ 2bit 推荐 | — | M0/M1s |
-| 注解缓存：转录链（GENCODE）、复制时序（Repli-seq 箱）、染色质/元件、mappability、callable BED | MP/TensorSignatures 数据管线 | 注解层（入 MsCatalog provenance） | ✅ | — | M1s–M4 |
-| 样本 QC：负荷分布 + 机制级伪迹哨兵（初版交付 U-M4-02b；污染/性别核对 ⏳、Degasperi amber/red 忠实复刻 ⏳v1.x） | 领域实践（ICAMS/SigProfiler QC） | `ms_qc_report()` | ✅ 初版 | QC 仪表页 | M4 |
-| 伪迹检测与清除：FFPE/oxoG 机制哨兵 + COSMIC 伪迹签名暴露份额（初版交付 U-M4-02b）、Excerno 式过滤 ⏳、amber/red 分级 ⏳v1.x | Degasperi 2022；Excerno | 伪迹签名拟合 + 过滤器注册表 | 🔶 初版 | 伪迹贡献图 | M4（amber/red 拟合层级 ⏳v1.x） |
-| 超突变者分层：GMM cutoff + 排除 de novo + 强制 refit | SigProfiler | `ms_stratify_hypermutants()` | ✅ | 负荷分布 + cutoff 图 | M1c(v0.2) |
-| 机会归一化：exome↔genome 转换器 + 自定义机会向量 ✅（U-M4-02c；似然内机会 ⏳v1.x、panel 内置表 ⏳无 [V] 锚） | sigfit 似然内机会；sig_convert | `ms_convert()` + 似然内机会 | 🔶 初版 | 机会分布图 | M4 |
-| 深度下采样/公共深度 | SigProfiler | `ms_downsample()` | ✅ | — | M4 |
+| variant reading: multi-sample VCF/BCF, GDC MAF, TSV, Xena | hts-specs v4.5; left-align + multi-allele splitting | `ms_variants()` (validate on read) | ✅ | — | M1s |
+| somatic confidence: caller/normal provenance, VAF floor, FILTER passthrough | domain practice | MsVariants validator | ✅ | low-VAF sensitivity curve | M1s |
+| CNV input: ASCAT/ABSOLUTE/Battenberg/FACETS/PURPLE/SEQUENZA/PCAWG/CNVkit (allele-specific) | SPMG 8-caller mapping | `ms_segments()` | ✅ | CN profile/circos | M1c(v0.2) |
+| SV input: BEDPE, SV VCF, caller outputs | chain->type derivation | `ms_sv()` | ✅ | SV profile | M1c(v0.2) |
+| reference genome: BSgenome-compatible + 2bit fast path; GRCh37/38, T2T, mm9/10/39, rn6/7, custom | the SPMG pre-encoded byte-string idea | `genome =` argument | ✅ 2bit recommended | — | M0/M1s |
+| annotation cache: transcription chains (GENCODE), replication timing (Repli-seq bins), chromatin/elements, mappability, callable BED | MP/TensorSignatures data pipelines | annotation layer (into MsCatalog provenance) | ✅ | — | M1s–M4 |
+| sample QC: burden distribution + mechanism-level pseudosignature sentinels (first version delivered U-M4-02b; contamination/sex checks ⏳, Degasperi amber/red faithful replication ⏳v1.x) | domain practice (ICAMS/SigProfiler QC) | `ms_qc_report()` | ✅ first version | QC dashboard page | M4 |
+| pseudosignature detection and removal: FFPE/oxoG mechanism sentinels + COSMIC pseudosignature exposure share (first version delivered U-M4-02b), Excerno-style filtering ⏳, amber/red grading ⏳v1.x | Degasperi 2022; Excerno | pseudosignature fitting + filter registry | 🔶 first version | pseudosignature-contribution plot | M4 (the amber/red fitting tiers ⏳v1.x) |
+| hypermutator stratification: GMM cutoff + de novo exclusion + forced refit | SigProfiler | `ms_stratify_hypermutants()` | ✅ | burden distribution + cutoff plot | M1c(v0.2) |
+| opportunity normalization: the exome<->genome converter + custom opportunity vectors ✅ (U-M4-02c; within-likelihood opportunities ⏳v1.x, the panel built-in table ⏳ no [V] anchor) | the sigfit within-likelihood opportunities; sig_convert | `ms_convert()` + within-likelihood opportunities | 🔶 first version | opportunity distribution plot | M4 |
+| depth downsampling / common depth | SigProfiler | `ms_downsample()` | ✅ | — | M4 |
 
-## L-B 目录表征
+## L-B catalog representation
 
-| 能力 | 方法/标准 | 对等引擎 | 默认 | 可视化 | 里程碑 |
+| Capability | Methods/standards | Engine-equivalent | Default | Viz | Milestone |
 |---|---|---|---|---|---|
-| SBS 通道族：6/24/96/192/288/384/1536/6144 | COSMIC/SigProfiler（语义逐位） | `ms_tally(mode =)` | SBS96/192 | 全系 profile 图 | M1s/M1c |
-| DBS 通道族：78/186/312/1248/2976 | SPMG Q-链规则 | 同上 | DBS78 | DBS profile/portrait | M1s(78)/⏳其余 |
-| MNV/complex/double-indel 路由 + skip ledger | SPMG | `mnv.rs` + provenance | ✅ | — | M1s |
-| ID 通道族：28/83/89/96/150/415/476 | ID83=SPMG 逐位；ID89/476=Koh 2025 | `indel83.rs`→`indel89.rs` | ID83（89⏳v1.x） | ID profile | 83=M1c；89=v1.x |
-| CN 特征空间：CN48（Steele）/CN40（Wang）/Macintyre 36 分量/Drews 特征/CN176（Tao） | 各自原文 | `cnv_features.R`（统一 typed IR） | CN48 | CN48 谱/热图 | M1c(v0.2) |
-| SV 通道：SV32/RS38/PCAWG16 | exactPcf clustered | `sv_features.rs/R` | SV32 | SV 谱/热图 | M1c(v0.2) |
-| RNA-SBS192（非嘧啶归一化，12 ref>alt × 16 侧翼） | COSMIC v3.4+/TRACERx | `ms_tally(mode="rna_sbs")` | — | RNA profile | ⏳v1.x（随 RNA 工作流） |
-| 多目录一体对象（musica 式）+ 目录 IR（无损粗粒化 fine→coarse；细粒化需变异级重算） | musicatk 概念 | MsCatalog 族 | ✅ | — | M1s/M1c |
-| 目录模拟器：基因组真实放置、场景生成器、NB 校准采样 | SigProfilerSimulator/SynSig/Jiang | `ms_simulate()` | ✅ | 场景示意 | M7（内核 M1s） |
-| 格式互操作：COSMIC txt + SigProfiler txt ✅（[V] 双格式，tests fixture 锚）、signatures 导入 ✅；WTSI 长格式 ⏳（无上游实样）、MP 矩阵/sigminer RDS/ICAMS 语义 ⏳ | 互操作矩阵（research 07 §1.19） | `ms_import/ms_export` | 🔶 双格式 | — | M4（余 ⏳） |
+| the SBS channel family: 6/24/96/192/288/384/1536/6144 | COSMIC/SigProfiler (bit-for-bit semantics) | `ms_tally(mode =)` | SBS96/192 | full-family profile plots | M1s/M1c |
+| the DBS channel family: 78/186/312/1248/2976 | SPMG Q-chain rules | as above | DBS78 | DBS profile/portrait | M1s(78)/⏳ the rest |
+| MNV/complex/double-indel routing + skip ledger | SPMG | `mnv.rs` + provenance | ✅ | — | M1s |
+| the ID channel family: 28/83/89/96/150/415/476 | ID83 = SPMG bit-for-bit; ID89/476 = Koh 2025 | `indel83.rs`->`indel89.rs` | ID83 (89⏳v1.x) | ID profile | 83=M1c; 89=v1.x |
+| the CN feature space: CN48 (Steele) / CN40 (Wang) / Macintyre 36 components / Drews features / CN176 (Tao) | each original paper | `cnv_features.R` (a unified typed IR) | CN48 | CN48 spectra/heatmaps | M1c(v0.2) |
+| SV channels: SV32/RS38/PCAWG16 | exactPcf clustered | `sv_features.rs/R` | SV32 | SV spectra/heatmaps | M1c(v0.2) |
+| RNA-SBS192 (non-nucleotide-normalized, 12 ref>alt x 16 flanks) | COSMIC v3.4+/TRACERx | `ms_tally(mode="rna_sbs")` | — | RNA profile | ⏳v1.x (with the RNA workflow) |
+| the multi-catalog single object (musica-style) + the catalog IR (lossless coarsening fine->coarse; refining needs variant-level recomputation) | the musicatk concepts | the MsCatalog family | ✅ | — | M1s/M1c |
+| catalog simulator: genome-realistic placement, scenario generators, NB-calibrated sampling | SigProfilerSimulator/SynSig/Jiang | `ms_simulate()` | ✅ | scenario schematic | M7 (kernel M1s) |
+| format interoperability: COSMIC txt + SigProfiler txt ✅ ([V] dual formats, tests fixture anchors), the signatures import face ✅; the WTSI long format ⏳ (no upstream real sample), the MP matrix / sigminer RDS / ICAMS semantics ⏳ | the interoperability matrix (research 07 §1.19) | `ms_import/ms_export` | 🔶 dual formats | — | M4 (the rest ⏳) |
 
-## L-C 签名识别（de novo 提取）——对等引擎矩阵
+## L-C signature identification (de novo extraction) -- the engine-equivalence matrix
 
-| 引擎（method =） | 主流来源/谱系 | 实现层 | 状态 | 默认 |
+| Engine (method =) | Mainstream source/lineage | Implementation layer | Status | Default |
 |---|---|---|---|---|
-| `ms_nmf(engine="kl")` | Brunet KL-MU（SigProfiler/MP 金标准核） | Rust | ✅ M1s | **默认提取流水线的核** |
-| `ms_nmf(engine="eu"/"hals")` | Lee-EU；HALS（RcppML 思想） | Rust | ✅ M1s/M2 | 可选 |
-| `ms_nmf(engine="nsnmf"/"offset"/"lsnmf")` | R NMF 全家族 | Rust | 🔶（按需） | — |
-| `ms_ard()` | SignatureAnalyzer ARD（Tan–Févotte；Broad 公式） | Rust | ✅ M2 | 分诊模式 |
-| `ms_sparse()` | 体积正则 mvNMF（Leplat–Gillis）+ L1（SparseSignatures 思想） | Rust | ✅ M2 | 可选 |
-| `ms_correlated()` | 相关性感知（Cornet/Paisley 谱系，自研优化） | Rust | ⏳ v1.x | 可选（预注册可证伪声明达标后按结果去留，reviews/00 A4） |
-| `ms_tensor()` | NTF+NB 张量（TensorSignatures 现代重实现） | Rust | 🔭 v1.x | — |
-| `ms_lda()` | 主题模型（musicatk/topicmodels 谱系） | Rust | ⏳ v1.x | — |
-| `ms_hdp()` | mSigHdp（HDP；罕见签名敏感） | Adapt（bench 对照）→⏳自有实现 v1.x | ⏳ | — |
-| `ms_bayes()` | signeR Gibbs / sigfit HMC / BayesPowerNMF 幂后验 | Adapt（bench）→⏳ | ⏳ | — |
-| `ms_supervised()` | SuperSigs（最小 σ-代数 + 逻辑回归） | R 原生 | ⏳ v1.x | — |
-| 深度学习提取器 | 无可信赢家（research 01 §8） | ❌（只吸收残差思想） | ❌ | — |
-| **共识-CV 流水线（默认）** | SigProfiler 共识 + SUITOR CV + 多证据 K 仲裁（自研整合） | Rust+R | ✅ M2 | **`ms_extract()` 默认** |
+| `ms_nmf(engine="kl")` | Brunet KL-MU (the SigProfiler/MP golden-standard kernel) | Rust | ✅ M1s | **the kernel of the default extraction pipeline** |
+| `ms_nmf(engine="eu"/"hals")` | Lee-EU; HALS (the RcppML idea) | Rust | ✅ M1s/M2 | optional |
+| `ms_nmf(engine="nsnmf"/"offset"/"lsnmf")` | the full R NMF family | Rust | 🔶 (on demand) | — |
+| `ms_ard()` | SignatureAnalyzer ARD (Tan–Févotte; the Broad formula) | Rust | ✅ M2 | diagnostic mode |
+| `ms_sparse()` | the volume-regularized mvNMF (Leplat–Gillis) + L1 (the SparseSignatures idea) | Rust | ✅ M2 | optional |
+| `ms_correlated()` | correlation-aware (the Cornet/Paisley lineage, self-developed optimization) | Rust | ⏳ v1.x | optional (kept or dropped by outcome once pre-registered falsifiable claims qualify, reviews/00 A4) |
+| `ms_tensor()` | NTF+NB tensor (the modern re-implementation of TensorSignatures) | Rust | 🔭 v1.x | — |
+| `ms_lda()` | topic models (the musicatk/topicmodels lineage) | Rust | ⏳ v1.x | — |
+| `ms_hdp()` | mSigHdp (HDP; sensitive to rare signatures) | Adapt (a bench comparison) ->⏳ own implementation v1.x | ⏳ | — |
+| `ms_bayes()` | signeR Gibbs / sigfit HMC / BayesPowerNMF power posterior | Adapt (bench) ->⏳ | ⏳ | — |
+| `ms_supervised()` | SuperSigs (the minimal sigma-algebra + logistic regression) | native R | ⏳ v1.x | — |
+| deep-learning extractors | no credible winner (research 01 §8) | ❌ (absorbing only the residual idea) | ❌ | — |
+| **the consensus-CV pipeline (default)** | SigProfiler consensus + SUITOR CV + multi-evidence K adjudication (a self-developed integration) | Rust+R | ✅ M2 | **the `ms_extract()` default** |
 
-**K 选择全集**（`ms_select_k()`）：cophenetic/dispersion（诊断）、silhouette 共识、SUITOR entry-wise CV、bi-cross-validation、似然剪枝、ARD 自动 K、BIC、gap、Wilcoxon（诊断）、随机基线对照 → 默认仲裁规则（CV argmin → 稳定性 veto → 诊断报告）。✅ M2（部分诊断 ⏳）。
-**提取前策略**：超突变分层 ✅、common/rare 两阶段（atlas 工作流）🔶v1.x、去噪 🔶。
+**The full K-selection set** (`ms_select_k()`): cophenetic/dispersion
+(diagnostic), silhouette consensus, SUITOR entry-wise CV,
+bi-cross-validation, likelihood pruning, ARD automatic K, BIC, gap, Wilcoxon
+(diagnostic), randomized-baseline controls -> the default adjudication rule
+(CV argmin -> stability veto -> diagnostic report). ✅ M2 (some diagnostics
+⏳).
+**Pre-extraction strategy**: hypermutator stratification ✅, the
+common/rare two-stage (atlas workflow) 🔶v1.x, denoising 🔶.
 
-## L-D 签名定量（fitting/attribution）——对等引擎矩阵
+## L-D signature quantification (fitting/attribution) -- the engine-equivalence matrix
 
-| 引擎（ms_fit method =） | 主流来源 | 实现层 | 状态 | 默认 |
+| Engine (ms_fit method =) | Mainstream source | Implementation layer | Status | Default |
 |---|---|---|---|---|
-| `"nnls"` | Lawson-Hanson（deconstructSigs/MP 系基线） | Rust | ✅ M1s | 起步基线 |
-| `"qp"` | SignatureEstimation QP（Σe=1） | Rust/quadprog | ✅ v0.2 | 可选 |
-| `"likelihood"`（bidirectional） | MuSiCal 语义（ϵ=0.001 逐步） | Rust | ✅ v0.2 | **MSU-Fit 主模式** |
-| `"lrt"` | PASA/mSigAct（NB χ²₁ 前向搜索） | Rust | ✅ v0.2 | **MSU-Fit 主模式** |
-| `"em"` / 后向消元 | mmsig/MP strict | R | 🔶 v0.2 | 血液肿瘤兼容 |
-| `"lasso"` | sigLASSO/StarSignDNA（L1 Poisson MAP） | Rust | ⏳ v1.x | — |
-| `"bayes"` | sigfit/signeR 后验 | Adapt→⏳ | ⏳ | — |
-| `"sa"` / `"anneal"` | 模拟退火（sigminer SA/STL） | R | ⏳ v1.x | — |
-| `"best_subset"` | MP best_subset（小目录穷举） | Rust | ⏳ v1.x | — |
-| 暴露稀疏化：bleedingFilter/auto_reduce/清零规则 | STL/sigminer/sigfit | R/Rust | ✅ v0.2 | 可选 |
+| `"nnls"` | Lawson-Hanson (the deconstructSigs/MP family baseline) | Rust | ✅ M1s | starting baseline |
+| `"qp"` | SignatureEstimation QP (Σe=1) | Rust/quadprog | ✅ v0.2 | optional |
+| `"likelihood"` (bidirectional) | MuSiCal semantics (ϵ=0.001 stepwise) | Rust | ✅ v0.2 | **the MSU-Fit primary mode** |
+| `"lrt"` | PASA/mSigAct (the NB χ²₁ forward search) | Rust | ✅ v0.2 | **the MSU-Fit primary mode** |
+| `"em"` / backward elimination | mmsig/MP strict | R | 🔶 v0.2 | hematologic-tumor compatible |
+| `"lasso"` | sigLASSO/StarSignDNA (the L1 Poisson MAP) | Rust | ⏳ v1.x | — |
+| `"bayes"` | sigfit/signeR posteriors | Adapt→⏳ | ⏳ | — |
+| `"sa"` / `"anneal"` | simulated annealing (the sigminer SA/STL) | R | ⏳ v1.x | — |
+| `"best_subset"` | MP best_subset (brute-force over small catalogs) | Rust | ⏳ v1.x | — |
+| exposure sparsification: bleedingFilter/auto_reduce/zeroing rules | STL/sigminer/sigfit | R/Rust | ✅ v0.2 | optional |
 
-**目录管理**：COSMIC v3.2–3.6 版本化 ✅、器官 RefSig T1–T4 层级 🔶v1.x、暴露签名面板（Kucab/SIGNAL）🔶v1.x、connected 组（SPA/MuSiCal 清单差异显式化）✅、背景强制（SBS1/5）✅、病因/伪迹子群 ✅、父/子签名策略 ✅。
-**不确定性（MSU-Fit）**：bootstrap CI（支撑条件）✅、χ²₁ LRT p/q ✅、Fisher 内点 ✅、conformal（Mondrian by TMB）🔶v1.x、贝叶斯后验 ⏳、**覆盖率校准协议** ✅（M3b）。
-**每突变分配**：比例分配 + unassigned 残差伪签名 ✅ v0.2、贝叶斯分配 ⏳。
-**相似度/匹配（校准相似度库，`ms_compare()`，框架组件）**：cosine（零校准：签名/目录双零分布面 `ms_compare_null_rust`，type-7 分位 + 冻结 MC-SE 容差）/correlation/JSD/Hellinger ✅（U-M4-01）、Hungarian 一对一（主）+ Islam 贪心 + Jiang 活性三协议 ✅（U-M4-01；Jiang 要求 k_est=k_ref 真值字典拟合口径）、熵匹配 Dirichlet 零分布 ✅（U-M7-pre 形状条件化面 `ms_compare_shape_null_rust`：Multinomial(N,u)/N 重构噪声条件化于参考形状与负荷——alpha_total=N 连续极限，无需熵二分；散点图 null_family = "shape_conditional" 直读）、签名聚类 ✅（ms_cluster_signatures：阈值图连通分量，确定性无 RNG，medoid + 尺寸表；阈值默认 0.90 Islam 线）。
-**de novo→目录分解（签名注释）**：MuSiCal match 语义 + 平坦清理 ✅ v0.2。
-**特殊模式**：panel/ctDNA 低计数（MSU-LowCount）🔶 v1.0、RNA 模式 ⏳v1.x、单细胞池化 ⏳。
+**Catalog management**: the COSMIC v3.2–3.6 versioning ✅, the organ RefSig
+T1–T4 hierarchy 🔶v1.x, the exposure-signature panels (Kucab/SIGNAL)
+🔶v1.x, the connected groups (making the SPA/MuSiCal roster difference
+explicit) ✅, background forcing (SBS1/5) ✅, the etiology/pseudosignature
+subgroups ✅, the parent/child signature policies ✅.
+**Uncertainty (MSU-Fit)**: bootstrap CI (support-conditional) ✅, χ²₁ LRT
+p/q ✅, Fisher interior ✅, conformal (Mondrian by TMB) 🔶v1.x, Bayesian
+posterior ⏳, **the coverage-calibration protocol** ✅ (M3b).
+**Per-mutation assignment**: proportional assignment + the unassigned-residual
+pseudosignature ✅ v0.2, Bayesian assignment ⏳.
+**Similarity/matching (the calibrated similarity library, `ms_compare()`, a
+framework component)**: cosine (null-calibrated: the dual signature/catalog
+null-distribution faces `ms_compare_null_rust`, type-7 quantiles + the frozen
+MC-SE tolerance) / correlation / JSD / Hellinger ✅ (U-M4-01), Hungarian
+one-to-one (primary) + Islam greedy + Jiang activity, the three protocols ✅
+(U-M4-01; Jiang requires the k_est=k_ref true-catalog fitting caliber), the
+entropy-matched Dirichlet null distribution ✅ (U-M7-pre the shape-conditional
+face `ms_compare_shape_null_rust`: the Multinomial(N,u)/N reconstruction
+noise conditioned on the reference shape and burden -- alpha_total=N the
+continuous limit, no entropy dichotomy needed; the scatter plot
+null_family = "shape_conditional" read directly), signature clustering ✅
+(ms_cluster_signatures: threshold-graph connected components, deterministic
+with no RNG, medoid + size table; the threshold default 0.90 the Islam
+line).
+**de novo->catalog decomposition (signature annotation)**: the MuSiCal match
+semantics + flat cleaning ✅ v0.2.
+**Special modes**: panel/ctDNA low counts (MSU-LowCount) 🔶 v1.0, RNA mode
+⏳v1.x, single-cell pooling ⏳.
 
-## L-E 拟合后分析
+## L-E post-fitting analysis
 
-| 能力 | 方法 | 状态 | 可视化 |
+| Capability | Method | Status | Viz |
 |---|---|---|---|
-| 每签名 TSB 检验（无人原生做过，自研） | 泊松/二项 UTS-vs-TS + 不确定性传播 | ✅ v0.2 | 链偏倚图 |
-| RTA / 复制时序不对称 | 自研（领域无规范工具） | ⏳ v1.x | RT 剖面 |
-| 损伤分离扫描（Aitken 2020）+ rainfall/kataegis | 链分相 run/HMM | ⏳ v1.x | 损伤节奏轨迹图 |
-| 签名时序（TrackSig 式 CCF 轨迹） | 变点 + 多项 EM | ⏳ v1.x | 轨迹图 |
-| 组间比较：Wilcoxon 基线 + DM 混合模型（MSU-Infer）+ CoDA | Morrill 2025 复现+扩展 | 🔶 v1.0 起 | 森林图/箱线+检验注记 |
-| 生存/临床关联（不确定性传播） | 多重插补 + Cox | ⏳ v1.x | KM/森林图 |
-| 复合判定：HRD 报告（WGS-only 契约）、PRRDetect、MSI/MMR、组织起源 | HRDetect 系数/Koh 2025 | HRD ✅ v1.0；其余 ⏳ | HRD 报告页 |
-| exposure 嵌入（UMAP/kmeans）✅ + 差异挖掘 ✅（ms_exposure_test：双组 Wilcoxon + BH，all-tied NA 面） | musicatk 思想 | ✅ M4 | 嵌入散点/聚类图 |
+| the per-signature TSB test (no one has done it natively, self-developed) | Poisson/binomial UTS-vs-TS + uncertainty propagation | ✅ v0.2 | strand-bias plot |
+| RTA / replication-timing asymmetry | self-developed (no canonical tool in the domain) | ⏳ v1.x | RT profile |
+| the damage-segregation sweep (Aitken 2020) + rainfall/kataegis | chain partitioning run/HMM | ⏳ v1.x | damage-rhythm trajectory plot |
+| signature timing (the TrackSig-style CCF trajectories) | changepoint + multinomial EM | ⏳ v1.x | trajectory plot |
+| inter-group comparison: the Wilcoxon baseline + the DM mixture model (MSU-Infer) + CoDA | Morrill 2025 reproduction + extension | 🔶 from v1.0 | forest plot / boxline + test annotation |
+| survival/clinical association (uncertainty propagation) | multiple imputation + Cox | ⏳ v1.x | KM/forest plot |
+| the compound determination: the HRD report (the WGS-only contract), PRRDetect, MSI/MMR, tissue of origin | the HRDetect coefficients / Koh 2025 | HRD ✅ v1.0; the rest ⏳ | the HRD report page |
+| exposure embedding (UMAP/kmeans) ✅ + differential mining ✅ (ms_exposure_test: the two-group Wilcoxon + BH, the all-tied NA face) | the musicatk idea | ✅ M4 | embedding scatter / clustering plot |
 
-## L-F 基本可视化（ggplot2 原生；COSMIC 风格规范：规范序强制、官方调色板、类组分隔、双轴、矢量输出）
+## L-F basic visualization (native ggplot2; the COSMIC style specification: canonical order enforced, the official palette, class-group separation, dual axes, vector output)
 
-| 图型族 | 覆盖 | 里程碑 |
+| Figure-type family | Coverage | Milestone |
 |---|---|---|
-| 目录/谱图：SBS6/24/96/192/384/1536、DBS78、ID83(89)、CN48、SV32、RNA-SBS192——样本目录 + 签名谱 + 参考谱 | ✅ 首批 8 图 M4，全集 M7 | M4/M7 |
-| 原始 vs 重构对比面板（逐通道残差） | ✅ M4 | M4 |
-| exposure：堆叠柱 ✅、热图 ✅、riverplot ✅（ggalluvial Suggests，PI 许可 2026-10-05） | ✅ M4 | M4 |
-| 相似度：cosine 热图、vs COSMIC 点图（cosine + 零分布经验 p 注记 ✅；ms_compare 逐对比 p_null/q_bh BH 矩阵 ✅——add-one MC + p.adjust，全格保守视图） | ✅ M4 | M4 |
-| K 选择证据：CV 误差曲线 + 稳定性双线 + veto 线（U-M4-03 余项，ms_select_k 证据表直读） | ✅ M2/M4 | M4 |
-| bootstrap：CI 误差条 + 稳定性柱（U-M4-03 余项）+ 覆盖率曲线（M3b 面）；分布直方图 ⏳M7（draws 不落 MsFit——升级臂） | ✅ M3b/M4 | M4 |
-| 链偏倚/TSB 图、rainfall、损伤分离轨迹、RT 剖面 | 🔶（TSB v0.2，其余 v1.x） | 分期 |
-| sample portrait 多上下文网格（SBS/DBS/ID 全家桶） | ⏳ v1.x | v1.x |
-| CN/SV 专属：谱图+热图+circos 风格 profile | 🔶 v1.0 | v1.0 |
-| 组比较/关联图（箱线+检验、森林图、富集点图） | ✅ v1.0 | M4/M6s |
+| catalog/spectra plots: SBS6/24/96/192/384/1536, DBS78, ID83(89), CN48, SV32, RNA-SBS192 -- sample catalogs + signature spectra + reference spectra | ✅ the first 8 figures M4, the full set M7 | M4/M7 |
+| the raw-vs-reconstructed comparison panel (per-channel residuals) | ✅ M4 | M4 |
+| exposure: stacked bars ✅, heatmaps ✅, riverplot ✅ (ggalluvial Suggests, PI permission 2026-10-05) | ✅ M4 | M4 |
+| similarity: cosine heatmaps, vs-COSMIC scatter plots (cosine + the null-distribution empirical p annotation ✅; the ms_compare per-pair p_null/q_bh BH matrices ✅ -- add-one MC + p.adjust, the conservative all-cell view) | ✅ M4 | M4 |
+| the K-selection evidence: the CV error curve + the stability double line + the veto line (the U-M4-03 residual item, the ms_select_k evidence table read directly) | ✅ M2/M4 | M4 |
+| bootstrap: CI error bars + stability bars (the U-M4-03 residual item) + the coverage curve (the M3b face); the distribution histogram ⏳M7 (the draws do not land in MsFit -- the upgrade arm) | ✅ M3b/M4 | M4 |
+| strand-bias/TSB plots, rainfall, damage-segregation trajectories, RT profiles | 🔶 (TSB v0.2, the rest v1.x) | phased |
+| the sample-portrait multi-context grid (the SBS/DBS/ID full-family buckets) | ⏳ v1.x | v1.x |
+| CN/SV dedicated: spectra+heatmaps+circos-style profiles | 🔶 v1.0 | v1.0 |
+| group-comparison/association plots (boxline+tests, forest plots, enriched-set scatter) | ✅ v1.0 | M4/M6s |
 
-## L-G 应用场景工作流与可视化挖掘
+## L-G application-scenario workflows and visual data mining
 
-| 工作流 | 场景（research 03 排名） | 状态 | 挖掘/可视化交付 |
+| Workflow | Scenario (the research 03 ranking) | Status | Mining/visualization deliverable |
 |---|---|---|---|
-| `ms_atlas_fit()`（common/rare 两阶段 atlas 模式） | 图谱研究标准流程 | 🔶 v1.0 | 队列签名景观热图 + common/rare 桑基图 |
-| `ms_hrd_report()` | 临床 HRD 复合（Top-1） | ✅ v1.0 | HRD 报告页（判定+不确定性+文本） |
-| `ms_exposure_panel()` | 暴露归因流行病学（Top-3） | ✅ v1.0 | 地理/年龄/暴露关联图 |
-| `ms_lowcount_report()` | panel/ctDNA（Top-5/9） | 🔶 v1.0 | 灵敏度界 + conformal 区间图 |
-| 队列挖掘：签名×临床/基因组特征关联扫描 + 多重校正 + 可视化（**可视化挖掘层**） | 领域实践形式化（MSU-Infer） | 🔶 v1.0/v1.x | 关联热图/森林图/交互表 |
-| `ms_damage_tempo()` | 损伤节奏（近零竞争） | ⏳ v1.x | 轨迹+检验综合图 |
-| `ms_rna_report()` | RNA-only 队列（Top-8；G2 条件升级） | ⏳ v1.x | DNA-RNA 一致性图 |
-| therapy forensics / cross-species / CHIP | Top-6/10 | ⏳ v1.x | 治疗时间线图 |
-| 统一报告引擎（provenance 检查单、多页 HTML/PDF） | 领域无标准（空白） | ✅ v1.0 | 全工作流通用 |
+| `ms_atlas_fit()` (the common/rare two-stage atlas mode) | the standard flow of pan-cancer studies | 🔶 v1.0 | the cohort signature-landscape heatmap + the common/rare Sankey plot |
+| `ms_hrd_report()` | clinical HRD compound (Top-1) | ✅ v1.0 | the HRD report page (the verdict + uncertainty + text) |
+| `ms_exposure_panel()` | exposure-attribution epidemiology (Top-3) | ✅ v1.0 | geography/age/exposure-association plots |
+| `ms_lowcount_report()` | panel/ctDNA (Top-5/9) | 🔶 v1.0 | the sensitivity bound + the conformal interval plot |
+| cohort mining: the signature x clinical/genomic-feature association sweep + multiple correction + visualization (**the visual data-mining layer**) | a formalization of domain practice (MSU-Infer) | 🔶 v1.0/v1.x | association heatmaps / forest plots / interactive tables |
+| `ms_damage_tempo()` | damage rhythm (near-zero competition) | ⏳ v1.x | the trajectory + test composite plot |
+| `ms_rna_report()` | the RNA-only cohort (Top-8; the G2 conditional upgrade) | ⏳ v1.x | the DNA-RNA concordance plot |
+| therapy forensics / cross-species / CHIP | Top-6/10 | ⏳ v1.x | the therapy timeline plot |
+| the unified report engine (the provenance checklist, multi-page HTML/PDF) | no standard in the domain (a blank) | ✅ v1.0 | common across all workflows |
 
-## L-H 平台层
+## L-H platform layer
 
-| 能力 | 状态 |
+| Capability | Status |
 |---|---|
-| 中心对象 + 工作流文法（Seurat 教义，D16） | ✅ 架构定稿 |
-| 引擎注册表 + 第三方扩展 API + certified 治理 | ✅ 架构定稿，M0/M2 交付 |
-| 溯源/报告标准（领域空白） | ✅ 全对象携带 |
-| CLI（Rust bin，bench 与流水线用） | ⏳ v1.x |
-| nf-core module / Docker / parquet 交换（Python 可消费） | ⏳ M8/v1.x |
-| 教程文化：get-started → 全工作流 vignettes + pkgdown | ✅ 分期 M4–M7 |
+| the central object + the workflow grammar (the Seurat doctrine, D16) | ✅ architecture finalized |
+| the engine registry + the third-party extension API + certified governance | ✅ architecture finalized, delivered M0/M2 |
+| the provenance/reporting standard (a domain blank) | ✅ carried by all objects |
+| CLI (a Rust bin, for the bench and pipelines) | ⏳ v1.x |
+| the nf-core module / Docker / parquet exchange (consumable by Python) | ⏳ M8/v1.x |
+| the tutorial culture: get-started -> the full-workflow vignettes + pkgdown | ✅ phased M4–M7 |
 
-### L-H API 表面（`ms_*` 名称全集；docs-sync CI 以本表对照 ROADMAP/ARCHITECTURE）
+### L-H API surface (the complete set of `ms_*` names; docs-sync CI checks this table against ROADMAP/ARCHITECTURE)
 
-| API（`ms_*`） | 层 | 说明 | 里程碑 |
+| API (`ms_*`) | Layer | Description | Milestone |
 |---|---|---|---|
-| `ms_variants()` `ms_tally()` `ms_extract()` `ms_fit()` `ms_compare()` `plot()` | L2/L3 | 统一工作流文法主干（六类变异同文法；换引擎不改管线） | M1s/M2/M3a/M4 |
-| `ms_select_k()` | L3 | K 选择仲裁规则（CV argmin → 稳定性 veto → Wilcoxon 诊断） | M2（部分诊断 ⏳） |
-| `ms_fit_bootstrap()` `ms_test_presence()` | L3 | bootstrap CI（支撑条件）与 presence LRT（NB χ²₁ + BH） | M3a |
-| `ms_calibration_grid()` `ms_calibration_verdict()` `plot_calibration_curve()` `ms_calibration_sanity()` | L3 | 校准实验面：MC 覆盖率网格（`ms_calibration_grid_rust` 核面上装配）+ 判据窗 verdict + 覆盖率曲线图 + 真实数据降采样 sanity harness（sanity 永不写成 calibration 证据；数据获取/治理协议 inst/sanity/README.md，真实数据不入库） | M3b |
-| `register_ms_engine()` `match_ms_engine()` `ms_engines()` | L3 | 引擎注册表扩展入口 + 字符串糖解析（A14，失败列全部可用引擎名）+ 已注册引擎目录；certified 三态治理（A17），non-certified 解析一次性告警 | M0 |
-| `ms_engine()` `fit_engine()` `required_pkgs()` `ms_extract_signatures()` `ms_extract_exposures()` `ms_extract_fit_time()` | L3 | 引擎注册表 S7 泛型（`ms_extract_*` 为泛型访问器，仅后两者进 FFI 表面） | M0/M2 |
-| `ms_benchmark()` | L3 | mlr3 式基准网格；non-certified 引擎显式 warning | M0 骨架/M7 完备 |
-| `ms_sitrep()` | L3 | 环境/依赖/refdb/线程诊断 | M0 |
-| `ms_qc_report()` `ms_downsample()` `ms_convert()` `ms_update_refdb()` | L2 | QC 报告、深度下采样、机会转换、参考库更新 | M0 骨架起（`ms_update_refdb()`）/M4 |
-| `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | 格式互操作、allele-specific CN / SV 输入、目录模拟器（ms_simulate 变异计数层第一版：multinomial/poisson/nb 三臂，VCF 级放置 ⏳M7） | M1c（CN/SV）/M4（互操作）/M7-pre（simulate） |
-| `ms_stratify_hypermutants()` | L2 | 超突变者分层（分类+排除 de novo+强制 refit） | M1c |
-| `ms_atlas_fit()` `ms_hrd_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | 应用工作流 | 见 L-G |
-| `ms_nmf()` `ms_ard()` `ms_sparse()` `ms_lda()` `ms_correlated()` `ms_tensor()` `ms_supervised()` `ms_hdp()` `ms_bayes()` | L3 | 引擎工厂（S7 对象一等公民，字符串为糖；L-C/L-D 状态列为准） | 见 L-C |
-| `ms_tally_rust()` `ms_extract_rust()` | L1 | **FFI 内部**（非用户 API 承诺；`docs/ffi-surface.md` 冻结管理，M0 起） | M0/M1s |
+| `ms_variants()` `ms_tally()` `ms_extract()` `ms_fit()` `ms_compare()` `plot()` | L2/L3 | the trunk of the unified workflow grammar (the six variant classes share one grammar; swapping the engine does not change the pipeline) | M1s/M2/M3a/M4 |
+| `ms_select_k()` | L3 | the K-selection adjudication rule (CV argmin -> stability veto -> Wilcoxon diagnostic) | M2 (some diagnostics ⏳) |
+| `ms_fit_bootstrap()` `ms_test_presence()` | L3 | the bootstrap CI (support-conditional) and the presence LRT (NB χ²₁ + BH) | M3a |
+| `ms_calibration_grid()` `ms_calibration_verdict()` `plot_calibration_curve()` `ms_calibration_sanity()` | L3 | the calibration experiment faces: the MC coverage grid (assembled over the `ms_calibration_grid_rust` kernel face) + the verdict-window verdict + the coverage-curve plot + the real-data downsampling sanity harness (sanity is never written as calibration evidence; the data-acquisition/governance protocol inst/sanity/README.md, real data never enters the repository) | M3b |
+| `register_ms_engine()` `match_ms_engine()` `ms_engines()` | L3 | the engine-registry extension entry + string-sugar resolution (A14, listing every available engine name on failure) + the catalog of registered engines; the certified tri-state governance (A17), resolving to a non-certified engine warns once | M0 |
+| `ms_engine()` `fit_engine()` `required_pkgs()` `ms_extract_signatures()` `ms_extract_exposures()` `ms_extract_fit_time()` | L3 | the engine-registry S7 generics (the `ms_extract_*` are generic accessors; only the latter two enter the FFI surface) | M0/M2 |
+| `ms_benchmark()` | L3 | the mlr3-style benchmark grid; a non-certified engine emits an explicit warning | M0 skeleton / M7 complete |
+| `ms_sitrep()` | L3 | environment/dependency/refdb/thread diagnostics | M0 |
+| `ms_qc_report()` `ms_downsample()` `ms_convert()` `ms_update_refdb()` | L2 | the QC report, depth downsampling, opportunity conversion, reference-library update | from the M0 skeleton (`ms_update_refdb()`) / M4 |
+| `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | format interoperability, allele-specific CN / SV input, the catalog simulator (the first version of the ms_simulate variant-count layer: the multinomial/poisson/nb three arms, VCF-level placement ⏳M7) | M1c (CN/SV) / M4 (interoperability) / M7-pre (simulate) |
+| `ms_stratify_hypermutants()` | L2 | hypermutator stratification (classification + de novo exclusion + forced refit) | M1c |
+| `ms_atlas_fit()` `ms_hrd_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | application workflows | see L-G |
+| `ms_nmf()` `ms_ard()` `ms_sparse()` `ms_lda()` `ms_correlated()` `ms_tensor()` `ms_supervised()` `ms_hdp()` `ms_bayes()` | L3 | the engine factories (S7 objects as first-class citizens, strings as sugar; the L-C/L-D status columns govern) | see L-C |
+| `ms_tally_rust()` `ms_extract_rust()` | L1 | **FFI internals** (not a user-API promise; frozen and governed by `docs/ffi-surface.md`, from M0) | M0/M1s |
 
 ---
 
-## ⚡ "你可能没想到的"清单（本矩阵新增覆盖）
+## ⚡ the "you might not have thought of" list (coverage added by this matrix)
 
-1. **QC 是一等公民层**（L-A）：样本 QC 报告、伪迹检出清除、amber/red 分级——领域痛点（research 03 §11.5），非附加功能。
-2. **机会归一化与 panel 机会目录**：WES/panel refit 用 WGS 参考会系统性偏置平坦签名——似然内机会 + `ms_convert()`。
-3. **MNV/complex 路由与 VCF 拆分后的 DBS 重连**：不修则 SBS/DBS 目录系统性失真（语义正确性，非性能）。
-4. **基因组卫生**：contig 白名单、性别机会校正、非整倍体逐样本机会、chrM 路由、T2T。
-5. **模拟器作为平台能力**：零模型/场景生成器内置（benchmark 与测试共用），不是外部脚本。
-6. **报告引擎与 provenance 检查单**：领域无报告标准——每次分析自带可审计元数据。
-7. **校准诊断图**：覆盖率曲线作为一等可视化（MSU-Fit 的诚实性展示）。
-8. **队列可视化挖掘**：签名×特征关联扫描 + 多重校正 + 图形化——应用论文的日常操作。
-9. **对等引擎矩阵本身**：任何主流方法一行切换（D15），benchmark 文化日常化。
-10. **Python/流水线互操作**：parquet 交换 + CLI + nf-core——领域重心在 Python，不锁死 R。
+1. **QC is a first-class layer** (L-A): the sample-QC report, pseudosignature
+   detection and removal, amber/red grading -- a domain pain point (research
+   03 §11.5), not an add-on feature.
+2. **opportunity normalization and the panel opportunity catalog**: WES/panel
+   refits against a WGS reference systematically bias flat signatures
+   -- the within-likelihood opportunities + `ms_convert()`.
+3. **MNV/complex routing and the DBS re-join after VCF splitting**: left
+   unpatched, the SBS/DBS catalogs are systematically distorted (semantic
+   correctness, not performance).
+4. **genome hygiene**: the contig whitelist, sex-chromosome opportunity
+   correction, the per-sample ploidy opportunities, chrM routing, T2T.
+5. **the simulator as a platform capability**: the null models / scenario
+   generators are built-in (shared by the benchmark and the tests), not
+   external scripts.
+6. **the report engine and the provenance checklist**: no reporting standard
+   in the domain -- every analysis carries auditable metadata.
+7. **the calibration diagnostic plots**: the coverage curve as a
+   first-class visualization (the honest display of MSU-Fit).
+8. **cohort visual data mining**: the signature x feature association sweep
+   + multiple correction + graphics -- the day-to-day operation of an
+   application paper.
+9. **the engine-equivalence matrix itself**: any mainstream method one row
+   away (D15), the benchmark culture made everyday.
+10. **Python/pipeline interoperability**: parquet exchange + CLI +
+    nf-core -- the domain's center of gravity is in Python, do not lock
+    down into R.
 
-## 与 Seurat 类比的自检（D16）
+## The self-check against the Seurat analogy (D16)
 
-| Seurat 成功要素 | msuiter 对应 | 矩阵落点 |
+| The Seurat success ingredient | the msuiter counterpart | matrix landing |
 |---|---|---|
-| 统一对象（Seurat object） | MsVariants/MsCatalog/MsSignature/MsFit | L-H |
-| 工作文法（NormalizeData→…→UMAP） | ms_variants→ms_tally→ms_extract→ms_fit→ms_compare→plot | L-H |
-| 全方法整合 | 引擎对等矩阵（L-C/L-D） | L-C/L-D |
-| 默认可信流水线 | 共识-CV 流水线 + MSU-Fit/LowCount/Infer | §5 默认路径 |
-| 教程/生态 | vignettes/pkgdown/nf-core/扩展 API | L-H/L-G |
+| the unified object (the Seurat object) | MsVariants/MsCatalog/MsSignature/MsFit | L-H |
+| the workflow grammar (NormalizeData→…→UMAP) | ms_variants→ms_tally→ms_extract→ms_fit→ms_compare→plot | L-H |
+| the integration of all methods | the engine-equivalence matrices (L-C/L-D) | L-C/L-D |
+| the trustworthy default pipeline | the consensus-CV pipeline + MSU-Fit/LowCount/Infer | §5 the default path |
+| tutorials/ecosystem | the vignettes/pkgdown/nf-core/extension API | L-H/L-G |
 
-**矩阵治理**：每个里程碑验收时由 PI 更新本矩阵（状态列 + 新增能力行）；docs-sync CI 校验矩阵中承诺的 ms_* 函数名与 ROADMAP/ARCHITECTURE 一致（枚举载体为 L-H「API 表面」表；ARCH/ROADMAP 出现而未列入该表的用户 API 视为 drift，ms_*_rust FFI 内部名除外，由 docs/ffi-surface.md 单独管理）。
+**Matrix governance**: at each milestone's acceptance the PI updates this
+matrix (the status columns + new capability rows); the docs-sync CI verifies
+that the ms_* function names promised in the matrix agree with
+ROADMAP/ARCHITECTURE (the enumeration carrier is the L-H "API surface"
+table; a user API that appears in ARCH/ROADMAP without being listed in that
+table counts as drift, except the ms_*_rust FFI internals, governed
+separately by docs/ffi-surface.md).
