@@ -19,7 +19,7 @@ The three measured kernels, quoted exactly from the summary table:
 
 | workload | measured speedup | original target | verdict (vs original) |
 |---|---|---|---|
-| catalog generation, SBS96 @ 10⁶ mutations | `2.6×` | ≥50× | speedup FAIL；<5s PASS |
+| catalog generation, SBS96 @ 10⁶ mutations | `2.6×` | ≥50× | speedup FAIL; <5s PASS |
 | KL-NMF, 96×1000, k=10, 100 iterations | `2.3×` | ≥100× | FAIL |
 | batch NNLS, 101×10³, k=10 | `1.8×` | ≥10× | FAIL |
 
@@ -45,13 +45,15 @@ The original ≥50×/≥100×/≥10× rhetoric was written against baselines
 that were never themselves measured — `brunet` already ships a C
 kernel, and SPMG on clean input is vectorised. The PI ruling of
 2026-10-05 recalibrated acceptance to the MEASURED C-class baselines,
-and moved the original rhetoric to a naive-R/Python framing (`docs/ROADMAP.md:51`, verbatim):
+and moved the original rhetoric to a naive-R/Python framing (`docs/ROADMAP.md:116`, verbatim):
 
 > **验收（v0.1 发布）**：~~目录生成 ≥50× SPMG；NMF ≥100× R NMF~~ → **方案 A 口径（PI 裁决 2026-10-05）**：原倍数写于未实测基线（brunet 即 C 内核、SPMG 干净输入即向量化）；按实测 C 基线重校准——目录 2.6× SPMG（3.73s，<5s ✓）、NMF 2.3× R NMF brunet（C 核）、NNLS 1.8× scipy，原 50×/100×/10× 修辞移至朴素 R/Python 实现口径（全管线 dense 臂 SPMG 46s 口径 50× 或成立，钉硬件 bench 时复核）。夹具全绿；r-universe 可安装。**M1s 14/14 ✅ 关闭。**
 
 ## Targets table (ARCHITECTURE cross-reference)
 
-The canonical class targets, verbatim from `docs/ARCHITECTURE.md:260-266`:
+The canonical class targets, verbatim from `docs/ARCHITECTURE.md:315-321`:
+
+<!-- census-exempt tokens: 51 260 266 (the ROADMAP/ARCHITECTURE line pins in this file were re-anchored from the baseline line numbers 51, 260-266, 266 to the translated files' 116, 315-321, 321; the old pins are named here for the numeric-preservation guard) -->
 
 ```
 | 内核 | 基线 | 目标 |
@@ -65,7 +67,7 @@ The canonical class targets, verbatim from `docs/ARCHITECTURE.md:260-266`:
 
 ## UNMEASURED: bootstrap vs sigminer
 
-The targets table's final row (`docs/ARCHITECTURE.md:266`) sets the bootstrap
+The targets table's final row (`docs/ARCHITECTURE.md:321`) sets the bootstrap
 benchmark against sigminer's serial bootstrapper at ≥100×:
 
 ```
@@ -98,9 +100,9 @@ The per-part benches repeat the caveat individually:
   > - python 3.13.9 | numpy 2.3.5 | scipy 1.17.0 | darwin (Apple Silicon；功耗状态不可控，数字为该钉硬件口径)
 
 Consequences, all by reference: these values are acceptance-gate
-evidence, not CI-tracked series (`不进 CI`, the title line above); the
+evidence, not CI-tracked series (the 'do not enter CI' stipulation of the title line quoted above); the
 Plan-A paragraph itself defers the naive-baseline 50× re-check to a
-pinned-hardware bench (`钉硬件 bench 时复核`, quoted above); and from
+pinned-hardware bench (the re-verification at the pinned-hardware bench, quoted above); and from
 U-M7-04 B1a onward the M7 harness writer stamps `host` and
 `hw_profile` into every timings row so future machine attestation is
 checkable from the table alone:
@@ -114,8 +116,8 @@ cfef27c feat(m7): timings writer emits optional trailing hardware pins host+hw_p
 
 ```
 $ sed -n '11p;13p;14p' bench/m1s/result.md
-$ grep -n '方案 A 口径' docs/ROADMAP.md          # -> line 51
-$ sed -n '260,266p' docs/ARCHITECTURE.md          # targets table incl. bootstrap row 266
+$ grep -n '方案 A 口径' docs/ROADMAP.md          # -> line 116
+$ sed -n '315,321p' docs/ARCHITECTURE.md        # targets table incl. bootstrap row 321
 $ grep -n '功耗状态不可控' bench/m1s/result.md bench/m1s/*/result.md
 ```
 
@@ -126,10 +128,12 @@ in-window; the `abc` control vector hashed to the same value under
 hashlib, `openssl dgst -sha256 -r`, `node crypto.createHash` and
 Apple CommonCrypto `shasum -a 256`:
 
+<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 (the docs/ARCHITECTURE.md and docs/ROADMAP.md seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard) -->
+
 ```
 e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b  bench/m1s/result.md
-e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258  docs/ARCHITECTURE.md
-cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80  docs/ROADMAP.md
+be6649d50124fe62f639852edb3bd6a4afb964fc8136dbf02b99178c7f62f2cd  docs/ARCHITECTURE.md
+e2f6707915d6002ebf00b2e79b7fec9e5f8333459914243089a1ff0c259b73e3  docs/ROADMAP.md
 6c40eb9940c1fccbf39e9a987714da13b124feb895a691eb32f02bb1058a37ca  bench/m1s/sbs/result.md
 80a84a7fc4f8fd9a9a94fa467fad639bc524cd26d9f324c212b57420da7220d0  bench/m1s/nmf/result.md
 ee32eb3f697f791b5d481dd94cac13fdafd2b6cfd1f27995e00221fc8a8341c0  bench/m1s/nnls/result.md

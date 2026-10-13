@@ -37,6 +37,8 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
   (P) test_matrix_governance  exact-stamp parsing (no substring classes),
       judgment refuse-to-claim, pre-flight co-tenant refusal, worker census,
       pre-registered 3x-floor gate
+  (S) test_action_pins      action-pin law helper: tag form, attested SHA form,
+      mutable/short-SHA rejection (M8 supply-chain hardening)
   (R) test_floor_calibration  RB-09 calibrated floor table: per-class
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
@@ -111,7 +113,8 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # U-M7-03 RB-07/RB-08: launch governance (postmortem seals):
            "test_matrix_governance",
            "test_floor_calibration",
-           # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100 钉硬件全表):
+           # U-M7-04 GO-05: hardware-pin completeness (ROADMAP:100, full-table
+           # hardware attestation):
            "test_hardware_pin",
            # U-M7-04 GO-05: bootstrap-vs-sigminer campaign instrument (SCOPE B):
            "test_bootstrap_campaign",
@@ -122,7 +125,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # GO-05 ruling @10:45: consumed/report-only fits + tier-probe (TDD):
            "test_tier_probe",
            # GO-05 ruling @12:50: unmeasurable floor leg, rc 3 (TDD):
-           "test_floor_gate_unmeasurable"]
+           "test_floor_gate_unmeasurable",
+           # M8 (PR #17): the action-pin law helper:
+           "test_action_pins"]
 
 
 def _collect(mod_name):

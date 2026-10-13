@@ -4,6 +4,7 @@
 """
 
 import csv
+import os
 import tempfile
 from pathlib import Path
 
@@ -120,3 +121,69 @@ def test_cosmic_provider_rejects_wrong_channel_count():
     p = _tmpfile("short.csv")
     _write_channel_major(p, labels[:-1], mat[:-1])
     _expect_reject(p, "96")
+
+
+# ---------------------------------------------------------------------------
+# Env-shadowing hardening (controller dry-run witness, 2026-10-13).
+# The constructor's own error text promises "set G0_SIGNATURES_PATH or pass
+# an explicit path": an explicit path must therefore WIN over an ambient
+# environment value. Before this gate, os.environ.get(G0_SIGNATURES_PATH,
+# path) silently preferred the environment, so a test or harness passing an
+# explicit file would load the ambient one instead -- a silent-wrong-input
+# hazard for the truth-axis that D3 governs.
+# ---------------------------------------------------------------------------
+
+def _env_saved(fn):
+    """Run fn() with G0_SIGNATURES_PATH set, restoring the prior state."""
+    def run():
+        old = os.environ.get("G0_SIGNATURES_PATH")
+        try:
+            fn()
+        finally:
+            if old is None:
+                os.environ.pop("G0_SIGNATURES_PATH", None)
+            else:
+                os.environ["G0_SIGNATURES_PATH"] = old
+    return run
+
+
+def _norm(v):
+    v = np.asarray(v, dtype=float)
+    return v / v.sum()
+
+
+def test_cosmic_provider_explicit_path_beats_ambient_env():
+    labels, mat = _pseudo_mat()
+    env_file = _tmpfile("env_wins_bug.csv")
+    exp_file = _tmpfile("explicit.csv")
+    # Distinguish the two files AFTER normalization: different column
+    # multipliers make the normalized SBS1 profiles differ measurably.
+    _write_channel_major(env_file, labels, mat)
+    mat_b = np.array([[1.0 + ((i * 11 + j) % 13) / 13.0
+                       for j in range(5)] for i in range(96)])
+    _write_channel_major(exp_file, labels, mat_b)
+    want = _norm([float(f"{mat_b[i, 0]:.6f}") for i in range(96)])
+
+    @_env_saved
+    def go():
+        os.environ["G0_SIGNATURES_PATH"] = str(env_file)
+        prov = CosmicFileProvider(exp_file)          # explicit path wins?
+        got = prov.signature("SBS1")
+        assert np.allclose(got, want, rtol=0, atol=1e-9), (
+            "explicit path was shadowed by the ambient G0_SIGNATURES_PATH")
+    go()
+
+
+def test_cosmic_provider_empty_path_still_uses_env():
+    """The harness route (provider_by_name passes '') must keep working."""
+    labels, mat = _pseudo_mat()
+    env_file = _tmpfile("env_route.csv")
+    _write_channel_major(env_file, labels, mat)
+
+    @_env_saved
+    def go():
+        os.environ["G0_SIGNATURES_PATH"] = str(env_file)
+        prov = CosmicFileProvider("")                # falsy path -> env route
+        for k in providers.TRUTH_NAMES:
+            assert abs(prov.truth[k].sum() - 1.0) < 1e-9
+    go()

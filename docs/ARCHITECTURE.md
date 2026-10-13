@@ -1,296 +1,351 @@
-# msuiter 架构设计（ARCHITECTURE）
+# msuiter architecture design (ARCHITECTURE)
 
-> 版本：**v2.2（2026-09-28，全库文档对齐版）**。评审证据：[docs/reviews/00-synthesis.md](reviews/00-synthesis.md)（裁决表）与 01–05 原文。调研底稿：docs/research/00–08（快照性质，见各篇头部声明）。完备性检查表：[docs/CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md)。
-> 定位：**Rust 计算底层 + R(S7) 用户接口的 mutational signature 生态系统**；领域算法为可插拔组件（便于逐一 benchmark），自研统计推断层为论文 headline；科学准确性（声明与协议对齐）与简便性（S7 统一接口）统一。
-> **v2.1 要点**（相对 v2）：统计契约成文（estimand/校准/边界）、conformal 降维到 Mondrian 分层、方法命名收缩为 MSU-Fit/LowCount/Infer 三方法、无状态 FFI、自研 RNG、线程不变性契约、双层验收术语、基准场景升级、refdb 治理、路线图双轨化。
+> Version: **v2.2 (2026-09-28, whole-repo documentation alignment edition)**. Review evidence: [docs/reviews/00-synthesis.md](reviews/00-synthesis.md) (the adjudication table) plus the 01–05 originals. Research base drafts: docs/research/00–08 (snapshot nature; see the header declaration of each piece). Completeness checklist: [docs/CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md).
+> Positioning: **a Rust computational substrate + an R(S7) user interface -- a mutational signature ecosystem**; the domain algorithms are pluggable components (so each can be benchmarked one by one), the self-developed statistical-inference layer is the paper headline, and scientific accuracy (claims aligned with protocols) is unified with simplicity (the S7 unified interface).
+> **The v2.1 highlights** (vs v2): the statistical contracts written up (estimand/calibration/boundary), conformal reduced to Mondrian stratification, the method naming contracted to the three methods MSU-Fit/LowCount/Infer, stateless FFI, the self-developed RNG, the thread-invariance contract, the two-tier acceptance terminology, the upgraded benchmark scenarios, refdb governance, the dual-track roadmap.
 
 ---
 
-## 0. 决策记录（ADR 索引；正式 ADR 逐步迁入 docs/adr/）
+## 0. Decision record (the ADR index; the formal ADRs migrate progressively into docs/adr/)
 
-| # | 决策 | 选择 | 状态 |
+| # | Decision | Choice | Status |
 |---|---|---|---|
-| D1 | 许可 | Apache-2.0；GPL 来源只从论文公式重实现 | accepted |
-| D2 | 包架构 | 单 R 包 + `src/rust/` workspace；engine crate 为未来拆 crates.io 的唯一候选切面；R 侧拆包仅为 CRAN 体积被拒时的应急预案 | accepted |
-| D3 | COSMIC 数据 | 捆绑 + 按需更新到 `tools::R_user_dir`；溯源钉死 Alexandrov-lab BSD-2 镜像 | accepted |
-| D4 | 分发 | CRAN-ready 设计（cargo vendor），r-universe + GitHub Releases 先行 | accepted |
-| D5 | API 风格 | tidy 风格 `ms_*`；通道按标签校验；零魔法字符串 | accepted |
-| D6 | 引擎内核 | beta-MM MU（KL 默认=多项 MLE）+ ARD + NNDSVDa/随机双初始化；体积正则与相关性引擎为组件 | accepted（v2.1 修订：删"三噪声模型"宣传，β=1 为默认并声明其统计含义） |
-| D7 | 基因组读取 | BSgenome 兼容层 + Rust 快路径（twobit crate over `Cursor<Mmap>` 与自研 reader 两案由 M0 spike 裁决 ADR） | accepted |
-| D8 | R 对象系统 | S7 全面实现；地板 R ≥ 4.3；S7 只在 API 边界 | accepted |
-| D9 | 方法框架 | 统一框架 + 引擎注册表；外部工具永不进 `ms_*` API（仅 bench 对照） | accepted |
-| D10 | 自研命名 | **只命名三个方法：MSU-Fit / MSU-LowCount / MSU-Infer**；其余为框架组件（v2.1 依评审收缩） | accepted（supersedes v2 的 8 方法命名） |
-| **D11** | **验收术语** | **语义逐位**（通道算术/协议步骤/平局规则/默认参数：整数与标签 golden，硬验收）≠ **数值协议等价**（浮点内核：固定种子+容差 cosine>1−1e-6）。对 R NMF/MuSiCal 等外部的"bit 级对齐"目标废弃 | accepted（v2.1 新增） |
-| **D12** | **FFI 形态** | **无状态**：无句柄注册表、无 `.state`；每次调用一次进出；mmap 进程内即用即释 | accepted（v2.1 新增，supersedes caugi 句柄模式） |
-| **D13** | **统计声明纪律** | 每个统计声明必须同时给出 estimand、生成模型、校准协议与失效条件；"首个"类声明限定到可辩护范围 | accepted（v2.1 新增） |
-| **D14** | **论文定位** | headline = "Calibrated inference of mutational signature exposures"（Framing A）+ 五模态生态支撑（B）；先导覆盖实验为 kill-criterion 门 | accepted（v2.1 新增） |
-| **D15** | **引擎对等原则** | 引擎/方法层对**所有主流与先进算法**提供**接口对等的自有实现**（热核 Rust 原生、统计粘合 R 原生；外部工具仅作 bench 参照——对等 ≠ 包装他人 API，与 D9 一致）；领域用户可用统一接口跑任何主流方法做对比 | accepted（2026-09-28 用户指令） |
-| **D16** | **平台定位** | **mutational signatures 领域的 Seurat**：中心对象模型 + 统一工作流文法 + 引擎注册表生态 + 教程文化；自研方法为默认路径，主流算法为可选引擎——一切设计决策以"成为领域默认入口"为标尺 | accepted（2026-09-28 用户指令） |
+| D1 | License | Apache-2.0; GPL sources are re-implemented from the paper formulas only | accepted |
+| D2 | Package architecture | a single R package + the `src/rust/` workspace; the engine crate is the only candidate cut surface for a future split into crates.io; splitting the R side is only the contingency plan for CRAN rejecting the size | accepted |
+| D3 | COSMIC data | bundled + updated on demand into `tools::R_user_dir`; the provenance pinned to the Alexandrov-lab BSD-2 mirror | accepted |
+| D4 | Distribution | CRAN-ready design (cargo vendor), with r-universe + GitHub Releases first | accepted |
+| D5 | API style | the tidy-style `ms_*`; channels validated by label; zero magic strings | accepted |
+| D6 | Engine kernel | beta-MM MU (the KL default = the multinomial MLE) + ARD + NNDSVDa/dual random initialization; the volume regularization and the correlation engine are components | accepted (the v2.1 revision: removed the "three noise models" marketing; β=1 is the default with its statistical meaning declared) |
+| D7 | Genome reading | the BSgenome compatibility layer + the Rust fast path (the twobit crate over `Cursor<Mmap>` vs the self-developed reader, the two options adjudicated by the M0 spike ADR) | accepted |
+| D8 | The R object system | S7 implemented throughout; the floor R ≥ 4.3; S7 only at the API boundary | accepted |
+| D9 | Method framework | the unified framework + the engine registry table; external tools never enter the `ms_*` API (bench comparison only) | accepted |
+| D10 | Self-developed naming | **only three methods are named: MSU-Fit / MSU-LowCount / MSU-Infer**; the rest are framework components (contracted per the review in v2.1) | accepted (supersedes the v2 naming of 8 methods) |
+| **D11** | **Acceptance terminology** | **bit-for-bit semantics** (the channel arithmetic / the protocol steps / the tie rules / the default parameters: the integers and the labels golden, the hard acceptance) ≠ **numerical-protocol equivalence** (the floating kernels: the fixed seed + the tolerance cosine>1−1e-6). The "bit-level alignment" target against the external ones such as R NMF/MuSiCal is abandoned | accepted (new in v2.1) |
+| **D12** | **The FFI shape** | **stateless**: no handle registry table, no `.state`; one entry and one exit per call; the mmap is used and released within the process | accepted (new in v2.1, supersedes the caugi handle pattern) |
+| **D13** | **Statistical-claim discipline** | every statistical claim must give at once the estimand, the generative model, the calibration protocol and the failure conditions; the "first" claims are qualified to a defensible scope | accepted (new in v2.1) |
+| **D14** | **The paper positioning** | headline = "Calibrated inference of mutational signature exposures" (Framing A) + the five-modal-ecosystem support (B); the leading coverage experiment is the kill-criterion gate | accepted (new in v2.1) |
+| **D15** | **The engine-parity principle** | the engine/method layer provides **interface-parity native implementations** for **all the mainstream and advanced algorithms** (the hot kernel Rust native, the statistical glue R native; the external tools are only the bench reference -- parity ≠ packaging someone else's API, consistent with D9); the domain user can run any mainstream method through the unified interface for comparison | accepted (the 2026-09-28 user directive) |
+| **D16** | **The platform positioning** | **the Seurat of the mutational-signatures domain**: the central object model + the unified workflow grammar + the engine-registry ecosystem + the tutorial culture; the self-developed methods are the default path and the mainstream algorithms are optional engines -- every design decision is measured by "becoming the domain's default entry" | accepted (the 2026-09-28 user directive) |
 
 ---
 
-## 1. 系统分层总览
+## 1. The system-layering overview
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ L4 应用工作流 (R/S7)                                                  │
+│ L4 the application workflows (R/S7)                                    │
 │   ms_hrd_report() · ms_exposure_panel() · ms_lowcount_report()       │
-│   ms_atlas_fit()（common/rare 两阶段）· ms_stratify_hypermutants()   │
-│   （v1.x 视合作者：ms_rna_report() · therapy forensics）              │
+│   ms_atlas_fit() (the common/rare two stages) ·                      │
+│   ms_stratify_hypermutants()                                         │
+│   (v1.x per the collaborator: ms_rna_report() · therapy forensics)  │
 ├──────────────────────────────────────────────────────────────────────┤
-│ L3 方法层 (R/S7) —— 统一方法框架 + 引擎注册表                          │
-│   ms_extract(cat, method)   method = MsEngine 子类（对象一等公民，     │
-│                             字符串仅作糖）                            │
-│   ms_fit(cat, sigs, method) / ms_fit_bootstrap() / ms_test_presence()│
-│   ms_select_k()（默认仲裁规则）· ms_benchmark()（mlr3 式网格）         │
+│ L3 the method layer (R/S7) -- the unified method framework +        │
+│   the engine registry table                                          │
+│   ms_extract(cat, method)   method = an MsEngine subclass           │
+│                             (the objects are first-class citizens,   │
+│                             the strings are only sugar)               │
+│   ms_fit(cat, sigs, method) / ms_fit_bootstrap() /                  │
+│   ms_test_presence()                                                  │
+│   ms_select_k() (the default adjudication rule) ·                    │
+│   ms_benchmark() (the mlr3-style grid)                               │
 ├──────────────────────────────────────────────────────────────────────┤
-│ L2 表示与数据层 (R/S7)                                                │
+│ L2 the representation and data layer (R/S7)                          │
 │   S7: MsVariants · MsCatalog · MsSignature · MsFit · MsRefDb         │
-│   （对象互引一律**快照摘要**：维度+通道表哈希+refdb 版本——非内嵌完整   │
-│    对象，防内存翻倍与 waldo 噪声）                                     │
-│   通道注册表（规范序+元数据）· 参考库 · 校准相似度库                   │
+│   (the cross-object references are always **snapshot summaries**:   │
+│    the dimensions + the channel-table hash + the refdb version --    │
+│    not an embedded full object, guarding against the memory          │
+│    doubling and the waldo noise)                                     │
+│   the channel-registry table (the canonical order + the metadata) · │
+│   the reference library · the calibrated similarity library          │
 ├──────────────────────────────────────────────────────────────────────┤
-│ L1 计算引擎 (Rust, workspace: engine/catalog/ffi)                     │
-│   NMF 系核（KL/EU/HALS/ARD/体积正则/相关性/NTF）· NNLS/QP ·           │
-│   多项/负二项似然 + χ²₁ LRT + Fisher(内点) · **自研 PCG64 RNG** ·      │
-│   重采样/共识聚类/HMM/GMM · SBS/DBS/**MNV/complex 路由**/ID83 ·        │
-│   twobit 快路径 · exactPcf                                            │
+│ L1 the computational engines (Rust, workspace:                      │
+│   engine/catalog/ffi)                                                │
+│   the NMF kernel family (KL/EU/HALS/ARD/volume-reg/correlation/NTF) │
+│   · NNLS/QP · the multinomial/negative-binomial likelihood +        │
+│   χ²₁ LRT + Fisher (interior) · **the self-developed PCG64 RNG** ·   │
+│   the resampling / consensus clustering / HMM / GMM ·                │
+│   SBS/DBS/**MNV/complex routing**/ID83 · the twobit fast path ·      │
+│   exactPcf                                                           │
 └──────────────────────────────────────────────────────────────────────┘
-   外部工具（SigProfiler*/MuSiCal/mmsig/…）→ bench/adapters/ 容器化对照，
-   永不进入 ms_* API（D9）
+   the external tools (SigProfiler*/MuSiCal/mmsig/…) -> the containerized
+   comparison under bench/g0/adapters/ and bench/m7/adapters/, never
+   entering the ms_* API (D9)
 ```
 
-正交规则：L1 无样本/COSMIC 概念；L2 独占通道语义与参考数据版本；L3 只组合 L2 与 L1；L4 只组装 L3；S7 分发只在 API 边界（热路径全 Rust）。R 侧架构测试强制：`R/<section>/` 只能调用本区 + `classes/` + FFI wrappers + 显式白名单。
+The orthogonality rules: L1 has no sample/COSMIC concepts; L2 monopolizes the channel semantics and the reference-data versioning; L3 only composes L2 and L1; L4 only assembles L3; the S7 dispatch only at the API boundary (the hot paths all Rust). The R-side architecture tests enforce: `R/<section>/` may call only its own section + `classes/` + the FFI wrappers + the explicit whitelist.
 
-## 1.5 平台教义：mutational signatures 的 Seurat（D15/D16）
+## 1.5 The platform doctrine: the Seurat of mutational signatures (D15/D16)
 
-Seurat 之所以成为单细胞生态的核心，不是因为它发明了最多算法，而是因为它提供了**默认入口**：统一的对象、统一的工作流文法、对全领域方法的整合、以及让人上来就会用的教程文化。msuiter 复制这四件事：
+Seurat became the center of the single-cell ecosystem not because it invented the most algorithms but because it provided **the default entry**: the unified object, the unified workflow grammar, the integration of all the domain's methods, and a tutorial culture that gets people working immediately. msuiter copies these four things:
 
-1. **中心对象模型**：MsVariants → MsCatalog → MsSignature/MsFit 构成分析主干，provenance 全链路携带（版本/种子/方法），对象间互引走快照摘要。
-2. **统一工作流文法**：`ms_variants() |> ms_tally() |> ms_extract() |> ms_fit() |> ms_compare() |> plot()`——六类变异（SBS/DBS/ID/CN/SV/RNA-SBS）同一文法；换引擎不改管线。
-3. **引擎对等（D15）**：主流与先进算法全部以统一接口、自有实现进入注册表（`method = ms_nmf(...) / ms_ard(...) / ms_lda(...) / ...`），用户可以一行换引擎做方法学对比——**这是 benchmark 文化成为日常操作而不是论文附录的关键**。外部工具只作 bench 参照，不进 API。
-4. **默认即自研**：默认路径永远是我们的独立方法（提取默认 = 共识-CV 流水线；拟合默认 = MSU-Fit；低计数 = MSU-LowCount；关联 = MSU-Infer）——用户开箱得到的是我们校准过的统计，而不是 2013 年的裸 NNLS。
-5. **教程文化与采用**：vignettes、COSMIC 风格图开箱即用、`ms_sitrep()` 诊断、nf-core/CLI 互操作——以"领域 PI 明天把 pipeline 换成 msuiter"为验收标尺。
+1. **The central object model**: MsVariants → MsCatalog → MsSignature/MsFit form the analysis trunk, the provenance carried along the whole chain (version/seed/method); the cross-object references go through snapshot summaries.
+2. **The unified workflow grammar**: `ms_variants() |> ms_tally() |> ms_extract() |> ms_fit() |> ms_compare() |> plot()` -- the six variant classes (SBS/DBS/ID/CN/SV/RNA-SBS) share one grammar; swapping the engine does not change the pipeline.
+3. **The engine parity (D15)**: the mainstream and advanced algorithms all enter the registry table through the unified interface with native implementations (`method = ms_nmf(...) / ms_ard(...) / ms_lda(...) / ...`); the user can swap the engine in one line for a methodological comparison -- **this is the key that makes the benchmark culture an everyday operation rather than a paper appendix**. The external tools serve only as the bench reference, not entering the API.
+4. **The default is the self-developed**: the default path is always our independent method (the extraction default = the consensus-CV pipeline; the fitting default = MSU-Fit; the low counts = MSU-LowCount; the association = MSU-Infer) -- out of the box the user gets our calibrated statistics, not the 2013 raw NNLS.
+5. **The tutorial culture and adoption**: the vignettes, the COSMIC-style figures out of the box, the `ms_sitrep()` diagnostics, the nf-core/CLI interoperability -- measured by "the domain PI switches the pipeline to msuiter tomorrow".
 
-对 ROADMAP 的含义：引擎对等矩阵（哪种主流算法在哪个版本轨道进入注册表）随每个里程碑更新；benchmark 章节的"逐算法对比"直接由注册表驱动生成。
+The implication for the ROADMAP: the engine-parity matrix (which mainstream algorithm enters the registry table in which version track) updates with each milestone; the "per-algorithm comparison" of the benchmark chapter is generated driven directly by the registry table.
 
-**完备性检查表**：平台的完整功能空间（数据/QC/预处理 → 目录表征 → 识别 → 定量 → 拟合后分析 → **基本可视化** → **应用工作流与可视化挖掘** → 平台层，含"没想到的"清单）以 [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) 为权威——识别/定量/可视化/挖掘逐能力标注方法、对等引擎、默认路径、可视化交付与里程碑，每里程碑验收时更新。
+**The completeness checklist**: the platform's complete capability space (data/QC/preprocessing → catalog representation → identification → quantification → post-fitting analysis → **basic visualization** → **the application workflows and visual mining** → the platform layer, incl. the "you might not have thought of" list) is authoritative in [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) -- per capability the identification/quantification/visualization/mining annotate the methods, the parity engine, the default path, the visualization deliverable and the milestone, updated at each milestone's acceptance.
 
 
-## 2. Rust workspace（src/rust/）
+## 2. The Rust workspace (src/rust/)
 
 
 
 ```
 src/rust/
-├── Cargo.toml        # 依赖预算（v2.1 收缩）: extendr-api(default-features=false,
-│                     #   仅 ndarray feature)、ndarray、rayon、memmap2、twobit(待spike)。
-│                     #   ★ 无 rand——随机性自研（见下）。MSRV 目标 1.71（extendr 0.9 官方）。
-│                     #   engine/catalog 两 crate: #![forbid(unsafe_code)]；
-│                     #   依赖方向 ffi→catalog→engine：deny 全局禁 rand 族，反向/extendr
-│                     #   渗入由 tools/check-dep-direction.sh 断言 + manifest 结构强制。
-├── engine/           # 纯数值，零 FFI，独立 cargo test
-│   ├── nmf.rs        # KL(β=1,默认)/EU MM-MU + HALS + ARD + 体积正则组件
-│   ├── correlated.rs # 相关性感知组件（对数空间低秩 exposure；gauge-fixed 输出协议）
-│   ├── tensor.rs     # NTF+NB（探索性；held-out likelihood 定秩 + Kruskal 条件检查）
-│   ├── rng.rs        # ★ 自研 PCG64 + SplitMix64 种子流布局（per-replicate/rank/fold
-│   │                 #   计数器流；布局写进论文 Methods）。multinomial/Dirichlet
-│   │                 #   采样在 resample.rs（U-M1s-04），不在此模块
-│   ├── nndsvd.rs     # NNDSVDa/ar：随机化 SVD 固定 q≥3 power iterations + oversampling≥16
-│   │                 #   + "exact Gram-SVD 对照" property test；KL 分母 max(·,ε)/log(ε+·)
-│   ├── nnls.rs       # Lawson-Hanson on Gram：pivot 化 LDLᵀ + ε‖G‖ ridge + KKT 断言
-│   ├── likelihood.rs # 多项/负二项 LL + ϵ 步进 + χ²₁ LRT + Fisher（内点支撑 only）
-│   ├── resample.rs   # 多项重采样 + NB 校准采样（Jiang 协议）
-│   ├── consensus.rs  # 余弦距离 + 矩形 Hungarian（unmatched 显式 split/merge 语义）+ silhouette
-│   ├── stats.rs      # 1-D GMM（分层器）、Wilcoxon（诊断）、HMM（损伤分离，v1.x）
-│   └── linalg.rs     # pivot 化 Cholesky/LDLᵀ、三角解
-├── catalog/          # 通道语义（FFI 无关）
-│   ├── sbs.rs        # SBS96/192/384/1536 字节算术
-│   ├── mnv.rs        # ★ MNV 2–5bp / >5bp / complex indel / double indel 路由表 +
-│   │                 #   拆分-VCF 相邻记录重连（skip ledger 进 provenance）
-│   ├── dbs.rs        # DBS78（Q-链规则；仅接受重连后的距离恰 1 doublet）
-│   ├── indel83.rs    # ID83（SPMG 语义逐位复刻）
-│   ├── pcf.rs        # exactPcf（SV clustered）
-│   └── genome.rs     # 2bit 快路径（已裁决：twobit 0.2.2 over Cursor<Mmap>，见
-│                     #   docs/adr/0001；自研回退原型 244 行已验证，入库 tools/spike/）
-└── (根 crate = FFI 壳 msuiter)   # extendr FFI 壳（无状态，~25 导出；docs/ffi-surface.md 冻结管理）。
-                                  # 实现注记：rextendr 硬约定 FFI crate manifest 位于 src/rust/Cargo.toml，
-                                  # 故为 root-package + members 形态（U-M0-01 实测定案），上图 msuiter/ 子目录意图并入根 crate。
+├── Cargo.toml        # the dependency budget (the v2.1 contraction):
+                      #   extendr-api(default-features=false, the ndarray
+                      #   feature only), ndarray, rayon, memmap2,
+                      #   twobit (pending the spike).
+                      #   ★ no rand -- the randomness is self-developed
+                      #   (see below). The MSRV target 1.71 (the extendr
+                      #   0.9 official).
+                      #   the engine/catalog two crates:
+                      #   #![forbid(unsafe_code)]; the dependency direction
+                      #   ffi→catalog→engine: deny bans the rand family
+                      #   globally, the reverse/extendr seepage asserted by
+                      #   tools/check-dep-direction.sh + enforced by the
+                      #   manifest structure.
+├── engine/           # pure numerical, zero FFI, standalone cargo test
+│   ├── nmf.rs        # the KL(β=1, default)/EU MM-MU + HALS + ARD + the
+│   │                 #   volume-regularization component
+│   ├── correlated.rs # the correlation-aware component (the low-rank
+│   │                 #   exposure in the log space; the gauge-fixed
+│   │                 #   output protocol)
+│   ├── tensor.rs     # NTF+NB (exploratory; the rank fixed by the held-out
+│   │                 #   likelihood + the Kruskal condition check)
+│   ├── rng.rs        # ★ the self-developed PCG64 + SplitMix64 seed-stream
+│   │                 #   layout (the per-replicate/rank/fold counter
+│   │                 #   streams; the layout written into the paper
+│   │                 #   Methods). the multinomial/Dirichlet sampling is
+│   │                 #   in resample.rs (U-M1s-04), not in this module
+│   ├── nndsvd.rs     # NNDSVDa/ar: the randomized SVD with a fixed q≥3
+│   │                 #   power iterations + oversampling≥16 + the "exact
+│   │                 #   Gram-SVD cross-check" property test; the KL
+│   │                 #   denominators max(·,ε)/log(ε+·)
+│   ├── nnls.rs       # Lawson-Hanson on the Gram: the pivoted LDLᵀ + the
+│   │                 #   ε‖G‖ ridge + the KKT assertions
+│   ├── likelihood.rs # the multinomial/negative-binomial LL + the ϵ stepping
+│   │                 #   + the χ²₁ LRT + Fisher (the interior support only)
+│   ├── resample.rs   # the multinomial resampling + the NB-calibrated
+│   │                 #   sampling (the Jiang protocol)
+│   ├── consensus.rs  # the cosine distance + the rectangular Hungarian
+│   │                 #   (the explicit split/merge semantics for
+│   │                 #   unmatched) + silhouette
+│   ├── stats.rs      # the 1-D GMM (the stratifier), Wilcoxon (diagnostic),
+│   │                 #   HMM (the lesion segregation, v1.x)
+│   └── linalg.rs     # the pivoted Cholesky/LDLᵀ, the triangular solve
+├── catalog/          # the channel semantics (FFI-free)
+│   ├── sbs.rs        # the SBS96/192/384/1536 byte arithmetic
+│   ├── mnv.rs        # ★ the MNV 2–5bp / >5bp / complex indel / double
+│   │                 #   indel routing tables + the split-VCF adjacent
+│   │                 #   record re-join (the skip ledger into the
+│   │                 #   provenance)
+│   ├── dbs.rs        # DBS78 (the Q-chain rules; accepting only the
+│   │                 #   distance-exactly-1 doublet after the re-join)
+│   ├── indel83.rs    # ID83 (the SPMG semantics bit-for-bit replica)
+│   ├── pcf.rs        # exactPcf (the SV clustered)
+│   └── genome.rs     # the 2bit fast path (adjudicated: twobit 0.2.2 over
+│                     #   Cursor<Mmap>, see docs/adr/0001; the self-developed
+│                     #   fallback prototype of 244 lines verified, filed into
+│                     #   tools/spike/)
+└── (the root crate = the FFI shell msuiter)  # the extendr FFI shell
+                                              #   (stateless, ~25 exports;
+                                              #   governed frozen by
+                                              #   docs/ffi-surface.md).
+                                              #   Implementation note: rextendr
+                                              #   hard-convention puts the FFI
+                                              #   crate manifest at
+                                              #   src/rust/Cargo.toml, hence
+                                              #   the root-package + members
+                                              #   shape (settled by the
+                                              #   U-M0-01 real measurement); the
+                                              #   msuiter/ sub-directory of the
+                                              #   diagram above folds into the
+                                              #   root crate.
 ```
 
-**FFI 硬契约（v2.1 全部成文）**：
-1. **无状态**：`ms_tally_rust(genome_path, variants, …)` 进程内 mmap 即用即释；`ms_extract_rust(counts, params, seeds)` 一次进出。无句柄、无 `.state`、无静默重算。
-2. **内存布局**：过界矩阵统一显式 column-major 视图；"方形矩阵转置探测器"单测（非对称 golden 往返）。
-3. **NA/NaN**：R validator 强制 `anyNA()` 拒绝；Rust `debug_assert!(!is_nan())` 且不产出 NaN（ε 策略：分母 `max(·,ε)`、`log(ε+·)`，ε 值进文档）；目录层**零伪计数**（与 musicatk 的 +ε 对比测试）。
-4. **索引**：i32→usize 显式转换 + bounds check，越界返回 R error 非 panic。
-5. **错误**：kernel 返回 `Result<_, MsError>`，仅在 ffi crate 边界转 R condition；禁止 kernel 内调 throwing API（`Rf_error` longjmp 跳过 Rust 析构）；任何 panic → 整调用报错、无部分结果。
-6. **并发**：**放弃 rayon 全局池**——每顶层调用内建 per-call ThreadPool（`msuiter.threads` option；`_R_CHECK_LIMIT_CORES_` 下默认 2）；**并行只存在于独立单元之间**（replicate/样本/bootstrap），单元内单线程固定归约顺序——**线程数不变性**：同 seed 在 threads∈{1,N} 输出 `identical()`（CI 硬测试）。
-7. **中断**：主线程在 chunk 边界轮询 `R_CheckUserInterrupt`；worker 只查 AtomicBool；中断后无残留（无状态自动成立）。
-8. **构建**：Makevars.in 按 string2path 模式（vendor.tar.xz + offline + `CARGO_BUILD_JOBS=2` + cleanup）；DESCRIPTION `SystemRequirements: cargo, rustc (>= 1.71)`；rust-toolchain.toml 不进 tarball；**M0 spike 产出真实 vendor + xz 字节数与 rustc 1.71 构建证明**。
+**The FFI hard contracts (all written up in v2.1)**:
+1. **Stateless**: `ms_tally_rust(genome_path, variants, …)` uses and releases the in-process mmap; `ms_extract_rust(counts, params, seeds)` one entry one exit. No handles, no `.state`, no silent recomputation.
+2. **The memory layout**: the crossing matrices use a unified explicit column-major view; the "square-matrix transpose detector" unit test (the asymmetric golden round-trip).
+3. **NA/NaN**: the R validator enforces the `anyNA()` rejection; the Rust `debug_assert!(!is_nan())` and never produces NaN (the ε policy: the denominators `max(·,ε)`, `log(ε+·)`, the ε value documented); the catalog layer carries **zero pseudo-counts** (the contrast test against musicatk's +ε).
+4. **The indexing**: the i32→usize explicit conversion + the bounds check; out of bounds returns an R error rather than panicking.
+5. **Errors**: the kernel returns `Result<_, MsError>`, converted to an R condition only at the ffi-crate boundary; calling a throwing API inside the kernel is forbidden (`Rf_error`'s longjmp skips the Rust destructors); any panic → the whole call errors, no partial results.
+6. **Concurrency**: **the rayon global pool abandoned** -- each top-level call builds its own per-call ThreadPool (the `msuiter.threads` option; default 2 under `_R_CHECK_LIMIT_CORES_`); **the parallelism exists only between the independent units** (the replicate/sample/bootstrap), single-threaded within a unit with the fixed reduction order -- **the thread-count invariance**: with the same seed the outputs for threads∈{1,N} are `identical()` (the CI hard test).
+7. **Interrupts**: the main thread pols `R_CheckUserInterrupt` at the chunk boundaries; the workers check only the AtomicBool; no residue after an interrupt (holds automatically given statelessness).
+8. **Build**: Makevars.in per the string2path pattern (vendor.tar.xz + offline + `CARGO_BUILD_JOBS=2` + cleanup); DESCRIPTION `SystemRequirements: cargo, rustc (>= 1.71)`; rust-toolchain.toml not entering the tarball; **the M0 spike produces the real vendor + xz byte counts and the rustc 1.71 build proofs**.
 
-## 3. R 包结构与 S7 类系统
+## 3. The R package structure and the S7 class system
 
-### 3.1 目录布局（模块化、预留拆包线；每 section 一份三行 README 声明允许的依赖方向）
+### 3.1 The directory layout (modular, reserving the package-split line; each section carries a three-line README declaring the allowed dependency directions)
 
-> **实现注记（U-M0-03 实测）**：R 包机制（WRE §1.1.5）只安装 `R/` 顶层 `.R` 文件——上图 `R/<section>/` 子目录不可字面落地。约定改为**平铺前缀命名** `<section>-<topic>.R`（如 `classes-variants.R`、未来的 `io-variants.R`、`catalog-tally.R`），section 归属由文件名前缀表达、加载顺序由 DESCRIPTION `Collate` 控制；各 section 的依赖方向规则由静态架构测试强制（M2 契约测试套件承接，模式同 `tools/check-dep-direction.sh` 与 `tools/docs-sync.R`）。
+> **Implementation note (the U-M0-03 real measurement)**: the R package machinery (WRE §1.1.5) installs only the top-level `.R` files of `R/` -- the `R/<section>/` sub-directories of the diagram above cannot land literally. The convention changed to **flat prefixed naming** `<section>-<topic>.R` (e.g. `classes-variants.R`, the future `io-variants.R`, `catalog-tally.R`); the section membership is expressed by the file-name prefix and the load order is controlled by the DESCRIPTION `Collate`; each section's dependency-direction rules are enforced by the static architecture tests (carried by the M2 contract test suite, the pattern same as `tools/check-dep-direction.sh` and `tools/docs-sync.R`).
 
 ```
 R/
-├── msuiter-package.R  zzz.R          # S7::methods_register()；on_load 钩子
-├── classes/                           # ★ S7 类定义（单一事实来源）
+├── msuiter-package.R  zzz.R          # S7::methods_register(); the on_load hooks
+├── classes/                           # ★ the S7 class definitions (the single source of truth)
 │   ├── variants.R  catalog.R  signature.R  fit.R  refdb.R
-│   ├── engines.R                      # MsEngine 抽象 + 具体引擎 spec 子类
-│   ├── benchmark.R  utils.R           # MsBenchmark；union 类型
-├── io/                      # 输入层（唯一接触外部格式的地方，读时校验 → MsVariants）
-│   ├── variants.R           # VCF/BCF/MAF/TSV/Xena；somaticness 校验
+│   ├── engines.R                      # the MsEngine abstract + the concrete engine spec subclasses
+│   ├── benchmark.R  utils.R           # MsBenchmark; the union types
+├── io/                      # the input layer (the only place touching the external formats, validated on read -> MsVariants)
+│   ├── variants.R           # VCF/BCF/MAF/TSV/Xena; the somaticness validation
 │   ├── segments.R  bedpe.R  genome.R
 ├── catalog/
-│   ├── channels.R           # 通道注册表（规范序标签 + 元数据，构建期与 COSMIC 文件断言一致）
-│   ├── tally.R  normalize.R # ms_tally() 泛型分发；GMM 分层/TMB 重标定
+│   ├── channels.R           # the channel-registry table (the canonical-order labels + the metadata, asserted consistent with the COSMIC files at build)
+│   ├── tally.R  normalize.R # the ms_tally() generic dispatch; the GMM stratification/TMB recalibration
 │   ├── cnv_features.R  sv_features.R
-├── engines/                 # ★ 算法动物园实现位（每引擎一文件，统一 fit_engine 接口）
+├── engines/                 # ★ the algorithm-zoo implementation site (one file per engine, the unified fit_engine interface)
 │   ├── nmf.R  ard.R  sparse.R  correlated.R  tensor.R  lda.R  supervised.R
 ├── fit/
 │   ├── fit.R  bootstrap.R  presence.R  assign.R  coda.R
-├── kselect/   select.R                # ms_select_k()：稳定性 + CV + Wilcoxon 多证据与仲裁规则
-├── qc/                                # ★ 样本 QC 一等公民层
-│   ├── sample.R  artifacts.R          # ms_qc_report()；FFPE/oxoG/amber-red 过滤器注册表
+├── kselect/   select.R                # ms_select_k(): the stability + CV + Wilcoxon multi-evidence and the adjudication rule
+├── qc/                                # ★ the sample-QC first-class layer
+│   ├── sample.R  artifacts.R          # ms_qc_report(); the FFPE/oxoG/amber-red filter registry table
 ├── refdata/
-│   ├── refdb.R  update.R              # 版本化参考库 + precedence/manifest 治理
+│   ├── refdb.R  update.R              # the versioned reference library + the precedence/manifest governance
 ├── similarity/
-│   ├── metrics.R  calibration.R       # 校准相似度库（ms_compare）：零分布 + 三匹配协议
-├── analyses/                          # 拟合后分析族
+│   ├── metrics.R  calibration.R       # the calibrated similarity library (ms_compare): the null distributions + the three matching protocols
+├── analyses/                          # the post-fitting analysis family
 │   ├── tsb.R  rta.R  lesion.R  rainfall.R  timing.R
-├── viz/                     # ggplot2 原生（CAPABILITY-MATRIX L-F 的 10 图型族）
+├── viz/                     # ggplot2 native (the 10 figure-type families of CAPABILITY-MATRIX L-F)
 │   ├── profile.R  exposure.R  similarity.R  stability.R  strand.R
 │   ├── calibration.R  mining.R  palette.R
-├── workflows/               # L4（HRD/exposure/lowcount/atlas/report；RNA v1.x 条件）
+├── workflows/               # L4 (HRD/exposure/lowcount/atlas/report; the RNA v1.x conditional)
 │   ├── hrd.R  exposure.R  lowcount.R  atlas.R  report.R
 │   ├── rna.R  therapy.R               # v1.x
-└── extendr-wrappers.R                 # rextendr 生成
+└── extendr-wrappers.R                 # rextendr-generated
 ```
 
-### 3.2 S7 类（v2.1 修订）
+### 3.2 The S7 classes (the v2.1 revision)
 
 ```r
 MsVariants  : table + genome + provenance
-              validator: 必需列/坐标合法性 + **anyNA 拒绝 + somaticness 信号**
-              （caller 与 matched-normal provenance 必填、VAF floor 选项、
-               FILTER 置信分类透传——ctDNA/CHIP 第一失败模式的防御）
-MsCatalog   : counts(channels×samples) + channels 注册表快照 + samples + provenance
-              validator: 维度一致 + 标签逐一致 + 非负 + anyNA 拒绝
+              validator: the required columns / the coordinate legality +
+              **the anyNA rejection + the somaticness signals**
+              (the caller and matched-normal provenance required, the VAF
+               floor option, the FILTER confidence-class passthrough -- the
+               defense against the first failure mode of ctDNA/CHIP)
+MsCatalog   : counts(channels×samples) + the channel-registry snapshot +
+              samples + provenance
+              validator: the dimension consistency + the label exact
+              agreement + non-negativity + the anyNA rejection
 MsSignature : signatures/exposures/stability/k_evidence/engine/seed
-              + **catalog_summary**（快照摘要：维度+通道表哈希+build，
-                 非完整 MsCatalog——防内存翻倍）
-              （v2.1：删除 .state 属性——FFI 无状态化后不存在句柄）
+              + **catalog_summary** (the snapshot summary: the dimensions +
+                 the channel-table hash + the build, not the full
+                 MsCatalog -- guarding against the memory doubling)
+              (v2.1: the .state property deleted -- after the FFI went
+                 stateless no handles exist)
 MsFit       : exposures/support/tests + **reference_summary** + engine
 MsRefDb     : matrices + metadata(version/class/build/**schema_version**/
               sha256/license/**build_independent**/availability)
-MsEngine    : 抽象 spec（name/mode/params/deterministic/packages/label）
+MsEngine    : the abstract spec (name/mode/params/deterministic/packages/label)
 MsBenchmark : results(.engine/.scenario/.metric/.estimate) + settings
 ```
 
-泛型：`ms_tally / ms_extract / ms_fit / ms_select_k / ms_fit_bootstrap / ms_test_presence / ms_benchmark / ms_compare / ms_sitrep / fit_engine / required_pkgs / ms_extract_signatures / ms_extract_exposures / ms_extract_fit_time`——**全部 `ms_` 前缀**（hardhat 命名仅作文档概念对应）；`print/format/summary/plot/knit_print` 复用注册。
+The generics: `ms_tally / ms_extract / ms_fit / ms_select_k / ms_fit_bootstrap / ms_test_presence / ms_benchmark / ms_compare / ms_sitrep / fit_engine / required_pkgs / ms_extract_signatures / ms_extract_exposures / ms_extract_fit_time` -- **all `ms_` prefixed** (the hardhat naming serves only as a documentation concept correspondence); the `print/format/summary/plot/knit_print` reuse registrations.
 
-`method` 传参定型：`ms_extract(cat, method = ms_nmf(engine = "kl", ...))` S7 对象一等公民；`method = "nmf"` 字符串糖经 `match_ms_engine()` 解析，报错时列出全部可用引擎名。
+The `method` argument settled: `ms_extract(cat, method = ms_nmf(engine = "kl", ...))` with the S7 object as a first-class citizen; the `method = "nmf"` string sugar resolves through `match_ms_engine()`, listing every available engine name on failure.
 
-### 3.3 S7 工程铁律（不变）：分发只在 API 边界；热路径无 `@<-`；批量变更 `set_props(check=FALSE)` + 一次性 validate；RDS 天然安全（无 externalptr 后完全消除重连问题）。
+### 3.3 The S7 engineering iron laws (invariant): the dispatch only at the API boundary; no `@<-` on the hot paths; the batch changes via `set_props(check=FALSE)` + one validate; the RDS naturally safe (after removing the externalptr the re-attachment problem is fully eliminated).
 
-### 3.4 引擎注册表（v2.1 增治理字段）
+### 3.4 The engine registry (v2.1 adds the governance fields)
 
-`register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`。`certified ∈ {certified, self-reported, unknown}`；`ms_benchmark()` 对 non-certified 引擎显式 warning（实现注记：告警在引擎解析点 match_ms_engine()/ms_extract()/ms_fit() 每会话每引擎一次，benchmark 过滤读取同一注册表状态）；文档声明信任边界（"注册引擎代码将以你的权限执行"）；maintainer 月度反向依赖兼容矩阵 job。扩展契约：第三方包 `.onLoad()` 注册 + `S7::methods_register()`；`vignettes/extending.Rmd` + 配套 harness。
+`register_ms_engine(name, mode, engine_class, fit_fn, packages, tags, engine_version, contract_version, certified)`. `certified ∈ {certified, self-reported, unknown}`; `ms_benchmark()` emits an explicit warning for a non-certified engine (implementation note: the warning is at the engine-resolution point match_ms_engine()/ms_extract()/ms_fit() once per session per engine, and the benchmark filter reads the same registry state); the documentation declares the trust boundary ("registering an engine's code executes with your privileges"); a monthly reverse-dependency compatibility matrix job for the maintainer. The extension contract: the third-party package registers in `.onLoad()` + `S7::methods_register()`; `vignettes/extending.Rmd` + the companion harness.
 
-### 3.5 Error & lifecycle（v2.1 新增）
+### 3.5 Error & lifecycle (new in v2.1)
 
-错误 class 规范 `msuiter_error_<topic>`（rlang abort + cnd payload + i/j/c 三段信息）；lint 禁裸 `stop()`；lifecycle：v1.0 前 `@experimental` 标注、废弃走 `lifecycle::deprecate_warn`、NEWS.md 即 changelog；`docs/ffi-surface.md` 为 per-release 评审工件（diff 进 PR 模板检查项）。
+The error class convention `msuiter_error_<topic>` (the rlang abort + the cnd payload + the i/j/c three-segment message); the lint bans the raw `stop()`; the lifecycle: the `@experimental` annotation before v1.0, the deprecation via `lifecycle::deprecate_warn`, NEWS.md being the changelog; `docs/ffi-surface.md` is a per-release review artifact (the diff entering the PR-template check item).
 
-## 4. 统一框架与算法动物园
+## 4. The unified framework and the algorithm zoo
 
-分层动物园与实现策略见 [research/07-algorithm-zoo.md](research/07-algorithm-zoo.md) §2（状态表：Rust/R/Adapt/Skip）。v2.1 修订：
-- **Catalog IR 声明修正**："lossless coarse-graining (fine→coarse) + variant-level recomputation (coarse→fine requires variants)"；ID83↔89 提供显式映射表并标注不可映射通道。
-- 相关性引擎、损伤节奏、张量、目录 IR、**校准相似度库（`ms_compare()`）** 为**框架组件**（不再冠 MSU-）；张量降为 exploratory（held-out likelihood 定秩 + Kruskal 条件检查 + 一次只加一个模式）。对应 API 名：`ms_correlated()`（相关性引擎）、`ms_tensor()`（NTF）、`ms_supervised()`（SuperSigs 系）、`ms_hdp()` / `ms_bayes()`（bench 对照位，自有实现推迟 v1.x）、`ms_damage_tempo()`（损伤节奏，v1.x）。提取引擎统一经工厂函数构造 S7 对象：`ms_nmf(engine=)` / `ms_ard()` / `ms_sparse()` / `ms_lda()`；输入侧另有 `ms_segments()`（allele-specific CN 段）与 `ms_sv()`（SV 调用）+ `ms_simulate()`（目录模拟器，benchmark 与测试共用）——**全部经注册表，与 `ms_extract()`/`ms_fit()` 同接口**。
+The layered zoo and the implementation strategy are in [research/07-algorithm-zoo.md](research/07-algorithm-zoo.md) §2 (the status table: Rust/R/Adapt/Skip). The v2.1 revisions:
+- **The Catalog IR declaration corrected**: "lossless coarse-graining (fine→coarse) + variant-level recomputation (coarse→fine requires variants)"; ID83↔89 provides the explicit mapping table annotating the unmappable channels.
+- The correlation engine, the damage tempo, the tensor, the catalog IR, **the calibrated similarity library (`ms_compare()`)** are **framework components** (no longer prefixed MSU-); the tensor reduced to exploratory (the rank fixed by the held-out likelihood + the Kruskal condition check + adding only one pattern at a time). The corresponding API names: `ms_correlated()` (the correlation engine), `ms_tensor()` (NTF), `ms_supervised()` (the SuperSigs lineage), `ms_hdp()` / `ms_bayes()` (the bench-comparison slots, the native implementations deferred to v1.x), `ms_damage_tempo()` (the damage tempo, v1.x). The extraction engines are uniformly constructed as S7 objects via the factory functions: `ms_nmf(engine=)` / `ms_ard()` / `ms_sparse()` / `ms_lda()`; the input side adds `ms_segments()` (the allele-specific CN segments) and `ms_sv()` (the SV calls) + `ms_simulate()` (the catalog simulator, shared by the benchmark and the tests) -- **all through the registry table, the same interface as `ms_extract()`/`ms_fit()`**.
 
-## 5. 方法体系（v2.1 收缩为三命名方法 + 组件）
+## 5. The method system (v2.1 contracted to three named methods + components)
 
-**默认路径（D16）**：`ms_extract(method = NULL)` 默认 = 共识-CV 提取流水线；`ms_fit(method = NULL)` 默认 = MSU-Fit（nnls 起步 + `ms_test_presence()` 报告）；低计数上下文自动建议 MSU-LowCount；关联分析默认 MSU-Infer。主流算法全部经注册表一行可换（D15 对等原则）——**默认即自研校准统计，换引擎仅为方法学对比服务**。完整功能空间（识别/定量/可视化/工作流/挖掘及全部子能力）见 [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md)——该矩阵是平台完备性的权威检查表，随里程碑更新。
+**The default path (D16)**: the `ms_extract(method = NULL)` default = the consensus-CV extraction pipeline; the `ms_fit(method = NULL)` default = MSU-Fit (starting with nnls + the `ms_test_presence()` report); the low-count context automatically suggests MSU-LowCount; the association analysis defaults to MSU-Infer. The mainstream algorithms all swap in one line through the registry table (the D15 parity principle) -- **the default is the self-developed calibrated statistics; swapping the engine serves only the methodological comparison**. The complete capability space (the identification/quantification/visualization/workflows/mining and all the sub-capabilities) is in [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) -- that matrix is the authoritative completeness checklist of the platform, updated with the milestones.
 
 
-### 命名方法（论文 abstract 层）
-| 方法 | 内容 | 精确声明（D13 纪律） |
+### The named methods (the paper abstract layer)
+| Method | Content | The precise claim (the D13 discipline) |
 |---|---|---|
-| **MSU-Fit** | 似然稀疏拟合（ϵ 阈值 + χ²₁ LRT 双模式）+ 背景签名策略 + connected 组配置 + bootstrap CI + CI 清零 + 校准实验面（`ms_calibration_grid()` 覆盖率网格 / `ms_calibration_verdict()` 判据窗 / `plot_calibration_curve()` 曲线图 / `ms_calibration_sanity()` 真实数据降采样 sanity harness，协议 inst/sanity/README.md——sanity 永不写成 calibration 证据） | 声明："**首个对 exposure 区间做经验覆盖率测量并全网格报告的推断层**"。estimand 三层：①presence = χ² LRT（逐样本 Self–Liang 边界渐近 + cohort 池化时精确 Binomial(½) 混合 χ² 零分布——U-M3a-03 审计修正，n≥2 时 χ²₁ 参照统计无效）；②magnitude = **支撑条件下的绝对 exposure**（另报成分版）；③清零 = 决策规则，单独测复合流程覆盖率。校准：多项与 NB（Jiang 色散）**双生成模型**，coverage 按 N × Shannon 熵成曲线；BCa 或分层 calibrated-percentile；真实数据 sanity = 高 TMB 降采样覆盖检验；Fisher 区间仅内点支撑（"boundary parameters get tests, not intervals"）。退化语义注记：全 replicates 清零次要签名时 CI 退化为样本 total（清零+重标度的诚实退化，非数值噪声） |
-| **MSU-LowCount** | panel/ctDNA 低计数 refit：NB 似然 + 稀疏先验 + 显式残差通道 + conformal 区间 | 声明："**per-TMB-stratum conformal intervals（Mondrian by N bin，studentized score）with empirical coverage verified on stratified simulations and retrospective real panel data**"。明示 exchangeability 只在 bin 内成立、模拟保真的敏感性曲线随包发布 |
-| **MSU-Infer** | DM/logistic-normal 混合模型差丰（复现 Morrill 2025 → 扩展）+ CoDA 检验 + 生存/纵向 + 不确定性传播（多重插补协议） | 声明："首个覆盖**生存/病例对照/纵向**的统一暴露关联框架（组间差丰的 DM 混合模型已有 Morrill 2025，我们复现并扩展）"；扩展清单显式含 structural zeros / hurdle |
+| **MSU-Fit** | the likelihood sparsified fitting (the ϵ threshold + the χ²₁ LRT dual mode) + the background-signature policy + the connected-group configuration + the bootstrap CI + the CI zeroing + the calibration experiment faces (the `ms_calibration_grid()` coverage grid / the `ms_calibration_verdict()` verdict window / the `plot_calibration_curve()` curve plot / the `ms_calibration_sanity()` real-data downsampling sanity harness, the protocol in inst/sanity/README.md -- sanity is never written as calibration evidence) | The claim: "**the first inference layer that measures the empirical coverage of exposure intervals and reports it over the full grid**". The estimand three layers: ① presence = the χ² LRT (per-sample the Self–Liang boundary asymptotic + when pooled across the cohort the exact Binomial(½)-mixture χ² null distribution -- the U-M3a-03 audit correction, the χ²₁ reference statistic invalid for n≥2); ② magnitude = **the absolute exposure under the support condition** (the component version also reported); ③ zeroing = a decision rule, the compound-procedure coverage measured separately. The calibration: the multinomial and NB (the Jiang color scatter) **dual generative models**, the coverage turned into curves over N × the Shannon entropy; BCa or the layered calibrated-percentile; the real-data sanity = the high-TMB downsampling coverage test; the Fisher intervals only at the interior support ("boundary parameters get tests, not intervals"). The degeneration-semantics note: when all the replicates zero a minor signature the CI degenerates to the sample total (the honest degeneration of zeroing+rescaling, not numerical noise) |
+| **MSU-LowCount** | the panel/ctDNA low-count refit: the NB likelihood + the sparse prior + the explicit residual channel + the conformal intervals | The claim: "**per-TMB-stratum conformal intervals (Mondrian by N bin, studentized score) with empirical coverage verified on stratified simulations and retrospective real panel data**". Explicitly the exchangeability holds only within a bin; the simulation-fidelity sensitivity curves published with the package |
+| **MSU-Infer** | the DM/logistic-normal mixture-model differential abundance (reproducing Morrill 2025 → extended) + the CoDA test + the survival/longitudinal + the uncertainty propagation (the multiple-imputation protocol) | The claim: "the first exposure-association framework covering **survival/case-control/longitudinal** (the DM mixture model for between-group differential abundance already exists in Morrill 2025, we reproduce and extend it)"; the extension list explicitly including the structural zeros / the hurdle |
 
-### 框架组件（论文 Methods 层）
-- **共识-CV 提取流水线**（`ms_extract` 默认）：GMM **分层**（`ms_stratify_hypermutants`：分类+排除 de novo+强制 refit，非"归一化"）→ 多初始化 KL-MM ensemble → Hungarian 共识（unmatched 显式 split/merge 语义）→ **默认 K 仲裁规则**（SUITOR argmin → 稳定性 veto → Wilcoxon 仅诊断；meta-rule 在全网格上评估）→ NNLS refit。Delta 叙事：确定性（含线程不变性）+ 证据表透明 + Rust 加速"使校准统计学买得起"。
-- **相关性引擎**（correlated.rs）：**预注册可证伪声明**——Wu 2022 网格 r∈{0.8,0.9,0.95} 的 exposure L1 上须同时击败 (i) 重标定目录 plain KL-NMF (ii) 纯 MvNMF (iii) 原版 Cornet (iv) 相关性感知 refit，达显著幅度；只报告 gauge-fixed 量（h/W/重构，禁解读嵌入向量）；m<K 经 held-out likelihood 选择、K 扫描时固定 m；体积正则与嵌入为分离 ablation 轴；Cornet 10–40× 重标定 = 引擎内部超参（sweep {1,10,40,100}，平坦签名低估为守护指标，de-rescale 恢复绝对 exposure，禁用于 NMF 路径）；五模态降为 SBS+DBS 演示直至被证明。
-- **损伤节奏分析**（v1.x）、**NTF 张量引擎**（exploratory，v1.x）、**目录 IR**（§4 修正语义）、**校准相似度库**（`ms_compare()`，M4：零分布校准 + Hungarian/Islam/Jiang 三匹配协议）。
+### The framework components (the paper Methods layer)
+- **The consensus-CV extraction pipeline** (the `ms_extract` default): the GMM **stratification** (`ms_stratify_hypermutants`: classification + de novo exclusion + forced refit, not "normalization") → the multi-initialization KL-MM ensemble → the Hungarian consensus (the explicit split/merge semantics for unmatched) → **the default K adjudication rule** (SUITOR argmin → the stability veto → the Wilcoxon diagnostic-only; the meta-rule evaluated over the full grid) → the NNLS refit. The Delta narrative: deterministic (incl. the thread invariance) + a transparent evidence table + the Rust acceleration "making calibrated statistics affordable".
+- **The correlation engine** (correlated.rs): **the pre-registered falsifiable claim** -- over the Wu 2022 grid r∈{0.8,0.9,0.95} the exposure L1 must simultaneously defeat (i) the recalibrated-catalog plain KL-NMF (ii) the pure MvNMF (iii) the original Cornet (iv) the correlation-aware refit, by a significant margin; reporting only the gauge-fixed quantities (h/W/reconstruction; interpreting the embedded vectors forbidden); m<K selected through the held-out likelihood, with m fixed while scanning K; the volume regularization and the embedding are separated ablation axes; the Cornet 10–40× recalibration = an engine-internal hyperparameter (sweep {1,10,40,100}, the flat-signature underestimate a guard metric, the absolute exposure restored by the de-rescale, forbidden on the NMF path); the five modalities reduced to the SBS+DBS demonstration until proven.
+- **The damage-tempo analysis** (v1.x), the **NTF tensor engine** (exploratory, v1.x), the **catalog IR** (the §4 corrected semantics), **the calibrated similarity library** (`ms_compare()`, M4: the null-distribution calibration + the Hungarian/Islam/Jiang three matching protocols).
 
-平台功能全空间（含 QC 层、可视化 10 图型族、应用工作流与可视化挖掘、"没想到的"清单）以 [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) 为权威检查表，随里程碑更新。
+The platform capability full space (incl. the QC layer, the 10 visualization figure-type families, the application workflows and visual mining, the "you might not have thought of" list) is authoritative in [CAPABILITY-MATRIX.md](CAPABILITY-MATRIX.md) as the completeness checklist, updated with the milestones.
 
-## 6. 数据与标准（v2.1 修订）
+## 6. Data and standards (the v2.1 revision)
 
-1. **通道注册表**：单一事实来源（data-raw 生成 R CSV + Rust 常量 + 构建期断言）。
-2. **参考库治理**：
-   - **v1 只捆绑人类 SBS/DBS/ID**（GRCh37/GRCh38 SBS/DBS + GRCh37 ID；对齐 CRAN 5MB 指导线）；CN/SV/RNA-SBS/鼠鼠经 `ms_update_refdb()` 缓存获取。
-   - **缺失 build = `build_independent: true` 声明**（ID/CN/SV/RNA-SBS 通道标签与签名矩阵 build 无关——relabel 而非 derived），查询时如实提示"该 build 无官方参考集，最接近的是 YY"。
-   - **precedence**：分析永远 pin 在对象 provenance 记录的具体版本；默认 bundled 优先、cache 仅显式要求；`schema_version` 高于包支持即 stop（前向拒绝）。
-   - **完整性**：更新钉 commit SHA + 构建时烧录 manifest（lib-sums.tsv 模式）+ fail-closed；更新路径测试全 fixture 化（检查期零联网）。
-3. **基因组卫生**：contig 白名单（primary assembly）、性别机会校正、逐样本机会向量选项（CN segments + callable BED 进 MsCatalog）、chrM 显式路由、T2T 兼容（twobit 层天然支持）；**exome/panel 机会归一参考集**为一等公民（WES refit 用 WGS 参考会系统性偏置平坦签名）。
-4. **报告检查单**：provenance（目录版本、build、通道序、方法+版本、**种子流布局**、软件版本、线程数[承诺不影响结果]）。
+1. **The channel-registry table**: the single source of truth (data-raw generating the R CSV + the Rust constants + the build-time assertions).
+2. **The reference-library governance**:
+   - **v1 bundles human SBS/DBS/ID only** (GRCh37/GRCh38 SBS/DBS + GRCh37 ID; aligned with the CRAN 5MB guidance line); CN/SV/RNA-SBS/mouse obtained via the `ms_update_refdb()` cache.
+   - **A missing build = the `build_independent: true` declaration** (the ID/CN/SV/RNA-SBS channel labels and the signature matrices are build-independent -- a relabel rather than derived); queried honestly as "no official reference set for this build, the closest is YY".
+   - **precedence**: an analysis is always pinned to the specific version recorded in the object's provenance; the default bundled-first, the cache only on the explicit request; a `schema_version` above what the package supports stops (the forward rejection).
+   - **Integrity**: the update pins the commit SHA + burns a manifest at build (the lib-sums.tsv pattern) + fail-closed; the update-path tests fully fixture-ized (zero network during checks).
+3. **Genome hygiene**: the contig whitelist (the primary assembly), the sex-chromosome opportunity correction, the per-sample opportunity-vector option (the CN segments + the callable BED into MsCatalog), the explicit chrM routing, T2T compatibility (natively supported at the twobit layer); **the exome/panel opportunity-normalized reference sets** are first-class citizens (refitting a WES against a WGS reference systematically biases the flat signatures).
+4. **The report checklist**: the provenance (the catalog version, the build, the channel order, the method + version, the **seed-stream layout**, the software version, the thread count [promised not to affect the result]).
 
-## 7. 算法科学契约（v2.1 重写）
+## 7. The algorithmic science contracts (the v2.1 rewrite)
 
-1. **双层验收**（D11）：**语义逐位**（硬验收，整数/标签 golden）：SPMG ID83 与 MNV/complex 路由、DBS Q-flag、CN48/SV32 标签、Koh ID89 映射（v1.x）、SUITOR fold 按序取模与条件均值填补语义、HRDetect 系数、Macintyre/Drews 特征、Islam/Jiang/Medo **指标协议步骤**；**数值协议等价**（固定种子+容差）：KL-MU vs R NMF brunet（固定平台一次性实验，`‖ΔW‖/‖W‖<1e-10`，不进 CI 门）、MuSiCal bidirectional 数值轨迹、共识聚类统计量。
-2. **目录完备性契约**：输入事件类路由表（SNV/DBS/MNV2-5/MNV>5/complex indel/double indel → 各自去向），skip ledger 入 provenance；拆分 VCF 相邻记录重连算法规范与失败模式；MNV-相邻与 complex golden fixtures。
-3. **统计契约**（D13）：§5 表格的 estimand/生成模型/校准协议即契约；任何新统计声明进 §5 前必须先给出四件套。
-4. **零伪计数政策**：目录层无 +ε；数值防护只进除法。
-5. GPL 来源只从论文公式重实现（不变）。
+1. **The two-tier acceptance** (D11): **bit-for-bit semantics** (the hard acceptance, the integers/labels golden): the SPMG ID83 and the MNV/complex routing, the DBS Q-flag, the CN48/SV32 labels, the Koh ID89 mapping (v1.x), the SUITOR fold in-order modulo and the conditional-mean imputation semantics, the HRDetect coefficients, the Macintyre/Drews features, the Islam/Jiang/Medo **metric-protocol steps**; **numerical-protocol equivalence** (the fixed seed + the tolerance): the KL-MU vs R NMF brunet (the fixed-platform one-off experiment, `‖ΔW‖/‖W‖<1e-10`, not a CI gate), the MuSiCal bidirectional numerical trajectory, the consensus-clustering statistics.
+2. **The catalog-completeness contract**: the input-event-class routing table (SNV/DBS/MNV2-5/MNV>5/complex indel/double indel → each one's destination), the skip ledger into the provenance; the split-VCF adjacent-record re-join algorithm specification and its failure modes; the MNV-adjacent and complex golden fixtures.
+3. **The statistical contracts** (D13): the estimand/generative-model/calibration-protocol of the §5 table are the contract; any new statistical claim must supply the four-piece kit before entering §5.
+4. **The zero pseudo-count policy**: no +ε at the catalog layer; the numerical protection enters only the division.
+5. The GPL sources re-implemented from the paper formulas only (unchanged).
 
-## 8. 性能与 benchmark（v2.1 升级）
+## 8. Performance and benchmark (the v2.1 upgrade)
 
-**场景网格（升级）**：TMB 10²–10⁶ × 签名数 1–20 × 相关性 {0, 0.5, 0.8, 0.95} × **平坦签名组内 r=0.8 + 稀有签名共存（联合）** × purity {1.0, 0.7, 0.4, 0.2} × caller 轴（≥2 SNV + ≥2 indel caller）× 平台 WGS/WES/panel（机会归一）× 参考误设 + **目录外签名 cell** × **超突变臂（5–10% 样本 TMB 100×，APOBEC/POLE P/R 对 cutoff 敏感性）** × 亚克隆 exposure 结构 × **类别专属计数区间（SV 10–10³、CN segments 10–10⁴）**。
+**The scenario grid (upgraded)**: the TMB 10²–10⁶ × the signature count 1–20 × the correlation {0, 0.5, 0.8, 0.95} × **the flat-signature within-group r=0.8 + the rare-signature coexistence (joint)** × the purity {1.0, 0.7, 0.4, 0.2} × the caller axis (≥2 SNV + ≥2 indel callers) × the platform WGS/WES/panel (the opportunity normalized) × the reference mis-set + **the out-of-catalog signature cell** × **the hypermutator arms (5–10% of samples TMB 100×, the APOBEC/POLE P/R pair cutoff sensitivity)** × the subclonal exposure structure × **the category-specific count ranges (SV 10–10³, CN segments 10–10⁴)**.
 
-**三层场景隔离**：校准场景 / 模型选择场景 / 评估场景使用不同生成器（SigProfilerSimulator / SynSig / PCAWG 锚定真实混合）；协议发表前冻结随包发布。
+**The three-layer scenario isolation**: the calibration scenarios / the model-selection scenarios / the evaluation scenarios use different generators (SigProfilerSimulator / SynSig / the PCAWG-anchored real mixtures); the protocol frozen before publication and published with the package.
 
-**指标**：**主指标 = Hungarian 一对一匹配**的 P/R/F1（贪心 max-cosine + 阈值扫 0.80–0.90 为鲁棒性附录；分裂行为显式惩罚/dedup 统计）；exposure L1/cosine（absolute 与 compositional 口径与各引擎 estimand 一致）；缺席签名误分配质量；运行时/内存。Jiang Combined Score 与 Islam 协议逐位复刻（语义层 golden）。
+**The metrics**: **the primary metric = the P/R/F1 of the Hungarian one-to-one matching** (the greedy max-cosine + the threshold sweep 0.80–0.90 as the robustness appendix; the split behavior explicitly penalized / the dedup statistics); the exposure L1/cosine (the absolute and compositional calibers consistent with each engine's estimand); the mis-allocation mass onto the absent signatures; the runtime/memory. The Jiang Combined Score and the Islam protocol replicated bit-for-bit (the semantics layer golden).
 
-**性能预算（验收在钉硬件 bench，CI 只放 sanity bound）**：
-| 内核 | 基线 | 目标 |
+**The performance budgets (the acceptance at the hardware-pinned bench; the CI carries only a sanity bound)**:
+| Kernel | Baseline | Target |
 |---|---|---|
-| 目录生成 SBS96（10⁶ 突变） | SPMG | ≥50× 且 <5 s 单核 |
-| NMF KL（96×1000, k=10, 100 iter） | R NMF / rust-NMF | ≥100× R NMF；rust-NMF 对齐（容差） |
-| 批量 NNLS（101×10³） | scipy nnls 逐样本 | ≥10× |
-| 全样本拟合 | SPA ~0.21 s/样本 | 对齐或更优 |
-| bootstrap（10³×10³） | sigminer 串行 | ≥100× |
+| the catalog generation SBS96 (10⁶ mutations) | SPMG | ≥50× and <5 s single core |
+| NMF KL (96×1000, k=10, 100 iter) | R NMF / rust-NMF | ≥100× R NMF; the rust-NMF alignment (tolerance) |
+| the batch NNLS (101×10³) | scipy nnls per sample | ≥10× |
+| the all-sample fitting | SPA ~0.21 s/sample | aligned or better |
+| bootstrap (10³×10³) | sigminer serial | ≥100× |
 
-**G0 先导覆盖实验（kill-criterion 门，先于一切论文叙事）**：2 个竞品工具 × TMB 网格的名义 vs 实际覆盖率——结果决定 headline 走 Framing A（校准统计）还是 Framing B（生态）。
+**The G0 leading coverage experiment (the kill-criterion gate, before any paper narrative)**: the nominal vs actual coverage of 2 competing tools × the TMB grid -- the outcome decides whether the headline runs Framing A (calibrated statistics) or Framing B (the ecosystem).
 
-## 9. TDD 与 CI（v2.1 补全）
+## 9. TDD and CI (the v2.1 completion)
 
-- Rust：通道算术 property/golden（含 MNV 路由）；KL 单调性与 ε 行为；NNLS KKT + 病态 Gram（pivot LDLᵀ）；Hungarian 暴力对拍；RNG 跨版本 golden（固定 seed → 固定前 N 个 u64）；**线程不变性 identical() 测试**；相关引擎低相关退化测试。
-- R：S7 构造校验（坏标签/维度/NA 必抛错，错误 class 断言）；目录 vs sigminer/MP 玩具交叉验证；提取端到端（cosine>0.95）；拟合 vs quadprog/nnls（容差）；bootstrap 种子确定性 + **跨线程数一致性**；refdb precedence/schema 拒绝/manifest 校验（fixture 化更新路径）；错误路径测试（condition 而非崩溃，会话可继续）。
-- CI：3 OS × {release, oldrel, **R-4.3（Linux）**, devel（允许失败）}；rcmdcheck --as-cran + cargo test/clippy/deny（ban 规则）/audit；**valgrind + ASAN/UBSAN scheduled job**；基准门 = sanity bound；codecov（R≥85%，Rust 报告不设门）；docs-sync 检查（ROADMAP `ms_*` ↔ ARCH/R 布局对照，drift 即红）；rhub/win-builder 预提交。
+- Rust: the channel-arithmetic property/golden (incl. the MNV routing); the KL monotonicity and the ε behavior; the NNLS KKT + the ill-conditioned Gram (the pivot LDLᵀ); the Hungarian brute-force cross-check; the RNG cross-version golden (a fixed seed → the fixed first N u64); the **thread-invariance identical() tests**; the correlation-engine low-correlation degeneration tests.
+- R: the S7 construction validation (a bad label/dimension/NA must throw, the error class asserted); the catalog vs sigminer/MP toy cross-validation; the extraction end-to-end (cosine>0.95); the fitting vs quadprog/nnls (tolerance); the bootstrap seed determinism + **the cross-thread-count consistency**; the refdb precedence/schema rejection/manifest validation (the fixture-ized update path); the error-path tests (a condition rather than a crash, the session continuable).
+- CI: 3 OS × {release, oldrel, **R-4.3 (Linux)**, devel (allowed to fail)}; rcmdcheck --as-cran + cargo test/clippy/deny (the ban rules)/audit; the **valgrind + ASAN/UBSAN scheduled job**; the benchmark gate = the sanity bound; codecov (R≥85%, the Rust reported without a gate); the docs-sync check (the ROADMAP `ms_*` ↔ ARCH/R layout cross-check, the drift goes red); rhub/win-builder before submission.
 
-## 10. 论文定位（D14）
+## 10. The paper positioning (D14)
 
-- **Headline（Framing A）**："Calibrated inference of mutational signature exposures"——领域 exposure 区间从未被验证校准；MSU-Fit/LowCount/Infer 提供第一套完整推断层；Rust 性能使校准统计学在 cohort 规模分钟级可行（"fast *so that* statistical honesty is affordable"）。Target：Nature Methods（冲刺）/ Nat Commun（现实落点）。
-- **支撑（Framing B）**：五模态统一生态 + 语义逐位兼容 + 版本化参考库。Target：Genome Biology 保底。
-- **案例升级三路径**（需队列合作，G 门）：治疗记录 concordance / RNA-only 队列 / 低计数 panel 诊断级检出（MUTYH/MSI 模式）。
-- **Kill criteria**（触发即 pivot，见 reviews/05 §9）：先导实验证伪、Cornet 正式发表压制、M3b 前无队列合作、竞品发布校准 CI、滑期 >100%、无 co-maintainer。
+- **The headline (Framing A)**: "Calibrated inference of mutational signature exposures" -- the domain's exposure intervals have never been validated for calibration; MSU-Fit/LowCount/Infer provide the first complete inference layer; the Rust performance makes the calibrated statistics feasible in minutes at cohort scale ("fast *so that* statistical honesty is affordable"). Target: Nature Methods (the sprint) / Nat Commun (the realistic landing).
+- **The support (Framing B)**: the five-modality unified ecosystem + the bit-for-bit semantics compatibility + the versioned reference library. Target: the Genome Biology floor.
+- **The case-study upgrade's three paths** (needing the cohort collaboration, the G gate): the treatment-record concordance / the RNA-only cohort / the low-count panel diagnostic-grade detection (the MUTYH/MSI pattern).
+- **The kill criteria** (pivot upon triggering, see reviews/05 §9): the leading experiment refuting, the Cornet formal publication suppressing, no cohort collaboration before M3b, a competitor publishing calibrated CIs, the schedule slipping >100%, no co-maintainer.
 
-## 11. 风险登记（v2.1 增补）
+## 11. The risk register (the v2.1 additions)
 
-| 风险 | 缓解 |
+| Risk | Mitigation |
 |---|---|
-| rand 生态 RNG 跨版本漂移 | 自研 PCG64 + 流布局文档化 + 跨版本 golden（D6/A6） |
-| 线程数改变数值结果 | 单元间并行 + 固定归约 + identical() CI 测试（A7） |
-| "逐位"验收与 clean-room 对撞 | 双层术语（D11）；R NMF 对拍为一次性平台实验 |
-| 统计声明被统计学评审击穿 | D13 四件套前置 + G0 先导实验 + 统计学 co-author（组织行动项） |
-| Cornet 正式发表压制相关性组件 | 预注册可证伪声明 + 组件化降级（A4）+ 季度竞争复核（**2026-09-28 事件已发生**：bioRxiv 2026.09.14.751548；复核结论 = 策略维持、kill 未触发，见 devlog G3 复核；威胁面升级：Park 组 + MuSiCal，G0 升为 Framing A 关键路径） |
-| vendor 体积超限 | M0 spike 定数 + 依赖收缩（去 rand）+ faer 默认关 |
-| CRAN 2 线程/fork | per-call 池 + option 双读 + Makevars -j2 + BiocParallel 兼容文档 |
-| refdb 双源漂移 | precedence + schema_version + manifest + fixture 测试（A13） |
-| 时间线 fantasy | 双轨 v0.1/v0.2/v1.0 + Non-goals 硬性化（ROADMAP v3） |
-| bus factor | co-maintainer 前置到 M1s（组织行动项） |
+| the rand-ecosystem RNG drifting across versions | the self-developed PCG64 + the documented stream layout + the cross-version golden (D6/A6) |
+| the thread count changing the numerical result | the parallelism between the units + the fixed reduction + the identical() CI test (A7) |
+| the "bit-for-bit" acceptance clashing with clean-room | the two-tier terminology (D11); the R NMF cross-check as a one-off platform experiment |
+| a statistical claim pierced by a statistical reviewer | the D13 four-piece kit upfront + the G0 leading experiment + a statistics co-author (an organizational action item) |
+| the Cornet formal publication suppressing the correlation component | the pre-registered falsifiable claim + the componentization downgrade (A4) + the quarterly competitive review (**the 2026-09-28 event already occurred**: bioRxiv 2026.09.14.751548; the review conclusion = the strategy maintained, the kill not triggered, see the devlog G3 review; the threat surface escalated: the Park group + MuSiCal, G0 promoted to a key path for Framing A) |
+| the vendor size exceeding the limit | the M0 spike settling the numbers + the dependency contraction (dropping rand) + faer defaulted off |
+| the CRAN 2-thread/fork | the per-call pool + the option double-read + Makevars -j2 + the BiocParallel compatibility documentation |
+| the refdb dual-source drift | the precedence + schema_version + the manifest + the fixture tests (A13) |
+| the timeline fantasy | the dual-track v0.1/v0.2/v1.0 + the hardened Non-goals (ROADMAP v3) |
+| the bus factor | the co-maintainer pulled forward to M1s (an organizational action item) |
