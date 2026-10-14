@@ -417,28 +417,28 @@ fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
             fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7],
         );
         let ctx = |e: String| format!("cases manifest row {line_no}: {e}");
-        let init = Init::parse(init).map_err(&ctx)?;
+        let init = Init::parse(init).map_err(ctx)?;
         let seed = if seed.is_empty() {
             None
         } else {
-            Some(parse_u64("seed", seed).map_err(&ctx)?)
+            Some(parse_u64("seed", seed).map_err(ctx)?)
         };
         let replicate = if replicate.is_empty() {
             0
         } else {
-            parse_u64("replicate", replicate).map_err(&ctx)?
+            parse_u64("replicate", replicate).map_err(ctx)?
         };
         if init != Init::Seeded && replicate != 0 {
             return Err(ctx("replicate requires init=seeded".to_string()));
         }
-        validate_init_args(init, seed).map_err(&ctx)?;
+        validate_init_args(init, seed).map_err(ctx)?;
         let full = Case {
             in_dir: root.join(case),
             out_dir: out_root.join(case).join("out"),
-            m: parse_usize("m", m_s).map_err(&ctx)?,
-            n: parse_usize("n", n_s).map_err(&ctx)?,
-            k: parse_usize("k", k_s).map_err(&ctx)?,
-            iters: parse_usize("iters", iters_s).map_err(&ctx)?,
+            m: parse_usize("m", m_s).map_err(ctx)?,
+            n: parse_usize("n", n_s).map_err(ctx)?,
+            k: parse_usize("k", k_s).map_err(ctx)?,
+            iters: parse_usize("iters", iters_s).map_err(ctx)?,
             init,
             seed,
             replicate,
