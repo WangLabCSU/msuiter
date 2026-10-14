@@ -58,6 +58,7 @@ Collate:
     'ms-downsample.R'
     'io-catalog.R'
     'ms-qc-report.R'
+    'ms-qc-sentries.R'
     'ms-convert.R'
     'hrd-reference.R'
     'hrd-report.R'

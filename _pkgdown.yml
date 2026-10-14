@@ -125,9 +125,15 @@ reference:
   - ms_simulate
   - ms_test_presence
 - title: QC and reporting
-  desc: The QC report and the HRD report faces.
+  desc: The QC report, its sibling sentries surfaces and the HRD report faces.
   contents:
   - ms_qc_report
+  - ms_qc_burden
+  - ms_qc_sentries
+  - ms_qc_mechanism_channels
+  - ms_qc_artifact_roster
+  - ms_qc_roster_share
+  - ms_qc_provenance
   - ms_hrd_report
 - title: The benchmark-matrix driver
   desc: The scenario constructor and the driving loop (the naming ruling is in the 2026-10-10 decision record of docs/devlog).
