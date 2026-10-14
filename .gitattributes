@@ -18,3 +18,12 @@ inst/reference/** -text
 # shares the same hazard family. Pin the whole fixtures tree to raw bytes,
 # same discipline as the refdb pins above.
 tests/testthat/fixtures/** -text
+
+# Byte-pinned one-shot gate evidence ------------------------------------------------
+# tools/kl-gate-p1/result.md and data/outputs/ are the machine-written
+# attestation audited by test-kernel-gate-evidence.R (anchored row regexes
+# `^|...` and byte-comparisons against the kernel-cli goldens). The same
+# core.autocrlf=true CRLF-rewrite hazard as the fixtures above (PR #26
+# law): an unpinned Windows checkout would inject per-line \r and turn a
+# green record mechanically red. Pin the whole tool dir to raw bytes.
+tools/kl-gate-p1/** -text
