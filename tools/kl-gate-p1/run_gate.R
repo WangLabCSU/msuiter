@@ -31,6 +31,12 @@ suppressMessages(library(NMF))
 
 options(stringsAsFactors = FALSE, digits = 17, scipen = 12)
 
+# Local null-default shim: dev scripts may run under R builds without the
+# base operator (`%||%` is base-only from R 4.4.0; package floor is 4.3.0).
+# Same one-line shim as the house precedent tools/kl-crosscheck/run_experiment.R
+# (`%||%` definition at its L39); the call sites below stay untouched.
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
 args <- commandArgs(trailingOnly = TRUE)
 TOOL_DIR <- if (length(args) >= 1) normalizePath(args[1]) else
   normalizePath(dirname(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = 1))))
