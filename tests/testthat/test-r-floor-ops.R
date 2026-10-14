@@ -50,7 +50,10 @@
 test_that("package and test sources stay free of above-floor base operators", {
   rdir <- testthat::test_path("../../R")
   if (!dir.exists(rdir)) {
-    skip("package sources not in scope (R CMD check tarball context)")
+    # Wording note: the skip must speak the sanctioned ledger vocabulary of
+    # tools/check-layout-sim.R (SANCTIONED_ENDS "(R CMD check context)") --
+    # an unlisted skip reason is an UNAUTHORIZED_SKIP and fails the sim.
+    skip("package sources not available (R CMD check context)")
   }
   hits <- c(
     .ms_floor_census(rdir),
