@@ -228,3 +228,19 @@ test_that("row order of the input does not change the reported scores", {
   expect_identical(.hrd_row(df1, "S1", "ploh_fraction"),
     .hrd_row(df2, "S1", "ploh_fraction"))
 })
+
+# --- print method --------------------------------------------------------------
+
+test_that("print renders the header with the caller label and the null default", {
+  rep1 <- msuiter::ms_hrd_report(.ms_hrd_ok_segments(), genome = "GRCh37",
+    caller = "ascat", assay = "wgs", chr_size = .HRD_TEST_CHR_SIZE)
+  out <- paste(capture.output(print(rep1)), collapse = "\n")
+  expect_match(out, "<msuiter HRD report>")
+  expect_match(out, "genome=GRCh37  caller=ascat  assay=wgs")
+  # S3 print must also tolerate a hand-built report without a caller: the
+  # null-default branch of the header line (floor-safe since the hygiene fix).
+  bare <- list(rows = data.frame(), genome = "GRCh37", caller = NULL, assay = "wgs")
+  class(bare) <- "MsHrdReport"
+  out2 <- paste(capture.output(print(bare)), collapse = "\n")
+  expect_match(out2, "caller=\\(none\\)")
+})

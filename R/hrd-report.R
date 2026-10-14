@@ -351,7 +351,7 @@ print.MsHrdReport <- function(x, ...) {
   rows <- x$rows
   cat("<msuiter HRD report>\n")
   cat(sprintf("  genome=%s  caller=%s  assay=%s\n", x$genome,
-              x$caller %||% "(none)", x$assay))
+              if (is.null(x$caller)) "(none)" else x$caller, x$assay))
   cat(sprintf("  samples=%d\n", nrow(rows)))
   if (nrow(rows)) {
     print(rows, row.names = FALSE)

@@ -45,6 +45,11 @@ docs/site/
 /bench/**/__pycache__/
 /tools/kl-crosscheck/driver/target/
 
+# Dev-tool Python bytecode caches (tools/*.py helpers, once imported, emit
+# __pycache__ next to their sources; pytest would emit .pytest_cache)
+/tools/**/__pycache__/
+/tools/**/.pytest_cache/
+
 # P5 catalog-currency: the derived cache (source payloads + record) is a
 # local, re-derivable artifact -- only the committed sidecar is versioned
 /bench/catalog-currency/cache/

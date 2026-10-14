@@ -113,24 +113,16 @@ test_that("scenario-level generation failure isolates per engine", {
   testthat::local_mocked_bindings(
     ms_simulate = function(signatures, exposures, arm = "multinomial",
                            size = 8, burden = 1000, seed = 1) {
-      if (ncol(exposures) > 0 && sum(exposures) < 0) stop("never")
-      if (identical(colnames(exposures), NULL) || TRUE) {
-        # Fail only for the SECOND scenario (doomed): the driver's
-        # scenario loop order follows the grid names.
-      }
-      # Distinguish by burden: doomed shares the same 3000; distinguish
-      # by call count instead.
-      count <- count %||% 0
-      return(invisible(NULL))
+      # Honest contract for this unit: generation fails for EVERY scenario
+      # and the driver still completes, tagging each cell cell_error. The
+      # mock used to fail by accident on an undefined-counter line
+      # (`count %||% 0` -- version-dependent error, dead trailing return);
+      # the failure is now explicit and R-version-independent, cf. the
+      # floor law in test-r-floor-ops.R.
+      stop("mocked generation failure (cell-error isolation proof)")
     },
     .package = "msuiter"
   )
-  # The counting closure above cannot distinguish scenarios without
-  # state; assert the REAL isolation semantics through a direct failing
-  # simulate for the doomed burden instead: burden 3000 with k_active=2
-  # is valid, so mock by ncol of exposures -- both are 2. Simplest
-  # honest test: make ms_simulate fail for EVERY scenario and assert
-  # all cells carry cell_error while the run completes.
   bm <- ms_run_benchmark(grid, engines = list(nmf = ms_nmf()), seed = 1)
   expect_true(all(bm@results$.metric == "cell_error"))
   expect_identical(nrow(bm@results), 2L) # 1 per engine per scenario
