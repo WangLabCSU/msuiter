@@ -5,6 +5,7 @@ A new development cycle since v0.1.0.
 ## M6s · HRD workflow
 
 * `ms_hrd_report()`: HRD reporting surface -- dual-gate design with bit-exact SigMiner ground-truth replication and composite scoring, delivered TDD end-to-end (U-M6s-01, commit 2fc7e04, PR #6; R/hrd-report.R, R/hrd-reference.R; phase gate docs/ROADMAP.md:93).
+* `print.MsHrdReport()` floor fix: the header line's null default used `%||%`, a base operator only from R 4.4.0 while the declared floor is R >= 4.3.0 -- a latent "could not find function" abort on the 4.3 arm; replaced by an explicit `if (is.null(...))` idiom with a print-method smoke unit covering the null-default branch (commit 982b493; R/hrd-report.R, tests/testthat/test-hrd-report.R).
 
 ## M7 · Benchmark completeness
 
@@ -23,6 +24,7 @@ A new development cycle since v0.1.0.
 ## M8 · Release engineering
 
 * Release-engineering batch: all third-party GitHub Actions pinned to full commit SHAs with the human tag kept in the trailing comment (annotated-tag pins re-derived to the peeled commit, peel-verified), .git/.pytest_cache excluded from R CMD build tarballs, and an SDKROOT self-discovery fallback for the check-layout-sim provisioning INSTALL (commit 2c1431f, PR #17; tools/action_pins.py, tools/check-layout-sim.R, .Rbuildignore).
+* R-floor hygiene pass: a static census gate rejects package/test source use of base operators introduced above the declared R floor (the host R has them, so only a source scan can gate it; registry is one line per operator, first entry `%||%` from 4.4.0), the P1 KL gate runner gained the house-precedent local `%||%` shim, and Python bytecode caches under tools/** are gitignored (commits 926eede, 18ff2c6, 980aa7d; tests/testthat/test-r-floor-ops.R, tools/kl-gate-p1/run_gate.R, .gitignore; the driver-mock hardening rides commit 982b493).
 
 ## P5 · Catalog currency (sigminer v3 parity)
 
