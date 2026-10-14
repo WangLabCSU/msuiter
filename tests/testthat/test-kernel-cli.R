@@ -53,7 +53,7 @@
     stop("msuiter-kernel build failed:\n", paste(build, collapse = "\n"))
   }
   exe <- paste0("msuiter-kernel",
-    if (identical(Sys.info[["sysname"]], "Windows_NT")) ".exe" else "")
+    if (identical(Sys.info()[["sysname"]], "Windows_NT")) ".exe" else "")
   bin <- file.path(target, "debug", exe)
   if (!file.exists(bin)) stop("built binary not found at ", bin)
   .kernel_bin_env$bin <- bin
@@ -79,6 +79,10 @@
        stdout = paste(res, collapse = "\n"),
        stderr = paste(readLines(errf, warn = FALSE), collapse = "\n"))
 }
+
+# Full-file raw bytes for byte-identity comparisons (house readBin
+# convention: explicit "raw" + size).
+.kernel_bytes <- function(p) readBin(p, "raw", file.info(p)$size)
 
 # ---------------------------------------------------------------------------
 # Committed synthetic case (kl-crosscheck case1; all input CSVs tracked).
@@ -108,8 +112,8 @@ test_that("external-init fit reproduces the committed byte-pinned goldens", {
   expect_identical(out$status, 0L)
   # Byte-for-byte against the pinned goldens (raw bytes, -text tree).
   for (f in c("W.csv", "H.csv", "trace.csv", "meta.csv")) {
-    got <- readBin(file.path(outdir, f))
-    want <- readBin(file.path(gold, f))
+    got <- .kernel_bytes(file.path(outdir, f))
+    want <- .kernel_bytes(file.path(gold, f))
     expect_identical(got, want, info = f)
   }
 })
@@ -127,8 +131,8 @@ test_that("two runs of the same case are byte-identical (boundary determinism)",
     expect_identical(out$status, 0L)
   }
   for (f in c("W.csv", "H.csv", "trace.csv", "meta.csv")) {
-    expect_identical(readBin(file.path(dirs[1], f)),
-                     readBin(file.path(dirs[2], f)), info = f)
+    expect_identical(.kernel_bytes(file.path(dirs[1], f)),
+                     .kernel_bytes(file.path(dirs[2], f)), info = f)
   }
 })
 

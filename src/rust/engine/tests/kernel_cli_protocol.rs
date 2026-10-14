@@ -114,7 +114,7 @@ fn write_matrix(dir: &Path, name: &str, xs: &[f64], cols: usize) {
 }
 
 fn read_matrix(dir: &Path, name: &str) -> Vec<f64> {
-    let text = fs::read_to_string(&dir.join(name)).expect("read output");
+    let text = fs::read_to_string(dir.join(name)).expect("read output");
     text.lines()
         .filter(|l| !l.trim().is_empty())
         .flat_map(|l| l.split(','))
@@ -123,7 +123,7 @@ fn read_matrix(dir: &Path, name: &str) -> Vec<f64> {
 }
 
 fn read_text(dir: &Path, name: &str) -> String {
-    fs::read_to_string(&dir.join(name)).expect("read output")
+    fs::read_to_string(dir.join(name)).expect("read output")
 }
 
 // The shared small problem: 6×5, k=2, 12 iterations. Values avoid any
@@ -206,7 +206,7 @@ fn rerun_is_byte_identical() {
         assert_eq!(out.status, 0, "stderr: {}", out.stderr);
         let mut one = Vec::new();
         for name in ["W.csv", "H.csv", "trace.csv", "meta.csv"] {
-            one.push(fs::read(&out_dir.join(name)).expect("read artifact"));
+            one.push(fs::read(out_dir.join(name)).expect("read artifact"));
         }
         bytes.push(one);
     }
@@ -297,7 +297,9 @@ fn batch_mode_equals_single_case_runs() {
 
     fs::write(
         root.path().join("cases.csv"),
-        "case,init,seed,replicate,iters\ncaseA,external,,,12\ncaseB,seeded,42,1,12\n",
+        "case,init,seed,replicate,iters,m,n,k\n\
+         caseA,external,,,12,6,5,2\n\
+         caseB,seeded,42,1,12,6,5,2\n",
     )
     .expect("manifest");
 

@@ -1,0 +1,15 @@
+protocol,1
+command,fit-kl
+init,nndsvda
+seed,20261014
+replicate,na
+m,96
+n,20
+k,3
+iters,60
+iterations,60
+trace_len,61
+obj_init,3.38850453560417925e5
+obj_final,1.19068304447916606e0
+eps,1e-12
+engine_crate,engine: pure numeric kernels, FFI-free

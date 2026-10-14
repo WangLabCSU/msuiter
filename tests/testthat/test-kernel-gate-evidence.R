@@ -43,7 +43,7 @@ test_that("P1 bit-equivalence gate result.md carries a green verdict", {
   rows <- grep("^\\|[[:space:]]*case[0-9]+", res, value = TRUE)
   expect_gte(length(rows), 6L) # >= 2 endpoints x 3 cases
   for (row in rows) {
-    cells <- trimwhitespace(strsplit(row, "|", fixed = TRUE)[[1L]])
+    cells <- trimws(strsplit(row, "|", fixed = TRUE)[[1L]])
     cells <- cells[nzchar(cells)]
     expect_gte(length(cells), 5L)
     tval <- suppressWarnings(as.integer(cells[[2L]]))

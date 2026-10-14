@@ -1,0 +1,15 @@
+protocol,1
+command,fit-kl
+init,external
+seed,na
+replicate,na
+m,96
+n,20
+k,3
+iters,50
+iterations,50
+trace_len,51
+obj_init,3.38525194162586704e4
+obj_final,6.55693165906139438e3
+eps,1e-12
+engine_crate,engine: pure numeric kernels, FFI-free

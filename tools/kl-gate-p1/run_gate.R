@@ -89,7 +89,7 @@ if (!identical(attr(build, "status") %||% 0L, 0L)) {
 }
 TARGET <- file.path(dirname(MANIFEST), "target")
 BIN <- file.path(TARGET, "debug",
-  paste0(KERNEL, if (identical(Sys.info[["sysname"]], "Windows_NT")) ".exe" else ""))
+  paste0(KERNEL, if (identical(Sys.info()[["sysname"]], "Windows_NT")) ".exe" else ""))
 if (!file.exists(BIN)) stop("built binary missing: ", BIN)
 
 KERNEL_VERSION <- paste(system2(BIN, "--version", stdout = TRUE), collapse = " ")
@@ -122,6 +122,9 @@ read_meta <- function(dir) {
 
 rel_frob <- function(A, B) sqrt(sum((A - B)^2)) / sqrt(sum(B^2))
 
+# Full-file raw bytes for byte-identity probes (house readBin convention).
+.bytes <- function(p) readBin(p, "raw", file.info(p)$size)
+
 # -----------------------------------------------------------------------------
 # Mechanism probes (gate-validity preconditions, kl-crosscheck discipline)
 # -----------------------------------------------------------------------------
@@ -141,7 +144,7 @@ say(" - injection fidelity (--iters 0 returns the seeded W0/H0 exactly): ", prob
 da <- kernel_fit("case1", 5L, tag = "probe_det_a")
 db <- kernel_fit("case1", 5L, tag = "probe_det_b")
 probe_det <- all(vapply(c("W.csv", "H.csv", "trace.csv", "meta.csv"), function(f)
-  identical(readBin(file.path(da, f)), readBin(file.path(db, f)))))
+  identical(.bytes(file.path(da, f)), .bytes(file.path(db, f))), logical(1)))
 say(" - rerun determinism (two independent invocations byte-identical): ", probe_det)
 
 # P3 prefix property: the T=200 checkpoint at t=50 equals the T=50 run.
@@ -157,16 +160,16 @@ say(" - prefix property (T50 run == T200 checkpoint 50, file bytes): ", probe_pr
 cases_dir <- file.path(OUT_DIR, "batch")
 dir.create(cases_dir, recursive = TRUE, showWarnings = FALSE)
 manifest <- file.path(cases_dir, "cases.csv")
-writeLines(c("case,init,seed,replicate,iters",
-             "case2,external,,,200"), manifest)
+writeLines(c("case,init,seed,replicate,iters,m,n,k",
+             "case2,external,,,200,96,20,3"), manifest)
 rb <- system2(BIN, c("fit-kl", "--cases", manifest, "--root", IN_DIR,
   "--out-root", cases_dir), stdout = TRUE, stderr = TRUE)
 if (!identical(attr(rb, "status") %||% 0L, 0L)) {
   stop("batch mode failed:\n", paste(rb, collapse = "\n"))
 }
 single200 <- kernel_fit("case2", 200L, tag = "case2_T200")
-probe_batch <- identical(readBin(file.path(cases_dir, "case2", "out", "W.csv")),
-                         readBin(file.path(single200, "W.csv")))
+probe_batch <- identical(.bytes(file.path(cases_dir, "case2", "out", "W.csv")),
+                        .bytes(file.path(single200, "W.csv")))
 say(" - batch mode == single-case invocation (case2 W bytes): ", probe_batch)
 
 if (!all(probe_inj, probe_det, probe_pre, probe_batch)) {
@@ -225,7 +228,7 @@ dn2 <- kernel_fit("case1", 60L, tag = "probe_g2_b",
 Wn <- read_matrix_csv(file.path(dn1, "W.csv"))
 Hn <- read_matrix_csv(file.path(dn1, "H.csv"))
 g2_pos <- all(Wn > 0) && all(Hn > 0)
-g2_det <- identical(readBin(file.path(dn1, "W.csv")), readBin(file.path(dn2, "W.csv")))
+g2_det <- identical(.bytes(file.path(dn1, "W.csv")), .bytes(file.path(dn2, "W.csv")))
 say(" - NNDSVDa strict positivity: ", g2_pos,
     " | rerun determinism: ", g2_det)
 if (!g2_pos || !g2_det) stop("G2 companion arm failed")
