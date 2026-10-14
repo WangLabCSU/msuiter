@@ -36,6 +36,18 @@
   nzchar(tool) && !is.na(tool)
 }
 
+# Exit status of a system2/system result: the "status" attribute is absent
+# on success. The base null-default operator %||% exists only from R 4.4.0
+# and this file's floor is the package floor R >= 4.3 (DESCRIPTION
+# Depends), where the lookup fails outright -- R CMD check forensics,
+# run 38509332600, ubuntu-latest/R 4.3 arm: `could not find function
+# "%||%"`. Floor-safe extraction lives here once, used by all three
+# invocation helpers.
+.kernel_status <- function(res) {
+  st <- attr(res, "status")
+  if (is.null(st)) 0L else as.integer(st)
+}
+
 # Build (once per test-file session) and locate the stable batch entry.
 .kernel_bin_env <- new.env(parent = emptyenv())
 .kernel_bin <- function() {
@@ -51,13 +63,27 @@
       "--target-dir", target, "--package", "msuiter-engine",
       "--bin", "msuiter-kernel"),
     stdout = TRUE, stderr = TRUE)
-  if (!identical(attr(build, "status") %||% 0L, 0L)) {
+  if (!identical(.kernel_status(build), 0L)) {
     stop("msuiter-kernel build failed:\n", paste(build, collapse = "\n"))
   }
-  exe <- paste0("msuiter-kernel",
-    if (identical(Sys.info()[["sysname"]], "Windows_NT")) ".exe" else "")
-  bin <- file.path(target, "debug", exe)
-  if (!file.exists(bin)) stop("built binary not found at ", bin)
+  # Locate the built executable without platform-name assumptions: cargo
+  # emits exactly one of msuiter-kernel / msuiter-kernel.exe per target
+  # OS, so probing the filesystem beats branching on any OS-identity
+  # string. (String branching failed both ways here: Sys.info()'s
+  # "sysname" is not "Windows_NT" -- that value is R.version$os, which is
+  # what the original code compared, so windows arms looked for the
+  # suffix-less name; and both .Platform$os.type and R.version$os.type
+  # measured NULL on the unix runners (mac R 4.5.2), so no OS-string form
+  # is falsifiable on every platform while file-existence probing is.
+  # Forensics: run 38509332600, both windows arms: "built binary not
+  # found at ...msuiter-kernel".)
+  cands <- file.path(target, "debug",
+    paste0("msuiter-kernel", c(".exe", "")))
+  hit <- cands[file.exists(cands)]
+  if (!length(hit)) {
+    stop("built binary not found under ", file.path(target, "debug"))
+  }
+  bin <- hit[[1L]]
   .kernel_bin_env$bin <- bin
   bin
 }
@@ -65,7 +91,7 @@
 .kernel_cli <- function(args) {
   bin <- .kernel_bin()
   res <- suppressWarnings(system2(bin, args, stdout = TRUE, stderr = TRUE))
-  list(status = attr(res, "status") %||% 0L,
+  list(status = .kernel_status(res),
        stdout = paste(res, collapse = "\n"),
        stderr = "")
 }
@@ -77,7 +103,7 @@
   errf <- tempfile("kernel-cli-stderr")
   res <- suppressWarnings(system2(bin, args, stdout = TRUE,
     stderr = errf))
-  list(status = attr(res, "status") %||% 0L,
+  list(status = .kernel_status(res),
        stdout = paste(res, collapse = "\n"),
        stderr = paste(readLines(errf, warn = FALSE), collapse = "\n"))
 }
