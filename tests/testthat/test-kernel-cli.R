@@ -4,10 +4,12 @@
 # The Rust integration suite tests/kernel_cli_protocol.rs pins the protocol
 # against the in-process kernel; this file proves the same binary from the
 # R/CI perspective: it builds through the package toolchain, speaks the
-# frozen protocol=1 handshake, reproduces committed byte-pinned goldens for
-# the committed synthetic case1 inputs (tools/kl-crosscheck/data/inputs --
+# frozen protocol=1 handshake, reproduces the committed goldens for the
+# committed synthetic case1 inputs (tools/kl-crosscheck/data/inputs --
 # SYNTHETIC fixtures, seeds on the record there; D3: no COSMIC numerics
-# involved), reruns byte-identically, and fails structured.
+# involved) -- factor matrices byte-for-byte, the objective column at the
+# documented cross-libm tolerance -- reruns byte-identically, and fails
+# structured.
 #
 # Repository-only by nature (the binary builds from src/rust sources):
 # gated on .ms_root locatable + cargo present, never on an accidental
@@ -84,6 +86,15 @@
 # convention: explicit "raw" + size).
 .kernel_bytes <- function(p) readBin(p, "raw", file.info(p)$size)
 
+# Cross-platform tolerance for the objective column of the committed
+# goldens. The factor surfaces are bit-stable (asserted byte-for-byte); the
+# objective accumulates a long transcendental chain and its trailing digits
+# move at ulp scale between libm instances. Measured cross-ISA ceiling
+# 4.02e-10 (x86_64 container vs arm64 lane, t=142; PR #27 forensics
+# 2026-10-14); 1e-8 keeps a 20x safety margin while staying three orders
+# below any signal this gate could plausibly miss.
+.OBJ_RTOL <- 1e-8
+
 # ---------------------------------------------------------------------------
 # Committed synthetic case (kl-crosscheck case1; all input CSVs tracked).
 # ---------------------------------------------------------------------------
@@ -98,7 +109,7 @@ test_that("msuiter-kernel announces the frozen protocol=1 handshake", {
   expect_match(out$stdout, "kl_eps=1e-12")
 })
 
-test_that("external-init fit reproduces the committed byte-pinned goldens", {
+test_that("external-init fit reproduces the committed goldens (bit-stable factors, tol objective)", {
   indir <- .case1()
   gold  <- .kernel_repo(file.path("tests", "testthat", "fixtures",
     "kernel-cli", "golden_case1_T200"))
@@ -110,11 +121,36 @@ test_that("external-init fit reproduces the committed byte-pinned goldens", {
     "--m", "96", "--n", "20", "--k", "3", "--iters", "200"))
   on.exit(unlink(outdir, recursive = TRUE))
   expect_identical(out$status, 0L)
-  # Byte-for-byte against the pinned goldens (raw bytes, -text tree).
-  for (f in c("W.csv", "H.csv", "trace.csv", "meta.csv")) {
+  # The factor surfaces are bit-stable across platforms: byte-for-byte
+  # against the pinned goldens (raw bytes, -text tree). Cross-ISA verified:
+  # x86_64 (ubuntu 24.04 container, rustc 1.75 debug) reproduces the
+  # arm64 lane outputs bit-identically (PR #27 guards forensics 2026-10-14).
+  for (f in c("W.csv", "H.csv")) {
     got <- .kernel_bytes(file.path(outdir, f))
     want <- .kernel_bytes(file.path(gold, f))
     expect_identical(got, want, info = f)
+  }
+  # The objective column accumulates a long transcendental chain, so its
+  # last digits legitimately drift at ulp scale between libm instances
+  # (measured cross-ISA max relative deviation 4.02e-10 at t=142; the
+  # iteration count and t column stay exact). Contract: exact structure,
+  # tolerance on the numerics -- intra-platform bit-identity is pinned
+  # separately by the determinism test below.
+  gt <- read.csv(file.path(gold, "trace.csv"))
+  ot <- read.csv(file.path(outdir, "trace.csv"))
+  expect_identical(ot$t, gt$t)
+  expect_true(max(abs(ot$objective / gt$objective - 1)) < .OBJ_RTOL,
+               info = "trace objective")
+  gm <- read.csv(file.path(gold, "meta.csv"), header = FALSE, row.names = 1L,
+                 check.names = FALSE, stringsAsFactors = FALSE)
+  om <- read.csv(file.path(outdir, "meta.csv"), header = FALSE, row.names = 1L,
+                 check.names = FALSE, stringsAsFactors = FALSE)
+  expect_identical(sort(rownames(om)), sort(rownames(gm)))
+  desc <- setdiff(rownames(gm), c("obj_init", "obj_final"))
+  expect_identical(om[desc, , drop = FALSE], gm[desc, , drop = FALSE])
+  for (k in c("obj_init", "obj_final")) {
+    expect_true(abs(as.numeric(om[k, 1L]) / as.numeric(gm[k, 1L]) - 1) <
+                  .OBJ_RTOL, info = k)
   }
 })
 
