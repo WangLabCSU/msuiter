@@ -208,6 +208,24 @@ readDcfText <- function(path) {
   one
 }
 
+## Fail-fast identity gate on the provided bytes (belt) -- the tail assert
+## re-checks the NAMESPACE hash post-install from the bytes the resolver
+## carried (braces). Neither substitutes for the other.
+{
+  .rdesc <- readDcfText(file.path(TREE, "DESCRIPTION"))
+  .pkg <- .rdesc[["Package"]] %||% "(none)"
+  .ver <- .rdesc[["Version"]] %||% "(none)"
+  if (!identical(.pkg, "sigminer"))
+    stop(sprintf("install_sigminer_arm.R: --tree DESCRIPTION Package is %s, want sigminer", .pkg))
+  if (!identical(.ver, EXPECTED_VERSION))
+    stop(sprintf("install_sigminer_arm.R: --tree DESCRIPTION Version is %s, want the pre-registered %s",
+                 .ver, EXPECTED_VERSION))
+  .ns_now <- sha256File(file.path(TREE, "NAMESPACE"))
+  if (!identical(.ns_now, NS_EXPECT))
+    stop(sprintf("install_sigminer_arm.R: tree NAMESPACE hash %s is not the pre-registered %s",
+                 .ns_now, NS_EXPECT))
+}
+
 ## ---------------------------------------------------------------- version cmp
 ## This base R's compareVersion() is string-oriented (splits on [.-]).
 cmp <- function(a, b) {
