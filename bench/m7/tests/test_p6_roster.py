@@ -82,9 +82,9 @@ def test_registry_carries_every_p6_row_pre_flip_safe():
         row = reg[name]
         assert row.status in ("pending-verify", "ready"), f"{name}: {row.status}"
         assert row.version == FROZEN_VERSIONS[name], f"{name}: row version drift"
-        assert row.provenance.get("tree_sha") == FROZEN_TREES[name], (
-            f"{name}: row provenance does not echo the frozen tree")
-        assert row.provenance.get("face") == spec["face"], f"{name}: face not in provenance"
+        assert row.tree_sha == FROZEN_TREES[name], (
+            f"{name}: row tree_sha does not echo the frozen tree")
+        assert row.face == spec["face"], f"{name}: face column does not echo the roster"
         if row.status == "ready":
             assert HEX64.match(row.image_digest or ""), (
                 f"{name}: a READY row must carry an inspect-attested 71-char digest, "

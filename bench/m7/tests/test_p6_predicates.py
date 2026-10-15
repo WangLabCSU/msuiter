@@ -126,7 +126,7 @@ def test_tp_only_regression_passes_within_tolerance():
     base = [_cell_row("sigminer", "main", 100, tp=90, fp=10, fn=10)]
     arm = [_cell_row("sigminer_post_v3", "main", 100, tp=89, fp=12, fn=11)]
     v = p6_predicates.tp_only_regression_verdict(
-        base, arm, {"sigminer_post_v3": _classes()}, tol=TOL)
+        base, arm, {"sigminer_post_v3": [("main", 100)]}, tol=TOL)
     assert v["verdict"] == "PASS", v
 
 
@@ -134,10 +134,21 @@ def test_tp_only_regression_fails_below_tolerance():
     base = [_cell_row("sigminer", "main", 100, tp=90, fp=10, fn=10)]
     arm = [_cell_row("sigminer_post_v3", "main", 100, tp=80, fp=20, fn=20)]
     v = p6_predicates.tp_only_regression_verdict(
-        base, arm, {"sigminer_post_v3": _classes()}, tol=TOL)
+        base, arm, {"sigminer_post_v3": [("main", 100)]}, tol=TOL)
     assert v["verdict"] == "FAIL", v
     bad = [c for c in v["cells"] if not c["passed"]]
     assert bad and bad[0]["arm"] == "main", "failing class named per cell"
+
+
+def test_tp_only_refuses_classes_it_has_no_baseline_for():
+    """No data, no claim: declaring a class the baseline CSV does not cover is
+    a REFUSE, never a quiet skip (the same law the parity predicate obeys)."""
+    base = [_cell_row("sigminer", "main", 100, tp=90, fp=10, fn=10)]
+    arm = [_cell_row("sigminer_post_v3", "main", 100, tp=89, fp=12, fn=11)]
+    v = p6_predicates.tp_only_regression_verdict(
+        base, arm, {"sigminer_post_v3": _classes()}, tol=TOL)
+    assert v["verdict"] == "REFUSE", v["verdict"]
+    assert any("baseline class rows absent" in w for w in v["why"]), v["why"]
 
 
 def test_judgment_flips_are_counted_from_the_matched_set():

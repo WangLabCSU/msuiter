@@ -24,7 +24,13 @@ if str(HERE) not in sys.path:
 
 from competitors import docker_cmd, registry                  # noqa: E402  (RED seam)
 
-EXPECTED_NAMES = {"sigminer", "sigprofiler", "signal"}
+EXPECTED_NAMES = {"sigminer", "sigprofiler", "signal",
+                  # P6 evidence-loop arms (pre-registration SS1 roster; minted
+                  # from competitors.p6_arms — the six keys are data, their
+                  # frozen SHAs are policed by test_p6_roster):
+                  "sigminer_pre_v3", "sigminer_post_p1",
+                  "sigminer_post_p1_rust", "sigminer_post_p2",
+                  "sigminer_post_v3", "sigminer_post_v3_rust"}
 VALID_STATUSES = {"ready", "pending-verify"}
 
 # RB-05(6) flip witnesses 2026-10-09, data-only. The single authorized

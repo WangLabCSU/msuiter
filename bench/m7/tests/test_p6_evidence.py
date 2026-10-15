@@ -19,7 +19,7 @@ All fixtures are synthetic tmp trees — CI-safe, no docker.
 
 from __future__ import annotations
 
-import contextlib
+import tempfile
 import dataclasses
 import json
 import sys
@@ -93,7 +93,7 @@ def test_cell_provenance_requires_matching_digest_and_stamp():
     spec = dataclasses.replace(registry.lookup("sigminer_post_v3"),
                                status="ready",
                                image_digest="sha256:" + "a" * 64)
-    with contextlib.TemporaryDirectory() as td:
+    with tempfile.TemporaryDirectory() as td:
         cachedir = Path(td)
         good = _row()
         cell_dir = cachedir / "cells" / good["cell"] / "out"

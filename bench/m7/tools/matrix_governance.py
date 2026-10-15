@@ -60,18 +60,15 @@ def class_by_n(stamps, n: int) -> list[str]:
 # -- (2) pre-flight co-tenant refusal ---------------------------------------------
 def measurement_images() -> tuple[str, ...]:
     """Image refs that count as OURS: every READY competitor image in the
-    registry. A non-measurement container (test scaffolding) must never
-    trip the assert."""
+    registry (P6 arms join the census the moment their digests flip — a
+    pending row has no attested image to census). A non-measurement container
+    (test scaffolding) must never trip the assert."""
     from competitors import registry
     refs = []
-    for name in ("sigminer", "sigprofiler"):
-        try:
-            ref = registry.lookup(name).image_ref
-        except ValueError:
-            continue
-        if ref:
-            refs.append(ref)
-    return tuple(refs)
+    for spec in registry.load().values():
+        if getattr(spec, "status", None) == "ready" and spec.image_ref:
+            refs.append(spec.image_ref)
+    return tuple(sorted(set(refs)))
 
 
 def measurement_process_count(ps_rows) -> int:

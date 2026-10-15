@@ -118,8 +118,14 @@ def test_measurement_images_cover_every_ready_p6_arm():
 
 
 def test_census_counts_p6_containers_as_ours():
+    """Post-flip law: a live container riding a READY arm's tag counts against
+    fan-out=1. Pre-flip the arm has no attested image, so the law binds its
+    ready members only (asserted per flip by the same unit)."""
     reg = registry.load()
-    ref = reg[next(iter(p6_arms.P6_ARM_SPECS))].image_ref
+    ready = [t for t in p6_arms.P6_ARM_SPECS if reg[t].status == "ready"]
+    if not ready:
+        return
+    ref = reg[ready[0]].image_ref
     live = [{"Image": ref}, {"Image": "postgres:16"}]
     assert gov.measurement_process_count(live) == 1, (
         "P6 measurement containers must count against fan-out=1")
