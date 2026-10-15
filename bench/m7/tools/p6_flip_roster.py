@@ -105,6 +105,7 @@ def verify_green() -> int:
     """The roster mirror units must echo GREEN over the flipped bytes. The
     house collector is vars()/test_-prefixed (run_all takes no argv), so the
     module runs in-process exactly the way the suite's dispatcher does."""
+    import importlib
     import importlib.util as u
     importlib.invalidate_caches()
     spec = u.spec_from_file_location("tests.test_p6_roster",

@@ -54,10 +54,16 @@ def _block(tool: str) -> dict:
 
 
 def _temp_roster(tmp: Path) -> tuple[object, Path]:
-    """An isolated copy of the committed roster bytes, redirected in-module."""
+    """An isolated copy of the committed roster bytes, redirected in-module.
+    The copy is normalised to the pre-flip starting shape -- whatever the
+    committed roster carries today, the fixture attestations must own the
+    flip the units observe, never collide with drifted real digests."""
     mod = _load_flip()
     dst = tmp / "p6_arms_copy.py"
     shutil.copy2(mod.ROSTER, dst)
+    body = "\n".join(ln for ln in dst.read_text(encoding="utf-8").splitlines()
+                     if '"image_digest":' not in ln) + "\n"
+    dst.write_text(body, encoding="utf-8")
     mod.ROSTER = dst
     return mod, dst
 
@@ -172,6 +178,16 @@ def test_flip_is_idempotent_and_refuses_digest_conflict():
         clash = {t: dict(b, image_digest=_fixture_digest("clash" + t))
                  for t, b in blocks.items()}
         assert mod.flip(clash, dry=False) == 2             # refuses to guess
+
+
+def test_verify_green_runs_after_a_flip():
+    """verify_green() is the flip's post-write gate -- it must reach rc 0
+    in-process. The first live write crashed it with a NameError: the
+    body imported importlib.util under an alias only, while its cache
+    invalidation speaks the package name."""
+    mod = _load_flip()
+    rc = mod.verify_green()
+    assert rc == 0, f"the roster mirror units are not green over the roster bytes: rc={rc}"
 
 
 if __name__ == "__main__":
