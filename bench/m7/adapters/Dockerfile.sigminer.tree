@@ -150,6 +150,17 @@ RUN python3 -c 'import json,sys; p=json.load(open("/work/arm_pin.json")); want={
       "$TOOL" "$FACE" "$TREE_SHA" "$EXPECTED_VERSION" "$NS_SHA256"
 
 COPY mini_cell/ /work/mini/in/
+# The witness audits the cell-surface set IN /work (self_witness_arm.sh,
+# byte-frozen, tests -s /work/install_sigminer_arm.R): the resolver layer
+# consumes the /tmp copy, the trust guard requires the /work copy to exist
+# and carry the same committed bytes. Recorded bake death #4 (2026-10-15):
+# the first two bakes died silently at layer 26 -- set -e over a test -s of
+# a path this file never materialized. Placed late so the resolver strata
+# keep their build-cache lineage.
+COPY install_sigminer_arm.R /work/install_sigminer_arm.R
+RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
+      "a6f3180a81e70e70ea8ed0fa66f84f2804df674ceb617678052fd88c28f6dca9" \
+    || (echo "[FATAL] /work copy of install_sigminer_arm.R diverges from the committed fork" >&2; exit 1)
 COPY self_witness_arm.sh /tmp/self_witness_arm.sh
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
       "8c0d5d186af43bd2b7361be3db7552604834e67e134f61515cc7ccf4a177d8a4" \
