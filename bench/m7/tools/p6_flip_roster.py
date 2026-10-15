@@ -68,7 +68,7 @@ def flip(blocks: dict[str, dict], *, dry: bool) -> int:
         anchor = (f'        "version": "{spec["version"]}", '
                   f'"face": "{spec["face"]}",\n')
         seg_start = text.index(f'    "{tool}": {{')
-        seg_end = text.index("\n    }}", seg_start)
+        seg_end = text.index("\n    }", seg_start)
         seg = text[seg_start:seg_end]
         if '"image_digest"' in seg:
             have = re.search(r'"image_digest": "([^"]+)"', seg).group(1)

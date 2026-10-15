@@ -107,6 +107,11 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
   (AE) test_p6_mini_fixture    the arm-image witness fixture (death #7):
       the #13 attested r0 row survives verbatim, twenty N100-faithful
       aligned samples regenerate byte-exactly from the committed rule
+  (AF) test_p6_flip            the roster-flip tool: [ATTESTED] blocks parse
+      last-wins and a malformed digest dies (rc 2), dry-run is byte-sterile
+      on the committed roster, the digest lands directly under the face line
+      of exactly its own arm, a re-run is idempotent and a digest conflict
+      refuses
 """
 
 from __future__ import annotations
@@ -156,7 +161,8 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # P6 evidence loop (sigminer v3 release-attestation table):
            "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
            "test_p6_evidence", "test_p6_floor_governance",
-           "test_p6_yardstick", "test_p6_mini_fixture"]
+           "test_p6_yardstick", "test_p6_mini_fixture",
+           "test_p6_flip"]
 
 
 def _collect(mod_name):
