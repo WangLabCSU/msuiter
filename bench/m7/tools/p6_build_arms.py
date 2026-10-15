@@ -46,9 +46,13 @@ SIGMINER_GT = Path("/Users/wsx/Documents/GitHub/sigminer")
 MSUITER_SRC = HERE.parent.parent                      # the msuiter repo root
 MSUITER_SOURCE_SHA = "dbef3a77dce3f7b2bb9405895c426dd6342167c6"
 
-# The build-input files every context carries, in COPY-name order.
+# The build-input files every context carries, in COPY-name order. The
+# mini_cell/ fixture dir is a COPY source too (the self-witness's stage2 bytes)
+# -- omitting it is a solve-time "/mini_cell: not found", the first bake's
+# recorded death.
 FLAT_INPUTS = ("install_sigminer_arm.R", "run_sigminer_arm.R", "m7_entry.py",
                "self_witness_arm.sh", "Dockerfile.sigminer.tree")
+TREE_INPUT = "mini_cell"
 
 
 def _run(argv: list[str], cwd: Path | None = None,
@@ -110,6 +114,11 @@ def assemble(tool: str, scratch: Path) -> tuple[Path, Path]:
             sys.stderr.write(f"[FATAL] missing build input {src}\n")
             raise SystemExit(2)
         shutil.copy2(src, ctx / name)
+    fixtures = ADAPTERS / TREE_INPUT
+    if not (fixtures / "counts.csv").is_file():
+        sys.stderr.write(f"[FATAL] missing mini_cell fixtures under {fixtures}\n")
+        raise SystemExit(2)
+    shutil.copytree(fixtures, ctx / TREE_INPUT)
     pin = ADAPTERS / "arm_pins" / f"{tool}.json"
     if not pin.is_file():
         sys.stderr.write(f"[FATAL] missing committed arm pin {pin} -- "
