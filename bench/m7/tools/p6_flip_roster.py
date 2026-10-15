@@ -7,7 +7,7 @@ tools/p6_build_arms.py captured those bytes into each arm's build log as an
 ``"image_digest": "..."`` key into the roster spec, anchored on the face line
 (each edit asserts a unique anchor). There is no code path by which a
 hand-typed 71-char digest reaches the roster: pass --tool without a finished
-build and it refuses; a repo_digest string that is not 7+64 hex is refused.
+build and it refuses; an image_digest string that is not 7+64 hex is refused.
 
 After the edit it re-runs the roster group's mirror units via the same
 in-process collector the suite uses -- the flip is admissible only in a
@@ -47,9 +47,9 @@ def attested(scratch: Path) -> dict[str, dict]:
             latest = json.loads(m.group(1))          # last block wins (reruns)
         if latest is None:
             continue
-        if not DIGEST_OK.match(latest.get("repo_digest", "")):
-            sys.stderr.write(f"[FATAL] {log.name}: repo_digest is not "
-                             f"sha256+64hex: {latest.get('repo_digest')!r}\n")
+        if not DIGEST_OK.match(latest.get("image_digest", "")):
+            sys.stderr.write(f"[FATAL] {log.name}: image_digest is not "
+                             f"sha256+64hex: {latest.get('image_digest')!r}\n")
             raise SystemExit(2)
         out[latest["tool"]] = latest
     return out
@@ -72,19 +72,19 @@ def flip(blocks: dict[str, dict], *, dry: bool) -> int:
         seg = text[seg_start:seg_end]
         if '"image_digest"' in seg:
             have = re.search(r'"image_digest": "([^"]+)"', seg).group(1)
-            if have == blk["repo_digest"]:
+            if have == blk["image_digest"]:
                 print(f"OK    {tool} already flipped to {have[:18]}...")
                 continue
             sys.stderr.write(f"[FATAL] {tool}: roster carries {have!r}, the "
-                             f"build log attests {blk['repo_digest']!r} -- "
+                             f"build log attests {blk['image_digest']!r} -- "
                              f"refusing to guess which is real\n")
             return 2
         assert seg.count(anchor) == 1, f"{tool}: face-line anchor matched twice"
         seg_new = seg.replace(anchor, anchor +
-                              f'        "image_digest": "{blk["repo_digest"]}",\n')
+                              f'        "image_digest": "{blk["image_digest"]}",\n')
         text = text[:seg_start] + seg_new + text[seg_end:]
         changed += 1
-        print(f"FLIP  {tool} <- {blk['repo_digest']} (image {blk['image_ref']})")
+        print(f"FLIP  {tool} <- {blk['image_digest']} (image {blk['image_ref']})")
     if dry:
         print("(dry run -- nothing written)")
         return 0

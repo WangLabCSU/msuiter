@@ -148,15 +148,18 @@ def build(tool: str, scratch: Path) -> dict:
             "-t", tag, "."]
     print(f"[build] {tool} face={spec['face']} tree={spec['tree_sha'][:10]} -> {tag}")
     _run(argv, cwd=ctx, log=log)
-    # SS3 law: the digest is CAPTURED, never transcribed -- and never by this
-    # tool's hand into the roster; it prints for the flip and the log keeps it.
+    # SS3 law: the digest is CAPTURED, never transcribed. The reference rows
+    # were minted from inspect .Id ("sha256:" + 64 hex, the legacy registry's
+    # own annotation), and locally BUILT images carry no RepoDigests until
+    # pushed -- capture .Id first, keep RepoDigests as the post-push echo.
     inspect = _run(["docker", "image", "inspect", tag,
-                    "--format", "{{json .RepoDigests}}"], log=log)
-    digests = json.loads(inspect.strip())
-    if not digests:
-        sys.stderr.write(f"[FATAL] {tag}: no RepoDigests in inspect output\n")
+                    "--format", "{{.Id}}"], log=log)
+    digest = inspect.strip()
+    if len(digest) != 71 or not digest.startswith("sha256:"):
+        sys.stderr.write(f"[FATAL] {tag}: inspect .Id is not sha256+64hex: "
+                         f"{digest!r}\n")
         raise SystemExit(2)
-    block = {"tool": tool, "image_ref": tag, "repo_digest": digests[0],
+    block = {"tool": tool, "image_ref": tag, "image_digest": digest,
              "tree_sha": spec["tree_sha"], "face": spec["face"],
              "msuiter_source_sha": MSUITER_SOURCE_SHA if spec["face"] == "rust" else None}
     with log.open("a", encoding="utf-8") as fh:
