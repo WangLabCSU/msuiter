@@ -25,11 +25,14 @@ Builds the M4 first-version QC table: per-sample mutation burden
 sentinel) and, when a fitted exposure matrix is supplied, the share of
 exposure carried by the 19 COSMIC artifact signatures (SBS27, SBS43, SBS45–60, SBS95). The Degasperi
 amber/red tiering is not implemented (v1.x); `qc_flag` applies our
-declared initial-version constants.
+declared initial-version constants. The returned table carries the
+P4 provenance checklist as the `ms_qc_provenance` attribute (see
+[ms_qc_provenance()]).
 }
 \references{
 COSMIC artifact roster: cancer.sanger.ac.uk/cosmic/signatures/SBS
 (SBS27, SBS43, SBS45–60, SBS95). oxoG sentinel: Costello et al., NAR
 2013 (doi:10.1093/nar/gks1443). FFPE sentinel: Guo et al., Nat Commun
-2022 (doi:10.1038/s41467-022-32041-5).
+2022 (doi:10.1038/s41467-022-32041-5). Design memo:
+`docs/devlog/2026-10-04-M4-02b-qc-memo.md` sections 1, 3 and 4.
 }

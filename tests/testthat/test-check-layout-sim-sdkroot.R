@@ -15,7 +15,9 @@
 # The units drive the REAL extracted helper through .sim_defs (now shared via
 # helper-check-layout.R) with an injected xcrun stub and fabricated SDK dirs:
 # no unit reads the host's xcrun, /Library/Developer/CommandLineTools, or the
-# ambient SDKROOT.
+# ambient SDKROOT -- and since the 2026-10-15 functional leg, neither the
+# Xcode SDK enumeration nor the host clang are host inputs: both arrive
+# through injected arguments (xcode.sdkdir=, clang=).
 
 .fake.sdk <- function(with.include = TRUE) {
   d <- tempfile("fake-sdk-")
@@ -51,6 +53,53 @@
   identical(as.integer(rc), 0L)
 }
 
+# ---- The functional leg of the law (witnessed 2026-10-15, lane logs
+# 11/14/15) ---------------------------------------------------------------
+# A structurally healthy SDK dir can still be build-hostile: the witnessed
+# CLT SDK 27 answers xcrun --show-sdk-path with rc 0, carries usr/include,
+# and still kills every link with a tapi "unknown architecture" parse of its
+# libSystem.B.tbd (block 2b has carried that hazard note since 2026-10-10).
+# Discovery therefore may ACCEPT a candidate only after a real minimal link
+# against it succeeds; the first candidate passing both legs is adopted, and
+# when none does the answer stays NA and the environment stays untouched.
+.sdk.at <- function(root, name) {
+  d <- file.path(root, name)
+  dir.create(file.path(d, "usr", "include"), recursive = TRUE,
+             showWarnings = FALSE)
+  if (!dir.exists(file.path(d, "usr", "include"))) {
+    skip(paste0("cannot fabricate probe fixture at ", file.path(d, "usr", "include")))
+  }
+  d
+}
+# Stub clang: walks the argv for the value after -isysroot and exits 0 only
+# for an accepted SDK spelling -- exactly how the discovery probes a
+# candidate, mirrored by construction. A bare invocation carries no
+# -isysroot at all: that is the .stub.execs capability probe, and it answers
+# rc 0 (the real candidate probes always carry the flag, so discrimination
+# is untouched).
+.clang.stub <- function(accept = character()) {
+  p <- tempfile("clang-stub-")
+  cases <- if (length(accept) == 1L && identical(accept, "*")) {
+    "  *) exit 0 ;;"                                  # accept-all for adoptions
+  } else if (length(accept)) {
+    unlist(lapply(accept, function(a) paste0("  *", a, "*) exit 0 ;;")))
+  } else character()
+  writeLines(c("#!/bin/sh",
+               "prev=\"\"",
+               "sdk=\"\"",
+               "for a in \"$@\"; do",
+               "  if [ \"$prev\" = \"-isysroot\" ]; then sdk=\"$a\"; fi",
+               "  prev=\"$a\"",
+               "done",
+               "if [ -z \"$sdk\" ]; then exit 0; fi",
+               "case \"$sdk\" in",
+               cases,
+               "  *) exit 1 ;;",
+               "esac"), p)
+  Sys.chmod(p, mode = "0755")
+  p
+}
+
 test_that("SDKROOT self-discovery: an explicitly set SDKROOT is never touched", {
   sim <- .ms_src("tools/check-layout-sim.R")
   if (is.na(sim)) {
@@ -65,7 +114,9 @@ test_that("SDKROOT self-discovery: an explicitly set SDKROOT is never touched", 
   out <- f(getenv = function(name, default = "") {
              if (identical(name, "SDKROOT")) "/pinned/MacOsX26.5.sdk" else default
            },
-           os = "darwin", xcrun = stub, clt.sdk = .fake.sdk())
+           os = "darwin", xcrun = stub, clt.sdk = .fake.sdk(),
+           xcode.sdkdir = "/no/such/xcode", clang = .clang.stub("*"),
+           arch = "arm64")
   expect_identical(out, NA_character_)
 })
 
@@ -87,8 +138,13 @@ test_that("SDKROOT self-discovery: unset SDKROOT adopts a healthy xcrun probe", 
   if (!.stub.execs(stub)) {
     skip("POSIX shebang stub executor not installed on this platform")
   }
+  cc <- .clang.stub("*")
+  if (!.stub.execs(cc)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = .UNSET, os = "darwin",
-           xcrun = stub, clt.sdk = "/no/such/clt/sdk")
+           xcrun = stub, clt.sdk = "/no/such/clt/sdk",
+           xcode.sdkdir = "/no/such/xcode", clang = cc, arch = "arm64")
   expect_identical(out, sdk)
 })
 
@@ -106,8 +162,13 @@ test_that("SDKROOT self-discovery: an empty-string SDKROOT counts as unset", {
   if (!.stub.execs(stub)) {
     skip("POSIX shebang stub executor not installed on this platform")
   }
+  cc <- .clang.stub("*")
+  if (!.stub.execs(cc)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = function(name, default = "") "", os = "darwin",
-           xcrun = stub, clt.sdk = "/no/such/clt/sdk")
+           xcrun = stub, clt.sdk = "/no/such/clt/sdk",
+           xcode.sdkdir = "/no/such/xcode", clang = cc, arch = "arm64")
   expect_identical(out, sdk)
 })
 
@@ -132,8 +193,13 @@ test_that("SDKROOT self-discovery: absent xcrun falls through to the CLT SDK dir
   env <- .sim_defs(sim, ".sdkroot_default")
   f <- get(".sdkroot_default", envir = env)
   clt <- .fake.sdk()
+  cc <- .clang.stub("*")
+  if (!.stub.execs(cc)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = .UNSET, os = "darwin",
-           xcrun = "/no/such/xcrun", clt.sdk = clt)
+           xcrun = "/no/such/xcrun", clt.sdk = clt,
+           xcode.sdkdir = "/no/such/xcode", clang = cc, arch = "arm64")
   expect_identical(out, clt)
 })
 
@@ -146,8 +212,13 @@ test_that("SDKROOT self-discovery: a probe dir without usr/include is rejected",
   f <- get(".sdkroot_default", envir = env)
   broken <- .fake.sdk(with.include = FALSE)          # exists, but no usr/include
   clt <- .fake.sdk()                                  # healthy fallback candidate
+  cc <- .clang.stub("*")
+  if (!.stub.execs(cc)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
   out <- f(getenv = .UNSET, os = "darwin",
-           xcrun = .xcrun.stub(broken), clt.sdk = clt)
+           xcrun = .xcrun.stub(broken), clt.sdk = clt,
+           xcode.sdkdir = "/no/such/xcode", clang = cc, arch = "arm64")
   expect_identical(out, clt)
 })
 
@@ -161,10 +232,62 @@ test_that("SDKROOT self-discovery: failing xcrun rc falls through, nothing found
   # rc != 0: probe output ignored despite naming a real SDK
   sdk <- .fake.sdk()
   out1 <- f(getenv = .UNSET, os = "darwin",
-            xcrun = .xcrun.stub(sdk, rc = 1L), clt.sdk = "/no/such/clt/sdk")
+            xcrun = .xcrun.stub(sdk, rc = 1L), clt.sdk = "/no/such/clt/sdk",
+            xcode.sdkdir = "/no/such/xcode", clang = "/no/such/clang",
+            arch = "arm64")
   expect_identical(out1, NA_character_)
   # nothing discoverable at all: graceful NA (the CI branch -- env untouched)
   out2 <- f(getenv = .UNSET, os = "darwin",
-            xcrun = "/no/such/xcrun", clt.sdk = "/no/such/clt/sdk")
+            xcrun = "/no/such/xcrun", clt.sdk = "/no/such/clt/sdk",
+            xcode.sdkdir = "/no/such/xcode", clang = "/no/such/clang",
+            arch = "arm64")
   expect_identical(out2, NA_character_)
+})
+
+# The functional-leg fixtures (.sdk.at, .clang.stub) live with the other
+# probe helpers above: testthat runs the file top to bottom, so every helper
+# has to precede its first use.
+
+test_that("SDKROOT self-discovery: a link-hostile SDK is rejected and the next candidate adopted", {
+  sim <- .ms_src("tools/check-layout-sim.R")
+  if (is.na(sim)) {
+    skip("tools/check-layout-sim.R not locatable (R CMD check context)")
+  }
+  env <- .sim_defs(sim, ".sdkroot_default")
+  f <- get(".sdkroot_default", envir = env)
+  clang <- .clang.stub("MacOSX26[.]1[.]sdk")
+  if (!.stub.execs(clang)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
+  xdir <- tempfile("xcode-sdkdir-")
+  dir.create(xdir, recursive = TRUE, showWarnings = FALSE)
+  good <- .sdk.at(xdir, "MacOSX26.1.sdk")     # link-clean
+  bad  <- .sdk.at(xdir, "MacOSX27.0.sdk")     # structurally healthy landmine
+  # xcrun answers with the landmine at rc 0 (the witnessed machine state),
+  # and descending enumeration meets 27.0 first: only the functional leg can
+  # walk past both to the healthy 26.1.
+  out <- f(getenv = .UNSET, os = "darwin",
+           xcrun = .xcrun.stub(bad), clt.sdk = "/no/such/clt/sdk",
+           xcode.sdkdir = xdir, clang = clang, arch = "arm64")
+  expect_identical(out, good)
+})
+
+test_that("SDKROOT self-discovery: when every candidate fails the link probe the answer is NA", {
+  sim <- .ms_src("tools/check-layout-sim.R")
+  if (is.na(sim)) {
+    skip("tools/check-layout-sim.R not locatable (R CMD check context)")
+  }
+  env <- .sim_defs(sim, ".sdkroot_default")
+  f <- get(".sdkroot_default", envir = env)
+  clang <- .clang.stub()                     # accepts nothing
+  if (!.stub.execs(clang)) {
+    skip("POSIX shebang stub executor not installed on this platform")
+  }
+  xdir <- tempfile("xcode-sdkdir-")
+  dir.create(xdir, recursive = TRUE, showWarnings = FALSE)
+  bad <- .sdk.at(xdir, "MacOSX27.0.sdk")
+  out <- f(getenv = .UNSET, os = "darwin",
+           xcrun = .xcrun.stub(bad), clt.sdk = .fake.sdk(),
+           xcode.sdkdir = xdir, clang = clang, arch = "arm64")
+  expect_identical(out, NA_character_)
 })
