@@ -82,6 +82,24 @@ shape WITHOUT spending the RB-10 single authoritative shot:
       (dedicated writer executed on the target interpreter); the reader
       tolerates only the verbatim marker and discloses the leg, while
       breach and any forged string still fail a MEASURED claim
+P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
+  (Y) test_p6_roster           six frozen arm keys, full-40hex tree echo,
+      face convention (rust twins share their tree), pre-flip pending-verify
+      refusal, legacy rows byte-stable under the batch
+  (Z) test_p6_adapters         per-arm child-argv contract on the new
+      run_sigminer_arm.R sibling, --backend passthrough, zero tuning lever,
+      skip-not-skip AdapterUnavailable on unattested images
+  (AA) test_p6_predicates      parity <=2x (boundary-exact, per-cell named,
+      REFUSE never PASS on missing/non-ok), TP-only judgment non-regression
+      on the D2 matched-status surface, mechanical attribution split,
+      yardstick MEASURED-or-LEDGERED-PENDING (no third state)
+  (AB) test_p6_evidence        zero-cached shard-union merge with reason-coded
+      rejects, nine-column committed schema, digest-stamped cell provenance,
+      machine-written result.md purity
+  (AC) test_p6_floor_governance  no campaign arm rides ungated: all six P6
+      tools measured, 21-class anchor completeness, reps-matched OK witnesses
+      with committed bytes, calibration ledger fields, co-tenancy census
+      coverage of every ready P6 image
 """
 
 from __future__ import annotations
@@ -127,7 +145,10 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # GO-05 ruling @12:50: unmeasurable floor leg, rc 3 (TDD):
            "test_floor_gate_unmeasurable",
            # M8 (PR #17): the action-pin law helper:
-           "test_action_pins"]
+           "test_action_pins",
+           # P6 evidence loop (sigminer v3 release-attestation table):
+           "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
+           "test_p6_evidence", "test_p6_floor_governance"]
 
 
 def _collect(mod_name):
