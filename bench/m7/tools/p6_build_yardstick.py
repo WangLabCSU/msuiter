@@ -33,7 +33,7 @@ from p6_build_arms import _run                      # noqa: E402  (shared captur
 ADAPTERS = HERE / "adapters"
 IMAGE = "msuiter-sigminer:p6-nmf-yardstick-r1"
 FLAT_INPUTS = ("run_nmf_yardstick.py", "run_nmf_yardstick_leg.R",
-               "Dockerfile.nmf_yardstick")
+               "install_nmf_yardstick.R", "Dockerfile.nmf_yardstick")
 
 
 def assemble(scratch: Path) -> tuple[Path, Path]:

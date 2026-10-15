@@ -8,6 +8,9 @@ the banked fetch evidence (04-nmf-rs-fetch-probe-20261015), the upstream
 index is spelled (no silent mirror fallback), and every byte the image
 executes is pinned to its committed digest. The bake tool is text-sealed
 against transcription: its digest can only arrive via inspect .Id echo.
+Death #8 (2026-10-16) added the R-face seals: Biobase through the lane-
+recorded contrib host, the version-tolerant NMF invocation, and the
+asserted network-none brunet witness.
 """
 
 from __future__ import annotations
@@ -116,6 +119,64 @@ def test_fairness_is_fixed_iteration_on_both_sides():
         "rust leg must pin its thread count (co-tenancy law)"
     assert "rust_niter" in py and "r_niter" in py and "fairness_flag" in py, \
         "per-side stop-iteration attestations must be reported, not assumed"
+
+
+# ---------------------------------------------------------------- death #8
+# The CRAN-only NMF layer died: "dependency 'Biobase' is not available".
+# Biobase is a Bioconductor-class package the lane resolves through the
+# recorded contrib host (same source that served the arm trees, probes
+# 3/6); the yardstick now provisions it through a committed, result-gated
+# script. These units seal that repair -- the same shape the arm build
+# seals its resolver.
+_PROV = "install_nmf_yardstick.R"
+
+
+def test_r_face_provisions_biobase_from_the_recorded_contrib():
+    p = ADAPTERS / _PROV
+    if not p.is_file():
+        raise AssertionError(f"R-face provisioning script missing: {p}")
+    t = p.read_text(encoding="utf-8")
+    assert "https://bioconductor.org/packages/3.17/bioc/src/contrib" in t, \
+        ("Biobase must resolve through the lane-recorded contrib host "
+         "(install_sigminer.R BIOC_CONTRIB -- the only bioc source this mirror serves)")
+    assert "PACKAGES.gz" in t and "tries" in t, \
+        ("the index is fetched by hand (R's repo machinery fetches zero rows "
+         "here) and every URL carries per-URL retries (§9b flakiness)")
+    assert "install not result-gated" in t, \
+        ("a node counts as provisioned only when the library's own "
+         "DESCRIPTION reports the version -- the recorded result-gate")
+    assert '"BiocGenerics"' in t and '"Biobase"' in t, \
+        "the measured contrib closure (BiocGenerics under Biobase) must install deps-first"
+    assert '"0.28"' in t and '"2.60.0"' in t, \
+        ("the provisioning is version-gated: CRAN-current drift is a build "
+         "death, so a re-bake reproduces the attested pair or dies loudly")
+    assert "%||%" not in t and "|>" not in t, \
+        "R-floor platform-premise law: 4.4-only operators on a 4.3 base"
+    d = _dockerfile_text()
+    sha = hashlib.sha256(p.read_bytes()).hexdigest()
+    assert sha in d and f"COPY {_PROV} " in d, \
+        "the provisioning script is executed surface: byte-pinned and COPYed"
+
+
+def test_r_leg_survives_the_current_nmf_signature():
+    t = (ADAPTERS / "run_nmf_yardstick_leg.R").read_text(encoding="utf-8")
+    assert "do.call" in t and "formals(NMF::nmf" in t, \
+        ("the call must pass through a do.call filtered against the formals -- "
+         "NMF 0.28 dropped backup/silent from the brunet bootstrap's accepted set")
+    assert "unused argument" in t, \
+        "the arg-repair loop must heal exactly what the method refuses, by message"
+    assert "r_dropped=" in t, \
+        "dropped arguments are attestation data, not silence"
+
+
+def test_network_none_witness_asserts_the_measured_fit():
+    t = _dockerfile_text()
+    assert "identical(NMF::niter(r), 5L)" in t, \
+        ("the network-none witness must assert the fit actually iterated to "
+         "the fixed stop (niter 5), the way the measured probe attests it")
+    m = re.search(r'RUN --network=none Rscript -e \'.*?NMF.*?\'', t, re.DOTALL)
+    assert m and "backup" not in m.group(0) and "silent" not in m.group(0), \
+        "the witness must speak the version-tolerant invocation, not the 2023 shape"
 
 
 if __name__ == "__main__":

@@ -22,10 +22,20 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-pip python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
-# The R face: NMF (Brunet et al.) from CRAN -- the reference core the paper
-# measures against. The packageVersion echo is the version attestation
-# (same idiom as the arm images' jsonlite layer); absence is a build death.
-RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("NMF"); v <- packageVersion("NMF"); if (is.null(v)) quit(status = 1L); cat("[image] NMF ", as.character(v), " provisioned\n")'
+# The R face: NMF (Brunet et al.) -- the reference core the paper measures
+# against. Death #8: a CRAN-only install.packages("NMF") dies, because NMF
+# Imports Biobase, which exists on no CRAN tree (probes 3/6). Provisioning
+# therefore runs the committed, result-gated resolver install_nmf_yardstick.R
+# -- hand-read contrib index (R's repo machinery fetches zero rows from this
+# host), index-spelled tarballs, per-URL retries (§9b), library-DESCRIPTION
+# verdicts, and hard version gates NMF 0.28 / Biobase 2.60.0. The
+# [yardstick-provision] echoes are the layer's version attestation; absence
+# or drift is a build death.
+COPY install_nmf_yardstick.R /tmp/install_nmf_yardstick.R
+RUN test "$(sha256sum /tmp/install_nmf_yardstick.R | cut -d' ' -f1)" = \
+      "5054fc5ffe386a1db20df59141e29fe9d96ce788f109669f7a411b4058d88579" \
+    || (echo "[FATAL] install_nmf_yardstick.R bytes diverge from the committed resolver" >&2; exit 1)
+RUN Rscript /tmp/install_nmf_yardstick.R
 
 # The rust face: hash-pinned, index-spelled, single-package. --no-deps is
 # both the pip precondition for --require-hashes and the promise that the
@@ -43,7 +53,7 @@ RUN test "$(sha256sum /work/run_nmf_yardstick.py | cut -d' ' -f1)" = \
     || (echo "[FATAL] run_nmf_yardstick.py bytes diverge from the committed runner" >&2; exit 1)
 COPY run_nmf_yardstick_leg.R /work/
 RUN test "$(sha256sum /work/run_nmf_yardstick_leg.R | cut -d' ' -f1)" = \
-      "2dd390c90856b6702b9f7d6c65df63874c53ea6ffb3f180b070470fb0701a1c5" \
+      "91d3ef8d4ac8b551efeff12aec0ea8750698b1d41ab33e0cd762b53908ffc683" \
     || (echo "[FATAL] run_nmf_yardstick_leg.R bytes diverge from the committed leg" >&2; exit 1)
 COPY yardstick_cell/ /work/yardstick_cell/
 RUN test "$(sha256sum /work/yardstick_cell/matrix.csv | cut -d' ' -f1)" = \
@@ -54,7 +64,7 @@ RUN test "$(sha256sum /work/yardstick_cell/matrix.csv | cut -d' ' -f1)" = \
 # and complete a fixed five-iteration brunet run with no network at all.
 # An undeclared runtime dependency dies HERE, never mid-measurement.
 RUN --network=none python3 -c 'import numpy as np, nmf_rs; r = nmf_rs.nmf(np.random.default_rng(1).random((8, 6)), 2, method = "brunet", seed = 1, max_iter = 5, stop = "max_iter"); assert r.n_iter == 5; print("[image] nmf-rs smoke ok (5 iterations, network-none)")'
-RUN --network=none Rscript -e 'suppressMessages(library(NMF)); set.seed(1L); v <- matrix(abs(rnorm(24)), 6); r <- NMF::nmf(v, 2, method = "brunet", nrun = 1L, seed = 1L, maxIter = 5L, eps = 0, backup = 0L, silent = TRUE); cat("[image] NMF smoke ok (5 iterations, network-none)\n")'
+RUN --network=none Rscript -e 'suppressMessages(library(NMF)); set.seed(1L); v <- matrix(abs(rnorm(24)), 6); r <- NMF::nmf(v, 2L, method = "brunet", nrun = 1L, seed = 1L, maxIter = 5L, eps = 0); if (!is(r, "NMFfit") || !identical(NMF::niter(r), 5L)) quit(status = 1L); cat("[image] NMF smoke ok (5 iterations, network-none)\n")'
 
 # The yardstick invocation shape (measured outdir path supplied per cell):
 #   docker run --rm --network=none <image> \
