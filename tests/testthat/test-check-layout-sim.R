@@ -98,11 +98,16 @@ test_that("check-layout-sim: a DESCRIPTION-less --root= fails fast with its own 
 # short-circuited onto it, the nested run executed the lane's new test file
 # against the old build, and the full-suite self-test unit above broke for a
 # breakage that does not exist in the layout at all (the recorded
-# provision-lib hazard). The unit stages that class deterministically: copy
-# the installed msuiter build into a candidate lib, rename one Collate token
-# in the copy (Collate is INSTALL-time load order only -- the copy stays
-# functionally loadable), and require the resolver to name the rejection and
-# provision from the tree instead.
+# provision-lib hazard). The unit stages that class deterministically and
+# HERMETICALLY: the candidate is synthesized from the tree's own DESCRIPTION
+# (Version and Collate verbatim, one token renamed) plus a synthesized
+# CITATION -- the resolver's acceptance needs dir + DESCRIPTION + CITATION and
+# its staleness read needs only the DESCRIPTION, so those three files are the
+# whole candidate and no ambient install is consulted (staging from one was
+# host-dependent: the PR #29 CI witness shows a CITATION-less R CMD check
+# install yields a candidate that silently misses the acceptance gate before
+# the staleness read ever runs). The candidate is rejected before it is ever
+# used, so it carries no loadable R code.
 test_that("check-layout-sim: a stale provisioning candidate is rejected, never used", {
   if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
     skip("already running inside the simulated check layout (recursion guard)")
@@ -116,35 +121,21 @@ test_that("check-layout-sim: a stale provisioning candidate is rejected, never u
   if (!file.exists(file.path(.ms_root, "src", "rust", "Cargo.toml"))) {
     skip("provisioning a fresh INSTALL requires the source checkout")
   }
-  inst_desc <- system.file(package = "msuiter", "DESCRIPTION",
-                           lib.loc = .libPaths())
-  if (is.na(inst_desc)) {
-    skip("no installed msuiter build to stage a stale candidate from")
-  }
-  pkgdir <- dirname(inst_desc)
   stalelib <- tempfile("sim-stalelib-")
-  dir.create(stalelib, recursive = TRUE)
-  # File-by-file staging with the sanctioned copy primitives (this build has
-  # no dir.copy/dir.remove; cleanup rides base unlink below).
-  src_files <- list.files(pkgdir, recursive = TRUE, full.names = TRUE,
-                          all.files = TRUE)
-  for (f in src_files) {
-    rel <- substring(f, nchar(pkgdir) + 2L)
-    dst <- file.path(stalelib, "msuiter", rel)
-    dir.create(dirname(dst), recursive = TRUE, showWarnings = FALSE)
-    file.copy(f, dst, overwrite = TRUE)
-  }
+  dir.create(file.path(stalelib, "msuiter"), recursive = TRUE)
   # Tamper: the staged candidate lags the tree under test in exactly the
   # shape of the hazard -- its build identity no longer matches the source.
-  dpath <- file.path(stalelib, "msuiter", "DESCRIPTION")
-  dl <- readLines(dpath, warn = FALSE)
-  hit <- grep("'zzz.R'", dl, fixed = TRUE)
+  tree_desc <- readLines(file.path(.ms_root, "DESCRIPTION"), warn = FALSE)
+  hit <- grep("'zzz.R'", tree_desc, fixed = TRUE)
   expect_true(length(hit) >= 1L,
-               info = paste0("installed DESCRIPTION lacks the zzz.R Collate token:\n",
-                             paste(dl, collapse = "\n")))
-  dl[hit[1L]] <- gsub("'zzz.R'", "'zzz-stale-renamed.R'", dl[hit[1L]],
-                      fixed = TRUE)
-  writeLines(dl, dpath)
+               info = paste0("tree DESCRIPTION lacks the zzz.R Collate token:\n",
+                             paste(tree_desc, collapse = "\n")))
+  tampered <- tree_desc
+  tampered[hit[1L]] <- gsub("'zzz.R'", "'zzz-stale-renamed.R'", tampered[hit[1L]],
+                            fixed = TRUE)
+  writeLines(tampered, file.path(stalelib, "msuiter", "DESCRIPTION"))
+  writeLines("Synthesized CITATION for the stale-candidate fixture.",
+             file.path(stalelib, "msuiter", "CITATION"))
   out <- tempfile("sim-stalelib-out-")
   err <- tempfile("sim-stalelib-err-")
   rc <- system2(.ms_rscript(), c(sim, paste0("--root=", .ms_root),
