@@ -109,13 +109,20 @@ if (!identical(backend_arg, pin$face)) {
 }
 face <- pin$face
 sha256_file <- function(path) {
-  out <- character()
-  st <- tryCatch(system2("sha256sum", path, stdout = out),
-                 error = function(e) NA_integer_)
-  if (!identical(st, 0L) || !length(out)) {
-    fail(paste0("sha256sum unreadable for ", path))
-  }
-  sub("\\s.*$", "", out[[1L]])
+  ## Byte-idiom imported verbatim from the frozen resolver's sha256File
+  ## (install_sigminer.R:83-98, slice-3 pre-flight): the system2
+  ## stdout=<variable> form returns nothing readable under Rscript on
+  ## base 4.3.3 -- the file-redirect form is the deterministic contract.
+  ## Recorded bake death #5 (2026-10-15): the fork's vector-capture form
+  ## died "sha256sum unreadable" on a file that was there and readable.
+  o <- tempfile(); e <- tempfile()
+  st <- system2("sha256sum", c("--", path), stdout = o, stderr = e)
+  if (!identical(st, 0L))
+    fail(paste0("sha256sum failed on witness bytes (status ", st, "): ",
+                paste(readLines(e, warn = FALSE), collapse = " | ")))
+  ln <- readLines(o, warn = FALSE)
+  if (!length(ln)) fail(paste0("sha256sum printed no digest for ", path))
+  strsplit(trimws(ln[[1L]]), " ")[[1L]][[1L]]
 }
 ns_installed <- system.file("NAMESPACE", package = "sigminer")
 if (!nzchar(ns_installed) || !file.exists(ns_installed)) {

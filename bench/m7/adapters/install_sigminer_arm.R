@@ -22,22 +22,29 @@
 ##      floated, never raised (CONSIST guard fails closed on any attempt).
 ##   3. tarDesc gains a directory branch (a package tree is a valid "artifact"
 ##      for readDcfText purposes; install.packages accepts the directory).
-##   4. Two EXTRA_ROOTS — synchronicity, lpSolve — join the BFS as
-##      unconstrained seeds. best_practice.R's requireNamespace-guarded
-##      runtime install.packages fallbacks (witnessed in ALL FOUR campaign
-##      trees, e.g. pre_v3 best_practice.R:258/261) must never fire during a
-##      measurement cell: an on-demand CRAN fetch inside the timed region is
-##      network nondeterminism plus borrowed wall/cpu. They are Suggests-tier,
-##      so the Imports-only BFS would not meet them otherwise.
-##      Deliberately NOT provisioned (route-parity law, attested by
-##      self_witness_arm.sh under --network=none):
-##        - matrixStats: the RB-05-era fold does not carry to the 2.3.3 era —
-##          its only site is simulation.R (host-side synthetic generation),
-##          off the cell path; a forgotten need dies the build at the witness.
-##        - doParallel: absent from the reference slice3-r5 image (Imports-only
-##          BFS), so every committed reference cell ran use_dopar=FALSE. An arm
-##          image carrying it would silently switch the NMF parallel route and
-##          contaminate the attribution ratios. Its absence is the invariant.
+##   4. Four EXTRA_ROOTS — synchronicity, lpSolve, matrixStats, doParallel —
+##      join the BFS as unconstrained seeds. best_practice.R's
+##      requireNamespace-guarded runtime install.packages fallbacks (witnessed
+##      in ALL FOUR campaign trees, e.g. pre_v3 best_practice.R:258/261) must
+##      never fire during a measurement cell: an on-demand CRAN fetch inside
+##      the timed region is network nondeterminism plus borrowed wall/cpu.
+##      They are Suggests-tier, so the Imports-only BFS would not meet them
+##      otherwise.
+##      A4 amendment (2026-10-15) — the original two-absences law refuted by
+##      direct probe of the committed reference image (docker run
+##      msuiter-sigminer:slice3-r5 Rscript requireNamespace: matrixStats TRUE,
+##      doParallel TRUE):
+##        - matrixStats: NOT off the cell path. bp_extract_signatures simulates
+##          the catalogue, and simulation.R:60 requireNamespace-gates / :79
+##          rowWeightedMeans-consumes it; without it the auto-install branch
+##          fires mid-cell (witnessed: bake death #6 under --network=none).
+##        - doParallel: present in the reference provisioning that minted the
+##          committed table, so its absence would be the parity break. The
+##          route-parity invariant survives as the MEASURED form: face-pair
+##          twins share byte-identical install layers through the build cache,
+##          and the reference-table cells themselves ran on this provisioning.
+##      Presence/absence of the four is attested by self_witness_arm.sh under
+##      --network=none (absence of any one is a build-time death).
 ## ============================================================================
 ## install_sigminer.R — M7 sigminer image: whole-tree Archive-aware installer.
 ##
@@ -126,7 +133,18 @@ EXTRA_PINS <- list(c("rbibutils", "2.4.1"), c("gridBase", "0.4-7"))
 ## flip, invalidating every dependent witness (data_hash carries the
 ## image digest). A pin typed from a stale snapshot would be data no
 ## one measured — the float plus its log is the honest form.
-EXTRA_ROOTS <- list(list(name = "synchronicity"), list(name = "lpSolve"))
+## A4 (2026-10-15): the set is FOUR. matrixStats is NOT off the cell
+## path -- bp_extract_signatures simulates the catalogue and
+## simulation.R:60/79 requireNamespace/rowWeightedMeans it (witnessed:
+## bake death #6, the auto-install branch firing mid-cell under
+## network-none). doParallel is carried for reference parity: the
+## committed slice3-r5 reference image probes TRUE for BOTH (docker
+## run requireNamespace probe, 2026-10-15), so an arm image lacking
+## either diverges from the provisioning that minted the reference
+## table. Route-parity is then MEASURED, not asserted: the face-pair
+## twins share identical install bytes through the build cache.
+EXTRA_ROOTS <- list(list(name = "synchronicity"), list(name = "lpSolve"),
+                    list(name = "matrixStats"), list(name = "doParallel"))
 ## slice-3 (memo §9c.2/§9d): the frozen recipe's five-name export contract
 ## was fiction (0/5 in every published sigminer). The build gate is now the
 ## WITNESSED NAMESPACE export set of the exact pinned artifact (read from

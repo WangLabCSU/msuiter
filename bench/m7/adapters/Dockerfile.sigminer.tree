@@ -82,7 +82,7 @@ RUN test "$(sha256sum /tmp/tree/NAMESPACE | cut -d" " -f1)" = "$NS_SHA256"
 # files to the roster; these lines pin the scripts to their committed bytes).
 COPY install_sigminer_arm.R /tmp/install_sigminer_arm.R
 RUN test "$(sha256sum /tmp/install_sigminer_arm.R | cut -d' ' -f1)" = \
-      "a6f3180a81e70e70ea8ed0fa66f84f2804df674ceb617678052fd88c28f6dca9" \
+      "1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569" \
     || (echo "[FATAL] install_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
 RUN Rscript /tmp/install_sigminer_arm.R --tree /tmp/tree \
       --expected-version "$EXPECTED_VERSION" --ns-sha256 "$NS_SHA256"
@@ -138,7 +138,7 @@ RUN test "$(sha256sum /work/m7_entry.py | cut -d' ' -f1)" = \
     || (echo "[FATAL] m7_entry.py bytes diverge from the frozen launcher" >&2; exit 1)
 COPY run_sigminer_arm.R /work/
 RUN test "$(sha256sum /work/run_sigminer_arm.R | cut -d' ' -f1)" = \
-      "013c8248cbf6abfc89b3eafbf0b8163f7e43052e6b8f8d0973578bf1cb05c03d" \
+      "337b13ec36fd4ea27d5276df055f7a78604014b5074b3b6b9d5f7f6062c5b482" \
     || (echo "[FATAL] run_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
 
 # The committed arm pin (tools/p6_emit_arm_pins.py output over the roster --
@@ -159,11 +159,11 @@ COPY mini_cell/ /work/mini/in/
 # keep their build-cache lineage.
 COPY install_sigminer_arm.R /work/install_sigminer_arm.R
 RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
-      "a6f3180a81e70e70ea8ed0fa66f84f2804df674ceb617678052fd88c28f6dca9" \
+      "1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569" \
     || (echo "[FATAL] /work copy of install_sigminer_arm.R diverges from the committed fork" >&2; exit 1)
 COPY self_witness_arm.sh /tmp/self_witness_arm.sh
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
-      "8c0d5d186af43bd2b7361be3db7552604834e67e134f61515cc7ccf4a177d8a4" \
+      "2c7bf630992cc6931a49ac0a4cc0cec68df11acfcc0038fa20205aa0b8c336b4" \
     || (echo "[FATAL] self_witness_arm.sh bytes diverge from the committed witness" >&2; exit 1)
 # The container-scope four-file trust guard + arm gates, replayed under
 # network-none over the stage2-proven fixture bytes (frozen idiom). Any

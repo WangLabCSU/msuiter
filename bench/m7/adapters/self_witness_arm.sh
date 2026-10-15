@@ -14,12 +14,16 @@
 #   (ru_utime/ru_stime/cpu_seconds/exit_status, exit 0, cpu = utime+stime).
 #   ARMS: the baked /work/arm_pin.json (roster-mirrored via the tested emitter
 #   tools/p6_emit_arm_pins.py) is present and its face is admissible; the
-#   provisioning set is exact — synchronicity + lpSolve load (the BFS
-#   EXTRA_ROOTS of install_sigminer_arm.R), doParallel + matrixStats ABSENT
-#   (route-parity law: the reference slice3-r5 image never carried doParallel,
-#   so its presence would silently flip NMF's .pbackend and contaminate the
-#   attribution ratios; matrixStats' only tip-era site is simulation.R, off
-#   the cell path — its presence here is image drift).
+#   provisioning set is exact — synchronicity + lpSolve + matrixStats +
+#   doParallel all load (the BFS EXTRA_ROOTS of install_sigminer_arm.R).
+#   The latter two joined the set by A4 amendment (2026-10-15): direct probe
+#   of the committed reference image (docker run msuiter-sigminer:slice3-r5
+#   Rscript requireNamespace) returned TRUE for BOTH, so reference parity
+#   REQUIRES their presence; and matrixStats sits on the cell path itself
+#   (bp_extract_signatures simulates; simulation.R:60/79) — its absence made
+#   the auto-install branch fire mid-cell under network-none (bake death #6).
+#   Route parity is the measured form: face-pair twins share byte-identical
+#   install layers through the build cache.
 #   RUST FACE: MSUITER_KERNEL_BIN is set, executable, and answers the stable
 #   batch-entry handshake ("protocol=1" in --version, the same token
 #   sigminer's R/rust_backend.R gate requires); the msuiter R namespace loads.
@@ -80,12 +84,13 @@ Rscript -e 'if (!requireNamespace("synchronicity", quietly = TRUE))
   stop("provisioning drift: synchronicity (BFS EXTRA_ROOT, runtime-fallback seed) absent")'
 Rscript -e 'if (!requireNamespace("lpSolve", quietly = TRUE))
   stop("provisioning drift: lpSolve (BFS EXTRA_ROOT, runtime-fallback seed) absent")'
-Rscript -e 'if (requireNamespace("doParallel", quietly = TRUE))
-  stop("route-parity breach: doParallel present — reference cells all ran use_dopar=FALSE;
-         an arm image carrying it silently flips NMF .pbackend and contaminates attribution")'
-Rscript -e 'if (requireNamespace("matrixStats", quietly = TRUE))
-  stop("provisioning drift: matrixStats present — not provisioned by the arm resolver
-         (its only tip-era site is simulation.R, off the cell path)")'
+Rscript -e 'if (requireNamespace("doParallel", quietly = TRUE)) invisible(NULL) else
+  stop("reference-parity drift: the committed slice3-r5 reference image probes TRUE for
+         doParallel; an arm image lacking it diverges from the provisioning that
+         minted the reference table (A4 amendment, 2026-10-15)")'
+Rscript -e 'if (requireNamespace("matrixStats", quietly = TRUE)) invisible(NULL) else
+  stop("reference-parity drift: matrixStats absent — the reference image carries it and
+         simulation.R:79 rowWeightedMeans needs it ON the cell path (bake death #6)")'
 
 # ---- rust face: kernel-boundary gates --------------------------------------
 if [ "$FACE" = rust ]; then
