@@ -77,7 +77,7 @@ def main(argv=None) -> int:
         raise SystemExit(2)
     block = {"instrument": "nmf_yardstick", "image_ref": IMAGE,
              "image_digest": digest, "wheel_sha256":
-             "93608cb2f4ab78c9ece2fcdc2b7feb14536f913db01e8f8cb4f186a970c0eed3"}
+             "9ad81407bbc9335219f31a0b6746264761733494c6b16697e060729fa749dd17"}
     with log.open("a", encoding="utf-8") as fh:
         fh.write(f"\n[ATTESTED] {json.dumps(block, sort_keys=True)}\n")
     print(json.dumps(block, sort_keys=True))

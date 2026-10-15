@@ -10,7 +10,10 @@ executes is pinned to its committed digest. The bake tool is text-sealed
 against transcription: its digest can only arrive via inspect .Id echo.
 Death #8 (2026-10-16) added the R-face seals: Biobase through the lane-
 recorded contrib host, the version-tolerant NMF invocation, and the
-asserted network-none brunet witness.
+asserted network-none brunet witness. Death #9 (2026-10-16) moved the
+wheel onto the probe-measured download -> sha256sum gate -> offline-install
+shape (jammy pip exposes no CLI --require-hashes value form) and re-pinned
+it to the linux/arm64 wheel the arm64 image actually executes.
 """
 
 from __future__ import annotations
@@ -25,8 +28,9 @@ HERE = Path(__file__).resolve().parents[1]          # bench/m7
 ADAPTERS = HERE / "adapters"
 TOOLS = HERE / "tools"
 
-WHEEL_SHA = ("93608cb2f4ab78c9ece2fcdc2b7feb14536f913db01e8f8cb4f18"
-             "6a970c0eed3")
+WHEEL_SHA = ("9ad81407bbc9335219f31a0b6746264761733494c6b16697e060729fa"
+             "749dd17")                                        # linux/arm64
+WHEEL_FILE = "nmf_rs-0.1.0-cp39-abi3-manylinux_2_28_aarch64.whl"
 
 
 def _load(name: str):
@@ -46,15 +50,25 @@ def _dockerfile_text() -> str:
 
 def test_wheel_is_hash_pinned_against_fetch_evidence():
     t = _dockerfile_text()
-    assert f"--require-hashes sha256:{WHEEL_SHA}" in t, \
-        "the wheel must be pip --require-hashes pinned to the banked digest"
-    assert "pip install" in t and "--no-deps" in t, \
-        "wheel provisioning must be single-package (--no-deps), never a resolve sweep"
-    assert "--only-binary :all:" in t, \
-        "sdist fallthrough would hash-fail the wheel-only policy"
+    runtime = "\n".join(ln for ln in t.splitlines()
+                        if not ln.strip().startswith("#"))
+    assert "--require-hashes" not in runtime, \
+        ("jammy's pip 22.0.2 exposes --require-hashes as a no-value flag "
+         "(both CLI value forms rejected, measured); the hash policy must "
+         "ride the measured download -> sha256sum gate -> --no-index shape")
+    assert f'"{WHEEL_SHA}"' in t, \
+        ("the execution-arch (linux/arm64) wheel digest must be spelled -- "
+         "the banked x86_64 pin is fetch evidence, not the artifact the "
+         "arm64 image installs")
+    assert WHEEL_FILE in t, "the hash gate must name the exact wheel file"
+    assert "pip download" in t and "--no-deps" in t \
+        and "--only-binary :all:" in t, \
+        "provisioning must be single-package, binary-only, never a resolve sweep"
     assert "--index-url https://pypi.org/simple" in t, \
         "the upstream index must be spelled (the configured mirror does not " \
         "sync nmf-rs; a silent mirror fallback is a provisioning lie)"
+    assert "sha256sum" in t and "--no-index" in t and "--find-links" in t, \
+        "a digest mismatch must die at the gate, and the install must be offline"
     assert "nmf-rs==0.1.0" in t, "the yardstick wheel version is frozen"
 
 
@@ -74,6 +88,8 @@ def test_bake_tool_cannot_transcribe_a_digest():
     if not p.is_file():
         raise AssertionError(f"yardstick bake tool missing: {p}")
     t = p.read_text(encoding="utf-8")
+    assert WHEEL_SHA in t, \
+        "the bake attestation must name the same wheel digest the image gates on"
     assert '{{.Id}}' in t, \
         "the yardstick digest must be captured from inspect .Id (SS3 law)"
     assert 'raise SystemExit(2)' in t or "SystemExit(2)" in t, \

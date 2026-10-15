@@ -37,14 +37,28 @@ RUN test "$(sha256sum /tmp/install_nmf_yardstick.R | cut -d' ' -f1)" = \
     || (echo "[FATAL] install_nmf_yardstick.R bytes diverge from the committed resolver" >&2; exit 1)
 RUN Rscript /tmp/install_nmf_yardstick.R
 
-# The rust face: hash-pinned, index-spelled, single-package. --no-deps is
-# both the pip precondition for --require-hashes and the promise that the
-# numpy below (jammy apt, 1.21) is the one the abi3 wheel loads; :all:
-# binary-only kills the sdist fallthrough the hash policy cannot bless.
-RUN python3 -m pip install --no-deps --no-cache-dir --only-binary :all: \
-      --index-url https://pypi.org/simple \
-      --require-hashes sha256:93608cb2f4ab78c9ece2fcdc2b7feb14536f913db01e8f8cb4f186a970c0eed3 \
-      "nmf-rs==0.1.0"
+# The rust face: single-package, binary-only, and hash-gated on the
+# execution-arch wheel -- the shape the fetch probe itself measured (death
+# #9, 2026-10-16): Ubuntu jammy's pip 22.0.2 exposes --require-hashes as a
+# no-value flag (both CLI value forms rejected in-container), so the pin
+# rides a hard sha256sum test against the banked 04-nmf-rs-fetch-probe
+# bytes between download and an OFFLINE (--no-index --find-links) install:
+# a digest mismatch dies at the gate, never at import time. --no-deps
+# carries both roles it always had: no resolve sweep, and the promise that
+# the numpy below (jammy apt, 1.21) is the one the abi3 wheel loads. The
+# six arm images are linux/arm64 (inspect .Architecture) -- the wheel is the
+# aarch64 build, 9ad81407...; the x86_64 93608cb2... stays banked as fetch
+# evidence, not as this image's artifact. The index stays spelled upstream:
+# the configured mirror does not sync nmf-rs.
+RUN python3 -m pip download --no-deps --no-cache-dir --only-binary :all: \
+      --index-url https://pypi.org/simple -d /tmp/nmf_rs_wheel \
+      "nmf-rs==0.1.0" \
+    && test "$(sha256sum /tmp/nmf_rs_wheel/nmf_rs-0.1.0-cp39-abi3-manylinux_2_28_aarch64.whl | cut -d' ' -f1)" = \
+         "9ad81407bbc9335219f31a0b6746264761733494c6b16697e060729fa749dd17" \
+      || (echo "[FATAL] nmf-rs wheel digest diverges from the banked fetch evidence" >&2; exit 1) \
+    && python3 -m pip install --no-deps --no-cache-dir --no-index \
+         --find-links /tmp/nmf_rs_wheel "nmf-rs==0.1.0" \
+    && rm -rf /tmp/nmf_rs_wheel
 
 WORKDIR /work
 COPY run_nmf_yardstick.py /work/
