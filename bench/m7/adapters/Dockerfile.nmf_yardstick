@@ -1,0 +1,62 @@
+# P6 yardstick image: the seventh bake (manifest :42, :92 "python-capable;
+# only if wheel attempt proceeds" -- 04-nmf-rs-fetch-probe RESOLVED-FETCHABLE,
+# so it proceeds). The rust-NMF@nmf-rs wheel and R NMF::nmf(brunet) meet on
+# one committed fixture inside one image; run_nmf_yardstick.py is the entry.
+#
+# NETWORK POLICY (memo §5, binding): the base pull spells the mirror host --
+# docker.io is served by 9f6c5in3dh5vszgdz0.xuanyuan.run; a direct upstream
+# pull fails (proxy 407) and is prohibited. In-build package fetches
+# (apt/CRAN/PyPI) follow the G0-established §8 idiom: §5 governs image
+# pulls, not fetches. The PyPI leg spells the UPSTREAM index explicitly
+# because the network-configured mirror does not sync nmf-rs (probe bytes in
+# 04-nmf-rs-fetch-probe-20261015); a blocked index or a hash mismatch is a
+# build death, never a silent fallback.
+#
+# Build (driver: tools/p6_build_yardstick.py assembles the context; digest
+# captured from inspect .Id -- SS3, never transcribed):
+#   context = {run_nmf_yardstick.py, run_nmf_yardstick_leg.R,
+#              yardstick_cell/matrix.csv, Dockerfile.nmf_yardstick}
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip python3-numpy \
+    && rm -rf /var/lib/apt/lists/*
+
+# The R face: NMF (Brunet et al.) from CRAN -- the reference core the paper
+# measures against. The packageVersion echo is the version attestation
+# (same idiom as the arm images' jsonlite layer); absence is a build death.
+RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("NMF"); v <- packageVersion("NMF"); if (is.null(v)) quit(status = 1L); cat("[image] NMF ", as.character(v), " provisioned\n")'
+
+# The rust face: hash-pinned, index-spelled, single-package. --no-deps is
+# both the pip precondition for --require-hashes and the promise that the
+# numpy below (jammy apt, 1.21) is the one the abi3 wheel loads; :all:
+# binary-only kills the sdist fallthrough the hash policy cannot bless.
+RUN python3 -m pip install --no-deps --no-cache-dir --only-binary :all: \
+      --index-url https://pypi.org/simple \
+      --require-hashes sha256:93608cb2f4ab78c9ece2fcdc2b7feb14536f913db01e8f8cb4f186a970c0eed3 \
+      "nmf-rs==0.1.0"
+
+WORKDIR /work
+COPY run_nmf_yardstick.py /work/
+RUN test "$(sha256sum /work/run_nmf_yardstick.py | cut -d' ' -f1)" = \
+      "945da4867dba86241defc697e13b9778df732c96d85dd4ef4508c9f34ed7774c" \
+    || (echo "[FATAL] run_nmf_yardstick.py bytes diverge from the committed runner" >&2; exit 1)
+COPY run_nmf_yardstick_leg.R /work/
+RUN test "$(sha256sum /work/run_nmf_yardstick_leg.R | cut -d' ' -f1)" = \
+      "2dd390c90856b6702b9f7d6c65df63874c53ea6ffb3f180b070470fb0701a1c5" \
+    || (echo "[FATAL] run_nmf_yardstick_leg.R bytes diverge from the committed leg" >&2; exit 1)
+COPY yardstick_cell/ /work/yardstick_cell/
+RUN test "$(sha256sum /work/yardstick_cell/matrix.csv | cut -d' ' -f1)" = \
+      "10bda6beb4f457fa7f8b64e2030a05fa3cbe60c1251eb8bbfad14108a24601ae" \
+    || (echo "[FATAL] yardstick fixture bytes diverge from the committed matrix" >&2; exit 1)
+
+# Self-witness under network-none (arm-witness idiom): both cores must load
+# and complete a fixed five-iteration brunet run with no network at all.
+# An undeclared runtime dependency dies HERE, never mid-measurement.
+RUN --network=none python3 -c 'import numpy as np, nmf_rs; r = nmf_rs.nmf(np.random.default_rng(1).random((8, 6)), 2, method = "brunet", seed = 1, max_iter = 5, stop = "max_iter"); assert r.n_iter == 5; print("[image] nmf-rs smoke ok (5 iterations, network-none)")'
+RUN --network=none Rscript -e 'suppressMessages(library(NMF)); set.seed(1L); v <- matrix(abs(rnorm(24)), 6); r <- NMF::nmf(v, 2, method = "brunet", nrun = 1L, seed = 1L, maxIter = 5L, eps = 0, backup = 0L, silent = TRUE); cat("[image] NMF smoke ok (5 iterations, network-none)\n")'
+
+# The yardstick invocation shape (measured outdir path supplied per cell):
+#   docker run --rm --network=none <image> \
+#     python3 /work/run_nmf_yardstick.py --out /work/yardstick.json
+CMD ["python3", "/work/run_nmf_yardstick.py"]
