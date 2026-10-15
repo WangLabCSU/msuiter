@@ -6,7 +6,9 @@
 # Run under RUN --network=none at bake. The composed argv is
 # competitors/_p6_common.child_argv verbatim (counts/catalog/params/outdir +
 # the roster-carried --backend face token), executed through the frozen
-# m7_entry.py rusage launcher on the stage2-proven mini_cell fixtures.
+# m7_entry.py rusage launcher on the P6-regenerated mini_cell_p6 fixtures
+# (twenty N100 samples; death #7: the stage2-proven 96x1 twin is legitimate
+# history but nndsvd-rank-refusing at k=2 -- see the (AE) test group).
 #
 # Build dies unless ALL of:
 #   FROZEN CONTRACT (as self_witness.sh): rc=0; intervals.csv exact seven-

@@ -104,6 +104,9 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       hash-pinned against the banked fetch evidence with the unsynced
       mirror named, executed bytes COPY-pinned, the bake tool sealed
       against transcription, both cores measured at fixed iterations
+  (AE) test_p6_mini_fixture    the arm-image witness fixture (death #7):
+      the #13 attested r0 row survives verbatim, twenty N100-faithful
+      aligned samples regenerate byte-exactly from the committed rule
 """
 
 from __future__ import annotations
@@ -153,7 +156,7 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # P6 evidence loop (sigminer v3 release-attestation table):
            "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
            "test_p6_evidence", "test_p6_floor_governance",
-           "test_p6_yardstick"]
+           "test_p6_yardstick", "test_p6_mini_fixture"]
 
 
 def _collect(mod_name):

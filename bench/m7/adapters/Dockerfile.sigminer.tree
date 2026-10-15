@@ -10,7 +10,7 @@
 # the G0-established idiom (memo §8): §5 governs image pulls, not fetches.
 #
 # SHAPE: the legacy layer sequence (base, cmake, dev headers, tree-rooted
-# resolver, python3, jsonlite, byte pins, mini_cell, network-none
+# resolver, python3, jsonlite, byte pins, mini_cell_p6, network-none
 # self-witness) with the 2.3.1-specific strata retired and replaced:
 #   * The CRAN 2.3.1 root pin is gone: the root is the provisioned tree itself
 #     (COPY sigminer/ below; the installer's --tree/--expected-version/--ns-
@@ -33,7 +33,7 @@
 # Build (driver: bench/m7/tools/p6_build_arms.py assembles the context):
 #   context = {sigminer/<tree bytes>, msuiter/<pinned bytes>, arm_pin.json,
 #              install_sigminer_arm.R, run_sigminer_arm.R, m7_entry.py,
-#              self_witness_arm.sh, mini_cell/, Dockerfile.sigminer.tree}
+#              self_witness_arm.sh, mini_cell_p6/, Dockerfile.sigminer.tree}
 #   docker build -f Dockerfile.sigminer.tree \
 #     --build-arg TOOL=... --build-arg TREE_SHA=... \
 #     --build-arg EXPECTED_VERSION=... --build-arg NS_SHA256=... \
@@ -149,7 +149,13 @@ COPY arm_pin.json /work/arm_pin.json
 RUN python3 -c 'import json,sys; p=json.load(open("/work/arm_pin.json")); want={"tool":sys.argv[1],"face":sys.argv[2],"tree_sha":sys.argv[3],"expected_version":sys.argv[4],"ns_sha256":sys.argv[5]}; bad={k:(p.get(k),v) for k,v in want.items() if p.get(k)!=v}; print("[FATAL] /work/arm_pin.json disagrees with the build identity:",bad,file=sys.stderr) if bad else None; sys.exit(1 if bad else 0)' \
       "$TOOL" "$FACE" "$TREE_SHA" "$EXPECTED_VERSION" "$NS_SHA256"
 
+# Witness cell inputs: the #13-era attested byte-frozen fixture supplies the
+# COSMIC catalog and params (single committed copy); mini_cell_p6/ overlays
+# the (AE)-sealed twenty-sample regeneration of counts.csv on top (death #7
+# adjudication -- the 96x1 original is legit history but nndsvd-rank-refusing
+# at k=2). Overlay order is load-bearing: the regeneration must land last.
 COPY mini_cell/ /work/mini/in/
+COPY mini_cell_p6/ /work/mini/in/
 # The witness audits the cell-surface set IN /work (self_witness_arm.sh,
 # byte-frozen, tests -s /work/install_sigminer_arm.R): the resolver layer
 # consumes the /tmp copy, the trust guard requires the /work copy to exist
@@ -163,11 +169,12 @@ RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
     || (echo "[FATAL] /work copy of install_sigminer_arm.R diverges from the committed fork" >&2; exit 1)
 COPY self_witness_arm.sh /tmp/self_witness_arm.sh
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
-      "2c7bf630992cc6931a49ac0a4cc0cec68df11acfcc0038fa20205aa0b8c336b4" \
+      "926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663" \
     || (echo "[FATAL] self_witness_arm.sh bytes diverge from the committed witness" >&2; exit 1)
 # The container-scope four-file trust guard + arm gates, replayed under
-# network-none over the stage2-proven fixture bytes (frozen idiom). Any
-# undeclared runtime dependency dies HERE, never mid-measurement.
+# network-none over the (AE)-sealed mini_cell_p6 fixture bytes (death #7
+# adjudication; frozen idiom). Any undeclared runtime dependency dies HERE,
+# never mid-measurement.
 RUN --network=none sh /tmp/self_witness_arm.sh
 
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
