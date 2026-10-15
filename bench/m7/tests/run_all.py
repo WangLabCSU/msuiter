@@ -100,6 +100,10 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       tools measured, 21-class anchor completeness, reps-matched OK witnesses
       with committed bytes, calibration ledger fields, co-tenancy census
       coverage of every ready P6 image
+  (AD) test_p6_yardstick       seventh-image provisioning: the wheel is
+      hash-pinned against the banked fetch evidence with the unsynced
+      mirror named, executed bytes COPY-pinned, the bake tool sealed
+      against transcription, both cores measured at fixed iterations
 """
 
 from __future__ import annotations
@@ -148,7 +152,8 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_action_pins",
            # P6 evidence loop (sigminer v3 release-attestation table):
            "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
-           "test_p6_evidence", "test_p6_floor_governance"]
+           "test_p6_evidence", "test_p6_floor_governance",
+           "test_p6_yardstick"]
 
 
 def _collect(mod_name):
