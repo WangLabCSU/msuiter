@@ -47,6 +47,13 @@ def attested(scratch: Path) -> dict[str, dict]:
             latest = json.loads(m.group(1))          # last block wins (reruns)
         if latest is None:
             continue
+        if "tool" not in latest:
+            if "instrument" in latest:
+                continue                     # the yardstick attestation:
+                # delivery evidence sharing the scratch, never roster data
+            sys.stderr.write(f"[FATAL] {log.name}: [ATTESTED] block names "
+                             "neither tool nor instrument\n")
+            raise SystemExit(2)
         if not DIGEST_OK.match(latest.get("image_digest", "")):
             sys.stderr.write(f"[FATAL] {log.name}: image_digest is not "
                              f"sha256+64hex: {latest.get('image_digest')!r}\n")

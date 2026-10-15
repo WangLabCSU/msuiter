@@ -93,6 +93,29 @@ def test_attested_parses_last_block_and_demands_wellformed_digests():
             raise Assertionerror("malformed image_digest must be refused")
 
 
+def test_attested_walks_past_instrument_attestations():
+    """The seventh image attests as an instrument, not an arm -- its
+    [ATTESTED] block is delivery evidence and must neither leak into
+    roster data nor crash the flip (KeyError was the witnessed shape of
+    death #9, the first real scratch with both block kinds present)."""
+    mod = _load_flip()
+    with tempfile.TemporaryDirectory() as td:
+        scratch = Path(td)
+        (scratch / "sigminer_post_p1.build.log").write_text(
+            f"[ATTESTED] {json.dumps(_block('sigminer_post_p1'), sort_keys=True)}\n",
+            encoding="utf-8")
+        (scratch / "nmf_yardstick.build.log").write_text(
+            "[ATTESTED] " + json.dumps(
+                {"instrument": "nmf_yardstick",
+                 "image_ref": "msuiter-sigminer:p6-nmf-yardstick-r1",
+                 "image_digest": _fixture_digest("yardstick"),
+                 "wheel_sha256": "ad" * 32}, sort_keys=True) + "\n",
+            encoding="utf-8")
+        out = mod.attested(scratch)
+        assert set(out) == {"sigminer_post_p1"}, \
+            f"instrument attestation must not join roster data: {sorted(out)}"
+
+
 def test_flip_dry_run_survives_the_committed_roster_shape():
     """RED witness: flip() must locate the block terminator on real bytes."""
     with tempfile.TemporaryDirectory() as td:
