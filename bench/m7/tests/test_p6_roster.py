@@ -7,11 +7,19 @@ unit is the mechanical echo of that bank. A drift between the frozen roster here
 and competitors.p6_arms is a broken promise to the pre-registration, not a typo
 to be fixed forward: the test quotes the SHAs, the module must match.
 
-RED-by-absence: competitors.p6_arms does not exist yet in this batch; the import
-failure is the witnessed RED, and the same module is what competitors/registry.py
-consumes to mint the six rows (SS1: digests arrive only via the SS3 inspect
-ceremony, so until the flip every P6 row is pending-verify and compose-time
-refused by the image gate).
+RED-by-absence: competitors.p6_arms was introduced by the GREEN slice; the
+same module is what competitors/registry.py consumes to mint the six rows
+(SS1: digests arrive only via the SS3 inspect ceremony, so until the flip
+every P6 row is pending-verify and compose-time refused by the image gate).
+
+2026-10-15 A2 (trees attestation log /tmp/p6lane/logs/03b-trees-attestation-):
+the banked pre_v3 full SHA was a shaped mistranscription (valid 40-hex, non-
+existent object). The law table below now quotes the rev-parse-witnessed SHA,
+and equality is checked AGAINST THE TABLE in both directions — a format check
+alone cannot catch a validly-shaped typo, so the roster is now pinned by value,
+not by regex. The FROZEN_NS_HASHES column is likewise witnessed (shasum over
+git-archive bytes of each tree's NAMESPACE): it is the identity the arm
+installer's tail assert consumes, and it doubles as a tree-content fingerprint.
 """
 
 from __future__ import annotations
@@ -28,15 +36,30 @@ if str(HERE) not in sys.path:
 from competitors import docker_cmd, registry        # noqa: E402  (RED seam: p6_arms)
 from competitors import p6_arms                     # noqa: E402  (RED-by-absence)
 
-# The frozen roster, quoted verbatim from the pre-registration manifest SS1.
+# The frozen roster, quoted verbatim from the pre-registration manifest SS1,
+# A2-corrected by value against /Users/wsx/Documents/GitHub/sigminer (ground
+# truth, read-only) — witness lines in the trees attestation log.
 FROZEN_TREES = {
-    "sigminer_pre_v3":       "196471a54d0f78a1a12f4f4a027082746524b565",
+    "sigminer_pre_v3":       "196471a57000ff8a160400ebfc984f6ab0ea23e4",
     "sigminer_post_p1":      "1e174a044e1eb4288b73a664b1179c98b104d28c",
     "sigminer_post_p1_rust": "1e174a044e1eb4288b73a664b1179c98b104d28c",
     "sigminer_post_p2":      "37fc92a872720f947b5e2ac92d7de0fb96f2b092",
     "sigminer_post_v3":      "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
     "sigminer_post_v3_rust": "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
 }
+# shasum over each frozen tree's NAMESPACE bytes (git archive | tar -x | shasum
+# — attestation log SS "Per-tree DESCRIPTION/NAMESPACE facts"). The arm
+# installer asserts against these; they are the witnessed export-contract
+# fingerprint of exactly the bytes the image ships.
+FROZEN_NS_HASHES = {
+    "sigminer_pre_v3":       "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df",
+    "sigminer_post_p1":      "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df",
+    "sigminer_post_p1_rust": "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df",
+    "sigminer_post_p2":      "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+    "sigminer_post_v3":      "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+    "sigminer_post_v3_rust": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+}
+NS64 = re.compile(r"^[0-9a-f]{64}$")
 FROZEN_VERSIONS = {
     "sigminer_pre_v3": "2.3.3", "sigminer_post_p1": "2.3.3",
     "sigminer_post_p1_rust": "2.3.3", "sigminer_post_p2": "2.3.3",
@@ -60,6 +83,9 @@ def test_roster_tree_shas_are_the_banked_full_40hex():
             f"{name}: tree {sha} is not the pre-registered "
             f"{FROZEN_TREES[name]} — a re-pin needs its own dated manifest amendment")
         assert spec["version"] == FROZEN_VERSIONS[name], f"{name}: version pin drift"
+        assert spec.get("ns_sha256") == FROZEN_NS_HASHES[name], (
+            f"{name}: NAMESPACE witness drift — the arm installer's tail assert "
+            f"would gate on bytes no one attested")
 
 
 def test_face_convention_rust_twins_share_their_tree():
@@ -113,6 +139,22 @@ def test_p6_flip_is_pairwise_and_never_face_laundering():
         bad = dataclasses.replace(rust, image_digest="sha256:" + "0" * 63)
         assert docker_cmd.image_gate(bad) is not None, (
             f"{rust.name}: malformed digest must be refused pre-daemon")
+
+
+def test_arm_pin_files_mirror_the_roster():
+    """One committed identity file per arm (Dockerfile COPYs it to
+    /work/arm_pin.json; the arm runner's pin guard reads it). The committed
+    bytes must equal the emitter's output over the roster — identity is data,
+    never folklore, and hand-edited pin bytes are exactly the drift class
+    today's A2 attestation exists to make impossible."""
+    from tools import p6_emit_arm_pins
+    pins = HERE / "adapters" / "arm_pins"
+    for tool in p6_arms.P6_ARM_SPECS:
+        f = pins / f"{tool}.json"
+        assert f.exists(), f"missing committed arm pin {f}"
+        assert f.read_text(encoding="utf-8") == p6_emit_arm_pins.pin_text(tool), (
+            f"{tool}: committed arm pin drifts from the roster — regenerate via "
+            f"tools/p6_emit_arm_pins.py, never hand-edit")
 
 
 def test_legacy_rows_are_byte_stable_under_the_p6_batch():

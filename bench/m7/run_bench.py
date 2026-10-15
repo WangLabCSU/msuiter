@@ -265,6 +265,12 @@ def cell_identity(competitor: str, spec, args) -> dict:
             "version": spec.version, "image_ref": spec.image_ref,
             "image_digest": spec.image_digest, "entrypoint": spec.entrypoint,
             "runner_script": spec.runner_script,
+            # P6 arms carry typed tree/face columns (roster-attested): the
+            # cell's own manifest then names the bytes the image was baked
+            # from. Legacy rows answer empty — the slice exists, the witness
+            # law binds only where a tree was attested.
+            "tree_sha": getattr(spec, "tree_sha", ""),
+            "face": getattr(spec, "face", ""),
             "caps": list(docker_cmd.THREAD_CAPS),
             "adapter": args.adapter, "provider": args.provider,
             "provider_seed": args.provider_seed}

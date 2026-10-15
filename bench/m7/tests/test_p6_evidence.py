@@ -87,6 +87,26 @@ def test_master_columns_are_the_frozen_nine():
         f"committed schema drift: {p6_evidence.MASTER_COLUMNS}")
 
 
+def test_cell_identity_names_the_arm_tree_and_face():
+    """Digest-witness law, strengthened: a P6 cell's own manifest.json is
+    written from cell_identity, so the identity must carry the tree SHA and
+    face the image was baked from — a wrong-tree bake is then caught by the
+    cell's OWN bytes, not only by the build tag's naming convention. Legacy
+    rows (no typed columns) contribute empty strings: the field exists, the
+    witness law binds only where the roster attests a tree."""
+    import run_bench
+    from argparse import Namespace
+    args = Namespace(adapter="docker", provider="synthetic", provider_seed=0)
+    reg = registry.load()
+    ident = run_bench.cell_identity("sigminer_post_v3_rust",
+                                    reg["sigminer_post_v3_rust"], args)
+    assert ident["tree_sha"] == "a8b8825be0c0768580c85b7e749b7b9088d8d9d7"
+    assert ident["face"] == "rust"
+    legacy = run_bench.cell_identity("sigminer", reg["sigminer"], args)
+    assert legacy["tree_sha"] == "" and legacy["face"] == "", (
+        "legacy rows keep an empty identity slice, never an invented one")
+
+
 # -- digest-witness verification ----------------------------------------------------
 
 def test_cell_provenance_requires_matching_digest_and_stamp():

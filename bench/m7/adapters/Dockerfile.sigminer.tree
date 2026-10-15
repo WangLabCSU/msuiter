@@ -1,0 +1,175 @@
+# P6 arm image: sigminer at one pre-registered PROVISIONED TREE, one face.
+# Lane manifest /tmp/p6lane/logs/00-manifest-preregistration.md SS2/SS3; trees
+# and NAMESPACE hashes attested in 03b-trees-attestation-20261015.
+#
+# NETWORK POLICY (memo §5, binding, mirrored from Dockerfile.sigminer): every
+# base pull spells the mirror host explicitly -- docker.io is served by
+# 9f6c5in3dh5vszgdz0.xuanyuan.run. Direct upstream pulls fail on this network
+# (proxy 407) and are prohibited; a 407 is recorded as environmental evidence,
+# never routed around. In-build package fetches (apt/CRAN/crates.io) follow
+# the G0-established idiom (memo §8): §5 governs image pulls, not fetches.
+#
+# SHAPE: the legacy layer sequence (base, cmake, dev headers, tree-rooted
+# resolver, python3, jsonlite, byte pins, mini_cell, network-none
+# self-witness) with the 2.3.1-specific strata retired and replaced:
+#   * The CRAN 2.3.1 root pin is gone: the root is the provisioned tree itself
+#     (COPY sigminer/ below; the installer's --tree/--expected-version/--ns-
+#     sha256 carry the pre-registered identities -- fail-fast on the provided
+#     bytes, re-checked post-install on the resolver's own carried bytes).
+#   * The P3M era-snapshot layers are gone: synchronicity + lpSolve join the
+#     BFS as unconstrained EXTRA_ROOTS (their RESOLVE lines in the installer
+#     log are the version attestation; the twins share the install layer
+#     through the build cache, so a face-pair never straddles a float, and
+#     any post-facto drift re-surfaces as a digest change at the flip).
+#     matrixStats and doParallel are deliberately ABSENT -- the arm witness
+#     dies on their presence (route-parity law, self_witness_arm.sh).
+#   * FACE=rust adds the measurement toolchain (jammy rustc 1.75.0 >= the
+#     package MSRV 1.71, native glibc -- no cross-stage binary, no glibc
+#     wall) and the stable batch entry built --release (lto=true,
+#     codegen-units=1 from src/rust/Cargo.toml: the measurement profile; the
+#     P1 gate certified entry SEMANTICS, the profile is a measurement
+#     setting, and the in-image handshake re-attests the protocol token).
+#
+# Build (driver: bench/m7/tools/p6_build_arms.py assembles the context):
+#   context = {sigminer/<tree bytes>, msuiter/<pinned bytes>, arm_pin.json,
+#              install_sigminer_arm.R, run_sigminer_arm.R, m7_entry.py,
+#              self_witness_arm.sh, mini_cell/, Dockerfile.sigminer.tree}
+#   docker build -f Dockerfile.sigminer.tree \
+#     --build-arg TOOL=... --build-arg TREE_SHA=... \
+#     --build-arg EXPECTED_VERSION=... --build-arg NS_SHA256=... \
+#     --build-arg FACE=R|rust -t msuiter-sigminer:p6-<key>-r1 .
+# After a verified build the harness captures `docker image inspect`
+# RepoDigests into the roster (PENDING-VERIFY -> sha256:...); inventing or
+# transcribing a digest is prohibited -- inspect output only.
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
+
+ARG TOOL
+ARG TREE_SHA
+ARG EXPECTED_VERSION
+ARG NS_SHA256
+ARG FACE
+
+RUN test -n "$TOOL" && test -n "$TREE_SHA" && test -n "$EXPECTED_VERSION" \
+    && test -n "$NS_SHA256" \
+    && case "$FACE" in R|rust) : ;; *) echo "[FATAL] FACE must be R or rust, got: $FACE" >&2; exit 1 ;; esac \
+    && echo "[image] arm build identity: tool=$TOOL face=$FACE tree=$TREE_SHA version=$EXPECTED_VERSION"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates cmake \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dev-header strata mirrored verbatim from the proven legacy sequence: the
+# 2.3.3-era transitive closure answers to the same header classes (zlib.h,
+# hfile_libcurl.c) that produced the recorded build defects #2/#3/#5. The
+# concrete libcurl4-openssl-dev provider is spelled, never the virtual name.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# The provisioned tree: staged by the driver from the read-only ground-truth
+# checkout via `git -C <gt> archive <tree_sha> | tar -x` (never a clone, never
+# a fetch -- the SHAs are the witnessed 03b bytes). Identity is asserted here
+# cheaply and authoritatively in the installer (belt + braces).
+COPY sigminer/ /tmp/tree/
+RUN Rscript -e 'd <- read.dcf("/tmp/tree/DESCRIPTION")[[1L]]
+pkg <- if (is.null(d[["Package"]])) "(none)" else d[["Package"]]
+ver <- if (is.null(d[["Version"]])) "(none)" else d[["Version"]]
+stopifnot(identical(pkg, "sigminer"), sprintf("tree DESCRIPTION Package is %s, want sigminer", pkg))
+stopifnot(identical(ver, "'"$EXPECTED_VERSION"'"), sprintf("tree Version %s is not the pre-registered %s", ver, "'"$EXPECTED_VERSION"'"))' \
+    && test "$(sha256sum /tmp/tree/NAMESPACE | cut -d' ' -f1)" = "$NS_SHA256"
+
+# The tree-rooted resolver: a mechanically derived fork of the byte-frozen
+# install_sigminer.R (/tmp/p6lane/derive_install_fork.py, each anchor matching
+# exactly once; the reviewable delta is that table). Byte-pinned COPY: the
+# committed bytes ARE the build input (tests/test_p6_roster.py mirrors the pin
+# files to the roster; these lines pin the scripts to their committed bytes).
+COPY install_sigminer_arm.R /tmp/install_sigminer_arm.R
+RUN test "$(sha256sum /tmp/install_sigminer_arm.R | cut -d' ' -f1)" = \
+      "1fa7813e4c4dba4392b2ae6c6c0a2420c5f42e6de6d8077f61a5cb6dbe0956d9" \
+    || (echo "[FATAL] install_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
+RUN Rscript /tmp/install_sigminer_arm.R --tree /tmp/tree \
+      --expected-version "$EXPECTED_VERSION" --ns-sha256 "$NS_SHA256"
+
+# RB-01/RB-03 strata, mirrored verbatim (interpreter for the cell launcher;
+# jsonlite for the runners' fromJSON call sites -- the arm pin guard reads
+# arm_pin.json through it).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
+RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), " provisioned\n")'
+
+# ---- rust face: certified kernel + msuiter R package ------------------------
+# The toolchain is jammy-native (no builder/runtime glibc split). rustc is
+# version-gated, never floated silently: drift is a build death. The crates.io
+# index is pinned sparse+HTTPS (proxy-shaped); a blocked index is a build
+# death, never a silent fallback.
+RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no rust strata"; exit 0; fi \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends rustc cargo \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustc --version | grep -q '^rustc 1\.75\.0' \
+    && cargo --version | grep -q '^cargo 1\.75\.0'
+
+COPY msuiter/ /tmp/msuiter/
+RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no msuiter layer"; exit 0; fi \
+    && export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://index.crates.io/" \
+    && R CMD INSTALL --preclean --no-multiarch /tmp/msuiter \
+    && Rscript -e 'if (!requireNamespace("msuiter", quietly = TRUE)) quit(status = 1L)'
+
+RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no kernel layer"; exit 0; fi \
+    && export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://index.crates.io/" \
+    && cargo build --release --locked --quiet \
+         --manifest-path=/tmp/msuiter/src/rust/engine/Cargo.toml \
+         --target-dir=/tmp/ktarget --package=msuiter-engine --bin=msuiter-kernel \
+    && test -x /tmp/ktarget/release/msuiter-kernel \
+    && install -m 755 /tmp/ktarget/release/msuiter-kernel /usr/local/bin/msuiter-kernel \
+    && /usr/local/bin/msuiter-kernel --version | grep -q 'protocol=1' \
+    && rm -rf /tmp/ktarget /tmp/msuiter \
+    && echo "[image] msuiter-kernel release binary installed, handshake witnessed"
+
+# The kernel identity is ENV, not folklore (the sigminer .kernel_resolve
+# ladder consults it before PATH). On the R face the variable is set but the
+# binary is absent -- inert, because the R face never traverses the bridge;
+# the arm witness dies on a rust face without an executable at this path.
+ENV MSUITER_KERNEL_BIN=/usr/local/bin/msuiter-kernel
+
+# ---- cell-surface bytes, all pinned to the committed fork -------------------
+WORKDIR /work
+COPY m7_entry.py /work/
+RUN test "$(sha256sum /work/m7_entry.py | cut -d' ' -f1)" = \
+      "7ce0c147ccb7f3c3cb5fddf8062335544823eabfb6ab5423eb23a94b480c14be" \
+    || (echo "[FATAL] m7_entry.py bytes diverge from the frozen launcher" >&2; exit 1)
+COPY run_sigminer_arm.R /work/
+RUN test "$(sha256sum /work/run_sigminer_arm.R | cut -d' ' -f1)" = \
+      "013c8248cbf6abfc89b3eafbf0b8163f7e43052e6b8f8d0973578bf1cb05c03d" \
+    || (echo "[FATAL] run_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
+
+# The committed arm pin (tools/p6_emit_arm_pins.py output over the roster --
+# tests/test_p6_roster.py::test_arm_pin_files_mirror_the_roster guards the
+# bytes; this line guards that the pin baked into THIS image is the identity
+# the build was invoked with -- no cross-wiring of a container to a face).
+COPY arm_pin.json /work/arm_pin.json
+RUN python3 -c '
+import json, sys
+p = json.load(open("/work/arm_pin.json"))
+want = {"tool": sys.argv[1], "face": sys.argv[2], "tree_sha": sys.argv[3],
+        "expected_version": sys.argv[4], "ns_sha256": sys.argv[5]}
+bad = {k: (p.get(k), v) for k, v in want.items() if p.get(k) != v}
+if bad:
+    print("[FATAL] /work/arm_pin.json disagrees with the build identity:", bad, file=sys.stderr)
+    sys.exit(1)' "$TOOL" "$FACE" "$TREE_SHA" "$EXPECTED_VERSION" "$NS_SHA256"
+
+COPY mini_cell/ /work/mini/in/
+COPY self_witness_arm.sh /tmp/self_witness_arm.sh
+RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
+      "8c0d5d186af43bd2b7361be3db7552604834e67e134f61515cc7ccf4a177d8a4" \
+    || (echo "[FATAL] self_witness_arm.sh bytes diverge from the committed witness" >&2; exit 1)
+# The container-scope four-file trust guard + arm gates, replayed under
+# network-none over the stage2-proven fixture bytes (frozen idiom). Any
+# undeclared runtime dependency dies HERE, never mid-measurement.
+RUN --network=none sh /tmp/self_witness_arm.sh
+
+# The harness always invokes python3 /work/m7_entry.py ... -- Rscript
+# /work/run_sigminer_arm.R ... (competitors/_p6_common.child_argv); CMD is
+# documentation of that shape only.
+CMD ["python3", "/work/m7_entry.py"]
