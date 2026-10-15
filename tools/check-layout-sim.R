@@ -285,33 +285,109 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
 # libSystem.B.tbd trips tapi (measured 2026-10-10); CI's checked toolchain
 # preflights green, so the fallback is effectively dev-local. When SDKROOT is
 # not exported the harness now self-discovers an ambient default ahead of the
-# provisioning INSTALL (.sdkroot_default: xcrun --show-sdk-path probe, then
-# the standard CLT SDK dir, gated on usr/include presence); an explicitly
-# exported SDKROOT -- e.g. the devlog-pinned MacOsX26.5.sdk -- always wins,
-# untouched.
+# provisioning INSTALL (.sdkroot_default: the xcrun --show-sdk-path answer,
+# then the Xcode platform SDK dir newest-first, then the standard CLT SDK
+# dir -- each candidate gated structurally on usr/include AND functionally by
+# a minimal -isysroot link through the build's clang); an explicitly exported
+# SDKROOT -- e.g. the devlog-pinned MacOsX26.5.sdk -- always wins, untouched.
 # U-M8 release-eng: SDKROOT ambient default for the provisioning INSTALL's
 # native build. Pure + probes injected, so the shared .sim_defs extraction
 # lets tests/testthat/test-check-layout-sim-sdkroot.R drive every branch
 # offline. Contract: proposes a darwin SDKROOT only while it is currently
 # unset/empty -- an explicit override returns NA so callers leave the
 # environment exactly as found; NA also answers when nothing trustworthy is
-# discoverable (the branch CI's checked toolchain walks). The proposed-dir
-# gate (dir + usr/include) rejects dangling aliases and half-provisioned CLTs
-# before clang could ever follow them.
+# discoverable (the branch CI's checked toolchain walks). Two acceptance
+# legs: the proposed-dir gate (dir + usr/include) rejects dangling aliases
+# and half-provisioned CLTs, and the functional gate accepts a candidate only
+# after a real minimal -isysroot link through the build's clang succeeds.
+# The functional leg is what the witnessed machine state demands (2026-10-15,
+# reproducing block 2b's 2026-10-10 hazard note): the CLT SDK 27 answers
+# xcrun --show-sdk-path with rc 0 and carries usr/include, yet every link
+# through it dies on a tapi "unknown architecture" parse of its
+# libSystem.B.tbd -- a structurally clean candidate can be build-hostile, and
+# only an executed link can tell. Candidate order: the xcrun answer, then
+# the Xcode platform SDK dir (newest first), then the standard CLT dir; the
+# first candidate passing BOTH legs wins.
 .sdkroot_default <- function(getenv = Sys.getenv,
-                             os = .Platform$os.type,
+                             os = if (is.character(R.version[["os"]]))
+                                    R.version[["os"]] else "",
                              xcrun = "/usr/bin/xcrun",
-                             clt.sdk = "/Library/Developer/CommandLineTools/MacOSX.sdk") {
-  if (!identical(os, "darwin")) return(NA_character_)
+                             clt.sdk = "/Library/Developer/CommandLineTools/MacOSX.sdk",
+                             xcode.sdkdir = file.path(
+                               "/Applications/Xcode.app", "Contents", "Developer",
+                               "Platforms", "MacOSX.platform", "Developer",
+                               "SDKs"),
+                             clang = "clang",
+                             arch = NULL) {
+  # The darwin gate is a prefix test done with primitives, not a ^ regex:
+  # the renamed base in this build misbehaves on anchors (measured 2026-10-15
+  # -- anchored patterns miss matches their unanchored forms find). The live
+  # platform field answers the version-suffixed darwinNN form (measured
+  # darwin20), and an unrecognized or empty value declines injection.
+  if (!length(os) || !is.character(os) ||
+      !identical(substring(os[1L], 1L, 6L), "darwin"))
+    return(NA_character_)
   cur <- try(getenv("SDKROOT", ""), silent = TRUE)
   if (!inherits(cur, "try-error") && is.character(cur) &&
       length(cur) == 1L && nzchar(cur)) {
     return(NA_character_)                    # explicit override wins, untouched
   }
+  # The probe's -arch token rides the build's own arch when any source
+  # speaks it: a non-empty .Platform$r_arch, else the token after -arch in
+  # R CMD config CC. With neither, the flag is simply omitted (length-zero
+  # collapse in the argv below) and clang answers with its default -- the
+  # discriminator is the SDK's tbd parse, which needs no particular arch.
+  if (is.null(arch)) {
+    arch <- character(0)
+    # Either renamed spelling of the platform field, but NOT R.version's
+    # arch entry: its token is not one the host clang accepts (measured
+    # "invalid arch name" 2026-10-15), while the build's own CC record is.
+    for (a1 in list(.Platform$r_arch, .Platform$r.arch)) {
+      if (is.character(a1) && length(a1) == 1L && nzchar(a1)) {
+        arch <- a1
+        break
+      }
+    }
+    if (!length(arch)) {
+      of <- tempfile("sdkroot-cc-")
+      rc <- tryCatch(suppressWarnings(suppressMessages(
+               system2(file.path(R.home(), "bin", "R"),
+                       c("CMD", "config", "CC"), stdout = of,
+                       stderr = "/dev/null"))),
+             error = function(e) 1L)
+      if (identical(rc, 0L) && file.exists(of)) {
+        toks <- trimws(unlist(strsplit(paste(readLines(of, warn = FALSE),
+                                             collapse = " "),
+                                       " ", fixed = TRUE)))
+        hit <- match("-arch", toks)
+        if (!is.na(hit) && hit < length(toks) && nzchar(toks[hit + 1L]))
+          arch <- toks[hit + 1L]
+      }
+      if (file.exists(of)) unlink(of)
+    }
+  }
   .usable.sdk <- function(p) {
     is.character(p) && length(p) == 1L && nzchar(p) && dir.exists(p) &&
       dir.exists(file.path(p, "usr", "include"))
   }
+  # The functional leg mirrors the build's own link shape (-arch +
+  # -dynamiclib) on a two-instruction dylib; any toolchain failure -- the
+  # tapi/tbd parse among them -- disqualifies the candidate.
+  .links <- function(sdk) {
+    # The ".c" DOT is load-bearing: clang picks the language from the file
+    # suffix, and a dot-less fileext leaves it as a bare token that ld
+    # reports as an unknown file type (measured 2026-10-15).
+    src <- tempfile(fileext = ".c")
+    out <- tempfile()
+    writeLines("int m(void){return 0;}", src)
+    st <- tryCatch(suppressWarnings(suppressMessages(
+             system2(clang, c(if (length(arch)) c("-arch", arch),
+                             "-dynamiclib", "-isysroot", sdk, src, "-o", out)))),
+           error = function(e) 101L)
+    unlink(c(src, out))
+    identical(as.integer(st), 0L)
+  }
+  .offer <- function(p) if (.usable.sdk(p) && .links(p)) p
   probe <- NA_character_
   if (file.exists(xcrun)) {
     of <- tempfile("sdkroot-probe-")
@@ -321,12 +397,64 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
     if (identical(rc, 0L) && file.exists(of)) {
       hit <- trimws(readLines(of, warn = FALSE))
       hit <- hit[nzchar(hit)]
-      if (length(hit) == 1L && .usable.sdk(hit[1L])) probe <- hit[1L]
+      if (length(hit) == 1L) {
+        p <- .offer(hit[1L])
+        if (!is.null(p)) probe <- p
+      }
     }
     if (file.exists(of)) unlink(of)
   }
-  if (is.na(probe) && .usable.sdk(clt.sdk)) probe <- clt.sdk
+  if (is.na(probe) && dir.exists(xcode.sdkdir)) {
+    # Newest first: the version-suffixed SDK names sort above any bare
+    # alias, so the most recent registered platform SDK answers first.
+    sdks <- sort(list.files(xcode.sdkdir, pattern = "[.]sdk$",
+                            full.names = FALSE), decreasing = TRUE)
+    for (s in sdks) {
+      p <- .offer(file.path(xcode.sdkdir, s))
+      if (!is.null(p)) { probe <- p; break }
+    }
+  }
+  if (is.na(probe)) {
+    p <- .offer(clt.sdk)
+    if (!is.null(p)) probe <- p
+  }
   probe
+}
+## The provisioning tree-identity guard: what the simulated layout runs
+## against must be the build of the tree under test. R CMD INSTALL rewrites
+## the source DESCRIPTION (the Collate list is re-wrapped onto one line), so
+## identity is decided on the two fields that shape a build -- Version and
+## the Collate file set -- not on raw bytes. A stale candidate is NAMED and
+## skipped; provisioning falls through to the fresh INSTALL below, never a
+## silent wrong build. Witnessed RED (tests/testthat/test-check-layout-sim.R,
+## the stale-candidate unit; lane log 10-unit-stalelib-RED.log): with the
+## ambient install lagging the lane's Collate, the nested run executed the
+## lane's new test file against the old build and the sim self-test broke
+## for a breakage that does not exist in the layout (the recorded
+## provision-lib hazard).
+.collate_files <- function(x) {
+  hs <- grep("^Collate:", x)
+  if (!length(hs)) return(character(0))
+  blk <- x[seq(hs[1L], length(x))]
+  nxt <- grep("^[^[:space:]]", blk)
+  nxt <- nxt[nxt > 1L]
+  if (length(nxt)) blk <- blk[seq_len(nxt[1L] - 1L)]
+  toks <- unlist(strsplit(blk, "'", fixed = TRUE))
+  keep <- !is.na(toks) & nchar(toks) >= 3L &
+    substring(toks, nchar(toks) - 1L) == ".R"
+  sort(unique(toks[keep]))
+}
+.stale_candidate <- function(l) {
+  di <- tryCatch(readLines(file.path(l, pkg, "DESCRIPTION"), warn = FALSE),
+                 error = function(e) NULL)
+  if (is.null(di)) return(TRUE)
+  get_v <- function(x) {
+    v <- grep("^Version:", x, value = TRUE)
+    if (length(v)) trimws(sub("^Version:[[:space:]]*", "", v[1L]))
+    else NA_character_
+  }
+  !identical(get_v(di), get_v(desc)) ||
+    !identical(.collate_files(di), .collate_files(desc))
 }
 .provision_lib <- function() {
   cand <- if (nzchar(lib)) c(lib, .libPaths()) else .libPaths()
@@ -334,7 +462,15 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
     p <- file.path(l, pkg)
     if (dir.exists(p) &&
         file.exists(file.path(p, "DESCRIPTION")) &&
-        file.exists(file.path(p, "CITATION"))) return(l)
+        file.exists(file.path(p, "CITATION"))) {
+      if (.stale_candidate(l)) {
+        cat("check-layout-sim: stale candidate", p,
+            "rejected -- its installed Version/Collate lag the tree under",
+            "test; provisioning a fresh INSTALL instead\n")
+        next
+      }
+      return(l)
+    }
   }
   new <- tempfile(paste0("rlib-", pkg, "-"))
   dir.create(new, recursive = TRUE)   # INSTALL refuses a missing --library dir
