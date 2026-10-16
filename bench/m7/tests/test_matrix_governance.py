@@ -352,3 +352,65 @@ def test_anchor_witnesses_are_committed_probe_json_with_full_argv():
             f"anchor witness {path.name} disagrees with the registry reps")
         assert (doc["sidecar"]["cpu_seconds"]
                 == anchor["cpu_seconds"]), "registry cost != witness verbatim"
+
+
+# -- (1b) tool names may carry single underscores (death #10, 2026-10-16) ----
+# The campaign's six P6 arms (sigminer_pre_v3 ... sigminer_post_v3_rust) all
+# carry `_` in their registry tool names; the original grammar kept the tool
+# class ASCII-narrower than the arm class (which already allows single
+# underscores), and every historical measured tool was underscore-free -- so
+# the campaign's first underscored cell completion was the FIRST walk of
+# parse_stamp through floor_gate, and it killed the main shard. The twin
+# laws: the delimiter stays `__` (single `_` inside tool/arm is unambiguous)
+# and the near-miss rejection list survives intact.
+
+_P6_TOOLS = ("sigminer_pre_v3", "sigminer_post_p1", "sigminer_post_p1_rust",
+             "sigminer_post_p2", "sigminer_post_v3", "sigminer_post_v3_rust")
+
+
+def test_parse_stamp_accepts_underscored_tool_names():
+    for tool in _P6_TOOLS:
+        for arm in ("main", "comp_strong_flat"):
+            for n in (100, 1000, 10000, 100000, 1000000):
+                label = f"{tool}__{arm}__N{n}"
+                assert gov.parse_stamp(label) == (tool, arm, n)
+
+
+def test_parse_stamp_rejects_degenerate_underscore_forms():
+    # The relaxation must not open that door: degenerate segments and an
+    # embedded double-separator stay illegal labels.
+    for bad in ("_sig__main__N5", "sig_x___y__main__N5", "sig____main__N5",
+                "a__b__main__N5", "sigminer_pre_v3__main__N١٠٠",
+                "sigminer_pre_v3__main__N0100", "sigminer_pre_v3__main__N5x",
+                "sigminer_pre_v3__main__N5__x"):
+        try:
+            gov.parse_stamp(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"parse_stamp accepted malformed label {bad!r}")
+
+
+def test_floor_gate_passes_unanchored_underscored_tool():
+    # Pre-anchor regime (RB-09): an unmeasured tool walks the gate silently,
+    # and the walk starts at parse_stamp -- which must not throw.
+    assert "p6_probe_only" not in gov._MEASURED_TOOLS
+    row = {"cell": "p6_probe_only__main__N100", "status": "ok",
+           "seconds": 9999999.0}
+    assert gov.floor_gate(row) is None
+    # The exact string that killed the campaign parses identically.
+    assert gov.parse_stamp("sigminer_pre_v3__main__N100") == (
+        "sigminer_pre_v3", "main", 100)
+
+
+def test_floor_gate_anchored_path_is_unchanged():
+    # Relaxation regression: an anchored class still gates (pass below the
+    # floor, flagged above the ratio) whatever the name shapes do.
+    tool, arm, n = sorted(gov._FLOOR_ANCHORS)[0]
+    floor = gov.floor_for(tool, arm, n)
+    label = f"{tool}__{arm}__N{n}"
+    low = gov.floor_gate({"cell": label, "status": "ok",
+                          "seconds": floor * 0.5})
+    high = gov.floor_gate({"cell": label, "status": "ok",
+                           "seconds": floor * gov.FLOOR_RATIO * 2})
+    assert low is None
+    assert high is not None and high["status"].startswith("defect-floor")

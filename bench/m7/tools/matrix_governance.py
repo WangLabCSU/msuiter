@@ -35,7 +35,15 @@ from pathlib import Path
 # -- (1) exact stamp grammar ------------------------------------------------------
 # The ONLY admissible label shape. `[0-9]` is deliberately ASCII-class:
 # int("١٠٠") == 100, so a unicode-digit label would silently resolve.
-_STAMP_RE = re.compile(r"([a-z0-9]+)__((?:[a-z0-9]+)(?:_[a-z0-9]+)*)__N(0|[1-9][0-9]*)$")
+# Tool names may carry SINGLE underscores (the six P6 arms: sigminer_pre_v3
+# ... sigminer_post_v3_rust) exactly as arms do -- the delimiter is `__`, so
+# a single `_` inside tool/arm stays unambiguous under fullmatch. Death #10:
+# the tool class was narrower than the arm class only because every
+# historical measured tool was underscore-free; the campaign's first
+# underscored cell completion walked parse_stamp for the first time and
+# killed the main shard (test section (1b) seals both faces).
+_STAMP_RE = re.compile(
+    r"([a-z0-9]+(?:_[a-z0-9]+)*)__((?:[a-z0-9]+)(?:_[a-z0-9]+)*)__N(0|[1-9][0-9]*)$")
 
 
 def parse_stamp(label: str) -> tuple[str, str, int]:
