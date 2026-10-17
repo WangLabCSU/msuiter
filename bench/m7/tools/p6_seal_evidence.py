@@ -374,6 +374,9 @@ def main(argv=None) -> int:
     ap.add_argument("--cachedir", type=Path, required=True)
     ap.add_argument("--baseline", type=Path, default=None)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--refuse-ledger", action="store_true",
+                    help="on a REFUSE verdict, file result.md + the gate "
+                         "ledger (the master name stays SEALED-reserved)")
     args = ap.parse_args(argv)
 
     from competitors import registry                      # noqa: E402
@@ -398,6 +401,8 @@ def main(argv=None) -> int:
     print(json.dumps({"verdict": report["verdict"],
                       "accepted": report["accepted"],
                       "refusals": report["refusals"]}, indent=1))
+    if args.refuse_ledger and report["verdict"] == "REFUSE":
+        file_refusal(outdir=args.outdir, report=report)
     return 0 if report["verdict"] == "SEALED" else 4
 
 
