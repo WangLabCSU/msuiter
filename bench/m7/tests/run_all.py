@@ -43,7 +43,8 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
       (sigminer superlinear, sigprofiler amortizing)
-Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 hardware-pin the full
+bench table; the Han annotation here since PR #18 is translated, EN-only law):
   (S) test_hardware_pin        every authoritative row pinned to the measured
       environment; the docker-authoritative pass refuses to file without the
       operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
@@ -112,6 +113,12 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       on the committed roster, the digest lands directly under the face line
       of exactly its own arm, a re-run is idempotent and a digest conflict
       refuses
+  (AG) test_p6_seal_evidence   the S5 sealing pass over synthetic bytes:
+      discovery takes exactly the shard pass tables (replay trails die), the
+      zero-cached master is filed only whole, provenance and duplicate
+      trails are spoken not swallowed, the yardstick reads MEASURED only
+      over fair bytes, a missing parity side is REFUSE, and every result.md
+      figure traces to an input byte
 """
 
 from __future__ import annotations
@@ -162,7 +169,7 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
            "test_p6_evidence", "test_p6_floor_governance",
            "test_p6_yardstick", "test_p6_mini_fixture",
-           "test_p6_flip"]
+           "test_p6_flip", "test_p6_seal_evidence"]
 
 
 def _collect(mod_name):
