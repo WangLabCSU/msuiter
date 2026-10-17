@@ -119,6 +119,11 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       trails are spoken not swallowed, the yardstick reads MEASURED only
       over fair bytes, a missing parity side is REFUSE, and every result.md
       figure traces to an input byte
+  (AH) test_p6_anchor_registration  the fragment->table bridge: the witness
+      sidecar is the sole authority for an anchor figure (a lying fragment
+      dies), an unbacked or unverified witness is a REFUSE that leaves the
+      governance bytes sterile, legacy entries survive, a re-run is a
+      byte-identical no-op
 """
 
 from __future__ import annotations
@@ -169,7 +174,8 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
            "test_p6_evidence", "test_p6_floor_governance",
            "test_p6_yardstick", "test_p6_mini_fixture",
-           "test_p6_flip", "test_p6_seal_evidence"]
+           "test_p6_flip", "test_p6_seal_evidence",
+           "test_p6_anchor_registration"]
 
 
 def _collect(mod_name):
