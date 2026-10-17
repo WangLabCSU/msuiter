@@ -211,6 +211,48 @@ def test_result_md_numbers_all_trace_to_inputs():
             "the paper's 76x is UNMEASURED and may never enter this file"
 
 
+def test_refusal_ledger_files_report_and_result_but_never_master():
+    # A gate FAIL over a COMPLETE master is a finding the campaign must speak:
+    # the refusal lane files the ledger + result.md (verdict-bearing header),
+    # and still never files the SEALED-reserved master.
+    with tempfile.TemporaryDirectory() as t:
+        cd, out, tools, specs = _mk_campaign(Path(t), drop_tool="sigprofiler")
+        res = seal.seal(outdir=out, cachedir=cd, tools=tools,
+                        classes=[("main", 100)], specs=specs,
+                        baseline=None, yardstick=None, write=False)
+        assert res["verdict"] == "REFUSE", res
+        seal.file_refusal(outdir=out, report=res)
+        assert not (out / "master_committed.csv").exists(), \
+            "the master name is reserved for a SEALED pass"
+        rep = json.loads((out / "gate_ledgers" / "p6_seal_report.json")
+                         .read_text(encoding="utf-8"))
+        assert rep["verdict"] == "REFUSE" and rep["refusals"], \
+            "the refusal must be spoken in the ledger, not laundered"
+        body = (out / "result.md").read_text(encoding="utf-8")
+        assert "REFUSED" in body and "**P-1" in body, \
+            "result.md must carry the verdict-bearing header and the P-1 line"
+        assert "76" not in body.replace("0.76", "")
+
+
+def test_refusal_ledger_rerun_is_byte_identical():
+    with tempfile.TemporaryDirectory() as t:
+        cd, out, tools, specs = _mk_campaign(Path(t), drop_tool="sigprofiler")
+        res = seal.seal(outdir=out, cachedir=cd, tools=tools,
+                       classes=[("main", 100)], specs=specs,
+                       baseline=None, yardstick=None, write=False)
+        seal.file_refusal(outdir=out, report=res)
+        first = (out / "gate_ledgers" / "p6_seal_report.json").read_bytes()
+        assert b'"sealed_utc": null' in first, \
+            "a refusal never attests a seal instant"
+        res2 = seal.seal(outdir=out, cachedir=cd, tools=tools,
+                        classes=[("main", 100)], specs=specs,
+                        baseline=None, yardstick=None, write=False)
+        seal.file_refusal(outdir=out, report=res2)
+        # sealed_utc was None in both; sort_keys makes the rest deterministic
+        assert (out / "gate_ledgers" / "p6_seal_report.json") \
+            .read_bytes() == first
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(vars().items()):

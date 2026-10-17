@@ -181,6 +181,12 @@ def seal(*, outdir, cachedir, tools, classes, specs,
                 worst = max(v["cells"], key=lambda c: c["ratio"] or 0.0)
                 detail = (f"{len(v['cells'])} judged classes, worst ratio "
                           f"{worst['ratio']:.3f} at {worst['cell']}")
+            elif state == "FAIL":
+                bad = sorted((c for c in v["cells"] if not c["passed"]),
+                             key=lambda c: -(c["ratio"] or 0.0))
+                detail = (f"{len(bad)} offending class(es): "
+                          + ", ".join(f"{c['cell']} ratio {c['ratio']:.3f}"
+                                       for c in bad))
             else:
                 detail = "; ".join(v["why"])
             adjudications.append(
@@ -310,6 +316,28 @@ def seal(*, outdir, cachedir, tools, classes, specs,
     if write and verdict == "SEALED":
         _file(outdir, master, report)
     return report
+
+
+def file_refusal(*, outdir, report) -> None:
+    """File the refusal lane's evidence: verdict-bearing result.md (machine
+    writer, every figure a computed adjudication record) and the gate ledger
+    with its spoken refusals. The master name stays RESERVED: a campaign whose
+    gate failed attests its measurements, never a SEALED master."""
+    outdir = Path(outdir)
+    if report.get("verdict") == "SEALED":
+        raise SystemExit("[FATAL] file_refusal called on a SEALED report -- "
+                         "the sealed lane is seal(write=True)")
+    outdir.mkdir(parents=True, exist_ok=True)
+    (outdir / "result.md").write_text(
+        ev.write_result_md_text(
+            "P6 evidence campaign -- REFUSED, gate ledger follows",
+            report["adjudications"]),
+        encoding="utf-8")
+    led = outdir / "gate_ledgers"
+    led.mkdir(exist_ok=True)
+    (led / "p6_seal_report.json").write_text(
+        json.dumps(report, sort_keys=True, indent=1) + "\n",
+        encoding="utf-8")
 
 
 def _campaign_benchmark(outdir: Path) -> Path:
