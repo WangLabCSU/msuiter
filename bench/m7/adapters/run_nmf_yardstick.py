@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rust-NMF yardstick: one fixture, two cores, fixed-iteration wall ratio.
+"""Rust-NMF yardstick: one fixture, two cores, fixed-iteration CPU ratio.
 
 Manifest :42 -- rust-NMF@nmf-rs wheel vs R NMF::nmf(brunet) on the SAME
 fixture bytes, python-capable bench image. This is the ONLY route by which
@@ -9,15 +9,23 @@ sides produce bytes here the claim stays UNMEASURED in committed text
 
 Fairness is by construction, not by apology: both cores run the brunet
 KL multiplicative update over the identical float64 matrix for EXACTLY the
-same fixed iteration count (rust stop='max_iter', R eps=0 so the
-improvement rule can never pre-empt). The stop iteration count is REPORTED
-from each side's own attestation (NMFResult.n_iter / NMF's niter()) -- a
-mismatch is visible in the evidence, not hidden. Rust is pinned to one
-thread (co-tenancy law + the R core's serial baseline).
+same fixed iteration count (rust stop='max_iter'; R eps=-Inf so the
+improvement rule can never pre-empt). The stop count is REPORTED from each
+side's own attestation (NMFResult.n_iter / NMF's niter()) -- a mismatch is
+visible in the evidence, not hidden (fairness_flag). Default count 400 sits
+below the MEASURED R-side refusal boundary: R's NMF run() deterministically
+exits at 440 on this fixture+seed (in-loop non-convergence guard; witnessed
+identically at eps=0 and eps=-Inf, 2026-10-17), so a count above 440 makes
+"the same fixed iterations" physically impossible and the gate fires loudly.
+Rust is pinned to one thread (co-tenancy law + the R core's serial baseline).
 
-Timing idiom mirrors run_sigminer_arm.R: proc.time()[["total"]] brackets
-the factoring call only (load/IO are outside the brackets); the R leg
-reports through stdout lines, parsed here -- no shared-memory fiction.
+Timing (death #11 correction): each core's factoring call is bracketed alone
+(load/IO outside the brackets) -- python side via time.process_time(), the R
+leg via base R's proc.time() user+system sum (its own proc_total helper; base
+R has no "total" row). The earlier claim that this mirrored a proc_time
+idiom in run_sigminer_arm.R was false -- that runner times nothing (the
+harness times cells host-side). The R leg reports through stdout lines,
+parsed here -- no shared-memory fiction.
 """
 
 from __future__ import annotations
@@ -34,11 +42,12 @@ from pathlib import Path
 import numpy as np
 
 RS_R = Path(__file__).resolve().parent / "yardstick_cell" / "matrix.csv"
-LEG_RE = re.compile(r"^YARDS\s+r_seconds=(\S+)\s+r_niter=(\S+)\s+r_version=(\S+)$")
+LEG_RE = re.compile(r"^YARDS\s+r_seconds=(\S+)\s+r_niter=(\S+)\s+r_version=(\S+)"
+                    r"(?:\s+r_dropped=(\S+))?$")
 
 
 def _proc_total() -> float:
-    return time.proc_time()
+    return time.process_time()
 
 
 def run_rust_leg(matrix: np.ndarray, k: int, iters: int, seed: int,
@@ -66,7 +75,8 @@ def run_r_leg(matrix_path: Path, k: int, iters: int, seed: int) -> dict:
         m = LEG_RE.match(line.strip())
         if m:
             got = {"r_seconds": float(m.group(1)),
-                   "r_niter": int(m.group(2)), "r_version": m.group(3)}
+                   "r_niter": int(m.group(2)), "r_version": m.group(3),
+                   "r_dropped": m.group(4) or "-"}
     if got is None:
         raise SystemExit(f"[FATAL] R leg produced no YARDS attestation: "
                          f"{proc.stdout!r}")
@@ -78,7 +88,8 @@ def main(argv=None) -> int:
     ap.add_argument("--matrix", type=Path, default=None,
                     help="fixture CSV (default: the committed yardstick_cell)")
     ap.add_argument("--k", type=int, default=2)
-    ap.add_argument("--iters", type=int, default=2000)
+    ap.add_argument("--iters", type=int, default=FIXED_ITERS,
+                    help="fixed iteration count both cores must attest")
     ap.add_argument("--seed", type=int, default=1234)
     ap.add_argument("--threads", type=int, default=1)
     ap.add_argument("--out", type=Path, required=True)
@@ -116,6 +127,15 @@ def main(argv=None) -> int:
 
 
 FIXTURE_SHA = "10bda6beb4f457fa7f8b64e2030a05fa3cbe60c1251eb8bbfad14108a24601ae"
+
+# Committed fair fixed-iteration count (death #11, 2026-10-17): strictly
+# below the MEASURED R-side refusal boundary -- R's NMF run() exits at 440
+# on this fixture+seed regardless of eps (in-loop non-convergence guard;
+# witnessed identically at eps=0 and eps=-Inf, twice), while rust
+# stop="max_iter" iterates mechanically. 400 keeps the margin honest; if a
+# future base shifts the boundary under 400, the fairness_flag gate fires --
+# loud by design.
+FIXED_ITERS = 400
 
 if __name__ == "__main__":
     raise SystemExit(main())

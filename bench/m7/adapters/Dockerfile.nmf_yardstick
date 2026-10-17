@@ -63,11 +63,11 @@ RUN python3 -m pip download --no-deps --no-cache-dir --only-binary :all: \
 WORKDIR /work
 COPY run_nmf_yardstick.py /work/
 RUN test "$(sha256sum /work/run_nmf_yardstick.py | cut -d' ' -f1)" = \
-      "945da4867dba86241defc697e13b9778df732c96d85dd4ef4508c9f34ed7774c" \
+      "03f8c920e46a1b2f23a5216fae14e1349fcac3b00e92f648c37898ef46ac103f" \
     || (echo "[FATAL] run_nmf_yardstick.py bytes diverge from the committed runner" >&2; exit 1)
 COPY run_nmf_yardstick_leg.R /work/
 RUN test "$(sha256sum /work/run_nmf_yardstick_leg.R | cut -d' ' -f1)" = \
-      "91d3ef8d4ac8b551efeff12aec0ea8750698b1d41ab33e0cd762b53908ffc683" \
+      "4a6cb9e7eea012620649745588399ceb716b5a9d3a84e02cb18919e43e3e25ef" \
     || (echo "[FATAL] run_nmf_yardstick_leg.R bytes diverge from the committed leg" >&2; exit 1)
 COPY yardstick_cell/ /work/yardstick_cell/
 RUN test "$(sha256sum /work/yardstick_cell/matrix.csv | cut -d' ' -f1)" = \
@@ -78,7 +78,7 @@ RUN test "$(sha256sum /work/yardstick_cell/matrix.csv | cut -d' ' -f1)" = \
 # and complete a fixed five-iteration brunet run with no network at all.
 # An undeclared runtime dependency dies HERE, never mid-measurement.
 RUN --network=none python3 -c 'import numpy as np, nmf_rs; r = nmf_rs.nmf(np.random.default_rng(1).random((8, 6)), 2, method = "brunet", seed = 1, max_iter = 5, stop = "max_iter"); assert r.n_iter == 5; print("[image] nmf-rs smoke ok (5 iterations, network-none)")'
-RUN --network=none Rscript -e 'suppressMessages(library(NMF)); set.seed(1L); v <- matrix(abs(rnorm(24)), 6); r <- NMF::nmf(v, 2L, method = "brunet", nrun = 1L, seed = 1L, maxIter = 5L, eps = 0); if (!is(r, "NMFfit") || !identical(NMF::niter(r), 5L)) quit(status = 1L); cat("[image] NMF smoke ok (5 iterations, network-none)\n")'
+RUN --network=none Rscript -e 'suppressMessages(library(NMF)); set.seed(1L); v <- matrix(abs(rnorm(24)), 6); r <- NMF::nmf(v, 2L, method = "brunet", nrun = 1L, seed = 1L, maxIter = 5L, eps = -Inf); if (!is(r, "NMFfit") || !identical(NMF::niter(r), 5L)) quit(status = 1L); cat("[image] NMF smoke ok (5 iterations, network-none)\n")'
 
 # The yardstick invocation shape (measured outdir path supplied per cell):
 #   docker run --rm --network=none <image> \

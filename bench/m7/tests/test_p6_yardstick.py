@@ -41,6 +41,34 @@ def _load(name: str):
     return mod
 
 
+def _load_runner():
+    """Behave-with-the-committed-bytes loader (death #11 law): the group may
+    not text-gate the runner and call that a seal -- it must import the file
+    and CALL the function."""
+    spec = importlib.util.spec_from_file_location(
+        "nmf_yardstick_runner_under_test",
+        str(ADAPTERS / "run_nmf_yardstick.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_proc_total_returns_a_real_measurement():
+    # Death #11: the FIRST authoritative cell run crashed inside
+    # _proc_total -- "module 'time' has no attribute 'proc_time'". The
+    # function was born broken in ba7ff1f and never called: the dev probe
+    # that "witnessed both cores" ran a working draft, the committed file
+    # was only text-gated. The behavioral seal: it must execute and return
+    # a monotone non-decreasing float across calls.
+    mod = _load_runner()
+    t0 = mod._proc_total()
+    t1 = mod._proc_total()
+    assert isinstance(t0, float) and isinstance(t1, float), (
+        f"_proc_total must return float, got {type(t0).__name__}")
+    assert t0 >= 0.0
+    assert t1 >= t0, "process CPU time is monotone non-decreasing"
+
+
 def _dockerfile_text() -> str:
     p = ADAPTERS / "Dockerfile.nmf_yardstick"
     if not p.is_file():
@@ -129,8 +157,10 @@ def test_fairness_is_fixed_iteration_on_both_sides():
     r = (ADAPTERS / "run_nmf_yardstick_leg.R").read_text(encoding="utf-8")
     assert "stop=\"max_iter\"" in py, \
         "rust leg must run the fixed iteration count, not converge-and-quit"
-    assert "eps = 0" in r, \
-        "R leg must neutralise the improvement rule (eps=0) for the same reason"
+    assert "eps = -Inf" in r, \
+        ("R leg must physically disarm the improvement rule (eps=-Inf): eps=0 "
+         "STOPS EARLY on the first non-improving step -- measured 2026-10-17, "
+         "the committed-2000 cell attested r_niter=440, not 2000")
     assert "num_threads=threads" in py and "threads" in py, \
         "rust leg must pin its thread count (co-tenancy law)"
     assert "rust_niter" in py and "r_niter" in py and "fairness_flag" in py, \
@@ -193,6 +223,25 @@ def test_network_none_witness_asserts_the_measured_fit():
     m = re.search(r'RUN --network=none Rscript -e \'.*?NMF.*?\'', t, re.DOTALL)
     assert m and "backup" not in m.group(0) and "silent" not in m.group(0), \
         "the witness must speak the version-tolerant invocation, not the 2023 shape"
+
+
+def test_yards_parse_carries_the_measured_droppelist():
+    # Death #11 (2026-10-17): the leg attests r_dropped=... but the runner's
+    # anchored 3-field LEG_RE rejected the 4-field line -- a parse that
+    # cannot speak the drop-list is silence, which death #8's law forbids.
+    # The seal bytes are the REAL in-image YARDS line (NMF 0.28, this base).
+    mod = _load_runner()
+    m = mod.LEG_RE.match(
+        "YARDS r_seconds=0.329000 r_niter=5 r_version=0.28 "
+        "r_dropped=keep.rng+backup+silent")
+    assert m, "the measured 4-field YARDS line must parse"
+    assert m.group(1) == "0.329000" and int(m.group(2)) == 5
+    assert m.group(3) == "0.28"
+    assert m.group(4) == "keep.rng+backup+silent"
+    m3 = mod.LEG_RE.match("YARDS r_seconds=1.500000 r_niter=5 r_version=0.28")
+    assert m3 and m3.group(4) is None, "the no-drop 3-field form still parses"
+    assert not mod.LEG_RE.match("YARDS r_seconds=1.5 r_niter=5"), \
+        "a seconds-only stub must never parse as an attestation"
 
 
 if __name__ == "__main__":
