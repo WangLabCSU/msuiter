@@ -413,19 +413,54 @@ test_that("F8 the capability probe and the witnessed fallback: a farm that
               info = absent$witness)
   expect_identical(sort(st$served), paste0("u", sprintf("%02d", 1:3)))
   expect_identical(absent$workers, 4L)             # the ask is recorded too
-  # The real capability probe: this rig ships parallel::mclapply, so the
-  # auto-probed farm takes the parallel route and witnesses it. (No
-  # in-process counter may be consulted on this leg: the real mclapply
-  # FORKS, and a fork's bookkeeping lives and dies in the fork -- exactly
-  # the census-not-counter lesson the whole orphan law rests on. The
-  # returned bytes are the proof here.)
+
+  # A rig that REFUSES the fan-out at the asked worker count must still be
+  # served witnessed -- never through a third party's raw error. The
+  # refusal here is the CRAN-era discipline gate itself, the very export
+  # the CI workflow carries for FFI contract 6 (_R_CHECK_LIMIT_CORES_):
+  # parallel's .check_ncores stops any mclapply ask above two processes.
+  # Presence of the symbol is not ability -- the capability probe must
+  # consult the fan mechanism itself. (CI run 39171701050 guards arm: the
+  # presence-only probe said parallel, mclapply said 4 simultaneous
+  # processes spawned, and the farm died quoting.)
+  st1 <- new.env(parent = emptyenv()); st1$served <- character(0L)
+  refused <- withr::with_envvar(c("_R_CHECK_LIMIT_CORES_" = "true"),
+    kp.farm(units = .kpp.farm.units(3L), workers = 4L,
+            serve = .kpp.farm.mock.serve(st1)))
+  expect_false(isTRUE(refused$parallel), info = refused$witness)
+  expect_true(grepl("mclapply", refused$witness, fixed = TRUE),
+              info = refused$witness)
+  expect_true(grepl("unavailable", refused$witness, fixed = TRUE) ||
+              grepl("absent", refused$witness, fixed = TRUE) ||
+              grepl("refused", refused$witness, fixed = TRUE),
+              info = refused$witness)
+  expect_identical(sort(st1$served), paste0("u", sprintf("%02d", 1:3)))
+  expect_identical(refused$workers, 4L)            # the ask is recorded too
+
+  # Ambient-rig agreement (census, not counter): on whatever rig runs the
+  # suite, the auto-probed farm must AGREE with a live same-shape probe of
+  # the fan mechanism -- the parallel route where the pool really can fan
+  # out at the asked count, the witnessed fallback where it really
+  # cannot. No in-process counter may be consulted: a fork's bookkeeping
+  # lives and dies in the fork -- exactly the census-not-counter lesson
+  # the whole orphan law rests on. On both routes every unit is served and
+  # the returned bytes are the proof.
+  live <- tryCatch(
+    identical(parallel::mclapply(seq_len(1L), function(i) i,
+                                 mc.cores = 4L), list(1L)),
+    error = function(e) FALSE, warning = function(w) FALSE)
   st2 <- new.env(parent = emptyenv()); st2$served <- character(0L)
   real <- kp.farm(units = .kpp.farm.units(3L), workers = 4L,
                   serve = .kpp.farm.mock.serve(st2))
-  expect_true(isTRUE(real$parallel), info = real$witness)
+  expect_identical(isTRUE(real$parallel), live, info = real$witness)
   expect_true(grepl("mclapply", real$witness, fixed = TRUE),
               info = real$witness)
+  if (live) {
+    expect_true(grepl("parallel", real$witness, fixed = TRUE),
+                info = real$witness)
+  }
   expect_identical(names(real$results), paste0("u", sprintf("%02d", 1:3)))
+  expect_identical(sort(st2$served), paste0("u", sprintf("%02d", 1:3)))
   for (nm in names(real$results)) {
     expect_identical(real$results[[nm]]$tag, nm)
     expect_identical(real$results[[nm]]$value, nchar(nm) + 1L)
