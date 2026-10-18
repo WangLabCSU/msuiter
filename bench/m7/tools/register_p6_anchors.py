@@ -69,15 +69,28 @@ def _verify_witness(wdir: Path, fname: str, refusals: list[str]):
         refusals.append(f"witness not on disk: {path}")
         return None
     doc = json.loads(path.read_text(encoding="utf-8"))
-    if doc.get("verdict") != "OK" or doc.get("exit_code") != 0:
+    # (AC)-sealed witness contract (test_p6_floor_governance): the exit is
+    # spoken by run_rc and sidecar.exit_status -- real witnesses carry no
+    # top-level exit_code, and inventing one would refuse every true witness.
+    if doc.get("verdict") != "OK" or doc.get("status_tail") != "ok":
         refusals.append(f"witness {fname} does not speak "
-                        f"verdict=OK/exit=0 -- unverified bytes are never "
-                        f"anchored")
+                        f"verdict=OK/status_tail=ok -- unverified bytes are "
+                        f"never anchored")
+        return None
+    argv = doc.get("argv", [])
+    i = argv.index("--reps") + 1 if "--reps" in argv else len(argv) + 1
+    if i >= len(argv) or argv[i] != str(REPS):
+        refusals.append(f"witness {fname} argv lacks the --reps {REPS} echo")
         return None
     if doc.get("reps") != REPS:
         refusals.append(f"witness {fname} reps={doc.get('reps')!r} != {REPS}")
         return None
     side = doc.get("sidecar", {})
+    if side.get("exit_status") != 0 or doc.get("run_rc") != 0:
+        refusals.append(f"witness {fname} run_rc={doc.get('run_rc')!r} "
+                        f"sidecar.exit_status={side.get('exit_status')!r} "
+                        f"-- non-zero exit is never anchored")
+        return None
     if "cpu_seconds" not in side or "wall_seconds" not in doc:
         refusals.append(f"witness {fname} lacks sidecar.cpu_seconds/"
                         f"wall_seconds -- no measurement, no anchor")

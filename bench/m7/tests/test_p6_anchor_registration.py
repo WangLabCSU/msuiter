@@ -49,11 +49,20 @@ def _mk_fixture(root: Path, *, n_anchors=2, drop_witness=None):
         tool, arm, n = "sigminer_post_v3", "main", 100 * (i + 1)
         wname = f"{tool}__{arm}__N{n}__rep100.json"
         if wname != drop_witness:
+            # Schema mirrors the real witness bytes exactly (see
+            # results/m7_floor_calibration_p6_*/witnesses/*__rep100.json):
+            # exit is spoken by run_rc + sidecar.exit_status, never a
+            # top-level exit_code; status_tail and the --reps argv echo
+            # are part of the (AC)-sealed witness contract.
             (wdir / wname).write_text(json.dumps({
-                "tool": tool, "arm": arm, "n": n, "reps": 100,
-                "verdict": "OK", "exit_code": 0,
-                "sidecar": {"cpu_seconds": 100.0 + i},
-                "wall_seconds": 90.0 + i,
+                "argv": ["--tool", tool, "--arm", arm, "--N", str(n),
+                         "--reps", "100"],
+                "arm": arm, "cell": f"{tool}__{arm}__N{n}", "n": n,
+                "provenance": {"face": "docker", "status": "ok"},
+                "reps": 100, "run_rc": 0,
+                "sidecar": {"cpu_seconds": 100.0 + i, "exit_status": 0},
+                "status_tail": "ok", "tool": tool,
+                "verdict": "OK", "wall_seconds": 90.0 + i,
             }, sort_keys=True) + "\n", encoding="utf-8")
         fragment[f"{tool}|{arm}|N{n}"] = {
             "witness": (caldir, "witnesses", wname), "reps": 100,
