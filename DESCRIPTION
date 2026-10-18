@@ -49,6 +49,7 @@ Collate:
     'kernel-pipeline.R'
     'kernel-parse.R'
     'kernel-bridge.R'
+    'kernel-farm.R'
     'extract.R'
     'fit.R'
     'calibrate.R'

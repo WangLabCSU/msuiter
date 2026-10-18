@@ -60,7 +60,7 @@
 # mc.cores law is countable, preserves index order.
 .kpp.farm.mock.mclapply <- function(st) {
   st$calls <- 0L
-  st$cores <- numeric(0L)
+  st$cores <- integer(0L)
   function(X, FUN, ...) {
     dots <- list(...)
     st$cores <- c(st$cores, dots$mc.cores)
@@ -74,7 +74,8 @@
 
 .kpp.census <- function() {
   tf <- tempfile("kpp-census-")
-  invisible(system2("ps", c("-o", "pid=", "ppid=", "command=", "-ax"),
+  # One -o token for the whole format spec; -ax mandatory on this rig.
+  invisible(system2("ps", c("-o", "pid=,ppid=,command=", "-ax"),
                     stdin = "", stdout = tf, stderr = tf, wait = TRUE))
   L <- readLines(tf, warn = FALSE)
   tok <- strsplit(trimws(L), "[[:space:]]+", perl = TRUE)
@@ -109,6 +110,7 @@
   if (identical(via, "detached")) {
     b <- .kpp.census()
     invisible(system2("/bin/sleep", dur, wait = FALSE))
+    Sys.sleep(0.25)                                # fork-visibility settle
     a <- .kpp.census()
     new <- setdiff(a$pid, b$pid)
     hits <- new[a$ppid[match(new, a$pid, nomatch = 0L)] == 1L &
@@ -124,6 +126,7 @@
                       stderr = tf, wait = TRUE))
     op <- suppressWarnings(as.integer(trimws(readLines(tf, warn = FALSE)[[1L]])))
     expect_false(is.na(op), info = tf)
+    Sys.sleep(0.25)                                # reparent-visibility settle
     op
   }
 }
@@ -157,7 +160,7 @@ test_that("F2 serial/farm invariance and the no-undercount law: every unit
   st.s <- new.env(parent = emptyenv()); st.s$served <- character(0L)
   st.f <- new.env(parent = emptyenv()); st.f$served <- character(0L)
   st.x <- new.env(parent = emptyenv()); st.x$calls <- 0L
-  mk <- new.env(parent = emptyenv()); mk$cores <- numeric(0L); mk$calls <- 0L
+  mk <- new.env(parent = emptyenv()); mk$cores <- integer(0L); mk$calls <- 0L
   mcl <- function(X, FUN, ...) {
     dots <- list(...)
     mk$cores <- c(mk$cores, dots$mc.cores)
@@ -190,11 +193,19 @@ test_that("F3 the seven caps verbatim: set for the served phase, restored
   st <- new.env(parent = emptyenv()); st$served <- character(0L)
   seen <- new.env(parent = emptyenv())
   # Ambient state the restore must come back to: one cap at 9, one unset.
-  pre <- Sys.getenv(.kpp.farm.caps)
-  Sys.setenv(c("OMP_NUM_THREADS" = "9"))
+  # This build answers the EMPTY STRING for unset variables (never NA --
+  # probe-banked), so absence is normalized to NA at the capture.
+  pre <- vapply(.kpp.farm.caps,
+                function(nm) { v <- Sys.getenv(nm)
+                              if (length(v) == 0L || identical(v[[1L]], ""))
+                                as.character(NA) else v[[1L]] },
+                FUN.VALUE = "", USE.NAMES = FALSE)
+  names(pre) <- .kpp.farm.caps
+  Sys.setenv(OMP_NUM_THREADS = "9")
   Sys.unsetenv("GOMAXPROCS")
   on.exit({
-    Sys.setenv(pre[!is.na(pre)])
+    have <- pre[!is.na(pre)]
+    if (length(have) > 0L) do.call("Sys.setenv", as.list(have))
     Sys.unsetenv(names(pre)[is.na(pre)])
   })
   probe.serve <- .kpp.farm.mock.serve(st, extra = function(tag, ...) {
@@ -204,6 +215,7 @@ test_that("F3 the seven caps verbatim: set for the served phase, restored
   invisible(kp.farm(units = .kpp.farm.units(3L), workers = 4L,
                     serve = probe.serve, mclapply = mk))
   expect_false(is.null(seen$vals))
+  absent <- function(x) length(x) == 1L && (is.na(x) || identical(x, ""))
   for (i in seq_along(seen$vals)) {
     expect_identical(seen$vals[[i]],
                      structure(rep("1", length(.kpp.farm.caps)),
@@ -211,7 +223,7 @@ test_that("F3 the seven caps verbatim: set for the served phase, restored
   }
   post <- Sys.getenv(.kpp.farm.caps)
   expect_identical(post[["OMP_NUM_THREADS"]], "9")
-  expect_true(is.na(post[["GOMAXPROCS"]]))
+  expect_true(absent(post[["GOMAXPROCS"]]))
   # The fault path must restore too (the on.exit law of the farm itself).
   boom <- function(..., tag) stop("simulated serve death ", tag, domain = NA)
   err <- tryCatch({
@@ -222,7 +234,7 @@ test_that("F3 the seven caps verbatim: set for the served phase, restored
   expect_false(is.null(err))
   post2 <- Sys.getenv(.kpp.farm.caps)
   expect_identical(post2[["OMP_NUM_THREADS"]], "9")
-  expect_true(is.na(post2[["GOMAXPROCS"]]))
+  expect_true(absent(post2[["GOMAXPROCS"]]))
 })
 
 test_that("F4 the RSS guard: below the floor the farm refuses to fan out
@@ -339,7 +351,7 @@ test_that("F6 the domain: workers in {1, 4..8}; malformed units refused;
   kp.farm <- .kpp_surface("kp_farm")               # red by absence
   st <- new.env(parent = emptyenv()); st$served <- character(0L)
   mk <- .kpp.farm.mock.mclapply(st)
-  for (bad in list(0L, 2L, 3L, 9L, 10L, -1L, 1.5, NA_integer, "4")) {
+  for (bad in list(0L, 2L, 3L, 9L, 10L, -1L, 1.5, as.integer(NA), "4")) {
     err <- tryCatch({
       kp.farm(units = .kpp.farm.units(1L), workers = bad,
               serve = .kpp.farm.mock.serve(st), mclapply = mk)
@@ -380,7 +392,7 @@ test_that("F7 workers == 1 is the in-process serial: no pool is touched,
   mk <- .kpp.farm.mock.mclapply(st)
   res <- kp.farm(units = .kpp.farm.units(4L), workers = 1L,
                  serve = .kpp.farm.mock.serve(st), mclapply = mk)
-  expect_identical(mk$calls, 0L)                   # the pool was never touched
+  expect_identical(st$calls, 0L)                  # the pool was never touched
   expect_false(isTRUE(res$parallel))
   expect_true(grepl("workers == 1", res$witness, fixed = TRUE),
               info = res$witness)
@@ -402,13 +414,20 @@ test_that("F8 the capability probe and the witnessed fallback: a farm that
   expect_identical(sort(st$served), paste0("u", sprintf("%02d", 1:3)))
   expect_identical(absent$workers, 4L)             # the ask is recorded too
   # The real capability probe: this rig ships parallel::mclapply, so the
-  # auto-probed farm takes the parallel route and witnesses it.
+  # auto-probed farm takes the parallel route and witnesses it. (No
+  # in-process counter may be consulted on this leg: the real mclapply
+  # FORKS, and a fork's bookkeeping lives and dies in the fork -- exactly
+  # the census-not-counter lesson the whole orphan law rests on. The
+  # returned bytes are the proof here.)
   st2 <- new.env(parent = emptyenv()); st2$served <- character(0L)
   real <- kp.farm(units = .kpp.farm.units(3L), workers = 4L,
                   serve = .kpp.farm.mock.serve(st2))
   expect_true(isTRUE(real$parallel), info = real$witness)
   expect_true(grepl("mclapply", real$witness, fixed = TRUE),
               info = real$witness)
-  expect_identical(sort(st2$served), paste0("u", sprintf("%02d", 1:3)))
   expect_identical(names(real$results), paste0("u", sprintf("%02d", 1:3)))
+  for (nm in names(real$results)) {
+    expect_identical(real$results[[nm]]$tag, nm)
+    expect_identical(real$results[[nm]]$value, nchar(nm) + 1L)
+  }
 })
