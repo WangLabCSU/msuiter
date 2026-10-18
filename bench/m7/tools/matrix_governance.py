@@ -300,213 +300,675 @@ _SWEEP_RAW = {
 }
 _FLOOR_ANCHORS = {
     ('sigminer', 'clock', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__clock__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__clock__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1079.517548, 'wall_seconds': 820.965,
     },
     ('sigminer', 'comp_clock_only', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_clock_only__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_clock_only__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 1987.9280860000001, 'wall_seconds': 1506.929,
     },
     ('sigminer', 'comp_clock_only', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_clock_only__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_clock_only__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1473.853008, 'wall_seconds': 1028.773,
     },
     ('sigminer', 'comp_clock_only', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_clock_only__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_clock_only__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1074.911007, 'wall_seconds': 802.948,
     },
     ('sigminer', 'comp_flat_triple', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_flat_triple__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_flat_triple__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 992.969009, 'wall_seconds': 740.132,
     },
     ('sigminer', 'comp_flat_triple', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_flat_triple__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_flat_triple__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1073.205358, 'wall_seconds': 808.615,
     },
     ('sigminer', 'comp_flat_triple', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_flat_triple__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_flat_triple__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1092.265774, 'wall_seconds': 813.111,
     },
     ('sigminer', 'comp_mmr', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_mmr__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_mmr__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 994.2634899999999, 'wall_seconds': 752.927,
     },
     ('sigminer', 'comp_mmr', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_mmr__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_mmr__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1078.1636099999998, 'wall_seconds': 816.187,
     },
     ('sigminer', 'comp_mmr', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_mmr__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_mmr__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1091.936985, 'wall_seconds': 809.114,
     },
     ('sigminer', 'comp_pole', 100000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_pole__N100000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_pole__N100000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1028.535546, 'wall_seconds': 558.21,
     },
     ('sigminer', 'comp_pole', 300000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_pole__N300000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_pole__N300000__rep100.json'),
         'reps': 100, 'cpu_seconds': 919.758643, 'wall_seconds': 513.429,
     },
     ('sigminer', 'comp_pole', 1000000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_pole__N1000000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_pole__N1000000__rep100.json'),
         'reps': 100, 'cpu_seconds': 808.148956, 'wall_seconds': 498.576,
     },
     ('sigminer', 'comp_strong_flat', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_strong_flat__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_strong_flat__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 988.060477, 'wall_seconds': 692.085,
     },
     ('sigminer', 'comp_strong_flat', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_strong_flat__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_strong_flat__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1085.672869, 'wall_seconds': 818.52,
     },
     ('sigminer', 'comp_strong_flat', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__comp_strong_flat__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__comp_strong_flat__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1110.405228, 'wall_seconds': 828.443,
     },
     ('sigminer', 'main', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__main__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__main__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 1330.222873, 'wall_seconds': 940.066,
     },
     ('sigminer', 'main', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__main__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__main__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1062.816926, 'wall_seconds': 812.905,
     },
     ('sigminer', 'main', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__main__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__main__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1877.874399, 'wall_seconds': 1467.65,
     },
     ('sigminer', 'nb', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__nb__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__nb__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1006.058547, 'wall_seconds': 562.568,
     },
     ('sigminer', 'sparse', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigminer__sparse__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigminer__sparse__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1096.5625750000002, 'wall_seconds': 838.544,
     },
+    ('sigminer_post_p1', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1512.67021, 'wall_seconds': 741.146,
+    },
+    ('sigminer_post_p1', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1181.182362, 'wall_seconds': 544.76,
+    },
+    ('sigminer_post_p1', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1273.5764960000001, 'wall_seconds': 628.248,
+    },
+    ('sigminer_post_p1', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1301.3098639999998, 'wall_seconds': 615.209,
+    },
+    ('sigminer_post_p1', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1186.165622, 'wall_seconds': 568.281,
+    },
+    ('sigminer_post_p1', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1302.5172639999998, 'wall_seconds': 647.939,
+    },
+    ('sigminer_post_p1', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1419.5157860000002, 'wall_seconds': 669.363,
+    },
+    ('sigminer_post_p1', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1170.967497, 'wall_seconds': 529.818,
+    },
+    ('sigminer_post_p1', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1284.4343410000001, 'wall_seconds': 630.298,
+    },
+    ('sigminer_post_p1', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1306.061311, 'wall_seconds': 618.003,
+    },
+    ('sigminer_post_p1', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1242.472378, 'wall_seconds': 374.571,
+    },
+    ('sigminer_post_p1', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1107.406443, 'wall_seconds': 352.845,
+    },
+    ('sigminer_post_p1', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 933.8904160000001, 'wall_seconds': 366.731,
+    },
+    ('sigminer_post_p1', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1262.21647, 'wall_seconds': 595.09,
+    },
+    ('sigminer_post_p1', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1379.58735, 'wall_seconds': 676.729,
+    },
+    ('sigminer_post_p1', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1354.875247, 'wall_seconds': 641.431,
+    },
+    ('sigminer_post_p1', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1185.941896, 'wall_seconds': 568.461,
+    },
+    ('sigminer_post_p1', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1291.792056, 'wall_seconds': 634.275,
+    },
+    ('sigminer_post_p1', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1320.517466, 'wall_seconds': 622.953,
+    },
+    ('sigminer_post_p1', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1261.4518870000002, 'wall_seconds': 399.466,
+    },
+    ('sigminer_post_p1', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1325.985245, 'wall_seconds': 665.512,
+    },
+    ('sigminer_post_p1_rust', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 695.3996930000001, 'wall_seconds': 705.305,
+    },
+    ('sigminer_post_p1_rust', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 724.694705, 'wall_seconds': 734.608,
+    },
+    ('sigminer_post_p1_rust', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 703.861882, 'wall_seconds': 713.653,
+    },
+    ('sigminer_post_p1_rust', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 675.63099, 'wall_seconds': 685.543,
+    },
+    ('sigminer_post_p1_rust', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 711.964884, 'wall_seconds': 721.8,
+    },
+    ('sigminer_post_p1_rust', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 696.261971, 'wall_seconds': 706.289,
+    },
+    ('sigminer_post_p1_rust', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 673.4402779999999, 'wall_seconds': 683.107,
+    },
+    ('sigminer_post_p1_rust', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 728.009819, 'wall_seconds': 737.617,
+    },
+    ('sigminer_post_p1_rust', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 715.105491, 'wall_seconds': 725.048,
+    },
+    ('sigminer_post_p1_rust', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 688.595007, 'wall_seconds': 698.375,
+    },
+    ('sigminer_post_p1_rust', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 694.4584199999999, 'wall_seconds': 704.369,
+    },
+    ('sigminer_post_p1_rust', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 706.363379, 'wall_seconds': 715.965,
+    },
+    ('sigminer_post_p1_rust', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 770.873854, 'wall_seconds': 780.571,
+    },
+    ('sigminer_post_p1_rust', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 730.267688, 'wall_seconds': 740.183,
+    },
+    ('sigminer_post_p1_rust', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 717.335261, 'wall_seconds': 727.005,
+    },
+    ('sigminer_post_p1_rust', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 686.9795270000001, 'wall_seconds': 696.859,
+    },
+    ('sigminer_post_p1_rust', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 717.665213, 'wall_seconds': 727.512,
+    },
+    ('sigminer_post_p1_rust', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 698.763686, 'wall_seconds': 708.36,
+    },
+    ('sigminer_post_p1_rust', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 676.105636, 'wall_seconds': 685.763,
+    },
+    ('sigminer_post_p1_rust', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 706.056754, 'wall_seconds': 712.472,
+    },
+    ('sigminer_post_p1_rust', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p1_rust__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 698.529451, 'wall_seconds': 708.216,
+    },
+    ('sigminer_post_p2', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1279.736024, 'wall_seconds': 629.955,
+    },
+    ('sigminer_post_p2', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1183.583961, 'wall_seconds': 573.651,
+    },
+    ('sigminer_post_p2', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1281.660602, 'wall_seconds': 624.484,
+    },
+    ('sigminer_post_p2', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1272.8216850000001, 'wall_seconds': 594.953,
+    },
+    ('sigminer_post_p2', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1171.643258, 'wall_seconds': 563.273,
+    },
+    ('sigminer_post_p2', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1300.0194589999999, 'wall_seconds': 625.307,
+    },
+    ('sigminer_post_p2', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1295.591283, 'wall_seconds': 607.739,
+    },
+    ('sigminer_post_p2', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1193.891161, 'wall_seconds': 559.52,
+    },
+    ('sigminer_post_p2', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1281.0752889999999, 'wall_seconds': 634.62,
+    },
+    ('sigminer_post_p2', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1295.1608019999999, 'wall_seconds': 621.652,
+    },
+    ('sigminer_post_p2', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1254.803491, 'wall_seconds': 394.395,
+    },
+    ('sigminer_post_p2', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1114.648265, 'wall_seconds': 361.87,
+    },
+    ('sigminer_post_p2', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 949.918623, 'wall_seconds': 359.745,
+    },
+    ('sigminer_post_p2', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1209.54461, 'wall_seconds': 556.434,
+    },
+    ('sigminer_post_p2', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1304.891139, 'wall_seconds': 624.072,
+    },
+    ('sigminer_post_p2', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1269.404697, 'wall_seconds': 601.903,
+    },
+    ('sigminer_post_p2', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1210.7103299999999, 'wall_seconds': 571.603,
+    },
+    ('sigminer_post_p2', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1282.3758579999999, 'wall_seconds': 628.29,
+    },
+    ('sigminer_post_p2', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1312.87812, 'wall_seconds': 619.089,
+    },
+    ('sigminer_post_p2', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1222.069724, 'wall_seconds': 385.809,
+    },
+    ('sigminer_post_p2', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_p2__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1282.773356, 'wall_seconds': 624.206,
+    },
+    ('sigminer_post_v3', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1269.7224600000002, 'wall_seconds': 619.801,
+    },
+    ('sigminer_post_v3', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1185.111154, 'wall_seconds': 567.646,
+    },
+    ('sigminer_post_v3', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1310.033528, 'wall_seconds': 635.489,
+    },
+    ('sigminer_post_v3', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1269.003706, 'wall_seconds': 603.03,
+    },
+    ('sigminer_post_v3', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1175.853436, 'wall_seconds': 558.264,
+    },
+    ('sigminer_post_v3', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1308.1937249999999, 'wall_seconds': 630.729,
+    },
+    ('sigminer_post_v3', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1289.6336569999999, 'wall_seconds': 610.993,
+    },
+    ('sigminer_post_v3', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1197.054704, 'wall_seconds': 560.024,
+    },
+    ('sigminer_post_v3', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1308.677248, 'wall_seconds': 633.061,
+    },
+    ('sigminer_post_v3', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1281.6615920000002, 'wall_seconds': 612.942,
+    },
+    ('sigminer_post_v3', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1226.359625, 'wall_seconds': 384.021,
+    },
+    ('sigminer_post_v3', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1101.8824940000002, 'wall_seconds': 357.929,
+    },
+    ('sigminer_post_v3', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 967.863824, 'wall_seconds': 368.598,
+    },
+    ('sigminer_post_v3', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1190.557102, 'wall_seconds': 552.808,
+    },
+    ('sigminer_post_v3', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1309.385021, 'wall_seconds': 630.158,
+    },
+    ('sigminer_post_v3', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1279.9895510000001, 'wall_seconds': 611.543,
+    },
+    ('sigminer_post_v3', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1181.2738180000001, 'wall_seconds': 568.025,
+    },
+    ('sigminer_post_v3', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1309.866307, 'wall_seconds': 634.861,
+    },
+    ('sigminer_post_v3', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1296.151227, 'wall_seconds': 619.036,
+    },
+    ('sigminer_post_v3', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1231.033433, 'wall_seconds': 389.66,
+    },
+    ('sigminer_post_v3', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1277.6372609999999, 'wall_seconds': 625.479,
+    },
+    ('sigminer_post_v3_rust', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 707.16829, 'wall_seconds': 716.771,
+    },
+    ('sigminer_post_v3_rust', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 733.87587, 'wall_seconds': 743.716,
+    },
+    ('sigminer_post_v3_rust', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 720.919035, 'wall_seconds': 730.989,
+    },
+    ('sigminer_post_v3_rust', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 693.6153419999999, 'wall_seconds': 703.33,
+    },
+    ('sigminer_post_v3_rust', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 728.4079, 'wall_seconds': 738.078,
+    },
+    ('sigminer_post_v3_rust', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 715.644129, 'wall_seconds': 725.544,
+    },
+    ('sigminer_post_v3_rust', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 692.373738, 'wall_seconds': 702.158,
+    },
+    ('sigminer_post_v3_rust', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 741.187359, 'wall_seconds': 750.742,
+    },
+    ('sigminer_post_v3_rust', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 735.210798, 'wall_seconds': 745.226,
+    },
+    ('sigminer_post_v3_rust', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 702.4288079999999, 'wall_seconds': 712.218,
+    },
+    ('sigminer_post_v3_rust', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 709.245257, 'wall_seconds': 719.382,
+    },
+    ('sigminer_post_v3_rust', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 720.425624, 'wall_seconds': 730.293,
+    },
+    ('sigminer_post_v3_rust', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 793.2301600000001, 'wall_seconds': 803.435,
+    },
+    ('sigminer_post_v3_rust', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 747.413534, 'wall_seconds': 757.318,
+    },
+    ('sigminer_post_v3_rust', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 751.026404, 'wall_seconds': 761.855,
+    },
+    ('sigminer_post_v3_rust', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 737.7223839999999, 'wall_seconds': 747.378,
+    },
+    ('sigminer_post_v3_rust', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 724.1822920000001, 'wall_seconds': 734.372,
+    },
+    ('sigminer_post_v3_rust', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 712.493519, 'wall_seconds': 722.113,
+    },
+    ('sigminer_post_v3_rust', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 698.047277, 'wall_seconds': 707.746,
+    },
+    ('sigminer_post_v3_rust', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 723.96185, 'wall_seconds': 730.901,
+    },
+    ('sigminer_post_v3_rust', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_post_v3_rust__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 711.700155, 'wall_seconds': 721.743,
+    },
+    ('sigminer_pre_v3', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1275.424226, 'wall_seconds': 627.908,
+    },
+    ('sigminer_pre_v3', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1227.474572, 'wall_seconds': 584.159,
+    },
+    ('sigminer_pre_v3', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1297.133689, 'wall_seconds': 623.508,
+    },
+    ('sigminer_pre_v3', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1270.950574, 'wall_seconds': 602.076,
+    },
+    ('sigminer_pre_v3', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1177.907266, 'wall_seconds': 540.057,
+    },
+    ('sigminer_pre_v3', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1314.6446190000001, 'wall_seconds': 636.683,
+    },
+    ('sigminer_pre_v3', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1306.5519789999998, 'wall_seconds': 613.709,
+    },
+    ('sigminer_pre_v3', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1196.8656130000002, 'wall_seconds': 542.104,
+    },
+    ('sigminer_pre_v3', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1303.655271, 'wall_seconds': 630.718,
+    },
+    ('sigminer_pre_v3', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1276.9026139999999, 'wall_seconds': 608.565,
+    },
+    ('sigminer_pre_v3', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1251.790495, 'wall_seconds': 379.897,
+    },
+    ('sigminer_pre_v3', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1093.277535, 'wall_seconds': 348.73,
+    },
+    ('sigminer_pre_v3', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 942.6440240000001, 'wall_seconds': 356.311,
+    },
+    ('sigminer_pre_v3', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1187.1038760000001, 'wall_seconds': 538.552,
+    },
+    ('sigminer_pre_v3', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1300.003717, 'wall_seconds': 629.774,
+    },
+    ('sigminer_pre_v3', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1281.2447319999999, 'wall_seconds': 610.548,
+    },
+    ('sigminer_pre_v3', 'main', 100): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1207.6425279999999, 'wall_seconds': 578.958,
+    },
+    ('sigminer_pre_v3', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1296.1155290000002, 'wall_seconds': 630.561,
+    },
+    ('sigminer_pre_v3', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1288.196494, 'wall_seconds': 616.164,
+    },
+    ('sigminer_pre_v3', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1224.787014, 'wall_seconds': 386.872,
+    },
+    ('sigminer_pre_v3', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p6_20261017', 'witnesses', 'sigminer_pre_v3__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 1270.563527, 'wall_seconds': 622.519,
+    },
     ('sigprofiler', 'clock', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__clock__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__clock__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 39.244772999999995, 'wall_seconds': 18.449,
     },
     ('sigprofiler', 'comp_clock_only', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_clock_only__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_clock_only__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 34.820338, 'wall_seconds': 16.98,
     },
     ('sigprofiler', 'comp_clock_only', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_clock_only__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_clock_only__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 34.806035, 'wall_seconds': 16.399,
     },
     ('sigprofiler', 'comp_clock_only', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_clock_only__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_clock_only__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 35.652210999999994, 'wall_seconds': 16.759,
     },
     ('sigprofiler', 'comp_flat_triple', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_flat_triple__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_flat_triple__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 40.549361, 'wall_seconds': 18.38,
     },
     ('sigprofiler', 'comp_flat_triple', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_flat_triple__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_flat_triple__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 39.274159999999995, 'wall_seconds': 18.277,
     },
     ('sigprofiler', 'comp_flat_triple', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_flat_triple__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_flat_triple__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 37.464264, 'wall_seconds': 17.207,
     },
     ('sigprofiler', 'comp_mmr', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_mmr__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_mmr__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 36.290394, 'wall_seconds': 17.569,
     },
     ('sigprofiler', 'comp_mmr', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_mmr__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_mmr__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 37.709974, 'wall_seconds': 17.003,
     },
     ('sigprofiler', 'comp_mmr', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_mmr__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_mmr__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 37.273843, 'wall_seconds': 17.139,
     },
     ('sigprofiler', 'comp_pole', 100000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_pole__N100000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_pole__N100000__rep100.json'),
         'reps': 100, 'cpu_seconds': 36.79912, 'wall_seconds': 17.304,
     },
     ('sigprofiler', 'comp_pole', 300000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_pole__N300000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_pole__N300000__rep100.json'),
         'reps': 100, 'cpu_seconds': 37.579026999999996, 'wall_seconds': 17.521,
     },
     ('sigprofiler', 'comp_pole', 1000000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_pole__N1000000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_pole__N1000000__rep100.json'),
         'reps': 100, 'cpu_seconds': 38.160320999999996, 'wall_seconds': 17.361,
     },
     ('sigprofiler', 'comp_strong_flat', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_strong_flat__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_strong_flat__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 35.86489, 'wall_seconds': 16.877,
     },
     ('sigprofiler', 'comp_strong_flat', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_strong_flat__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_strong_flat__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 36.740424000000004, 'wall_seconds': 16.918,
     },
     ('sigprofiler', 'comp_strong_flat', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__comp_strong_flat__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__comp_strong_flat__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 35.797524, 'wall_seconds': 16.811,
     },
     ('sigprofiler', 'main', 100): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__main__N100__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__main__N100__rep100.json'),
         'reps': 100, 'cpu_seconds': 41.832933, 'wall_seconds': 18.637,
     },
     ('sigprofiler', 'main', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__main__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__main__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 39.971613000000005, 'wall_seconds': 17.563,
     },
     ('sigprofiler', 'main', 10000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__main__N10000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__main__N10000__rep100.json'),
         'reps': 100, 'cpu_seconds': 40.177937, 'wall_seconds': 16.936,
     },
     ('sigprofiler', 'nb', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__nb__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__nb__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 39.859497, 'wall_seconds': 18.441,
     },
     ('sigprofiler', 'sparse', 1000): {
-        'witness': ('m7_floor_calibration_20261009', 'witnesses',
-                    'sigprofiler__sparse__N1000__rep100.json'),
+        'witness': ('m7_floor_calibration_20261009', 'witnesses', 'sigprofiler__sparse__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 40.213161, 'wall_seconds': 18.265,
     },
 }

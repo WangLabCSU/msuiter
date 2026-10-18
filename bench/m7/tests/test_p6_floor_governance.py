@@ -76,7 +76,12 @@ def test_p6_witnesses_are_reps_matched_ok_and_verbatim():
     for d in dirs:
         for w in (d / "witnesses").glob("*__rep100.json"):
             doc = json.loads(w.read_text(encoding="utf-8"))
-            tool, arm, ntoken = w.stem.split("__")
+            # Stems speak tool__arm__N<n>__rep100 (the calibrator's naming
+            # law): the rep token is part of the filename contract, not a
+            # parseable-free remainder.
+            parts = w.stem.split("__")
+            assert len(parts) == 4 and parts[3] == "rep100", f"{w}: stem"
+            tool, arm, ntoken = parts[:3]
             n = int(ntoken[1:])
             seen.add((tool, arm, n))
             assert doc["verdict"] == "OK", f"{w}: verdict {doc['verdict']}"
