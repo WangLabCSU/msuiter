@@ -232,6 +232,26 @@
   if (is.null(st)) 0L else as.integer(st)
 }
 
+## ---- mock seam factory -----------------------------------------------------
+
+# The mocked seam still serves the protocol-1 handshake (the batch runner
+# handshakes once per call through the very seam being mocked), while the
+# batch invocation itself is routed to the scenario's batch.fn.
+.kpp_version_result <- function() {
+  res <- 0L
+  attr(res, "stdout") <-
+    'msuiter-kernel protocol=1 engine="msuiter-engine" kl_eps=1e-12'
+  attr(res, "stderr") <- character()
+  res
+}
+
+.kpp_mock <- function(batch.fn) {
+  function(bin, args) {
+    if (any(args == "--version")) return(.kpp_version_result())
+    batch.fn(bin, args)
+  }
+}
+
 ## ---- exec-seam swapping (house assignInNamespace idiom) --------------------
 
 # Swap msuiter:::kp_exec for the duration of `expr`; restore the original
@@ -249,11 +269,11 @@
          call. = FALSE)
   }
   old <- get("kp_exec", envir = ns)
-  unlockBinding("kp_exec", envir = ns)
+  unlockBinding("kp_exec", env = ns)
   on.exit(eval(expr, envir = env), add = TRUE)
   on.exit({
     assign("kp_exec", old, envir = ns)
-    lockBinding("kp_exec", envir = ns)
+    lockBinding("kp_exec", env = ns)
   }, add = TRUE)
   assign("kp_exec", mock, envir = ns)
   invisible(NULL)

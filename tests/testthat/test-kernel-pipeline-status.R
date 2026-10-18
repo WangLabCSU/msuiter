@@ -50,11 +50,30 @@ test_that("G2 status channel: a batch death with parsable residue fails
            closed at the consumer", {
   kp.run.batch <- .kpp_surface("kp_run_batch")   # red by absence
   sc <- .kpp_death_scenario()
-  err <- tryCatch({
-    kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
-                 out.root = sc$out.root)
-    NULL
-  }, error = function(e) conditionMessage(e))
+  # The batch invocation is the REAL certified binary on the REAL value
+  # channel (G1 already fixed its status-2 death at 0L of attributes);
+  # only the handshake text is seam-served, because this host's build
+  # drops system2 capture text in every mode (probe banked at
+  # /tmp/perf2lane/logs/system2_modes_probe.txt) and the campaign
+  # platforms deliver it verbatim.
+  err <- NULL
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
+    out.f <- tempfile("kpp-death-out-")
+    err.f <- tempfile("kpp-death-err-")
+    res <- suppressWarnings(system2(bin, args, stdout = out.f,
+                                    stderr = err.f))
+    attr(res, "stdout") <- if (file.exists(out.f))
+      readLines(out.f, warn = FALSE) else character()
+    attr(res, "stderr") <- if (file.exists(err.f))
+      readLines(err.f, warn = FALSE) else character()
+    res
+  }), {
+    err <- tryCatch({
+      kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
+                   out.root = sc$out.root)
+      NULL
+    }, error = function(e) conditionMessage(e))
+  })
   expect_false(is.null(err), "the death must never be consumed silently")
   expect_true(grepl("exited with status 2", err, fixed = TRUE),
               info = err)  # the exit code itself must be named in the fault
@@ -66,12 +85,12 @@ test_that("G3 status channel: the status VALUE is the source; attributes
   sc <- .kpp_valid_scenario()
   # (a) A real-style death: scalar status 7, no attribute anywhere.
   err <- NULL
-  .kpp_with_exec(function(bin, args) {
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
     res <- 7L
     attr(res, "stdout") <- character()
     attr(res, "stderr") <- "error: simulated kernel death"
     res
-  }, {
+  }), {
     err <- tryCatch({
       kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
                    out.root = sc$out.root)
@@ -87,11 +106,11 @@ test_that("G3 status channel: the status VALUE is the source; attributes
   # (b) Integrity: a value/attribute disagreement is itself fail-closed --
   # an attribute may falsify the value, never silently overrule it.
   err2 <- NULL
-  .kpp_with_exec(function(bin, args) {
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
     res <- 0L
     attr(res, "status") <- 3L
     res
-  }, {
+  }), {
     err2 <- tryCatch({
       kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
                    out.root = sc$out.root)
@@ -104,12 +123,12 @@ test_that("G3 status channel: the status VALUE is the source; attributes
   # success: consumption is attested per case, so the fault must name the
   # missing case output rather than read as "the kernel said ok".
   err3 <- NULL
-  .kpp_with_exec(function(bin, args) {
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
     res <- 0L
     attr(res, "stdout") <- character()
     attr(res, "stderr") <- character()
     res
-  }, {
+  }), {
     err3 <- tryCatch({
       kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
                    out.root = sc$out.root)
@@ -122,11 +141,11 @@ test_that("G3 status channel: the status VALUE is the source; attributes
   # shape arriving at the consumer: fail-closed -- the status must arrive
   # BY VALUE, an attribute alone is never a source.
   err4 <- NULL
-  .kpp_with_exec(function(bin, args) {
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
     res <- ""
     attr(res, "status") <- 9L
     res
-  }, {
+  }), {
     err4 <- tryCatch({
       kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
                    out.root = sc$out.root)
@@ -146,7 +165,7 @@ test_that("G4 retry visibility: every re-attempt leaves a countable witness
   # system2 VALUE channel -- it never fabricates an attribute.
   st <- new.env(parent = emptyenv())
   st$calls <- 0L
-  .kpp_with_exec(function(bin, args) {
+  .kpp_with_exec(.kpp_mock(function(bin, args) {
     st$calls <- st$calls + 1L
     if (st$calls < 2L) {
       res <- 2L
@@ -162,7 +181,7 @@ test_that("G4 retry visibility: every re-attempt leaves a countable witness
     attr(res, "stderr") <- if (file.exists(err.f))
       readLines(err.f, warn = FALSE) else character()
     res
-  }, {
+  }), {
     # (a) Default route (max_attempts = 1L): the death stops everything,
     # the message counts the attempt, and NO second call ever happens --
     # silent retry is structurally impossible on the default route.
@@ -175,7 +194,10 @@ test_that("G4 retry visibility: every re-attempt leaves a countable witness
     expect_true(grepl("attempt 1", err, fixed = TRUE), info = err)
     expect_identical(st$calls, 1L)  # the no-retry pin
     # (b) Opt-in bounded retry WITH the witness: two attempts are visible
-    # in the ledger, one row per attempt, countable from disk.
+    # in the ledger, one row per attempt, countable from disk. (Fresh
+    # scenario: the first block's death already consumed attempt one of
+    # the flaky schedule, so the counter restarts here.)
+    st$calls <- 0L
     ledger <- tempfile("kpp-ledger-")
     ok <- tryCatch({
       kp.run.batch(bin = sc$bin, manifest = sc$manifest, root = sc$in.root,
