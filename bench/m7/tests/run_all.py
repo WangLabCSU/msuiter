@@ -124,6 +124,12 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       dies), an unbacked or unverified witness is a REFUSE that leaves the
       governance bytes sterile, legacy entries survive, a re-run is a
       byte-identical no-op
+  (AI) test_p2_pipeline       the P2 sidecar accounting v2: the cpu figure
+      is the cgroup's own usage_usec delta (never a mock), the adopted
+      orphan is SIGKILLed into the measured tree and census-dead on return,
+      the drainer never touches its own pid, an unreadable cgroup speaks
+      absent/None rather than a fabricated zero, and every v2 key is
+      additive under the frozen probe validator
 """
 
 from __future__ import annotations
@@ -175,7 +181,10 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_evidence", "test_p6_floor_governance",
            "test_p6_yardstick", "test_p6_mini_fixture",
            "test_p6_flip", "test_p6_seal_evidence",
-           "test_p6_anchor_registration"]
+           "test_p6_anchor_registration",
+           # PERF P2 pair S: sidecar accounting v2 (cgroup delta, drain-and-
+           # reap under the no-undercount law, MSUITER_M7_CG_ROOT injection):
+           "test_p2_pipeline"]
 
 
 def _collect(mod_name):
