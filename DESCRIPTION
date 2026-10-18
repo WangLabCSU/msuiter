@@ -48,6 +48,7 @@ Collate:
     'engines-nmf.R'
     'kernel-pipeline.R'
     'kernel-parse.R'
+    'kernel-bridge.R'
     'extract.R'
     'fit.R'
     'calibrate.R'

@@ -458,10 +458,13 @@ kp_run_batch <- function(bin, manifest, root, out.root,
       }
       next
     }
-    # rc 0 is only a PROMISE; consumption waits for per-case receipts.
+    # rc 0 is only a PROMISE; consumption waits for per-case receipts. The
+    # attested bundles ride the return upward -- the consumer receives the
+    # validated bytes, never a directory path it must trust blindly.
     receipt.fault <- NULL
+    attested <- list()
     for (i in seq_len(nrow(cases))) {
-      got <- tryCatch({
+      got <- tryCatch(
         kp_attest_case(
           case = cases[i, "case"],
           out.dir = file.path(out.root, cases[i, "case"], "out"),
@@ -469,10 +472,10 @@ kp_run_batch <- function(bin, manifest, root, out.root,
           k = as.integer(cases[i, "k"]), iters = as.integer(cases[i, "iters"]),
           init = cases[i, "init"],
           seed = cases[i, "seed"],
-          replicate = cases[i, "replicate"])
-        NULL
-      }, error = function(e) conditionMessage(e))
-      if (!is.null(got)) { receipt.fault <- got; break }
+          replicate = cases[i, "replicate"]),
+        error = function(e) conditionMessage(e))
+      if (is.character(got)) { receipt.fault <- got; break }
+      attested[[cases[i, "case"]]] <- got
     }
     if (!is.null(receipt.fault)) {
       last.fault <- receipt.fault
@@ -485,7 +488,8 @@ kp_run_batch <- function(bin, manifest, root, out.root,
       .kp_ledger_row(ledger, paste0(unit, ",", attempt, ",0,ok"))
     }
     return(invisible(list(unit = unit, attempts = attempt,
-                          cases = nrow(cases), out.root = out.root)))
+                          cases = nrow(cases), out.root = out.root,
+                          attested = attested)))
   }
   stop(last.fault, domain = NA)
 }

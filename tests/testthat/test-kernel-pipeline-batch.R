@@ -110,10 +110,13 @@ test_that("B2 one process per unit: exactly one batch exec and exactly one
   # the single batch invocation. The legacy shape was 50 spawns + 50
   # handshakes for this same unit.
   expect_identical(st$calls, 2L)
-  expect_identical(sum(vapply(st$argv, function(a) any(a == "--version"))),
+  expect_identical(sum(vapply(st$argv, function(a) any(a == "--version"),
+                              FUN.VALUE = logical(1L), USE.NAMES = FALSE)),
                    1L)
   batch.argv <- st$argv[[which(!vapply(st$argv, function(a)
-                                       any(a == "--version")))[[1L]]]]
+                                         any(a == "--version"),
+                                       FUN.VALUE = logical(1L),
+                                       USE.NAMES = FALSE))[[1L]]]]
   expect_identical(batch.argv[[1L]], "fit-kl")
   expect_identical(sum(batch.argv == "--cases"), 1L)
   expect_identical(sum(batch.argv == "--root"), 1L)
@@ -125,27 +128,34 @@ test_that("B2 one process per unit: exactly one batch exec and exactly one
 })
 
 test_that("B3 V is marshalled ONCE per unit: one text rendering, the case
-           rows hardlink the single staged grid", {
+           rows are views of the single staged grid", {
   kp.serve.unit <- .kpp_surface("kp_serve_unit")   # red by absence
   sc <- .kpp_unit_scenario(nrun = 3L)
   srv <- kp.serve.unit(bin = sc$bin, V = sc$V, k = sc$k, seed = 5L,
                        nrun = sc$nrun, iters = sc$iters, tag = sc$tag,
                        root = sc$root, out.root = sc$out.root)
   want <- .kpp_grid(sc$V)
-  inodes <- integer(0L)
+  expect_true(file.exists(srv$shared), info = srv$shared)
   for (i in seq_len(sc$nrun)) {
     v.path <- file.path(sc$root, srv$cases[[i]], "V.csv")
     expect_true(file.exists(v.path), info = v.path)
     vl <- readLines(v.path, warn = FALSE)
     expect_identical(vl[nzchar(vl)], want)
-    inodes <- c(inodes, as.integer(file.info(v.path)$inode))
   }
-  # The hardlink law: the per-case grids are the SAME file, so the unit's
-  # V bytes exist once on disk (the manifest §1 marshalling law). The
-  # certified staging platforms carry inodes; a platform without them is a
-  # hard fault of this law, not a silent pass.
-  expect_true(all(inodes > 0L), info = paste(inodes, collapse = ","))
-  expect_identical(length(unique(inodes)), 1L)
+  # The sharing law (the manifest §1 marshalling law, platform-portable
+  # form): the per-case grids are VIEWS of the one staged rendering, not
+  # copies -- a write-through of the shared file is visible in every case
+  # view. A copy-based staging would leave the case views frozen and this
+  # probe would fail.
+  marker <- "#kpp-shared-probe"
+  con <- file(srv$shared, open = "a")
+  writeLines(marker, con)
+  close(con)
+  for (i in seq_len(sc$nrun)) {
+    vl <- readLines(file.path(sc$root, srv$cases[[i]], "V.csv"),
+                    warn = FALSE)
+    expect_identical(vl[[length(vl)]], marker)
+  }
 })
 
 test_that("B4 the frozen seed law rides the manifest verbatim: row i
@@ -225,7 +235,7 @@ test_that("B6 fail-closed consumption: a batch that exits 0 but leaves one
   out.part <- tempfile("kpp-b6-bad-out-")
   dir.create(out.part, recursive = TRUE, showWarnings = FALSE)
   for (i in seq_len(sc$nrun - 1L)) {
-    file.copy(file.path(sc$out.root, good$cases[[i]]), out.part,
+    file.copy(file.path(good$out.root, good$cases[[i]]), out.part,
               recursive = TRUE)
   }
   missing.case <- good$cases[[sc$nrun]]
@@ -238,7 +248,7 @@ test_that("B6 fail-closed consumption: a batch that exits 0 but leaves one
   }), {
     err <- tryCatch({
       kp.serve.unit(bin = sc$bin, V = sc$V, k = sc$k, seed = 5L,
-                    nrun = sc$nrun, iters = sc$iters, tag = "b6-bad",
+                    nrun = sc$nrun, iters = sc$iters, tag = "b6-good",
                     root = sc$root, out.root = out.part)
       NULL
     }, error = function(e) conditionMessage(e))
