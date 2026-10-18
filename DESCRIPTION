@@ -47,6 +47,7 @@ Collate:
     'engines-sparse.R'
     'engines-nmf.R'
     'kernel-pipeline.R'
+    'kernel-parse.R'
     'extract.R'
     'fit.R'
     'calibrate.R'
