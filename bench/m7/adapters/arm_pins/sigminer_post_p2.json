@@ -1,0 +1,7 @@
+{
+ "expected_version": "2.3.3",
+ "face": "R",
+ "ns_sha256": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+ "tool": "sigminer_post_p2",
+ "tree_sha": "37fc92a872720f947b5e2ac92d7de0fb96f2b092"
+}

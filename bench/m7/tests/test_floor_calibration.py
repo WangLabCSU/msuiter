@@ -71,8 +71,14 @@ def test_every_grid_class_carries_a_reps_matched_committed_anchor():
                 assert argv[argv.index("--reps") + 1] == str(a["reps"]), key
                 assert doc["verdict"] == "OK" and doc["status_tail"] == "ok"
                 assert doc["sidecar"]["cpu_seconds"] == a["cpu_seconds"], key
-    assert seen == set(gov._FLOOR_ANCHORS), (
+    from competitors import p6_arms
+    # P6 arm classes are policed by their own completeness unit
+    # (test_p6_floor_governance group AC): this legacy invariant covers the
+    # two reference tools only, but must still reject FOREIGN classes.
+    p6_keys = {k for k in gov._FLOOR_ANCHORS if k[0] in p6_arms.P6_ARM_SPECS}
+    assert set(gov._FLOOR_ANCHORS) - p6_keys == seen, (
         "table holds classes the frozen degraded grid does not run")
+    assert not (seen & p6_keys), "reference enumeration leaked into the P6 domain"
 
 
 # -- (2) the sweep pins probe-scale linearity and the n-saturation shape ----------

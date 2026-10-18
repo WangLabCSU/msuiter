@@ -43,7 +43,8 @@ Launch governance (U-M7-03, controller ruling RB-07/RB-08 -- postmortem seals):
       REP-100 anchors verbatim, sweep-pinned linearity + n-saturation shape,
       ratio untouchable, probe-scale extrapolation refuted in BOTH signs
       (sigminer superlinear, sigprofiler amortizing)
-Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+Hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 hardware-pin the full
+bench table; the Han annotation here since PR #18 is translated, EN-only law):
   (S) test_hardware_pin        every authoritative row pinned to the measured
       environment; the docker-authoritative pass refuses to file without the
       operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
@@ -82,6 +83,47 @@ shape WITHOUT spending the RB-10 single authoritative shot:
       (dedicated writer executed on the target interpreter); the reader
       tolerates only the verbatim marker and discloses the leg, while
       breach and any forged string still fail a MEASURED claim
+P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
+  (Y) test_p6_roster           six frozen arm keys, full-40hex tree echo,
+      face convention (rust twins share their tree), pre-flip pending-verify
+      refusal, legacy rows byte-stable under the batch
+  (Z) test_p6_adapters         per-arm child-argv contract on the new
+      run_sigminer_arm.R sibling, --backend passthrough, zero tuning lever,
+      skip-not-skip AdapterUnavailable on unattested images
+  (AA) test_p6_predicates      parity <=2x (boundary-exact, per-cell named,
+      REFUSE never PASS on missing/non-ok), TP-only judgment non-regression
+      on the D2 matched-status surface, mechanical attribution split,
+      yardstick MEASURED-or-LEDGERED-PENDING (no third state)
+  (AB) test_p6_evidence        zero-cached shard-union merge with reason-coded
+      rejects, nine-column committed schema, digest-stamped cell provenance,
+      machine-written result.md purity
+  (AC) test_p6_floor_governance  no campaign arm rides ungated: all six P6
+      tools measured, 21-class anchor completeness, reps-matched OK witnesses
+      with committed bytes, calibration ledger fields, co-tenancy census
+      coverage of every ready P6 image
+  (AD) test_p6_yardstick       seventh-image provisioning: the wheel is
+      hash-pinned against the banked fetch evidence with the unsynced
+      mirror named, executed bytes COPY-pinned, the bake tool sealed
+      against transcription, both cores measured at fixed iterations
+  (AE) test_p6_mini_fixture    the arm-image witness fixture (death #7):
+      the #13 attested r0 row survives verbatim, twenty N100-faithful
+      aligned samples regenerate byte-exactly from the committed rule
+  (AF) test_p6_flip            the roster-flip tool: [ATTESTED] blocks parse
+      last-wins and a malformed digest dies (rc 2), dry-run is byte-sterile
+      on the committed roster, the digest lands directly under the face line
+      of exactly its own arm, a re-run is idempotent and a digest conflict
+      refuses
+  (AG) test_p6_seal_evidence   the S5 sealing pass over synthetic bytes:
+      discovery takes exactly the shard pass tables (replay trails die), the
+      zero-cached master is filed only whole, provenance and duplicate
+      trails are spoken not swallowed, the yardstick reads MEASURED only
+      over fair bytes, a missing parity side is REFUSE, and every result.md
+      figure traces to an input byte
+  (AH) test_p6_anchor_registration  the fragment->table bridge: the witness
+      sidecar is the sole authority for an anchor figure (a lying fragment
+      dies), an unbacked or unverified witness is a REFUSE that leaves the
+      governance bytes sterile, legacy entries survive, a re-run is a
+      byte-identical no-op
 """
 
 from __future__ import annotations
@@ -127,7 +169,13 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # GO-05 ruling @12:50: unmeasurable floor leg, rc 3 (TDD):
            "test_floor_gate_unmeasurable",
            # M8 (PR #17): the action-pin law helper:
-           "test_action_pins"]
+           "test_action_pins",
+           # P6 evidence loop (sigminer v3 release-attestation table):
+           "test_p6_roster", "test_p6_adapters", "test_p6_predicates",
+           "test_p6_evidence", "test_p6_floor_governance",
+           "test_p6_yardstick", "test_p6_mini_fixture",
+           "test_p6_flip", "test_p6_seal_evidence",
+           "test_p6_anchor_registration"]
 
 
 def _collect(mod_name):

@@ -28,7 +28,7 @@ stderr.
 
 Usage:
   python3 tools/probe_sigminer_cell_argv.py [--work DIR] [--json PATH]
-      [--arm main] [--n 100] [--reps N]
+      [--tool sigminer] [--arm main] [--n 100] [--reps N]
 Floor witnesses (RB-09): pass --reps 100 — a REP-1 witness may never gate
 a REP-100 protocol class. The --reps default stays 1 for the (L) cell-argv
 smoke contract, which certifies EXECUTABILITY, not floor cost.
@@ -179,6 +179,10 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
     provenance = {"name": spec.name, "version": spec.version,
                   "image_ref": spec.image_ref, "image_digest": spec.image_digest,
                   "status": spec.status}
+    for column in ("tree_sha", "face"):           # P6 arm identity, when the
+        value = getattr(spec, column, "")          # row carries the columns
+        if value:
+            provenance[column] = value
     scratch = (Path(work) / f"probe_{hashlib.sha256(f'{tool}|{arm}|{n}|{reps}'.encode()).hexdigest()[:8]}"
                if work is not None
                else Path(tempfile.mkdtemp(prefix="m7cellprobe_")))
@@ -218,6 +222,10 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
 
 def parse_args(argv=None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--tool", default="sigminer",
+                    help="registry key whose row drives the cell (P6 arm keys "
+                         "included: the calibration pass mints P6 floor "
+                         "witnesses through the very same probe)")
     ap.add_argument("--work", default=None,
                     help="scratch root (default: fresh mkdtemp)")
     ap.add_argument("--json", default=None, dest="json_path",
@@ -232,7 +240,7 @@ def parse_args(argv=None) -> argparse.Namespace:
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    return run_probe("sigminer", arm=args.arm, n=args.n_point,
+    return run_probe(args.tool, arm=args.arm, n=args.n_point,
                      reps=args.reps, json_path=args.json_path,
                      work=args.work)
 

@@ -41,6 +41,11 @@ class CompetitorSpec:
     runner_script: str            # script name mounted under /work in the image
     provenance: str               # memo §2 evidence record
     pending_reason: str = ""      # non-empty iff status == pending-verify
+    # P6 evidence-loop columns (pre-registration SS1): the git tree the image
+    # installs from and the execution face it measures. Empty on the legacy
+    # rows — they predate tree-based arms and ride their CRAN-era images.
+    tree_sha: str = ""
+    face: str = ""
 
 
 REGISTRY: dict[str, CompetitorSpec] = {
@@ -117,6 +122,42 @@ REGISTRY: dict[str, CompetitorSpec] = {
             "hypothesis recorded in memo §10.2, HYPOTHESIS / UNVERIFIED)"),
     ),
 }
+
+# ---- P6 evidence-loop arms (pre-registration SS1): minted from the roster ----
+# Data-driven so the SS3 flip is a one-line data edit in competitors.p6_arms
+# (image_digest + build witness), never a hand-typed 71-char literal. An arm
+# without an inspect-attested digest mints pending-verify and is refused
+# compose-time by docker_cmd.image_gate — the no-invented-digests law holds
+# this table open by construction.
+from . import p6_arms as _p6_arms                     # noqa: E402
+
+for _tool, _arm in _p6_arms.P6_ARM_SPECS.items():
+    _attested = _arm.get("image_digest", "")
+    _ready = (_attested.startswith("sha256:") and len(_attested) == 71)
+    _img_note = _arm.get(
+        "image_ref_note",
+        "to be baked from the mirror-spelled r-ver base per "
+        "Dockerfile.sigminer.tree")
+    REGISTRY[_tool] = CompetitorSpec(
+        name=_tool,
+        runtime="R",
+        version=_arm["version"],
+        image_ref=_p6_arms.image_tag(_tool, _arm.get("revision", 1)),
+        image_digest=_attested if _ready else PENDING_VERIFY,
+        status=STATUS_READY if _ready else STATUS_PENDING_VERIFY,
+        entrypoint="python3",             # m7_entry.py measures the Rscript child
+        runner_script=_p6_arms.ARM_RUNNER,
+        tree_sha=_arm["tree_sha"],
+        face=_arm["face"],
+        provenance=(
+            f"P6 arm {_tool}: sigminer tree {_arm['tree_sha']} "
+            f"({_arm['role']}); whole-tree install via "
+            f"{_p6_arms.ARM_INSTALLER}, face {_arm['face']}; image {_img_note}"),
+        pending_reason=(
+            "" if _ready else
+            f"pending-verify: SS3 build+inspect ceremony not yet run for tree "
+            f"{_arm['tree_sha']} face {_arm['face']}"),
+    )
 
 
 def load() -> dict[str, CompetitorSpec]:

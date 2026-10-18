@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""(AD) test_p6_yardstick -- the rust-NMF yardstick's build-input seals.
+
+The yardstick (manifest :42) is the only route by which the paper's
+rust-NMF speed claims become OUR measurements, so its provisioning is
+sealed the same way the arm images are: the wheel is hash-pinned against
+the banked fetch evidence (04-nmf-rs-fetch-probe-20261015), the upstream
+index is spelled (no silent mirror fallback), and every byte the image
+executes is pinned to its committed digest. The bake tool is text-sealed
+against transcription: its digest can only arrive via inspect .Id echo.
+Death #8 (2026-10-16) added the R-face seals: Biobase through the lane-
+recorded contrib host, the version-tolerant NMF invocation, and the
+asserted network-none brunet witness. Death #9 (2026-10-16) moved the
+wheel onto the probe-measured download -> sha256sum gate -> offline-install
+shape (jammy pip exposes no CLI --require-hashes value form) and re-pinned
+it to the linux/arm64 wheel the arm64 image actually executes.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import re
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parents[1]          # bench/m7
+ADAPTERS = HERE / "adapters"
+TOOLS = HERE / "tools"
+
+WHEEL_SHA = ("9ad81407bbc9335219f31a0b6746264761733494c6b16697e060729fa"
+             "749dd17")                                        # linux/arm64
+WHEEL_FILE = "nmf_rs-0.1.0-cp39-abi3-manylinux_2_28_aarch64.whl"
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(
+        f"tests.{name}", str(HERE / "tests" / f"{name}.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _load_runner():
+    """Behave-with-the-committed-bytes loader (death #11 law): the group may
+    not text-gate the runner and call that a seal -- it must import the file
+    and CALL the function."""
+    spec = importlib.util.spec_from_file_location(
+        "nmf_yardstick_runner_under_test",
+        str(ADAPTERS / "run_nmf_yardstick.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_proc_total_returns_a_real_measurement():
+    # Death #11: the FIRST authoritative cell run crashed inside
+    # _proc_total -- "module 'time' has no attribute 'proc_time'". The
+    # function was born broken in ba7ff1f and never called: the dev probe
+    # that "witnessed both cores" ran a working draft, the committed file
+    # was only text-gated. The behavioral seal: it must execute and return
+    # a monotone non-decreasing float across calls.
+    mod = _load_runner()
+    t0 = mod._proc_total()
+    t1 = mod._proc_total()
+    assert isinstance(t0, float) and isinstance(t1, float), (
+        f"_proc_total must return float, got {type(t0).__name__}")
+    assert t0 >= 0.0
+    assert t1 >= t0, "process CPU time is monotone non-decreasing"
+
+
+def _dockerfile_text() -> str:
+    p = ADAPTERS / "Dockerfile.nmf_yardstick"
+    if not p.is_file():
+        raise AssertionError(f"yardstick image build input missing: {p}")
+    return p.read_text(encoding="utf-8")
+
+
+def test_wheel_is_hash_pinned_against_fetch_evidence():
+    t = _dockerfile_text()
+    runtime = "\n".join(ln for ln in t.splitlines()
+                        if not ln.strip().startswith("#"))
+    assert "--require-hashes" not in runtime, \
+        ("jammy's pip 22.0.2 exposes --require-hashes as a no-value flag "
+         "(both CLI value forms rejected, measured); the hash policy must "
+         "ride the measured download -> sha256sum gate -> --no-index shape")
+    assert f'"{WHEEL_SHA}"' in t, \
+        ("the execution-arch (linux/arm64) wheel digest must be spelled -- "
+         "the banked x86_64 pin is fetch evidence, not the artifact the "
+         "arm64 image installs")
+    assert WHEEL_FILE in t, "the hash gate must name the exact wheel file"
+    assert "pip download" in t and "--no-deps" in t \
+        and "--only-binary :all:" in t, \
+        "provisioning must be single-package, binary-only, never a resolve sweep"
+    assert "--index-url https://pypi.org/simple" in t, \
+        "the upstream index must be spelled (the configured mirror does not " \
+        "sync nmf-rs; a silent mirror fallback is a provisioning lie)"
+    assert "sha256sum" in t and "--no-index" in t and "--find-links" in t, \
+        "a digest mismatch must die at the gate, and the install must be offline"
+    assert "nmf-rs==0.1.0" in t, "the yardstick wheel version is frozen"
+
+
+def test_image_byte_pins_the_executed_surface():
+    t = _dockerfile_text()
+    for rel in ("run_nmf_yardstick.py", "run_nmf_yardstick_leg.R",
+                "yardstick_cell/matrix.csv"):
+        sha = hashlib.sha256((ADAPTERS / rel).read_bytes()).hexdigest()
+        assert sha in t, f"{rel} not byte-pinned in the yardstick Dockerfile"
+        assert f"COPY {rel.split('/')[-1]} " in t or f"COPY {rel} " in t \
+            or f"COPY {rel.split('/')[-1]}/ " in t or "yardstick_cell/" in t, \
+            f"{rel} has no COPY line in the yardstick Dockerfile"
+
+
+def test_bake_tool_cannot_transcribe_a_digest():
+    p = TOOLS / "p6_build_yardstick.py"
+    if not p.is_file():
+        raise AssertionError(f"yardstick bake tool missing: {p}")
+    t = p.read_text(encoding="utf-8")
+    assert WHEEL_SHA in t, \
+        "the bake attestation must name the same wheel digest the image gates on"
+    assert '{{.Id}}' in t, \
+        "the yardstick digest must be captured from inspect .Id (SS3 law)"
+    assert 'raise SystemExit(2)' in t or "SystemExit(2)" in t, \
+        "the bake tool must die loudly on a malformed digest"
+    # No hard-quotable sha256+64hex literal anywhere in the driver.
+    bad = [m.group(0) for m in
+           re.finditer(r'sha256:[0-9a-f]{64}', t)
+           if "require-hashes" not in t[max(0, m.start() - 80):m.start()]]
+    assert not bad, f"yardstick bake tool carries a transcribed digest: {bad}"
+
+
+def test_r_leg_is_floor_safe_and_speaks_attestation():
+    t = (ADAPTERS / "run_nmf_yardstick_leg.R").read_text(encoding="utf-8")
+    assert "%||%" not in t, "R-floor platform-premise law: %||% is 4.4+"
+    assert "|>" not in t, "R-floor platform-premise law: native pipe is 4.4+"
+    assert 'value =' not in t.replace("value=", ""), \
+        "renamed-R base quirk: grepl value= must not appear"
+    assert "YARDS r_seconds=" in t and "r_niter=" in t and "r_version=" in t, \
+        "the R leg must attest seconds, stop-iteration count, and NMF version"
+    assert "proc.time" in t, "timing idiom must match the arm runners"
+
+
+def test_runner_fixture_pin_mirrors_the_committed_bytes():
+    t = (ADAPTERS / "run_nmf_yardstick.py").read_text(encoding="utf-8")
+    m = re.search(r'FIXTURE_SHA = "([0-9a-f]{64})"', t)
+    assert m, "the runner must name its fixture pin as a constant"
+    real = hashlib.sha256(
+        (ADAPTERS / "yardstick_cell" / "matrix.csv").read_bytes()).hexdigest()
+    assert m.group(1) == real, \
+        f"runner pin {m.group(1)} drifts from committed bytes {real}"
+    assert "committed fixture bytes drifted" in t, \
+        "fixture drift must be a hard death, not a silent remeasure"
+
+
+def test_fairness_is_fixed_iteration_on_both_sides():
+    py = (ADAPTERS / "run_nmf_yardstick.py").read_text(encoding="utf-8")
+    r = (ADAPTERS / "run_nmf_yardstick_leg.R").read_text(encoding="utf-8")
+    assert "stop=\"max_iter\"" in py, \
+        "rust leg must run the fixed iteration count, not converge-and-quit"
+    assert "eps = -Inf" in r, \
+        ("R leg must physically disarm the improvement rule (eps=-Inf): eps=0 "
+         "STOPS EARLY on the first non-improving step -- measured 2026-10-17, "
+         "the committed-2000 cell attested r_niter=440, not 2000")
+    assert "num_threads=threads" in py and "threads" in py, \
+        "rust leg must pin its thread count (co-tenancy law)"
+    assert "rust_niter" in py and "r_niter" in py and "fairness_flag" in py, \
+        "per-side stop-iteration attestations must be reported, not assumed"
+
+
+# ---------------------------------------------------------------- death #8
+# The CRAN-only NMF layer died: "dependency 'Biobase' is not available".
+# Biobase is a Bioconductor-class package the lane resolves through the
+# recorded contrib host (same source that served the arm trees, probes
+# 3/6); the yardstick now provisions it through a committed, result-gated
+# script. These units seal that repair -- the same shape the arm build
+# seals its resolver.
+_PROV = "install_nmf_yardstick.R"
+
+
+def test_r_face_provisions_biobase_from_the_recorded_contrib():
+    p = ADAPTERS / _PROV
+    if not p.is_file():
+        raise AssertionError(f"R-face provisioning script missing: {p}")
+    t = p.read_text(encoding="utf-8")
+    assert "https://bioconductor.org/packages/3.17/bioc/src/contrib" in t, \
+        ("Biobase must resolve through the lane-recorded contrib host "
+         "(install_sigminer.R BIOC_CONTRIB -- the only bioc source this mirror serves)")
+    assert "PACKAGES.gz" in t and "tries" in t, \
+        ("the index is fetched by hand (R's repo machinery fetches zero rows "
+         "here) and every URL carries per-URL retries (§9b flakiness)")
+    assert "install not result-gated" in t, \
+        ("a node counts as provisioned only when the library's own "
+         "DESCRIPTION reports the version -- the recorded result-gate")
+    assert '"BiocGenerics"' in t and '"Biobase"' in t, \
+        "the measured contrib closure (BiocGenerics under Biobase) must install deps-first"
+    assert '"0.28"' in t and '"2.60.0"' in t, \
+        ("the provisioning is version-gated: CRAN-current drift is a build "
+         "death, so a re-bake reproduces the attested pair or dies loudly")
+    assert "%||%" not in t and "|>" not in t, \
+        "R-floor platform-premise law: 4.4-only operators on a 4.3 base"
+    d = _dockerfile_text()
+    sha = hashlib.sha256(p.read_bytes()).hexdigest()
+    assert sha in d and f"COPY {_PROV} " in d, \
+        "the provisioning script is executed surface: byte-pinned and COPYed"
+
+
+def test_r_leg_survives_the_current_nmf_signature():
+    t = (ADAPTERS / "run_nmf_yardstick_leg.R").read_text(encoding="utf-8")
+    assert "do.call" in t and "formals(NMF::nmf" in t, \
+        ("the call must pass through a do.call filtered against the formals -- "
+         "NMF 0.28 dropped backup/silent from the brunet bootstrap's accepted set")
+    assert "unused argument" in t, \
+        "the arg-repair loop must heal exactly what the method refuses, by message"
+    assert "r_dropped=" in t, \
+        "dropped arguments are attestation data, not silence"
+
+
+def test_network_none_witness_asserts_the_measured_fit():
+    t = _dockerfile_text()
+    assert "identical(NMF::niter(r), 5L)" in t, \
+        ("the network-none witness must assert the fit actually iterated to "
+         "the fixed stop (niter 5), the way the measured probe attests it")
+    m = re.search(r'RUN --network=none Rscript -e \'.*?NMF.*?\'', t, re.DOTALL)
+    assert m and "backup" not in m.group(0) and "silent" not in m.group(0), \
+        "the witness must speak the version-tolerant invocation, not the 2023 shape"
+
+
+def test_yards_parse_carries_the_measured_droppelist():
+    # Death #11 (2026-10-17): the leg attests r_dropped=... but the runner's
+    # anchored 3-field LEG_RE rejected the 4-field line -- a parse that
+    # cannot speak the drop-list is silence, which death #8's law forbids.
+    # The seal bytes are the REAL in-image YARDS line (NMF 0.28, this base).
+    mod = _load_runner()
+    m = mod.LEG_RE.match(
+        "YARDS r_seconds=0.329000 r_niter=5 r_version=0.28 "
+        "r_dropped=keep.rng+backup+silent")
+    assert m, "the measured 4-field YARDS line must parse"
+    assert m.group(1) == "0.329000" and int(m.group(2)) == 5
+    assert m.group(3) == "0.28"
+    assert m.group(4) == "keep.rng+backup+silent"
+    m3 = mod.LEG_RE.match("YARDS r_seconds=1.500000 r_niter=5 r_version=0.28")
+    assert m3 and m3.group(4) is None, "the no-drop 3-field form still parses"
+    assert not mod.LEG_RE.match("YARDS r_seconds=1.5 r_niter=5"), \
+        "a seconds-only stub must never parse as an attestation"
+
+
+if __name__ == "__main__":
+    fails = 0
+    for name, fn in sorted(vars().items()):
+        if name.startswith("test_") and callable(fn):
+            try:
+                fn()
+                print(f"  PASS {name}")
+            except Exception as exc:
+                fails += 1
+                print(f"  FAIL {name}: {exc}")
+    raise SystemExit(1 if fails else 0)

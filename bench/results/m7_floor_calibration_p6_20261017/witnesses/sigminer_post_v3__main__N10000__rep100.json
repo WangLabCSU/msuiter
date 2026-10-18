@@ -1,0 +1,52 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigminer_post_v3",
+  "--arms",
+  "main",
+  "--n-list",
+  "10000",
+  "--reps",
+  "100",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/Users/wsx/Documents/GitHub/msuiter-wt/p6-evidence/bench/results/m7_floor_calibration_p6_20261017/_scratch/probe_0712dfae/probe_cache",
+  "--outdir",
+  "/Users/wsx/Documents/GitHub/msuiter-wt/p6-evidence/bench/results/m7_floor_calibration_p6_20261017/_scratch/probe_0712dfae/probe_cache/out"
+ ],
+ "arm": "main",
+ "cell": "sigminer_post_v3__main__N10000",
+ "n": 10000,
+ "provenance": {
+  "face": "R",
+  "image_digest": "sha256:d810e886d04ed18519840c734c721a20a7e40ca3fc9fa89fe30d12b2e284c8f7",
+  "image_ref": "msuiter-sigminer:p6-sigminer_post_v3-r1",
+  "name": "sigminer_post_v3",
+  "status": "ready",
+  "tree_sha": "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
+  "version": "2.3.3"
+ },
+ "reps": 100,
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 1296.151227,
+  "exit_status": 0,
+  "ru_stime": 41.425154,
+  "ru_utime": 1254.726073
+ },
+ "status_tail": "ok",
+ "tool": "sigminer_post_v3",
+ "verdict": "OK",
+ "wall_seconds": 619.036
+}

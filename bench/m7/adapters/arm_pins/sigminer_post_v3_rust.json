@@ -1,0 +1,7 @@
+{
+ "expected_version": "2.3.3",
+ "face": "rust",
+ "ns_sha256": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+ "tool": "sigminer_post_v3_rust",
+ "tree_sha": "a8b8825be0c0768580c85b7e749b7b9088d8d9d7"
+}
