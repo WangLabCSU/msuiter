@@ -253,6 +253,64 @@ def test_refusal_ledger_rerun_is_byte_identical():
             .read_bytes() == first
 
 
+P3_TOOLS = ("sigminer", "sigminer_pre_v3", "sigminer_post_p1",
+            "sigminer_post_p1_rust", "sigminer_post_p2", "sigminer_post_v3",
+            "sigminer_post_v3_rust", "sigprofiler")
+
+
+def _mk_p3_campaign(root: Path, *, drop_rows_of=()):
+    """Campaign whose rows carry every attribution stage tool at (main,100)
+    -- the shape the live table actually has. drop_rows_of names tools whose
+    rows are withheld while the roster still declares them."""
+    cd, out = root / "cache" / "p3camp", root / "results" / "p3camp"
+    rows = [_row(t, "main", 100, 100.0 + 25 * i)
+            for i, t in enumerate(P3_TOOLS) if t not in drop_rows_of]
+    for tag, part in (("main", rows),):
+        _write_table(cd / "shard_out" / tag
+                     / f"timings_m7_degraded_20261018-000000_{tag}.csv", part)
+    for r in rows:
+        man = cd / "cells" / r["cell"] / "out" / "manifest.json"
+        man.parent.mkdir(parents=True, exist_ok=True)
+        man.write_text(json.dumps({"image_digest": DIG}) + "\n", encoding="utf-8")
+    out.mkdir(parents=True, exist_ok=True)
+    specs = {t: types.SimpleNamespace(image_digest=DIG) for t in P3_TOOLS}
+    return cd, out, list(P3_TOOLS), specs
+
+
+def test_p3_gate_translates_predicate_ok_into_ledger_language():
+    """The live run was the first execution of this path: attribution_split
+    speaks OK/REFUSE, the sealed ledger lexicon is MEASURED/PASS/FAIL/REFUSE/
+    LEDGERED-PENDING/PENDING -- the seal must translate, never copy."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        cd, out, tools, specs = _mk_p3_campaign(root)
+        res = seal.seal(outdir=out, cachedir=cd, tools=tools,
+                       classes=[("main", 100)], specs=specs,
+                       expected_predicates=("P-3",), write=False)
+        assert res["verdict"] == "SEALED", res["refusals"]
+        line = [a for a in res["adjudications"]
+                if a["name"].startswith("P-3 attribution N=100")]
+        assert len(line) == 1
+        assert line[0]["state"] == "PASS", line[0]
+        assert line[0]["detail"].startswith("6 stages"), line[0]["detail"]
+        # the closed vocabulary accepts the whole report end-to-end
+        ev.write_result_md_text("P6 test", res["adjudications"])
+
+
+def test_p3_missing_stage_rows_refuse_never_pass():
+    """A stage that forms no ratio is unmeasured: REFUSE, and it poisons the
+    verdict -- silence is not consent."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        cd, out, tools, specs = _mk_p3_campaign(root,
+                                                drop_rows_of=("sigminer_post_p1_rust",))
+        res = seal.seal(outdir=out, cachedir=cd, tools=tools,
+                        classes=[("main", 100)], specs=specs,
+                        expected_predicates=("P-3",), write=False)
+        assert res["verdict"] == "REFUSE"
+        assert any("kernel_face" in rf for rf in res["refusals"]), res["refusals"]
+
+
 if __name__ == "__main__":
     fails = 0
     for name, fn in sorted(vars().items()):

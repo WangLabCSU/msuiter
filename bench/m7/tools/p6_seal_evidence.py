@@ -246,10 +246,18 @@ def seal(*, outdir, cachedir, tools, classes, specs,
             ns = sorted(nn for (a, nn) in classes if a == "main")
             for n in ns:
                 v = pred.attribution_split(master, n=n, arms=("main",))
-                state = v["verdict"]
-                detail = ("; ".join(v["why"]) if state != "OK" else
-                          f"{len(v['stages'])} stages at N={n}, worst "
-                          f"{max(s['ratio'] for s in v['stages'].values()):.3f}")
+                #: attribution_split speaks its own verdict space (OK/REFUSE);
+                #: the ledger's closed vocabulary needs it translated, and an
+                #: empty stage set is no evidence -- it refuses, never passes.
+                if v["verdict"] == "OK" and not v["stages"]:
+                    state, detail = "REFUSE", (
+                        f"no stage formed a ratio at N={n}: the declared "
+                        f"stage tools share no cells -- unmeasured, unattributed")
+                else:
+                    state = "PASS" if v["verdict"] == "OK" else v["verdict"]
+                    detail = ("; ".join(v["why"]) if v["verdict"] != "OK" else
+                              f"{len(v['stages'])} stages at N={n}, worst "
+                              f"{max(s['ratio'] for s in v['stages'].values()):.3f}")
                 adjudications.append({"name": f"P-3 attribution N={n} (gate)",
                                       "state": state, "detail": detail})
                 if state not in GATE_OK:
@@ -284,8 +292,8 @@ def seal(*, outdir, cachedir, tools, classes, specs,
                 adjudications.append({
                     "name": "yardstick", "state": ys["state"],
                     "detail": (f"ratio {ys['ratio']:.2f} "
-                               f"(rust {ys['rust_seconds']}s, "
-                               f"r {ys['r_seconds']}s) at the committed "
+                               f"(rust {ys['rust_seconds']:.6f}s, "
+                               f"r {ys['r_seconds']:.6f}s) at the committed "
                                f"fixed count {doc.get('iterations_fixed')}, "
                                f"fixture {fx}")})
     else:
