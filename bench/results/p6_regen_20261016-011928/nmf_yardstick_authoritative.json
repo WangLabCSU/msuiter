@@ -1,0 +1,19 @@
+{
+  "fixture_sha256": "10bda6beb4f457fa7f8b64e2030a05fa3cbe60c1251eb8bbfad14108a24601ae",
+  "iterations_fixed": 400,
+  "k": 2,
+  "r_dropped": "keep.rng+backup+silent",
+  "r_niter": 400,
+  "r_seconds": 0.401,
+  "r_version": "0.28",
+  "ratio_r_over_rust": 1.2323046734094532,
+  "rust_niter": 400,
+  "rust_seconds": 0.3254065399999999,
+  "rust_threads": 1,
+  "rust_version": "0.1.0",
+  "seed": 1234,
+  "shape": [
+    400,
+    80
+  ]
+}
