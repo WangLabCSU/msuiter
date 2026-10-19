@@ -1,7 +1,7 @@
 # calibrate-plot.R: the calibration-curve visualization face (U-M3b-05;
-# ARCHITECTURE section 5 MSU-Fit row "校准诊断图", CAPABILITY-MATRIX item 7
-# "覆盖率曲线作为一等可视化", design memo docs/devlog/2026-10-04-M3b-design-memo.md
-# section 2.3 "覆盖率曲线读法").
+# ARCHITECTURE section 5 MSU-Fit row "the calibration diagnostic plots", CAPABILITY-MATRIX item 7
+# "the coverage curve as a first-class visualization", design memo docs/devlog/2026-10-04-M3b-design-memo.md
+# section 2.3 "how to read the coverage curve" (English renderings of the roster labels).
 #
 # `plot_calibration_curve()` renders one [ms_calibration_grid()] table as
 # the empirical-coverage-vs-N curve: one panel per true share, the frozen

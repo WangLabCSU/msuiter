@@ -2,7 +2,7 @@
 # 3.2/3.4, decisions A14/D6).
 #
 # MsNmf is an S7 subclass of the abstract MsEngine with the NMF
-# hyper-parameters frozen at factory time ("params 固化"): the spec object
+# hyper-parameters frozen at factory time ("the params frozen" [rendered]): the spec object
 # is the first-class citizen of ms_extract(method =), strings are only
 # sugar resolved by match_ms_engine(). The spec stays small, serializable
 # and metadata rich; no .state, no handles (D12).

@@ -29,7 +29,7 @@
 # All violations raise msuiter_error_* conditions; bare stop() is banned.
 
 # Veto thresholds: the upstream documented defaults (memo section 3 --
-# "上游默认值的引用，非我方校准声明"; any recalibration goes through the
+# "a citation of the upstream defaults, not our calibration claim" [rendered from the memo]; any recalibration goes through the
 # D13 four-piece review before entering the contract).
 .MS_VETO_AVG_MIN <- 0.8
 .MS_VETO_CLUSTER_MIN <- 0.2

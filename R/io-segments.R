@@ -1,5 +1,5 @@
 # io-segments.R: the io-layer entry point ms_segments() (M1c input-layer
-# wiring; CAPABILITY-MATRIX L-A row "CN 输入"; consumes the verified CN48
+# wiring; CAPABILITY-MATRIX L-A row "CNV input" (the as-built roster label); consumes the verified CN48
 # arithmetic of src/rust/catalog/src/cn48.rs, whose CnSegment carries
 # seg_len_bp = end - start (raw difference) and the ordered pair
 # minor_cn <= major_cn).

@@ -1,5 +1,5 @@
 # ms-cluster.R: signature clustering by cosine-threshold connected
-# components (CAPABILITY-MATRIX L-F "签名聚类 🔶" first version).
+# components (CAPABILITY-MATRIX L-F "signature clustering" [rendered] first version).
 #
 # Semantics (frozen): two signatures join the same cluster iff their
 # cosine similarity is >= threshold. Clusters are the connected
