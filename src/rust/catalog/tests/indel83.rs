@@ -90,51 +90,68 @@ fn mark_hit(hit: &mut [bool], tag: &str, out: Result<Indel83Outcome, MsError>) {
 /// `SigProfilerMatrixGeneratorFunc.py:1054-1138` (rows 0..83 of
 /// `indel_types`; rows 83-95 are the Ins:M extension rows plus the
 /// complex/non_matching bookkeeping rows and are NOT ID83).
-fn expected_table() -> Vec<&'static str> {
-    let mut t: Vec<&'static str> = Vec::new();
+///
+/// Ownership ruling (issue #32 D2): the earlier face of this helper returned
+/// `Vec<&'static str>` forged with `Box::leak(format!(...).into_boxed_str())`.
+/// Six leak sites x 72 leaked labels (648 B, every one a 9-byte channel
+/// label) then stood reported by LeakSanitizer at every nightly exit -- a
+/// test-only leak is still a leak, and the house law forbids papering over
+/// it with suppressions. The table is now owned `String`s; the single caller
+/// borrows via `as_str()` and everything unwinds cleanly at test exit.
+fn expected_table() -> Vec<String> {
+    let mut t: Vec<String> = Vec::new();
     for k4 in 0..6 {
-        t.push(Box::leak(format!("1:Del:C:{k4}").into_boxed_str()));
+        t.push(format!("1:Del:C:{k4}"));
     }
     for k4 in 0..6 {
-        t.push(Box::leak(format!("1:Del:T:{k4}").into_boxed_str()));
+        t.push(format!("1:Del:T:{k4}"));
     }
     for k4 in 0..6 {
-        t.push(Box::leak(format!("1:Ins:C:{k4}").into_boxed_str()));
+        t.push(format!("1:Ins:C:{k4}"));
     }
     for k4 in 0..6 {
-        t.push(Box::leak(format!("1:Ins:T:{k4}").into_boxed_str()));
+        t.push(format!("1:Ins:T:{k4}"));
     }
     for k1 in 2..=5 {
         for k4 in 0..6 {
-            t.push(Box::leak(format!("{k1}:Del:R:{k4}").into_boxed_str()));
+            t.push(format!("{k1}:Del:R:{k4}"));
         }
     }
     for k1 in 2..=5 {
         for k4 in 0..6 {
-            t.push(Box::leak(format!("{k1}:Ins:R:{k4}").into_boxed_str()));
+            t.push(format!("{k1}:Ins:R:{k4}"));
         }
     }
     // Microhomology blocks (Func:1122-1138 Del half): key4 upper bound is
     // key1-1 (MH homology length <= L-1), except key1=5 which also carries
     // L>5 events with key4 capped at 5.
-    t.extend_from_slice(&["2:Del:M:1"]);
-    t.extend_from_slice(&["3:Del:M:1", "3:Del:M:2"]);
-    t.extend_from_slice(&["4:Del:M:1", "4:Del:M:2", "4:Del:M:3"]);
-    t.extend_from_slice(&[
+    for s in ["2:Del:M:1"] {
+        t.push(String::from(s));
+    }
+    for s in ["3:Del:M:1", "3:Del:M:2"] {
+        t.push(String::from(s));
+    }
+    for s in ["4:Del:M:1", "4:Del:M:2", "4:Del:M:3"] {
+        t.push(String::from(s));
+    }
+    for s in [
         "5:Del:M:1",
         "5:Del:M:2",
         "5:Del:M:3",
         "5:Del:M:4",
         "5:Del:M:5",
-    ]);
+    ] {
+        t.push(String::from(s));
+    }
     t
 }
 
 #[test]
 fn table_is_exactly_the_spmg_iloc83_order() {
     let expected = expected_table();
+    let expected_refs: Vec<&str> = expected.iter().map(|s| s.as_str()).collect();
     assert_eq!(ID83_CHANNELS.len(), 83);
-    assert_eq!(&ID83_CHANNELS, expected.as_slice());
+    assert_eq!(&ID83_CHANNELS, expected_refs.as_slice());
 }
 
 /// Block boundaries of the canonical order (memo §2.1): the 1bp C/T blocks,
