@@ -151,7 +151,7 @@ fn bytes_moved_under_a_name_force_a_fresh_decode() {
     write_grid(&p, M, N, 0);
     let mut c = VCache::new();
     let a = c.decode(&p, M, N, K).expect("decode before");
-    std::thread::sleep(std::time::Duration::from_millis(60));
+    std::thread::sleep(std::time::Duration::from_millis(1_100)); // second-granularity clock key: the move must cross a tick
     write_grid(&p, M, N, 500); // same length, different bytes, clock moves
     let b = c.decode(&p, M, N, K).expect("decode after");
     assert!(!Rc::ptr_eq(&a, &b), "a moved file must not serve stale bytes");
