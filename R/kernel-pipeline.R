@@ -351,10 +351,22 @@ kp_read_trace_csv <- function(path, iters.expect, name) {
 # and trace structural checks. A case is NOT consumable before this passes;
 # every fault names the case and the file. seed/replicate arrive as the
 # manifest's raw strings ("" when the column is empty).
+# Route selector (parity plan P3): the three grid/trace reads ride either
+# the audited scalar reference readers or, as the DEFAULT, the P2 L4
+# vectorized readers of R/kernel-parse.R. The L4 family and
+# tests/testthat/test-kernel-attest-route.R pin both routes at identical()
+# grade over real certified bytes -- the receipt strength does not move
+# with the route -- and "reference" stays available for adjudication. An
+# unknown route is fail-closed.
 kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
-                           replicate) {
+                           replicate, route = c("fast", "reference")) {
   where <- function(msg) paste0("receipt attestation failed for case '",
                                 case, "': ", msg)
+  route <- route[[1L]]
+  if (!identical(route, "fast") && !identical(route, "reference")) {
+    stop(where(paste0("unknown attest route '", route,
+                      "': expected 'fast' or 'reference'")), domain = NA)
+  }
   meta <- kp_read_meta_csv(file.path(out.dir, "meta.csv"))
   expect <- list(
     protocol = as.character(.KP_PROTOCOL),
@@ -380,10 +392,17 @@ kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
            domain = NA)
     }
   }
-  w <- kp_read_matrix_csv(file.path(out.dir, "W.csv"), m, k, "W.csv")
-  h <- kp_read_matrix_csv(file.path(out.dir, "H.csv"), k, n, "H.csv")
-  obj <- kp_read_trace_csv(file.path(out.dir, "trace.csv"), iters,
-                           "trace.csv")
+  if (identical(route, "fast")) {
+    w <- kp_read_matrix_fast(file.path(out.dir, "W.csv"), m, k, "W.csv")
+    h <- kp_read_matrix_fast(file.path(out.dir, "H.csv"), k, n, "H.csv")
+    obj <- kp_read_trace_fast(file.path(out.dir, "trace.csv"), iters,
+                              "trace.csv")
+  } else {
+    w <- kp_read_matrix_csv(file.path(out.dir, "W.csv"), m, k, "W.csv")
+    h <- kp_read_matrix_csv(file.path(out.dir, "H.csv"), k, n, "H.csv")
+    obj <- kp_read_trace_csv(file.path(out.dir, "trace.csv"), iters,
+                             "trace.csv")
+  }
   invisible(list(case = case, W = w, H = h, objective = obj, meta = meta))
 }
 
@@ -460,7 +479,9 @@ kp_run_batch <- function(bin, manifest, root, out.root,
     }
     # rc 0 is only a PROMISE; consumption waits for per-case receipts. The
     # attested bundles ride the return upward -- the consumer receives the
-    # validated bytes, never a directory path it must trust blindly.
+    # validated bytes, never a directory path it must trust blindly. The
+    # reads ride the DEFAULT attest route (the P2 L4 vectorized readers,
+    # pinned identical()-grade to the reference route; see kp_attest_case).
     receipt.fault <- NULL
     attested <- list()
     for (i in seq_len(nrow(cases))) {

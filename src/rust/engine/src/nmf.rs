@@ -124,6 +124,63 @@ use crate::rng::{MsRng, StreamId};
 /// floating-point guard only, never a pseudocount).
 pub const KL_EPS: f64 = 1e-12;
 
+/// Working set of the certified KL loop (parity plan P3): the per-call
+/// temporaries of the certified steps live here instead of on the heap per
+/// call, so a batch pays for its buffers once per shape instead of roughly
+/// four times per iteration per fit. The scratch is shaped, not seasoned:
+/// it stores only buffers sized to one (m, n, k) lattice point (`ensure`
+/// retargets them when the shape moves), holds no fit values across calls,
+/// and every buffer is fully written before it is read. The reuse leg of
+/// `tests/kl_scratch_bit_exact.rs` is the guard that this promise keeps.
+#[derive(Debug, Clone)]
+pub struct KlScratch {
+    m: usize,
+    n: usize,
+    k: usize,
+    // The shared GEMM out-buffer. The certified steps run strictly in
+    // sequence inside one fit, so the three consumers of `wh` never overlap.
+    wh: Vec<f64>,
+    num: Vec<f64>,
+    lnv: Vec<f64>,
+    hrow: Vec<f64>,
+    rrow: Vec<f64>,
+}
+
+impl KlScratch {
+    /// A scratch sized for one (m, n, k) lattice point.
+    pub fn new(m: usize, n: usize, k: usize) -> Self {
+        // Shape fields start as a sentinel so `ensure` cannot mistake a
+        // fresh zero-length buffer set for one already sized to (m, n, k).
+        let mut s = KlScratch {
+            m: 0,
+            n: 0,
+            k: 0,
+            wh: Vec::new(),
+            num: Vec::new(),
+            lnv: Vec::new(),
+            hrow: Vec::new(),
+            rrow: Vec::new(),
+        };
+        s.ensure(m, n, k);
+        s
+    }
+
+    /// Grow or retarget the buffers for one lattice point. Contents are
+    /// never trusted across a move: every buffer is written before read.
+    fn ensure(&mut self, m: usize, n: usize, k: usize) {
+        if (self.m, self.n, self.k) != (m, n, k) {
+            self.m = m;
+            self.n = n;
+            self.k = k;
+            self.wh = vec![0.0f64; m * n];
+            self.num = vec![0.0f64; k * n];
+            self.lnv = vec![0.0f64; m * n];
+            self.hrow = vec![0.0f64; k];
+            self.rrow = vec![0.0f64; n];
+        }
+    }
+}
+
 /// Outcome of a fixed-iteration NMF fit.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NmfFit {
@@ -205,15 +262,46 @@ pub fn fit_kl_with_init(
     h0: &[f64],
     max_iter: usize,
 ) -> Result<NmfFit, MsError> {
+    let mut s = KlScratch::new(m, n, k);
+    fit_kl_with_init_scratch(v, m, n, k, w0, h0, max_iter, &mut s)
+}
+
+/// The certified KL fit over a reusable working set — the single loop body
+/// behind [`fit_kl_with_init`] (which builds a throwaway scratch and
+/// delegates), so there is no second implementation and the byte law has
+/// one home: `tests/kl_scratch_bit_exact.rs` runs this face, the public
+/// face, and a frozen verbatim reference twin side by side at the real
+/// certified shapes and length, bit for bit, before this file may move.
+///
+/// The scratch carries no fit values across calls: the loop-invariant
+/// `lnv[i] = ln(KL_EPS + V[i])` is recomputed at every entry (same libm
+/// call, same argument bits, hence the same returned bits — the memoization
+/// removes recomputation, never re-derives a value by another route), and
+/// every other buffer is fully written before it is read.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+pub fn fit_kl_with_init_scratch(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    w0: &[f64],
+    h0: &[f64],
+    max_iter: usize,
+    s: &mut KlScratch,
+) -> Result<NmfFit, MsError> {
     validate(v, m, n, k, w0, h0)?;
+    s.ensure(m, n, k);
+    for (slot, &vv) in s.lnv.iter_mut().zip(v.iter()) {
+        *slot = (KL_EPS + vv).ln();
+    }
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
     let mut objective = Vec::with_capacity(max_iter + 1);
-    objective.push(kl_objective(v, &w, &h, m, n, k));
+    objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
     for _ in 0..max_iter {
-        kl_h_step(v, &w, &mut h, m, n, k);
-        kl_w_step(v, &mut w, &h, m, n, k);
-        objective.push(kl_objective(v, &w, &h, m, n, k));
+        kl_h_step_core(v, &w, &mut h, m, n, k, &mut s.wh, &mut s.num);
+        kl_w_step_core(v, &mut w, &h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow);
+        objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
     }
     Ok(NmfFit { w, h, objective, iterations: max_iter })
 }
@@ -250,9 +338,29 @@ pub fn fit_eu_with_init(
 /// Crate-visible so the SUITOR CV driver (U-M2-02) reuses the audited MU
 /// kernel verbatim instead of forking it.
 pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) {
-    let wh = matmul(w, h, m, n, k);
+    let mut s = KlScratch::new(m, n, k);
+    kl_h_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.num);
+}
+
+/// The certified H step body (see [`kl_h_step`]). The temporaries arrive as
+/// disjoint field borrows of a [`KlScratch`]; every value and every
+/// per-accumulator accumulation order is the committed one.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+fn kl_h_step_core(
+    v: &[f64],
+    w: &[f64],
+    h: &mut [f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    wh: &mut [f64],
+    num: &mut [f64],
+) {
+    matmul_body(w, h, m, n, k, wh);
     // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
-    let mut num = vec![0.0f64; k * n];
+    for x in num.iter_mut() {
+        *x = 0.0f64;
+    }
     for i in 0..m {
         let wrow = &w[i * k..i * k + k];
         for j in 0..n {
@@ -280,20 +388,53 @@ pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize,
 /// One KL W step: `W ← W ⊙ ((V ⊘ max(WH, ε)) Hᵀ) ⊘ max(1_m Hᵀ, ε)`.
 /// Crate-visible for the SUITOR CV driver (see [`kl_h_step`]).
 pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) {
-    let wh = matmul(w, h, m, n, k);
+    let mut s = KlScratch::new(m, n, k);
+    kl_w_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow);
+}
+
+/// The certified W step body (see [`kl_w_step`]). Two recomputations of the
+/// committed code become hoists WITHOUT any value change, and that is the
+/// whole safety argument:
+///   * `den` (the H row sum, ascending j) was recomputed for every (i, s)
+///     pair with identical operands — it depends only on s, so one pass per
+///     call yields exactly the same f64s;
+///   * the ratio column r[j] = V/max(WH, ε) was recomputed inside the s
+///     loop for every s with identical div operands — one pass per row
+///     yields exactly the same f64s for all s;
+///
+/// the per-(i, s) `num` accumulation keeps its committed ascending-j order,
+/// so every product enters each accumulator in the same sequence with the
+/// same values.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+fn kl_w_step_core(
+    v: &[f64],
+    w: &mut [f64],
+    h: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    wh: &mut [f64],
+    hrow: &mut [f64],
+    rrow: &mut [f64],
+) {
+    matmul_body(w, h, m, n, k, wh);
+    for s in 0..k {
+        let mut d = 0.0f64;
+        for j in 0..n {
+            d += h[s * n + j];
+        }
+        hrow[s] = d.max(KL_EPS);
+    }
     for i in 0..m {
+        for j in 0..n {
+            rrow[j] = v[i * n + j] / wh[i * n + j].max(KL_EPS);
+        }
         for s in 0..k {
             let mut num = 0.0f64;
             for j in 0..n {
-                let r = v[i * n + j] / wh[i * n + j].max(KL_EPS);
-                num += r * h[s * n + j];
+                num += rrow[j] * h[s * n + j];
             }
-            // den[s] = Σ_j H[s][j] (H row sums — independent of i)
-            let mut den = 0.0f64;
-            for j in 0..n {
-                den += h[s * n + j];
-            }
-            w[i * k + s] *= num / den.max(KL_EPS);
+            w[i * k + s] *= num / hrow[s];
         }
     }
 }
@@ -391,6 +532,19 @@ fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) 
 /// (see [`kl_h_step`]).
 pub(crate) fn matmul(w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -> Vec<f64> {
     let mut out = vec![0.0f64; m * n];
+    matmul_body(w, h, m, n, k, &mut out);
+    out
+}
+
+/// The certified GEMM body: zero-fill, then the i/s/j accumulation with the
+/// committed skip-a-zero-scaled-row law. The OUT buffer is reused by the
+/// scratch faces: the zero-fill writes exact 0.0 per cell (bit-identical to
+/// a fresh `vec![0.0; m * n]`) and the accumulation order per output cell is
+/// the committed ascending s.
+fn matmul_body(w: &[f64], h: &[f64], m: usize, n: usize, k: usize, out: &mut [f64]) {
+    for x in out.iter_mut() {
+        *x = 0.0f64;
+    }
     for i in 0..m {
         let wrow = &w[i * k..i * k + k];
         for (s, &ws) in wrow.iter().enumerate() {
@@ -403,17 +557,31 @@ pub(crate) fn matmul(w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -> Vec<
             }
         }
     }
-    out
 }
 
 /// Generalized KL divergence `D(V‖WH) = Σ [V·ln(V/(WH)) − V + WH]`, with
 /// the `log(ε + ·)` evaluation path (module docs, ε policy): finite for all
-/// non-negative inputs, and exactly `WH[i,j]` at `V[i,j] = 0`.
-fn kl_objective(v: &[f64], w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -> f64 {
-    let wh = matmul(w, h, m, n, k);
+/// non-negative inputs, and exactly `WH[i,j]` at `V[i,j] = 0`. `lnv` must be
+/// the elementwise `ln(KL_EPS + V[i])` produced by the fit face (same libm
+/// call on the same argument bits); the shared product `WH` is written into
+/// `wh` by this call.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+fn kl_objective_core(
+    v: &[f64],
+    lnv: &[f64],
+    w: &[f64],
+    h: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    wh: &mut [f64],
+) -> f64 {
+    matmul_body(w, h, m, n, k, wh);
     let mut acc = 0.0f64;
-    for (&vv, &mm) in v.iter().zip(wh.iter()) {
-        acc += vv * ((KL_EPS + vv).ln() - (KL_EPS + mm).ln()) - vv + mm;
+    for i in 0..m * n {
+        let vv = v[i];
+        let mm = wh[i];
+        acc += vv * (lnv[i] - (KL_EPS + mm).ln()) - vv + mm;
     }
     acc
 }
@@ -474,7 +642,7 @@ fn open_unit(rng: &mut MsRng) -> f64 {
     ((rng.next_u64() >> 11) as f64 + 1.0) * (1.0 / (1u64 << 53) as f64)
 }
 
-fn validate_shape(v: &[f64], m: usize, n: usize, k: usize) -> Result<(), MsError> {
+pub(crate) fn validate_shape(v: &[f64], m: usize, n: usize, k: usize) -> Result<(), MsError> {
     if m == 0 || n == 0 || k == 0 {
         return Err(
             MsError::new("argument", "matrix dimensions must be positive")

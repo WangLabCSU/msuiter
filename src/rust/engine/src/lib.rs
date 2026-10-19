@@ -21,6 +21,7 @@ pub mod resample;
 pub mod rng;
 pub mod sparse;
 pub mod stats;
+pub mod vcache;
 
 pub use error::MsError;
 
