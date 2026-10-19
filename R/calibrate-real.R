@@ -1,6 +1,6 @@
 # calibrate-real.R: the real-data downsampling sanity harness (U-M3b-06;
-# ARCHITECTURE section 5 MSU-Fit row "真实数据 sanity = 高 TMB 降采样覆盖
-# 检验", design memo docs/devlog/2026-10-04-M3b-design-memo.md section 4,
+# ARCHITECTURE section 5 MSU-Fit row "the real-data sanity = the high-TMB downsampling
+# coverage test" (English rendering of the roster label), design memo docs/devlog/2026-10-04-M3b-design-memo.md section 4,
 # data-source protocol in inst/sanity/README.md).
 #
 # NON-CLAIM DISCIPLINE (memo section 4, frozen wording): this harness is a
@@ -28,7 +28,7 @@
 #       pseudo-truth share >= 0.05 covered by the diluted CIs;
 #   (5) acceptance: S(N) within +-0.05 of the caller-supplied synthetic
 #       main-arm curve at the same N (union the wider [0.90, 1.00] floor
-#       per level, memo "取宽者"), and no systematic monotonicity
+#       per level, memo "take the wider one" [rendered]), and no systematic monotonicity
 #       inversion along N.
 #
 # Error protocol: all violations raise msuiter_error_* conditions.
@@ -36,7 +36,7 @@
 # Frozen sanity constants (memo section 4; re-freezing moves the protocol
 # docs and tests together):
 .MS_SANITY_TOLERANCE <- 0.05           # |S(N) - synthetic| band half-width
-.MS_SANITY_FLOOR <- c(lo = 0.90, hi = 1.00)  # the "or" floor band (取宽者)
+.MS_SANITY_FLOOR <- c(lo = 0.90, hi = 1.00)  # the "or" floor band (memo: "take the wider one" [rendered])
 .MS_SANITY_SHARE_FLOOR <- 0.05         # pseudo-truth share kept for S(N)
 
 # ---------------------------------------------------------------------------
@@ -88,7 +88,7 @@
 }
 
 # The +/-0.05 synthetic comparison, "or" the wider [0.90, 1.00] floor band
-# per level (memo: "或 [0.90, 1.00] 地板，取宽者"). Without a synthetic
+# per level (memo: "or the [0.90, 1.00] floor band, take the wider one" [rendered]). Without a synthetic
 # curve the floor band alone is the criterion (recorded as such).
 #' @noRd
 .ms_sanity_window <- function(s, levels, synthetic, tolerance) {

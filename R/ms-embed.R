@@ -1,5 +1,5 @@
 # ms-embed.R: the exposure embedding first version (U-M4-03 remainder;
-# CAPABILITY-MATRIX L-F "exposure 嵌入（UMAP/kmeans）+ 差异挖掘 🔶 M4" —
+# CAPABILITY-MATRIX L-F "exposure embedding (UMAP/kmeans) + differential mining, M4" —
 # the embedding/scatter face; the differential-mining face is a later
 # unit).
 #

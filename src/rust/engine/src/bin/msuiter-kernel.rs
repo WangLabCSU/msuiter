@@ -58,6 +58,8 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
+use msuiter_engine::vcache::VCache;
+
 /// Frozen protocol version (module docs). Every `meta.csv` echoes it;
 /// `--version` is the handshake.
 const PROTOCOL: u64 = 1;
@@ -209,7 +211,7 @@ fn dispatch_fit_kl(argv: &mut impl Iterator<Item = String>) -> Result<(), String
                 dump_at,
             };
             validate_init_args(init, case.seed)?;
-            run_case(&case)
+            run_case(&case, &mut VCache::new())
         }
         (Some(cases), Some(root), Some(out_root)) => {
             // Batch mode: dimensions and per-case settings come from the
@@ -275,12 +277,17 @@ fn validate_init_args(init: Init, seed: Option<u64>) -> Result<(), String> {
 }
 
 /// The initializers + fixed-count fit for one case, dispatched on `init`.
-/// Reads are re-done from disk on every call so the checkpoint path and
-/// the main path share one code route (exactness by the kernel's
-/// documented prefix property, not by state reuse).
-fn fit_case(case: &Case) -> Result<msuiter_engine::nmf::NmfFit, String> {
+/// The main path and the checkpoint path share one code route (exactness
+/// by the kernel's documented prefix property, not by fit-state reuse).
+/// `V` is served through the batch [`VCache`]: under the serving bridge's
+/// layout every restart of a unit hard-links one inode, so the shared,
+/// already-validated bytes are decoded once per distinct file per batch
+/// (engine `vcache` module law: identity key, fail-closed faults that are
+/// never cached, any move of the bytes under a name forces a fresh
+/// decode). `W0`/`H0` stay re-read from disk on every call.
+fn fit_case(case: &Case, vc: &mut VCache) -> Result<msuiter_engine::nmf::NmfFit, String> {
     let label = case.init.as_str();
-    let v = read_csv(&case.in_dir.join("V.csv"), case.m * case.n, "V.csv")?;
+    let v = vc.decode(&case.in_dir.join("V.csv"), case.m, case.n, case.k)?;
     match case.init {
         Init::External => {
             let w0 = read_csv(&case.in_dir.join("W0.csv"), case.m * case.k, "W0.csv")?;
@@ -318,16 +325,16 @@ fn fit_case(case: &Case) -> Result<msuiter_engine::nmf::NmfFit, String> {
     }
 }
 
-fn run_case(case: &Case) -> Result<(), String> {
-    let fit = fit_case(case)?;
-    emit_fit(&fit, case)
+fn run_case(case: &Case, vc: &mut VCache) -> Result<(), String> {
+    let fit = fit_case(case, vc)?;
+    emit_fit(&fit, case, vc)
 }
 
 /// Byte-stable emission: W/H as `{:.17e}` grids, the full objective trace,
 /// the timestamp-free meta record, and optional state checkpoints (each a
 /// re-run of the same pure fixed-count loop — same technique as the
 /// kl-crosscheck driver).
-fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case) -> Result<(), String> {
+fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case, vc: &mut VCache) -> Result<(), String> {
     std::fs::create_dir_all(&case.out_dir)
         .map_err(|e| format!("cannot create {}: {e}", case.out_dir.display()))?;
 
@@ -375,7 +382,7 @@ fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case) -> Result<(), String
             return Err(format!("--dump-at {t}: beyond --iters {}", case.iters));
         }
         let ck = Case { iters: t, dump_at: Vec::new(), ..case.clone() };
-        let ck_fit = fit_case(&ck)?;
+        let ck_fit = fit_case(&ck, vc)?;
         if ck_fit.iterations != t {
             return Err(format!("checkpoint {t}: kernel stopped at {}", ck_fit.iterations));
         }
@@ -404,6 +411,10 @@ fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
         return Err(format!("cases manifest header must be `{BATCH_HEADER}`, got `{header}`"));
     }
     let mut ran = 0usize;
+    // One decoded V per distinct file for the whole batch: the serving
+    // bridge hard-links one unit's V into all fifty case dirs, so fifty
+    // requests are one decode (engine vcache law, tests pinned).
+    let mut vc = VCache::new();
     for (no, row) in lines.enumerate() {
         let line_no = no + 2; // 1-based, header counted
         let fields: Vec<&str> = row.split(',').map(str::trim).collect();
@@ -444,7 +455,7 @@ fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
             replicate,
             dump_at: Vec::new(),
         };
-        run_case(&full).map_err(|e| format!("case {case}: {e}"))?;
+        run_case(&full, &mut vc).map_err(|e| format!("case {case}: {e}"))?;
         ran += 1;
     }
     eprintln!("msuiter-kernel: batch ok ({ran} cases)");
@@ -456,31 +467,13 @@ fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
 // ---------------------------------------------------------------------------
 
 /// Parse a headerless numeric CSV (any mix of row/newline separators) into
-/// exactly `expect_len` row-major values.
+/// exactly `expect_len` row-major values. The certified reader itself now
+/// lives in the engine `vcache` module so the batch V cache and this CLI
+/// share one implementation of the byte law (a forked reader is a second
+/// implementation, and second implementations are how byte laws die);
+/// this is a thin delegate and the fault texts are unchanged.
 fn read_csv(path: &Path, expect_len: usize, label: &str) -> Result<Vec<f64>, String> {
-    let text = std::fs::read_to_string(path)
-        .map_err(|e| format!("cannot read {label} at {}: {e}", path.display()))?;
-    let mut out = Vec::with_capacity(expect_len);
-    for (line_no, line) in text.lines().enumerate() {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-        for tok in line.split(',') {
-            let tok = tok.trim();
-            if tok.is_empty() {
-                return Err(format!("{label}: empty field on line {}", line_no + 1));
-            }
-            let v: f64 = tok
-                .parse()
-                .map_err(|e| format!("{label} line {}: parse `{tok}`: {e}", line_no + 1))?;
-            out.push(v);
-        }
-    }
-    if out.len() != expect_len {
-        return Err(format!("{label}: expected {expect_len} values, got {}", out.len()));
-    }
-    Ok(out)
+    msuiter_engine::vcache::read_certified_csv(path, expect_len, label)
 }
 
 /// Write a row-major matrix as `{:.17e}` rows (bit-exact round trip).

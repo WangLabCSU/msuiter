@@ -1,20 +1,20 @@
 # ms-compare.R: the calibrated similarity/matching library ms_compare()
-# (U-M4-01; CAPABILITY-MATRIX L-F, ARCHITECTURE section "指标",
+# (U-M4-01; CAPABILITY-MATRIX L-F, ARCHITECTURE section "The metrics",
 # design memo docs/devlog/2026-10-04-M4-01-design-memo.md).
 #
 # Four metrics on share-normalized columns (memo §1, frozen definitions):
 #   cosine / correlation (Pearson on shares) / jsd (sqrt, bits) / hellinger.
 # Two null families behind ms_compare_null_rust (memo §2): the signature
 # null (unrelated uniform-Dirichlet signatures, channel count only) and
-# the catalog null (truth reconstructed at burden N -- the 零校准 of the
-# cosine; "按通道数×负荷"). The frozen MC-SE tolerance (0.01) is enforced
+# the catalog null (truth reconstructed at burden N -- the zero-calibration of the
+# cosine; "by channel count × burden"). The frozen MC-SE tolerance (0.01) is enforced
 # HERE at the R face: the kernel reports the number, policy lives at the
 # boundary.
 # Three matching protocols (memo §3):
 #   hungarian -- engine::consensus::match_solutions verbatim (U-M2-01),
 #                one-to-one, the primary metric;
 #   islam     -- per-estimated greedy max-cosine >= tau (Islam 2022
-#                semantics, 逐位; the test layer re-derives the
+#                semantics, bit-for-bit; the test layer re-derives the
 #                test-islam-xval.R table);
 #   jiang     -- activity > 0 matching + scaled Manhattan + Combined Score
 #                + specificity (bbaf042; exposure-driven, no cosine in the
@@ -593,7 +593,7 @@ ms_compare <- S7::new_generic(
     jiang <- NULL
   }
 
-  # --- per-pair empirical null p + BH (the L-F "q 值注记" table face)
+  # --- per-pair empirical null p + BH (the L-F "q-value annotation" table face [rendered])
   # Every (est, ref) pair gets an add-one empirical tail probability
   # under the frozen signature-null family, then BH across ALL pairs
   # (the conservative whole-grid view). Same sampler as the scatter

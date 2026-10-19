@@ -1,5 +1,5 @@
 # io-sv.R: the io-layer entry point ms_sv() (M1c input-layer wiring;
-# CAPABILITY-MATRIX L-A row "SV 输入"; consumes the verified SV32
+# CAPABILITY-MATRIX L-A row "SV input" (the as-built roster label); consumes the verified SV32
 # arithmetic of src/rust/catalog/src/sv32.rs, whose SvRecord carries
 # sv_type, size_bp = |start1 - start2| and the clustered flag).
 #
