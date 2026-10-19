@@ -14,7 +14,9 @@ contracts it is supposed to implement:
     Linux + Windows (section 4.4/5), and the Cargo.lock pins
     (matrixmultiply 0.3.9, rayon 1.10.x, lock v3) asserted by a CI
     step next to the dependabot ignore rules (belt and braces);
-  * every repository path referenced by a workflow actually exists.
+  * every repository path referenced by a workflow actually exists
+    (sanctioned build-output roots are excepted by EXACT token only, and a
+    built-in firing control proves a genuinely dangling path still reddens).
 
 Runs in CI (guards job) and locally:  python3 tools/ci-selfcheck.py
 Exit 0 = all checks pass; exit 1 = at least one FAIL printed.
@@ -104,6 +106,30 @@ def run_blocks(doc):
 def job_script(doc, job):
     """Concatenated run scripts of one job."""
     return "\n".join(run_blocks(doc.get("jobs", {}).get(job, {})))
+
+
+# The instruments that make the sanitizer legs LOUD (issue #32 D1): without
+# any one of them an instrument could be dead while the leg still reports
+# green/red by accident. Pinned by name so gutting the harness is a guards
+# failure, not a silent weakening.
+LOUDNESS_LAW_MARKERS = (
+    "probe_rustc",             # rustc must accept -Zsanitizer=<value>
+    "census",                  # executed-work census: zero executed work -> red
+    "build_canary",            # reviewed canary compiled with/without the sanitizer
+    "run_canary",
+    "assert_trip_reported",    # live canary violation MUST be reported
+    "assert_trip_silent",      # uninstrumented canary MUST stay silent
+    "assert_clean_silent",     # clean canary MUST stay silent
+)
+
+
+def loudness_law_markers():
+    """Return the loudness-law markers missing from the leg harness."""
+    harness = REPO / "tools/deep-checks/run_sanitizer_leg.sh"
+    if not harness.is_file():
+        return list(LOUDNESS_LAW_MARKERS) + ["tools/deep-checks/run_sanitizer_leg.sh"]
+    h = harness.read_text(encoding="utf-8")
+    return [m for m in LOUDNESS_LAW_MARKERS if m not in h]
 
 
 def main():
@@ -270,12 +296,29 @@ def main():
           and sched["jobs"]["valgrind"].get("continue-on-error") is True
           and "valgrind" in job_script(sched, "valgrind"))
     sani = sched["jobs"].get("sanitizer", {})
-    sani_m = str(sani.get("strategy", {}).get("matrix", {}))
-    check("scheduled: ASAN/UBSAN matrix {address, undefined}",
-          "address" in sani_m and "undefined" in sani_m)
-    check("scheduled: sanitizer via RUSTFLAGS -Zsanitizer",
-          "-Zsanitizer=" in job_script(sched, "sanitizer")
-          or "-Zsanitizer=" in str(sani))
+    sani_matrix = sani.get("strategy", {}).get("matrix", {}) or {}
+    sani_set = set(sani_matrix.get("sanitizer", []))
+    # Issue #32 D1 law change (this selfcheck moves WITH the contract it
+    # governs): the matrix value `undefined` never existed in rustc's
+    # -Zsanitizer vocabulary -- the retired leg died at target discovery and
+    # produced zero signal while looking red. The executed set is now the
+    # rustc-accepted {address, leak}; pinned by EXACT set equality so any
+    # silent addition (including a reintroduced `undefined`), removal, or
+    # substitution goes red.
+    check("scheduled: sanitizer matrix = exact set {address, leak} (rustc-accepted)",
+          sani_set == {"address", "leak"}, f"got {sorted(sani_set)}")
+    # Wiring moved from the retired RUSTFLAGS inline step to the loudness-law
+    # harness. Both halves stay loaded: the workflow must invoke the leg
+    # script with the matrix value, and the harness itself must still carry
+    # every loudness-law instrument (a deleted canary or deleted census dies
+    # the guards arm, so a dead instrument cannot masquerade as green).
+    leg = job_script(sched, "sanitizer")
+    check("scheduled: sanitizer legs invoke the loudness-law harness per matrix value",
+          "run_sanitizer_leg.sh leg" in leg and "${{ matrix.sanitizer }}" in leg)
+    missing_markers = loudness_law_markers()
+    check("sanitizer harness exists and enforces the loudness law "
+          "(rustc probe, executed-work census, canary trip/clean gates)",
+          not missing_markers, f"missing {missing_markers}")
 
     # ---- scheduled pkgdown site build (U-M7-04 slice-C, C5) ----------------
     # The per-PR 13-check topology is frozen, so the site render is pinned
@@ -323,6 +366,24 @@ def main():
           re.search(r'name = "rayon"\nversion = "1\.10\.\d+"', lock) is not None)
 
     # ---- referenced paths exist -------------------------------------------
+    # Sanctioned build-output allowance (issue #32, controller law change
+    # recorded here and in the lane manifest): `docs/dev` is the pkgdown
+    # devel-mode OUTPUT ROOT that the site job's existence probe asserts at
+    # RUNTIME (development.mode: devel writes docs/dev/, the site root is
+    # reserved for release builds). It is a build artifact, never a
+    # committed path -- exactly the class the D1 loudness lesson warned
+    # about from the other side: a check must not gate on a path the
+    # configuration never writes, and this scanner must not demand a path
+    # the build only produces. The allowance is EXACT-TOKEN (no prefix, no
+    # glob) and stays honest via the firing control below: a genuinely
+    # dangling sibling of the sanctioned root must still go red.
+    sanctioned_build_outputs = {"docs/dev"}
+
+    def missing(refs):
+        return [t for t in sorted(refs)
+                if t.rstrip("/") not in sanctioned_build_outputs
+                and not (REPO / t.rstrip("/")).exists()]
+
     refs = set()
     for wtext in (ci_text, txt(SCHED)):
         for m2 in re.finditer(
@@ -330,9 +391,20 @@ def main():
                 wtext):
             token = m2.group(0).rstrip(".-")
             refs.add(token)
-    missing = [t for t in sorted(refs) if not (REPO / t).exists()]
-    check("every repo path referenced by a workflow exists",
-          not missing, str(missing))
+    missing_paths = missing(refs)
+    check("every repo path referenced by a workflow exists "
+          "(sanctioned build outputs excepted by exact token)",
+          not missing_paths, str(missing_paths))
+    # Firing control (house law: scanners without a firing positive control
+    # are vacuous and refused): the allowance admits ONLY the sanctioned
+    # token; its uncommitted sibling and a bogus tools/ path must redden.
+    control = missing({"docs/dev", "docs/dev/",
+                       "docs/dev/nothing-committed-here-9f3b",
+                       "tools/no-such-tool-9f3b.sh"})
+    check("path-scanner firing control: narrow allowance, dangling paths still red",
+          control == ["docs/dev/nothing-committed-here-9f3b",
+                      "tools/no-such-tool-9f3b.sh"],
+          f"control leaked {control}")
 
     print()
     if failures:
