@@ -460,7 +460,13 @@ test_that("F8 the capability probe and the witnessed fallback: a farm that
                 info = real$witness)
   }
   expect_identical(names(real$results), paste0("u", sprintf("%02d", 1:3)))
-  expect_identical(sort(st2$served), paste0("u", sprintf("%02d", 1:3)))
+  # On the parallel route the farm FORKS: a fork's served-writes live and
+  # die in the fork, so the in-process counter is void evidence there and
+  # the returned bytes below are the proof. On the witnessed fallback the
+  # in-process route must record every unit.
+  if (!live) {
+    expect_identical(sort(st2$served), paste0("u", sprintf("%02d", 1:3)))
+  }
   for (nm in names(real$results)) {
     expect_identical(real$results[[nm]]$tag, nm)
     expect_identical(real$results[[nm]]$value, nchar(nm) + 1L)

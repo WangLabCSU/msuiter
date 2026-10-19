@@ -142,7 +142,10 @@
 #    serial route, which fans nothing out, is not asked;
 #  * mclapply: the capability surface. A function is injected verbatim
 #    (the tests' counting stand-in); FALSE declares the capability absent;
-#    NULL auto-probes parallel::mclapply;
+#    NULL auto-probes parallel::mclapply for presence AND ability -- a live
+#    same-shape fan probe at the asked worker count, so a rig that refuses
+#    the fan-out takes the witnessed serial fallback instead of quoting
+#    the refusal as a third party's error;
 #  * adoption: for the run's lifetime .KP_FARM_ADOPT_ENV addresses a
 #    ledger; pids registered there are dead before the farm returns.
 #
@@ -249,12 +252,37 @@ kp_farm <- function(units, workers = 4L, serve = NULL, mem.probe = NULL,
   } else {
     probed <- tryCatch(getFromNamespace("mclapply", "parallel"),
                        error = function(e) NULL)
+    fan <- NULL
     if (is.function(probed)) {
+      # Presence is not ability: ask the fan mechanism itself, at the asked
+      # worker count and under the ambient rig discipline, before any unit
+      # is committed. A forkless build, the CRAN-era _R_CHECK_LIMIT_CORES_
+      # gate (parallel's .check_ncores stops every ask above two
+      # processes) and process-table pressure all refuse HERE -- and
+      # because the probe serves nothing, a refusal precedes all work, so
+      # the witnessed fallback below can never double-serve.
+      fan <- tryCatch({
+        p <- probed(seq_len(1L), function(i) i, mc.cores = workers)
+        if (identical(p, list(1L))) {
+          list(available = TRUE, reason = "")
+        } else {
+          list(available = FALSE, reason = "the probe returned unexpected bytes")
+        }
+      },
+      error   = function(e) list(available = FALSE, reason = conditionMessage(e)),
+      warning = function(w) list(available = FALSE, reason = conditionMessage(w)))
+    }
+    if (isTRUE(fan$available)) {
       mc <- probed
       parallel <- TRUE
       witness <- paste0("parallel: parallel::mclapply over ",
                         as.character(workers), " workers serving ",
                         as.character(n), " units")
+    } else if (is.function(probed)) {
+      witness <- paste0("serial fallback: parallel::mclapply present but ",
+                        "fan-out unavailable (the probe was refused: ",
+                        fan$reason, "; workers ",
+                        as.character(workers), " requested)")
     } else {
       witness <- paste0("serial fallback: parallel::mclapply capability ",
                         "absent -- the probe found no pool (workers ",
