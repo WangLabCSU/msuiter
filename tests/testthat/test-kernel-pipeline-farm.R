@@ -346,6 +346,26 @@ test_that("F5b the reaping law survives a faulted unit: the on.exit sweep
   expect_identical(.kpp.alive(born$pids), integer(0L))
 })
 
+test_that("F9 the POSIX rig probe answers honestly: it refuses a machine
+           that cannot run the rig, caches its answer, and shares the units'
+           machinery verbatim (the windows R CMD check arms of 2026-10-19
+           ran the F5 orphans into an absent /bin/sh and quoted
+           subscript-out-of-bounds where a skip was owed)", {
+  # Negative control, platform-independent: no machine can execute this
+  # trio, so a probe that answers TRUE for it is measuring its own
+  # optimism. The two calls also pin the cache: a re-ask returns the same
+  # settled answer, not a re-vote.
+  fake <- list(ps = "definitely-not-a-ps-9f3",
+                sleep = "/definitely-not/sleep-9f3",
+                sh = "/definitely-not/sh-9f3")
+  expect_false(isTRUE(.kpp.posix.rig(bins = fake)))
+  expect_false(isTRUE(.kpp.posix.rig(bins = fake)))
+  # The probe must speak with the units' own voice: the default bins are
+  # the very constants the census and the spawn helpers reach for.
+  expect_identical(.kpp.posix.bins,
+                   list(ps = "ps", sleep = "/bin/sleep", sh = "/bin/sh"))
+})
+
 test_that("F6 the domain: workers in {1, 4..8}; malformed units refused;
            all refusals happen before any contact", {
   kp.farm <- .kpp_surface("kp_farm")               # red by absence
