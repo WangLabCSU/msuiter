@@ -8,7 +8,15 @@
 //! here against `msuiter_engine::vcache::VCache`, the engine face the batch
 //! entry will use.
 //!
-//! The law this file pins, in order:
+//! The law this file pins, in order. The memo's identity key and lookup
+//! path are a `cfg(unix)` construction (`vcache.rs`): on non-unix there is
+//! no key to hit, so `VCache::decode` falls through to a fresh read every
+//! time — a designed fail-closed never-cache fallback, not a degraded
+//! sharing law. Each sharing law below is therefore asserted twice: on
+//! unix in its sharing form, and on non-unix as a fail-closed twin that
+//! pins the Windows-side guarantee honestly (every decode is a fresh read,
+//! so a stale hit is structurally impossible). No assertion is flipped to
+//! fit a platform; each platform states the law it can actually keep.
 //!   1. two requests for the SAME path hand back the SAME Rc (zero-copy
 //!      sharing, the point of the exercise) with the naive-parse bytes
 //!      bit-for-bit (`assert_eq!` on the Vec);
@@ -97,6 +105,7 @@ const N: usize = 7;
 const K: usize = 2;
 const MN: usize = M * N;
 
+#[cfg(unix)]
 #[test]
 fn same_path_shares_one_decoding_bit_exactly() {
     let t = Tmp::new("same");
@@ -110,6 +119,25 @@ fn same_path_shares_one_decoding_bit_exactly() {
     assert_eq!(*a, want, "shared decoding must be the naive bytes exactly");
 }
 
+#[cfg(not(unix))]
+#[test]
+fn same_path_redecodes_are_bit_exact_fresh_reads() {
+    // Fail-closed twin of `same_path_shares_one_decoding_bit_exactly`: on
+    // this platform there is no identity key and no lookup path, so there
+    // is nothing to share -- the Windows-side law is that every decode is
+    // its own fresh read and each one is the naive bytes exactly.
+    let t = Tmp::new("same");
+    let p = t.join("V.csv");
+    write_grid(&p, M, N, 0);
+    let want = naive_read(&p, MN);
+    let mut c = VCache::new();
+    let a = c.decode(&p, M, N, K).expect("decode a");
+    let b = c.decode(&p, M, N, K).expect("decode b");
+    assert_eq!(*a, want, "a fresh decode must be the naive bytes bit-exactly");
+    assert_eq!(*b, want, "a repeated decode must re-read to the same bytes, never a cached shadow");
+}
+
+#[cfg(unix)]
 #[test]
 fn hardlinked_alias_shares_the_decoding() {
     // The bridge's layout itself: fifty names, one inode, one decoding.
@@ -124,6 +152,29 @@ fn hardlinked_alias_shares_the_decoding() {
         let got = c.decode(&alias, M, N, K).expect("decode alias");
         assert!(Rc::ptr_eq(&a, &got), "hard-linked name {i} must share the base decoding");
         assert_eq!(*got, *a, "alias bytes");
+    }
+}
+
+#[cfg(not(unix))]
+#[test]
+fn hardlinked_aliases_decode_correctly_and_independently() {
+    // Fail-closed twin of `hardlinked_alias_shares_the_decoding`:
+    // `std::fs::hard_link` exists here (one file, many names), but with no
+    // identity key there is no fold to assert -- the Windows-side law is
+    // one correct decode per name, each through its own read. The expected
+    // bytes are re-read from disk per name, so every assertion stands on
+    // its own independent witness rather than on a shared object.
+    let t = Tmp::new("link");
+    let p = t.join("shared.csv");
+    write_grid(&p, M, N, 0);
+    let mut c = VCache::new();
+    let a = c.decode(&p, M, N, K).expect("decode base");
+    assert_eq!(*a, naive_read(&p, MN), "the base name must decode to the naive bytes exactly");
+    for i in 0..3 {
+        let alias = t.join(&format!("case{i}.csv"));
+        fs::hard_link(&p, &alias).expect("hard_link");
+        let got = c.decode(&alias, M, N, K).expect("decode alias");
+        assert_eq!(*got, naive_read(&alias, MN), "hard-linked name {i} must decode to the bytes on disk through its own fresh read");
     }
 }
 
@@ -144,6 +195,7 @@ fn equal_bytes_under_different_names_do_not_share() {
     assert!(!Rc::ptr_eq(&a, &b), "distinct files must not be folded into one entry");
 }
 
+#[cfg(unix)]
 #[test]
 fn bytes_moved_under_a_name_force_a_fresh_decode() {
     let t = Tmp::new("move");
@@ -158,6 +210,29 @@ fn bytes_moved_under_a_name_force_a_fresh_decode() {
     assert_eq!(*b, naive_read(&p, MN), "fresh decode must see the new bytes");
     let c2 = c.decode(&p, M, N, K).expect("decode after again");
     assert!(Rc::ptr_eq(&b, &c2), "the fresh bytes are now the shared entry");
+}
+
+#[cfg(not(unix))]
+#[test]
+fn bytes_moved_under_a_name_can_never_serve_stale_bytes() {
+    // Load-bearing fail-closed twin of
+    // `bytes_moved_under_a_name_force_a_fresh_decode`: with no key and no
+    // lookup path, the strongest Windows-side law is staleness-impossible --
+    // every read is the file's current bytes. The unix twin's 1.1 s sleep
+    // exists because its identity key is clock-second-granular; here there
+    // is no key to out-wait, so the move lands immediately.
+    let t = Tmp::new("move");
+    let p = t.join("V.csv");
+    write_grid(&p, M, N, 0);
+    let mut c = VCache::new();
+    let a = c.decode(&p, M, N, K).expect("decode before");
+    assert_eq!(*a, naive_read(&p, MN), "the first decode must be the original bytes exactly");
+    write_grid(&p, M, N, 500); // same length, different bytes
+    let b = c.decode(&p, M, N, K).expect("decode after");
+    assert_eq!(*b, naive_read(&p, MN), "the read after the move must be the new bytes, never the old ones");
+    assert_ne!(*a, *b, "a settled file that moved must show it: the post-move read differs from the pre-move one");
+    let c2 = c.decode(&p, M, N, K).expect("decode after again");
+    assert_eq!(*c2, *b, "repeated reads of the settled file must agree with each other");
 }
 
 #[test]
