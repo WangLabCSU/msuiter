@@ -53,11 +53,14 @@
   }
   old <- get(name, envir = ns)
   unlockBinding(name, env = ns)
+  # Handler order is the house idiom verbatim: on.exit(add = TRUE)
+  # evaluates in SETTING order, so the body runs first (with the swap
+  # installed) and the restore runs after it.
+  on.exit(eval(expr, envir = env), add = TRUE)
   on.exit({
     assign(name, old, envir = ns)
     lockBinding(name, env = ns)
   }, add = TRUE)
-  on.exit(eval(expr, envir = env), add = TRUE)
   assign(name, fn, envir = ns)
   invisible(NULL)
 }
