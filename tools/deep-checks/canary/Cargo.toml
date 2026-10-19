@@ -1,0 +1,15 @@
+[package]
+name = "msuiter-sanitizer-canary"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+# Deliberately detached from the src/rust workspace: this crate is a
+# test fixture for the sanitizer-leg harness (tools/deep-checks/), never
+# a product artifact, never in the dependency graph, never in the
+# vendor baseline (tools/vendor.sh walks src/rust only).
+[workspace]
+
+[profile.dev]
+debug = 2
+opt-level = 0

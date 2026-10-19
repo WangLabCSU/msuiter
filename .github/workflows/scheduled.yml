@@ -4,12 +4,20 @@
 # gate (U-M7-04 slice-C, C5): a site that no longer builds must go red.
 #
 #   valgrind  : full R CMD check --as-cran --use-valgrind on Linux.
-#   sanitizer : RUSTFLAGS -Zsanitizer={address,undefined} over the pure numeric
+#   sanitizer : RUSTFLAGS -Zsanitizer={address,leak} over the pure numeric
 #               crates (msuiter-engine + msuiter-catalog, both
 #               #![forbid(unsafe_code)]). The FFI shell links libR, which is
 #               not instrumented, so full-workspace sanitizer runs only
 #               produce libR false positives; the numeric core is the
-#               memory-safety surface we own.
+#               memory-safety surface we own. The matrix value `undefined`
+#               was retired (issue #32 D1): rustc has never accepted it, the
+#               leg died at target discovery and produced zero signal while
+#               looking red. Both legs now run through
+#               tools/deep-checks/run_sanitizer_leg.sh, which enforces the
+#               LOUDNESS LAW: the leg goes red unless rustc accepts the
+#               flag, the suite genuinely executed, and a reviewed canary
+#               violation is actually reported (a dead instrumentation can
+#               no longer masquerade as a green/red build).
 #   site      : pkgdown::build_site render of the reference site + artifact.
 #
 # Sanitizers need -Z flags => nightly toolchain (engine/catalog compile on
@@ -80,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sanitizer: [address, undefined]
+        sanitizer: [address, leak]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -92,11 +100,9 @@ jobs:
           workspaces: src/rust
           key: sanitizer-${{ matrix.sanitizer }}
 
-      - name: cargo +nightly test under ${{ matrix.sanitizer }} sanitizer
-        working-directory: src/rust
-        env:
-          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
-        run: cargo +nightly test -p msuiter-engine -p msuiter-catalog
+      - name: Sanitizer leg ${{ matrix.sanitizer }} (suite + loudness-law canary)
+        shell: bash -e {0}
+        run: sh tools/deep-checks/run_sanitizer_leg.sh leg "${{ matrix.sanitizer }}"
 
   site:
     # pkgdown site-build tripwire (U-M7-04 slice-C, C5). The per-PR 13-check

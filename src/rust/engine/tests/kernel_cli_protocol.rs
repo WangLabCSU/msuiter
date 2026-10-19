@@ -31,23 +31,29 @@ use std::process::Command;
 use msuiter_engine::nmf::{fit_kl_on_stream, fit_kl_with_init};
 use msuiter_engine::rng::StreamId;
 
-/// Locate the binary cargo just built for this test binary:
-/// `target/debug/deps/<test>` → `target/debug/msuiter-kernel[.exe]`.
+/// Locate the binary cargo built for this suite. The test binary itself may
+/// run from `target/debug/deps/` or, on newer cargo, from
+/// `target/debug/build/<pkg>/<metadata>/out/` (the issue #32 nightly layout);
+/// the kernel binary lands in the profile root either way, so resolve by
+/// walking the executable's ancestors -- one rule that holds under every
+/// cargo layout instead of a fixed-up walk that silently pins one.
 fn kernel_bin() -> PathBuf {
     let exe = std::env::current_exe().expect("current_exe");
-    let deps = exe.parent().expect("deps dir");
-    let profile = deps.parent().expect("target profile dir");
-    let mut p = profile.join("msuiter-kernel");
-    if cfg!(windows) {
-        p.set_extension("exe");
+    let exe_name = if cfg!(windows) { "msuiter-kernel.exe" } else { "msuiter-kernel" };
+    let mut dir = exe.parent();
+    for _ in 0..6 {
+        let Some(d) = dir else { break };
+        let p = d.join(exe_name);
+        if p.exists() {
+            return p;
+        }
+        dir = d.parent();
     }
-    assert!(
-        p.exists(),
-        "stable batch entry not built: {} missing — the boundary contract file \
-         src/rust/engine/src/bin/msuiter-kernel.rs must exist",
-        p.display()
+    panic!(
+        "stable batch entry not built: {exe_name} missing above {} — the boundary \
+         contract file src/rust/engine/src/bin/msuiter-kernel.rs must exist",
+        exe.display()
     );
-    p
 }
 
 struct Out {
