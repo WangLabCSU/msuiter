@@ -69,14 +69,21 @@
   }
 }
 
+## ---- the POSIX rig constants --------------------------------------------------
+
+# The three privileges the F5 orphan units stand on. The capability probe
+# and the helpers reach them from here -- one name, one voice -- so the
+# probe can never drift from the mechanism it certifies.
+.kpp.posix.bins <- list(ps = "ps", sleep = "/bin/sleep", sh = "/bin/sh")
+
 ## ---- the process census (renamed-R build: bare ps hides tty-less
 ## ---- processes, so every census runs -ax through one file capture) ----------
 
-.kpp.census <- function() {
+.kpp.census <- function(ps = .kpp.posix.bins$ps) {
   tf <- tempfile("kpp-census-")
   # One -o token for the whole format spec; -ax mandatory on this rig.
-  invisible(system2("ps", c("-o", "pid=,ppid=,command=", "-ax"),
-                    stdin = "", stdout = tf, stderr = tf, wait = TRUE))
+  invisible(system2(ps, c("-o", "pid=,ppid=,command=", "-ax"),
+                     stdin = "", stdout = tf, stderr = tf, wait = TRUE))
   L <- readLines(tf, warn = FALSE)
   tok <- strsplit(trimws(L), "[[:space:]]+", perl = TRUE)
   keep <- vapply(tok, function(t) length(t) >= 3L,
@@ -104,32 +111,86 @@
 #    collision-free.
 #  * "shw": an sh that backgrounds a sleep, reports its pid through
 #    stdout, and exits -- the PSOCK-orphan shape (PPID 1, pid known).
-.kpp.spawn.adopt <- function(duration, via = c("detached", "shw")) {
-  via <- match.arg(via, c("detached", "shw"))
+# The mechanism and the verdict are split: .kpp.spawn.raw carries the
+# recipe alone (and answers NULL where the recipe refused), the adopted
+# expect_* bookkeeping lives in the .kpp.spawn.adopt shell. The capability
+# probe below reaches for the raw core -- one mechanism, witnessed by both,
+# and a probe that never votes in the ledger it certifies.
+.kpp.spawn.raw <- function(duration, via, bins = .kpp.posix.bins) {
   dur <- as.character(duration)
   if (identical(via, "detached")) {
     b <- .kpp.census()
-    invisible(system2("/bin/sleep", dur, wait = FALSE))
+    invisible(system2(bins$sleep, dur, wait = FALSE))
     Sys.sleep(0.25)                                # fork-visibility settle
     a <- .kpp.census()
     new <- setdiff(a$pid, b$pid)
     hits <- new[a$ppid[match(new, a$pid, nomatch = 0L)] == 1L &
                 grepl(paste0("sleep ", dur), a$cmd[match(new, a$pid)])]
-    expect_identical(length(hits), 1L,
-                     info = paste0("detached sleep ", dur))
+    if (!identical(length(hits), 1L)) return(NULL)
     hits[[1L]]
   } else {
     scr <- tempfile("kpp-orphan-")
     writeLines(c("#!/bin/sh", paste0("sleep ", dur, " & echo $!")), con = scr)
     tf <- tempfile("kpp-orphan-out-")
-    invisible(system2("/bin/sh", scr, stdin = "", stdout = tf,
+    invisible(system2(bins$sh, scr, stdin = "", stdout = tf,
                       stderr = tf, wait = TRUE))
-    op <- suppressWarnings(as.integer(trimws(readLines(tf, warn = FALSE)[[1L]])))
-    expect_false(is.na(op), info = tf)
+    L <- readLines(tf, warn = FALSE)
+    if (length(L) < 1L) return(NULL)
+    op <- suppressWarnings(as.integer(trimws(L[[1L]])))
+    if (is.na(op)) return(NULL)
     Sys.sleep(0.25)                                # reparent-visibility settle
     op
   }
 }
+
+.kpp.spawn.adopt <- function(duration, via = c("detached", "shw"),
+                             bins = .kpp.posix.bins) {
+  via <- match.arg(via, c("detached", "shw"))
+  pid <- .kpp.spawn.raw(duration, via = via, bins = bins)
+  if (identical(via, "detached")) {
+    expect_false(is.null(pid),
+                 info = paste0("detached sleep ", as.character(duration)))
+  } else {
+    expect_false(is.null(pid), info = "the sh reported no pid")
+  }
+  pid
+}
+
+# Capability probe for the orphan-reaping units, in the idiom of
+# .stub.execs (test-check-layout-sim-sdkroot.R): ask the rig itself, never
+# an OS label. The windows CI arm of 2026-10-19 witnessed an absent
+# executor quoting subscript errors where a skip was owed, and the label
+# guard of 2026-10-13 witnessed os.type labels refusing to fire where the
+# executor was missing -- only the mechanism can testify about itself.
+# Each leg exercises the exact recipe its units reach for (the shared raw
+# core, not a lookalike); an absent rig answers FALSE on every leg, so
+# witness and verdict cannot disagree. Answers settle once per bin-set
+# (the units ask, the cache answers); the capable path pays for it with
+# two self-expiring sleeps, not a vote.
+.kpp.posix.rig <- local({
+  settled <- new.env(parent = emptyenv())
+  pid.ok <- function(p) is.numeric(p) && length(p) == 1L &&
+                        !is.na(p) && p > 0L
+  function(bins = .kpp.posix.bins) {
+    key <- paste0(bins[c("ps", "sleep", "sh")], collapse = "|")
+    got <- settled[[key]]
+    if (!is.null(got)) return(got)
+    legs <- list(
+      # census leg: the -ax process table the alive law reads from
+      function() length(.kpp.census(ps = bins$ps)$pid) > 10L,
+      # detachment leg: system2(wait = FALSE) reparenting to PPID 1
+      function() pid.ok(.kpp.spawn.raw(13L, "detached", bins = bins)),
+      # job-control leg: sh backgrounds the sleep and reports its pid
+      function() pid.ok(.kpp.spawn.raw(14L, "shw", bins = bins))
+    )
+    ask <- function(f) tryCatch(isTRUE(f()),
+                                error = function(e) FALSE,
+                                warning = function(w) FALSE)
+    ans <- all(vapply(legs, ask, FUN.VALUE = FALSE, USE.NAMES = FALSE))
+    settled[[key]] <- ans
+    ans
+  }
+})
 
 ## ---- the battery --------------------------------------------------------------
 
@@ -275,6 +336,11 @@ test_that("F4 the RSS guard: below the floor the farm refuses to fan out
 test_that("F5 PSOCK-orphan reaping is enforced: what a unit adopted is
            census-dead when the farm returns, on both orphan shapes", {
   kp.farm <- .kpp_surface("kp_farm")               # red by absence
+  if (!isTRUE(.kpp.posix.rig())) {
+    skip(paste0("the POSIX process rig (", .kpp.posix.bins$ps, " census, ",
+                .kpp.posix.bins$sleep, " detachment, ", .kpp.posix.bins$sh,
+                " job control) is not installed on this platform"))
+  }
   adopt.env <- .kpp.const(".KP_FARM_ADOPT_ENV")    # the adoption ledger name
   st <- new.env(parent = emptyenv()); st$served <- character(0L)
   st$alive <- integer(0L)
@@ -321,6 +387,11 @@ test_that("F5 PSOCK-orphan reaping is enforced: what a unit adopted is
 test_that("F5b the reaping law survives a faulted unit: the on.exit sweep
            still kills every registered orphan", {
   kp.farm <- .kpp_surface("kp_farm")               # red by absence
+  if (!isTRUE(.kpp.posix.rig())) {
+    skip(paste0("the POSIX process rig (", .kpp.posix.bins$ps, " census, ",
+                .kpp.posix.bins$sleep, " detachment, ", .kpp.posix.bins$sh,
+                " job control) is not installed on this platform"))
+  }
   adopt.env <- .kpp.const(".KP_FARM_ADOPT_ENV")
   born <- new.env(parent = emptyenv()); born$pids <- integer(0L)
   st <- new.env(parent = emptyenv()); st$served <- character(0L)
