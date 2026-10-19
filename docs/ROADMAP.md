@@ -112,8 +112,8 @@ dense arm at the SPMG 46s caliber would still support 50x; to be revisited
 when the hardware-pinned bench lands). All fixtures green; installable from
 r-universe. **M1s 14/14 ✅ closed.**
 
-> Preserved ruling original (authoritative, verbatim):
-> **验收（v0.1 发布）**：~~目录生成 ≥50× SPMG；NMF ≥100× R NMF~~ → **方案 A 口径（PI 裁决 2026-10-05）**：原倍数写于未实测基线（brunet 即 C 内核、SPMG 干净输入即向量化）；按实测 C 基线重校准——目录 2.6× SPMG（3.73s，<5s ✓）、NMF 2.3× R NMF brunet（C 核）、NNLS 1.8× scipy，原 50×/100×/10× 修辞移至朴素 R/Python 实现口径（全管线 dense 臂 SPMG 46s 口径 50× 或成立，钉硬件 bench 时复核）。夹具全绿；r-universe 可安装。**M1s 14/14 ✅ 关闭。**
+> Retired ruling original -- English twin of the byte-frozen CJK verbatim (CJK corpus
+> phase-2, issue #25, 2026-10-19; the Chinese original lives in git blob sha256 8b905eb8151cde0c75dee4b3d3b61f5efb72cffa0e38729b6119d74615718a91). **Acceptance (v0.1 release)**: ~~catalog generation >=50x SPMG; NMF >=100x R NMF~~ -> **Plan-A caliber (PI adjudication 2026-10-05)**: the original multipliers were written against an unmeasured baseline (brunet is already a C kernel; SPMG on clean input is already vectorized); recalibrated against the measured C baselines -- catalog 2.6x SPMG (3.73s, <5s OK), NMF 2.3x R NMF brunet (C core), NNLS 1.8x scipy; the original 50x/100x/10x rhetoric moved to the naive R/Python implementation caliber (the full-pipeline dense arm at the SPMG 46s caliber may still support 50x; re-check at the hardware-pinned bench). All fixtures green; installable from r-universe. **M1s 14/14 closed.**
 
 ---
 

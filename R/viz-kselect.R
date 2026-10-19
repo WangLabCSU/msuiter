@@ -1,5 +1,5 @@
 # viz-kselect.R: the K-selection evidence faces (CAPABILITY-MATRIX L-F
-# "K 选择证据：稳定性曲线、CV 误差、多证据表可视化 | ✅ M2/M4"; the
+# "the K-selection evidence: the stability curve, the CV error, the multi-evidence table visualization | ✅ M2/M4" [rendered]; the
 # ms_select_k() evidence table is the M2 contract, U-M2-02/03).
 #
 #   plot_k_cv_curve       -- CV test deviance vs k, argmin marked

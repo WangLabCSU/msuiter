@@ -19,8 +19,16 @@
 # working file with at least the same multiplicity. Losing a numeric claim in
 # a translation is drift -> exit 1.
 #
-# Run:  Rscript tools/cjk-census.R [--baseline=REF] [--quiet]
+# Run:  Rscript tools/cjk-census.R [--baseline=REF] [--quiet] [--self-test]
 #       (exit 0 = compliant, exit 1 = violations; default REF = HEAD)
+#
+#       --self-test exercises the scanner against embedded positive controls
+#       (one Han ideograph + one hiragana pair) and one negative control (a
+#       pure-ASCII line) through the very .cjk_hit() machinery the corpus
+#       scan uses. Both controls MUST behave -- a scanner whose controls do
+#       not fire is vacuous and its zero verdict is worthless
+#       ([[governance-scan-integrity]], 2026-10-15). Exit 1 if any control
+#       misbehaves; the corpus gate must never be trusted without them.
 
 options(warn = 1)
 
@@ -76,6 +84,7 @@ options(warn = 1)
   "docs/research/06-s7-class-system.md"           = "normative",
   "docs/research/07-algorithm-zoo.md"             = "normative",
   "docs/research/08-fact-check-audit.md"          = "normative",
+  "docs/research/09-sigminer-v3-parity-plan.md"   = "normative",
   "docs/reviews/00-synthesis.md"                  = "normative",
   "docs/reviews/01-computational-biologist.md"    = "normative",
   "docs/reviews/02-rust-r-engineer.md"            = "normative",
@@ -96,6 +105,26 @@ options(warn = 1)
   "bench/m1s/nnls/result.md"                      = "reference",
   "bench/m1s/sbs/result.md"                       = "reference"
 )
+
+# Glob enrollment (CJK corpus phase 2, issue #25): the normative R roxygen
+# corpus and the shipped Rd corpus join by class, not by a hand-curated list
+# that silently lags the tree -- a shipped source file must not be able to
+# hide from the gate by being absent from the explicit roster
+# ([[governance-scan-integrity]]: the instrument covers the corpus).
+.expand_corpus_globs <- function(corpus) {
+  patterns <- c(R = "[.]R$", man = "[.]Rd$")
+  for (dir_ in names(patterns)) {
+    hits <- list.files(file.path(.repo_root, dir_), pattern = patterns[[dir_]],
+                       full.names = FALSE)
+    hits <- hits[!grepl("^helper", hits)]          # testthat helpers are not shipped docs
+    for (h in hits) {
+      rel <- paste0(dir_, "/", h)
+      if (!(rel %in% names(corpus))) corpus[[rel]] <- "normative"
+    }
+  }
+  corpus
+}
+.corpus <- .expand_corpus_globs(.corpus)
 
 # Per-line markdown context: TRUE where CJK is permitted to survive
 # (blockquote or fenced code).
@@ -136,6 +165,56 @@ options(warn = 1)
   hits <- grep(.cjk_regex, c(x, .SENTINEL), perl = TRUE)
   seq_along(x) %in% hits
 }
+
+# ---------------------------------------------------------------------------
+# Firing positive controls ([[governance-scan-integrity]]): the corpus verdict
+# is only trustworthy while the scanner demonstrably fires. The controls ride
+# as \u{} escapes so this file stays pure ASCII (English-only law); they run
+# through the SAME .cjk_hit() path as the corpus scan, so a regression in the
+# class definition, the regex engine mode or the encoding plumbing -- any of
+# the historic vacuous-green failure modes (BSD grep -P no-op, undecoded perl)
+# -- shows up here as a control going dark, not as a silent zero downstream.
+# ---------------------------------------------------------------------------
+.run_self_test <- function(quiet = FALSE) {
+  controls <- list(
+    han   = c(lit = "\u{4f60}\u{597d}", want = TRUE,
+              why = "two Han ideographs (U+4F60 U+597D)"),
+    kana  = c(lit = "\u{3042}\u{3044}", want = TRUE,
+              why = "two hiragana (U+3042 U+3044)"),
+    ascii = c(lit = "plain ascii baseline: 0123456789 [Cjk] {}",
+              want = FALSE, why = "pure-ASCII negative control")
+  )
+  got <- .cjk_hit(vapply(controls, function(k) k[["lit"]], character(1L)))
+  names(got) <- names(controls)
+  ok <- TRUE
+  for (nm in names(controls)) {
+    want <- isTRUE(as.logical(controls[[nm]][["want"]]))
+    fire <- isTRUE(got[[nm]])
+    if (!identical(fire, want)) {
+      ok <- FALSE
+      cat(sprintf("SELF-TEST %s %s: %s -- %s\n", nm,
+                  if (want) "FAILED TO FIRE" else "FALSELY FIRED",
+                  controls[[nm]][["why"]],
+                  if (want) "the scan is vacuous" else "the scan over-matches"))
+    } else if (!quiet) {
+      cat(sprintf("SELF-TEST %s %s: %s\n", nm,
+                  if (fire) "FIRES" else "stays dark",
+                  controls[[nm]][["why"]]))
+    }
+  }
+  if (!ok) {
+    cat("cjk-census: SELF-TEST FAIL -- scanner vacuous or over-matching;\n")
+    cat("cjk-census: a zero corpus verdict from this scanner MUST NOT be trusted.\n")
+    quit(status = 1L)
+  }
+  if (!quiet) {
+    cat("cjk-census: SELF-TEST OK (Han + kana controls fire; ASCII control dark)\n")
+  }
+}
+# The controls run on EVERY invocation (not only --self-test): a corpus
+# verdict is emitted only by a scanner that just now demonstrably fired.
+.run_self_test(quiet = .quiet)
+if ("--self-test" %in% .args) quit(status = 0L)
 
 .read_work <- function(relpath) {
   p <- file.path(.repo_root, relpath)

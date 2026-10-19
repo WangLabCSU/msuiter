@@ -13,7 +13,7 @@ rendering.
 Source: `bench/m1s/result.md` — the M1s acceptance-gate bench summary
 (`bench/m1s/result.md:1`):
 
-> # bench/m1s · M1s 验收门 bench 汇总（U-M1s-13 配套；钉硬件口径，不进 CI）
+> # bench/m1s · the M1s acceptance-gate bench summary (the U-M1s-13 companion; the pinned-hardware caliber, not into the CI)
 
 The three measured kernels, quoted exactly from the summary table:
 
@@ -30,14 +30,14 @@ linear algebra for batch NNLS — see the verbatim rows directly below.
 Verbatim table rows (`bench/m1s/result.md:11, 13, 14`):
 
 ```
-| 目录生成 SBS96（10⁶ 突变） | ≥50× SPMG 且 <5s 单核 | 2.6×（我方 3.73s vs SPMG 9.82s）；<5s ✓ | **speedup FAIL；<5s PASS** |
-| NMF KL（96×1000, k=10, 100 iter） | ≥100× R NMF | 2.3×（我方 205ms vs brunet 0.47s） | **FAIL** |
-| 批量 NNLS（101×10³, k=10） | ≥10× scipy 逐样本 | 1.8×（我方 6.7ms vs scipy 11.2ms） | **FAIL** |
+| the catalog generation SBS96 (the 10⁶ mutations) | ≥50× SPMG and <5s single-core | 2.6× (ours 3.73s vs SPMG 9.82s); <5s ✓ | **speedup FAIL; <5s PASS** |
+| the NMF KL (96×1000, k=10, 100 iter) | ≥100× R NMF | 2.3× (ours 205ms vs brunet 0.47s) | **FAIL** |
+| the batch NNLS (101×10³, k=10) | ≥10× the per-sample scipy | 1.8× (ours 6.7ms vs scipy 11.2ms) | **FAIL** |
 ```
 
 And the summary's own adjudication of the pre-recalibration targets (`bench/m1s/result.md:17`):
 
-> ROADMAP M1s 验收行「目录生成 ≥50× SPMG；NMF ≥100× R NMF」按本 bench 不成立——
+> The ROADMAP M1s acceptance row "catalog generation ≥50× SPMG; NMF ≥100× R NMF" does not hold under this bench —
 
 ## Framing: the Plan-A recalibration (PI ruling 2026-10-05)
 
@@ -45,9 +45,9 @@ The original ≥50×/≥100×/≥10× rhetoric was written against baselines
 that were never themselves measured — `brunet` already ships a C
 kernel, and SPMG on clean input is vectorised. The PI ruling of
 2026-10-05 recalibrated acceptance to the MEASURED C-class baselines,
-and moved the original rhetoric to a naive-R/Python framing (`docs/ROADMAP.md:116`, verbatim):
+and moved the original rhetoric to a naive-R/Python framing (`docs/ROADMAP.md:116`, verbatim; the blockquote spans `docs/ROADMAP.md:115-116`):
 
-> **验收（v0.1 发布）**：~~目录生成 ≥50× SPMG；NMF ≥100× R NMF~~ → **方案 A 口径（PI 裁决 2026-10-05）**：原倍数写于未实测基线（brunet 即 C 内核、SPMG 干净输入即向量化）；按实测 C 基线重校准——目录 2.6× SPMG（3.73s，<5s ✓）、NMF 2.3× R NMF brunet（C 核）、NNLS 1.8× scipy，原 50×/100×/10× 修辞移至朴素 R/Python 实现口径（全管线 dense 臂 SPMG 46s 口径 50× 或成立，钉硬件 bench 时复核）。夹具全绿；r-universe 可安装。**M1s 14/14 ✅ 关闭。**
+> [English twin of the retired ruling original; CJK corpus] phase-2, issue #25, 2026-10-19; the Chinese original lives in git blob sha256 8b905eb8151cde0c75dee4b3d3b61f5efb72cffa0e38729b6119d74615718a91). **Acceptance (v0.1 release)**: ~~catalog generation >=50x SPMG; NMF >=100x R NMF~~ -> **Plan-A caliber (PI adjudication 2026-10-05)**: the original multipliers were written against an unmeasured baseline (brunet is already a C kernel; SPMG on clean input is already vectorized); recalibrated against the measured C baselines -- catalog 2.6x SPMG (3.73s, <5s OK), NMF 2.3x R NMF brunet (C core), NNLS 1.8x scipy; the original 50x/100x/10x rhetoric moved to the naive R/Python implementation caliber (the full-pipeline dense arm at the SPMG 46s caliber may still support 50x; re-check at the hardware-pinned bench). All fixtures green; installable from r-universe. **M1s 14/14 closed.**
 
 ## Targets table (ARCHITECTURE cross-reference)
 
@@ -56,13 +56,13 @@ The canonical class targets, verbatim from `docs/ARCHITECTURE.md:315-321`:
 <!-- census-exempt tokens: 51 260 266 (the ROADMAP/ARCHITECTURE line pins in this file were re-anchored from the baseline line numbers 51, 260-266, 266 to the translated files' 116, 315-321, 321; the old pins are named here for the numeric-preservation guard) -->
 
 ```
-| 内核 | 基线 | 目标 |
+| Kernel | Baseline | Target |
 |---|---|---|
-| 目录生成 SBS96（10⁶ 突变） | SPMG | ≥50× 且 <5 s 单核 |
-| NMF KL（96×1000, k=10, 100 iter） | R NMF / rust-NMF | ≥100× R NMF；rust-NMF 对齐（容差） |
-| 批量 NNLS（101×10³） | scipy nnls 逐样本 | ≥10× |
-| 全样本拟合 | SPA ~0.21 s/样本 | 对齐或更优 |
-| bootstrap（10³×10³） | sigminer 串行 | ≥100× |
+| the catalog generation SBS96 (10⁶ mutations) | SPMG | ≥50× and <5 s single core |
+| NMF KL (96×1000, k=10, 100 iter) | R NMF / rust-NMF | ≥100× R NMF; the rust-NMF alignment (tolerance) |
+| the batch NNLS (101×10³) | scipy nnls per sample | ≥10× |
+| the all-sample fitting | SPA ~0.21 s/sample | aligned or better |
+| bootstrap (10³×10³) | sigminer serial | ≥100× |
 ```
 
 ## MEASURED: bootstrap vs sigminer -- the >=100x target measured FALSE
@@ -114,17 +114,20 @@ Every number above is a single-session measurement on one pinned,
 developer machine whose power state was not controlled — the source
 attestation (`bench/m1s/result.md:3-4`):
 
-> 日期：2026-09-30 · 本机 Apple M5 / macOS 26.6.2 / R 4.5.2 / rustc 1.92 /
-> SPMG 1.3.6（bench/m1s/.venv）。功耗状态不可控——数字为该钉硬件单次会话口径；
+> Date: 2026-09-30 · the local Apple M5 / macOS 26.6.2 / R 4.5.2 / rustc 1.92 /
+> SPMG 1.3.6 (bench/m1s/.venv). The power status not controllable — the numbers are for this pinned-hardware single-session caliber;
 
-The per-part benches repeat the caveat individually:
+The per-part benches repeat the caveat individually -- the three reference
+reports below stay byte-frozen CJK originals (translation only on user demand,
+charter class "reference"), so each line is a labeled English rendering, not a
+verbatim quote:
 
-- `bench/m1s/sbs/result.md:14`
-  > - host: aarch64-apple-darwin20（Apple Silicon；功耗状态不可控，数字为该钉硬件口径）
-- `bench/m1s/nmf/result.md:14`
-  > - host: aarch64-apple-darwin20（Apple Silicon；功耗状态不可控，数字为该钉硬件口径）
-- `bench/m1s/nnls/result.md:8`
-  > - python 3.13.9 | numpy 2.3.5 | scipy 1.17.0 | darwin (Apple Silicon；功耗状态不可控，数字为该钉硬件口径)
+- `bench/m1s/sbs/result.md:14` (rendering of the CJK original)
+  > - host: aarch64-apple-darwin20 (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
+- `bench/m1s/nmf/result.md:14` (rendering of the CJK original)
+  > - host: aarch64-apple-darwin20 (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
+- `bench/m1s/nnls/result.md:8` (rendering of the CJK original)
+  > - python 3.13.9 | numpy 2.3.5 | scipy 1.17.0 | darwin (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
 
 Consequences, all by reference: these values are acceptance-gate
 evidence, not CI-tracked series (the 'do not enter CI' stipulation of the title line quoted above); the
@@ -143,9 +146,9 @@ cfef27c feat(m7): timings writer emits optional trailing hardware pins host+hw_p
 
 ```
 $ sed -n '11p;13p;14p' bench/m1s/result.md
-$ grep -n '方案 A 口径' docs/ROADMAP.md          # -> line 116
+$ grep -n 'Plan-A calibration' docs/ROADMAP.md       # -> line 105
 $ sed -n '315,321p' docs/ARCHITECTURE.md        # targets table incl. bootstrap row 321
-$ grep -n '功耗状态不可控' bench/m1s/result.md bench/m1s/*/result.md
+$ grep -n 'power status not controllable' bench/m1s/result.md; grep -n 'Apple Silicon' bench/m1s/*/result.md   # parent (translated) + the three CJK reference reports
 ```
 
 ## Integrity seals
@@ -155,12 +158,12 @@ in-window; the `abc` control vector hashed to the same value under
 hashlib, `openssl dgst -sha256 -r`, `node crypto.createHash` and
 Apple CommonCrypto `shasum -a 256`:
 
-<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 (the docs/ARCHITECTURE.md and docs/ROADMAP.md seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard) -->
+<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b e2f6707915d6002ebf00b2e79b7fec9e5f8333459914243089a1ff0c259b73e3 (the docs/ARCHITECTURE.md and docs/ROADMAP.md seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard; e215d681.../e2f67079... were superseded again at the CJK corpus phase-2 pass (issue #25): the bench/m1s/result.md drift came from the #21 translation commit and the docs/ROADMAP.md seal tracks the phase-2 retirement of the ruling blockquote's CJK twin) -->
 
 ```
-e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b  bench/m1s/result.md
+0baf0f93cba179c068f53fc4899773b00b775349bcb54ed624e0b51d276231c9  bench/m1s/result.md
 be6649d50124fe62f639852edb3bd6a4afb964fc8136dbf02b99178c7f62f2cd  docs/ARCHITECTURE.md
-e2f6707915d6002ebf00b2e79b7fec9e5f8333459914243089a1ff0c259b73e3  docs/ROADMAP.md
+4b2bcca5e28ed1679bada42f2c7e5769ef64c76853870e773ae7fc622e8cb90d  docs/ROADMAP.md
 6c40eb9940c1fccbf39e9a987714da13b124feb895a691eb32f02bb1058a37ca  bench/m1s/sbs/result.md
 80a84a7fc4f8fd9a9a94fa467fad639bc524cd26d9f324c212b57420da7220d0  bench/m1s/nmf/result.md
 ee32eb3f697f791b5d481dd94cac13fdafd2b6cfd1f27995e00221fc8a8341c0  bench/m1s/nnls/result.md

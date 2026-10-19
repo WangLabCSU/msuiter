@@ -1,5 +1,5 @@
 # viz-bootstrap.R: the bootstrap CI faces (CAPABILITY-MATRIX L-F
-# "bootstrap：CI 误差条、分布、覆盖率曲线（校准诊断图） | ✅ M3b/M4").
+# "bootstrap: the CI error bars, the distributions, the coverage curve (the calibration diagnostic plots) | ✅ M3b/M4" [rendered]).
 # The coverage-curve half is plot_calibration_curve() (U-M3b-05, the
 # audited M3b face); this file adds the exposure-CI error bars and the
 # bootstrap distribution faces for ms_fit_bootstrap() results.

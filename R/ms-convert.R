@@ -2,7 +2,7 @@
 # representations (U-M4-02c; design memo
 # docs/devlog/2026-10-04-M4-02c-convert-memo.md).
 #
-# The sigfit convert_signatures semantics (research/02 §文献): a
+# The sigfit convert_signatures semantics (research/02 section 8 "The key citations"): a
 # signature is divided by the source opportunities and multiplied by the
 # target ones, then re-normalized per column. The bundled frequency
 # tables come from the COSMIC v2/v3 signature database via
