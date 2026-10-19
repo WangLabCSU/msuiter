@@ -138,8 +138,12 @@ jobs:
             stop("site check: pkgdown unavailable")
           }
           pkgdown::build_site()
-          must <- file.path("docs", c("reference/index.html",
-                                       "articles/extending.html"))
+          # development.mode is 'devel' (_pkgdown.yml), so the build lands under
+          # docs/dev/ -- the site root is reserved for release builds. Probing
+          # docs/ directly would gate on a path this configuration never writes
+          # (the D1 lesson generalized: an assertion must observe real output).
+          must <- file.path("docs/dev", c("reference/index.html",
+                                          "articles/extending.html"))
           for (f in must) {
             if (!file.exists(f)) {
               stop(sprintf("site check: expected rendered file %s missing", f))

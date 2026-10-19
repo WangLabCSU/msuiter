@@ -70,6 +70,7 @@ reference:
   contents:
   - ms_calibration_grid
   - ms_calibration_sanity
+  - print.ms_calibration_sanity
   - ms_calibration_verdict
   - plot_calibration_curve
 - title: Bootstrap and stability
@@ -116,6 +117,7 @@ reference:
   - ms_catalog_registry
   - ms_catalog_currency
   - ms_catalog_currency_update
+  - print.ms_catalog_currency_report
 - title: Input construction and utilities
   desc: The variant/breakpoint input constructors, downsampling, simulation and the presence test.
   contents:
@@ -129,12 +131,20 @@ reference:
   contents:
   - ms_qc_report
   - ms_qc_burden
+  - print.MsQcBurden
   - ms_qc_sentries
+  - print.MsQcSentries
   - ms_qc_mechanism_channels
+  - print.MsQcMechanismChannels
   - ms_qc_artifact_roster
+  - print.MsQcArtifactRoster
   - ms_qc_roster_share
+  - print.MsQcRosterShare
   - ms_qc_provenance
+  - print.MsQcProvenance
   - ms_hrd_report
+  - print.MsHrdReport
+  - as.data.frame.MsHrdReport
 - title: The benchmark-matrix driver
   desc: The scenario constructor and the driving loop (the naming ruling is in the 2026-10-10 decision record of docs/devlog).
   contents:
@@ -142,5 +152,12 @@ reference:
   - ms_run_benchmark
 
 # articles: the vignette rendering list (pkgdown picks the same-named source files under vignettes/ by name).
+# Section form per pkgdown >= 2.0 (issue #32 D3): each entry is a list with
+# a title and a contents list; the bare string list the M0 skeleton carried
+# was rejected by the sitrep articles check ("articles must be a list, not
+# the string"). The single vignette under vignettes/ stays named explicitly
+# -- no default-index fallback, the audit stays load-bearing.
 articles:
+- title: Extending msuiter
+  contents:
   - extending
