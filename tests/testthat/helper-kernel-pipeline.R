@@ -25,7 +25,7 @@
 .kpp_bin_env <- new.env(parent = emptyenv())
 .kpp_bin <- function() {
   if (!is.null(.kpp_bin_env$bin)) return(.kpp_bin_env$bin)
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   manifest <- file.path(.ms_root, "src", "rust", "Cargo.toml")
   if (!file.exists(manifest)) {
     stop("required committed file missing: src/rust/Cargo.toml", call. = FALSE)
