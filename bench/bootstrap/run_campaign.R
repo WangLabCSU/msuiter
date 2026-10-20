@@ -109,7 +109,7 @@ oj <- function(text, key) {                   # tiny fixed-schema scalar pull
   # Capture goes through gregexpr: regmatches on this host is (x, m, invert)
   # and returns matched text only -- it has no capture groups and no perl
   # argument (the perl = TRUE shape died live in smoke rehearsal with
-  # 参数没有用). No-match renders as -1 here, witnessed by probe.
+  # "unused argument"). No-match renders as -1 here, witnessed by probe.
   pat <- sprintf('"%s": *"?([A-Za-z0-9._+-]*)"?', key)
   mm <- gregexpr(pat, text, perl = TRUE)[[1L]]
   if (is.na(mm[[1L]]) || mm[[1L]] < 0L) return(NA_character_)

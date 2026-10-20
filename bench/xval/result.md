@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # M1s 验收门 · sigminer / MutationalPatterns 玩具交叉验证（SBS96）
 
 日期：2026-09-28。执行：计算生物学家（R 侧）。产物全部在本目录；**未修改包代码与既有测试**（仅新增本目录、`tests/testthat/test-xval-sigminer.R`、DESCRIPTION Suggests 追加两条、`bench/xval/README.md`）。

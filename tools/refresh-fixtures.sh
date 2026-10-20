@@ -1,42 +1,57 @@
 #!/usr/bin/env bash
 # =============================================================================
-# tools/refresh-fixtures.sh · 仓库可再生成夹具的一键再生成入口（U-M1s-13）
+# tools/refresh-fixtures.sh -- one-shot regeneration entry for the
+# repo-regenerable fixtures (U-M1s-13).
 #
-# 对照 CONTRIBUTING.md §5「fixture / golden 刷新协议（团队铁律）」：
-#   * 任何金标准夹具更新（语义逐位 golden、数值协议 golden、RNG golden、
-#     通道参考文件）必须在对应 devlog（docs/devlog/YYYY-MM-DD-<单元>.md）
-#     写明上游理由；无理由的 golden 变更一律拒绝。本脚本只负责「重生成」，
-#     本身不构成更新理由——重生成后 git diff 非空 ⇒ 先停下写 devlog。
-#   * RNG golden 重生成须换 LAYOUT_ID（§5；域分离），不在本脚本范围。
-#   * 通道注册表单一事实来源在 data-raw/build_channels.R；重生成后
-#     test-channels-sync.R 与 tools/docs-sync.R 守卫必须全绿。
+# Against CONTRIBUTING.md section 5, the "fixture / golden refresh protocol
+# (team iron law)":
+#   * ANY golden-fixture update (bit-exact semantic goldens, numeric-protocol
+#     goldens, RNG goldens, channel reference files) must state its upstream
+#     reason in the matching devlog (docs/devlog/YYYY-MM-DD-<unit>.md);
+#     golden changes without a stated reason are refused outright. This
+#     script only regenerates -- it is never itself a reason to update: after
+#     a regeneration, a non-empty git diff means STOP and write the devlog
+#     first.
+#   * RNG-golden regeneration requires a fresh LAYOUT_ID (section 5; domain
+#     separation) and is out of this script's scope.
+#   * The channel registry's single source of truth is
+#     data-raw/build_channels.R; after any regeneration the
+#     test-channels-sync.R and tools/docs-sync.R guards must both be green.
 #
-# 频道表（夹具 → 再生成入口）：
-#   1. channel 表（R/sysdata.rda + src/rust/catalog/src/channels.rs）
-#        → Rscript data-raw/build_channels.R
-#      确定性、幂等、无网络（脚本头部自证条款）；本脚本直接运行。
-#   2. channel-reference（tools/channel-reference/*.txt）
-#      SigProfilerPlotting 上游锚，重下载需网络 → 只打印手动命令，不自动执行
-#      （变更须随 devlog 给出上游理由 + 更新该目录 README 的溯源注记）。
-#   3. kl-crosscheck 实验输入（tools/kl-crosscheck/data/inputs/）
-#        → MSUITER_FIXTURES_ONLY=1 Rscript tools/kl-crosscheck/run_experiment.R
-#      fixtures-only 模式：只生成输入（seeds 记录在脚本内），不跑对拍实验。
-#      注意 data/outputs/ 是已记录实验（U-M1s-14 result.md）的产物，不在
-#      再生成范围；重跑完整实验请去掉该环境变量（约 1.5 分钟）。
-#   4. tally/2bit 夹具（22-record golden 批次 + LE 2bit writer）：无需脚本——
-#      测试内生成，每次跑测试即重新生成，仓库内零落盘：
-#        - R 侧：tests/testthat/helper-tally.R（.tally_write_2bit /
-#          .tally_golden_records；U-M1s-13 起为 test-ffi-tally.R 与
-#          test-catalog-tally.R 的单一来源）；
-#        - Rust 侧：src/rust/src/tally.rs 与 src/rust/catalog/tests/genome/
-#          fixture.rs 的内联 golden 生成器。
-#      （bench/m1s 的性能夹具同理：由 bench 脚本确定性生成，不落盘仓库。）
+# Channel table (fixture -> regeneration entry):
+#   1. channel table (R/sysdata.rda + src/rust/catalog/src/channels.rs)
+#        -> Rscript data-raw/build_channels.R
+#      deterministic, idempotent, no network (self-attesting clause in that
+#      script's header); this script runs it directly.
+#   2. channel-reference (tools/channel-reference/*.txt)
+#      SigProfilerPlotting upstream anchors; re-downloading needs network ->
+#      only the manual command is printed, never auto-run (changes must
+#      carry an upstream reason in a devlog + an updated provenance note in
+#      that directory's README).
+#   3. kl-crosscheck experiment inputs (tools/kl-crosscheck/data/inputs/)
+#        -> MSUITER_FIXTURES_ONLY=1 Rscript tools/kl-crosscheck/run_experiment.R
+#      fixtures-only mode: generates the inputs only (seeds are recorded
+#      inside the script), does not run the cross-check experiment itself.
+#      Note: data/outputs/ holds the RECORDED experiment's products
+#      (U-M1s-14 result.md) and is out of regeneration scope; to re-run the
+#      full experiment drop that environment variable (~1.5 minutes).
+#   4. tally/2bit fixtures (22-record golden batch + LE 2bit writer): no
+#      script needed -- generated inside the tests, regenerated on every
+#      test run, with zero on-disk footprint in the repository:
+#        - R side: tests/testthat/helper-tally.R (.tally_write_2bit /
+#          .tally_golden_records; the single source for test-ffi-tally.R and
+#          test-catalog-tally.R since U-M1s-13);
+#        - Rust side: the inline golden generators in src/rust/src/tally.rs
+#          and src/rust/catalog/tests/genome/fixture.rs.
+#      (bench/m1s performance fixtures likewise: generated deterministically
+#      by the bench scripts, never landed in the repository.)
 #
-# 要求：R（≥4.3）+ NMF 包（频道 3 需要）；git（幂等性自检）。
+# Requires: R (>= 4.3) + the NMF package (channel 3); git (idempotency
+# self-check).
 #
-# 用法：
-#   bash tools/refresh-fixtures.sh           # 重生成（频道 1、3）+ 打印频道 2
-#   bash tools/refresh-fixtures.sh --check   # 幂等性验证：重生成后断言树干净
+# Usage:
+#   bash tools/refresh-fixtures.sh           # regenerate (channels 1, 3) + print channel 2
+#   bash tools/refresh-fixtures.sh --check   # idempotency: assert the tree is clean after regeneration
 # =============================================================================
 set -euo pipefail
 
@@ -50,55 +65,64 @@ fi
 
 say() { printf '%s\n' "$*"; }
 
-# --- 快照：记录进入时的树状态；幂等断言 = 重生成不引入「新的」漂移 --------
-# （不要求进入时树干净：断言的是 AFTER == BEFORE，即再生成入口自身是幂等的、
-#  不改动任何夹具；若进入时已有未提交内容，漂移检测是相对入口状态的。）
+# --- snapshot: record the tree state at entry; the idempotency assertion =
+#     = regeneration introduces no NEW drift -----------------------------------
+#     (a clean tree at entry is NOT required: what is asserted is AFTER == BEFORE,
+#      i.e. the regeneration entry itself is idempotent and touches no fixture; if
+#      uncommitted content already existed at entry, drift detection is relative
+#      to the entry state.)
 snapshot() {
   git status --porcelain
 }
 BEFORE="$(snapshot)"
 
-# --- 频道 1：channel 表（确定性、幂等、无网络） -------------------------
-say "== [1/3] channel 表：Rscript data-raw/build_channels.R =="
+# --- channel 1: the channel table (deterministic, idempotent, no network) ----
+say "== [1/3] channel table: Rscript data-raw/build_channels.R =="
 Rscript data-raw/build_channels.R
 
-# --- 频道 3：kl-crosscheck 实验输入（只生成输入，不跑实验） -------------
+# --- channel 3: kl-crosscheck experiment inputs (generate the inputs only,
+#     do not run the experiment itself) -----------------------------------------
 say ""
-say "== [2/3] kl-crosscheck 输入：MSUITER_FIXTURES_ONLY=1 Rscript tools/kl-crosscheck/run_experiment.R =="
+say "== [2/3] kl-crosscheck inputs: MSUITER_FIXTURES_ONLY=1 Rscript tools/kl-crosscheck/run_experiment.R =="
 MSUITER_FIXTURES_ONLY=1 Rscript tools/kl-crosscheck/run_experiment.R
 
-# --- 频道 2：channel-reference（需网络，只打印命令） ---------------------
+# --- channel 2: channel-reference (needs network; prints the command only) --
 say ""
-say "== [3/3] channel-reference（tools/channel-reference/*.txt）——需网络，手动执行 =="
-say "  来源（见该目录 README.md 的完整溯源与 license）："
+say "== [3/3] channel-reference (tools/channel-reference/*.txt) -- needs network, run manually =="
+say "  Sources (see that directory's README.md for the full provenance and license):"
 say "    SigProfilerPlotting @ master, commit 9be822faafc9b9933c75b78f0d59f2bfa35d657b"
 say "    path sigProfilerPlotting/reference_formats/{SBS96,SBS384,SBS1536,DBS78}.txt (BSD-2-Clause)"
-say "  手动刷新命令模板："
+say "  Manual refresh command template:"
 say "    for f in SBS96 SBS384 SBS1536 DBS78; do"
 say "      curl -fsSL \\\\"
 say "        \"https://raw.githubusercontent.com/AlexandrovLab/SigProfilerPlotting/9be822faafc9b9933c75b78f0d59f2bfa35d657b/sigProfilerPlotting/reference_formats/\${f}.txt\" \\\\"
 say "        -o \"tools/channel-reference/\${f}.txt\""
 say "    done"
-say "  刷新后必须：比对 diff、更新 README.md 溯源注记（来源/日期/license）、"
-say "  随 devlog 写明上游理由，且 testthat 的 test-channels-reference.R 全绿。"
+say "  After a refresh you MUST: compare the diff, update the README.md provenance note"
+say "    (source/date/license), state the upstream reason in a devlog, and keep"
+say "    testthat's test-channels-reference.R green."
 
-# --- 频道 4：tally/2bit 夹具——测试内生成，无脚本（见头部频道表注释） ----
+# --- channel 4: tally/2bit fixtures -- generated inside the tests, no script
+#     (see the header channel-table note) ---------------------------------------
 
-# --- 幂等性结论 ----------------------------------------------------------
+# --- idempotency verdict ------------------------------------------------------
 AFTER="$(snapshot)"
 say ""
-say "== 幂等性自检（重生成不得引入任何新漂移：AFTER == BEFORE） =="
+say "== idempotency self-check (regeneration must introduce no new drift: AFTER == BEFORE) =="
 if [[ "$AFTER" == "$BEFORE" ]]; then
-  say "PASS：再生成入口幂等——重生成后树状态与进入时逐行一致（夹具与已提交内容逐字节一致）。"
+  say "PASS: the regeneration entry is idempotent -- the tree state after regeneration is"
+  say "      line-identical to entry (fixtures and committed content byte-identical)."
 else
-  say "DIFF 非空——重生成引入了新漂移（金标准变更须先随 devlog 写明上游理由，CONTRIBUTING §5）："
+  say "DIFF non-empty -- regeneration introduced new drift (a golden change must first"
+  say "      carry its upstream reason in a devlog, CONTRIBUTING section 5):"
   say "$AFTER"
-  say "（git diff --stat）"
+  say "(git diff --stat)"
   git diff --stat | tail -n 5
   if [[ "$CHECK_MODE" == "1" ]]; then
-    say "--check 模式：FAIL。"
+    say "--check mode: FAIL."
     exit 1
   else
-    say "（非 --check 模式：保留差异供人工审查；确认有理由后随 devlog 提交。）"
+    say "(not --check mode: the differences are kept for human review; commit them with a"
+    say " devlog once the reason is confirmed.)"
   fi
 fi

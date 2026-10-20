@@ -143,7 +143,7 @@ test_that("the floor band alone gates when no synthetic curve is supplied", {
   expect_false(res$synthetic_used)
   expect_true(all(res$s_curve$within))
   # A synthetic curve that agrees within 0.05 keeps a boundary S in-window
-  # through the floor union (the memo's "取宽者").
+  # through the floor union (the memo's "take the wider one").
   edge <- ms_calibration_sanity(fx$catalog, fx$sigs, n_boot = 50,
     dilution_sizes = c(50), n_dilutions = 5, seed = 11,
     synthetic = data.frame(n = 50, coverage = 0.90))
@@ -194,7 +194,8 @@ test_that("the window criterion helper: tolerance band and floor union", {
   expect_identical(floor_only$within, c(FALSE, TRUE, TRUE))
   expect_identical(floor_only$deviation, rep(NA_real_, 3L))
   # Synthetic at 1.0: boundary deviation 0.05 stays in (<=), the wider
-  # deviations survive only through the floor union (the memo's 取宽者).
+  # deviations survive only through the floor union (the memo's "take the
+  # wider one).
   synth <- data.frame(n = levels, coverage = c(1, 1, 1))
   w <- .ms_sanity_window(s, levels, synth, 0.05)
   expect_identical(w$within, c(FALSE, TRUE, TRUE))

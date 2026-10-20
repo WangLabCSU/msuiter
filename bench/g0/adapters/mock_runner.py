@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""mock adapter runner——管线自检占位，非竞品测量（见 adapter_protocol.md §4）。
+"""The mock adapter runner — the pipeline self-check placeholder, not a competitor measurement (see adapter_protocol.md §4).
 
-行为：读 counts.csv + catalog.csv，参数自助法（multinomial 重采样 →
-EM 重拟合 → 2.5/97.5 百分位）产出 absolute 区间。同 seed 可复现。
-params.coverage_scale（默认 1.0）：区间宽度缩放因子，测试钩子——
-1.0 时对多项真值应给 ≈95% 名义覆盖（由 tests 验证），<1 构造欠覆盖
-驱动判定三叉。
+The behaviour: reads counts.csv + catalog.csv; the parametric bootstrap (multinomial resampling →
+EM refit → the 2.5/97.5 percentiles) produces the absolute intervals. Reproducible under the same seed.
+params.coverage_scale (the default 1.0): the interval-width scaling factor, a test hook —
+at 1.0 it should give ≈95% nominal coverage on the multinomial truth (validated by the tests); <1 constructs under-coverage
+to drive the judgment's three-way fork.
 
-用法：mock_runner.py --counts IN --catalog IN --params IN --outdir OUT
+Usage: mock_runner.py --counts IN --catalog IN --params IN --outdir OUT
 """
 
 from __future__ import annotations
@@ -48,8 +48,8 @@ def main() -> int:
 
     _, chan_labels, counts = read_csv_matrix(Path(args.counts))
     hdr, _chan_keys, catalog = read_csv_matrix(Path(args.catalog))
-    # catalog.csv：行 = 通道（首列 channel），列 = 签名 → W (96, K)（lrt 约定）；
-    # 签名名取表头列
+    # catalog.csv: rows = channels (the first column channel), columns = signatures → W (96, K) (the lrt convention);
+    # the signature names are taken from the header columns
     if hdr[0].strip().lower() != "channel" or catalog.shape[0] != 96:
         raise SystemExit("catalog.csv must be channel-major: header 'channel', 96 rows")
     sig_names = [h.strip() for h in hdr[1:1 + catalog.shape[1]]]
@@ -59,7 +59,7 @@ def main() -> int:
     rng = np.random.default_rng(seed)
     out_rows = []
     nboot = 200
-    # 重读 sample_id（read_csv_matrix 只返回数值部分）
+    # re-read the sample_id (read_csv_matrix returns only the numeric part)
     with Path(args.counts).open(newline="", encoding="utf-8") as fh:
         sample_ids = [r[0].strip() for r in list(csv.reader(fh))[1:]]
 
@@ -72,7 +72,7 @@ def main() -> int:
             continue
         h_hat = fit_exposures(x[None, :], W, size=None, max_iter=500)[0]
         mu_hat = h_hat @ W.T
-        # 参数自助法：~Multinomial(N, Wh/ΣWh)，refit，百分位区间
+        # the parametric bootstrap: ~Multinomial(N, Wh/ΣWh), refit, the percentile interval
         p_hat = mu_hat / mu_hat.sum()
         boots = rng.multinomial(int(round(total)), p_hat, size=nboot).astype(float)
         h_boot = fit_exposures(boots, W, size=None, max_iter=300)

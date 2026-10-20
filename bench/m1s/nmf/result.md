@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # B1 · NMF bench（M1s 验收门，ARCHITECTURE §8：96×1000, k=10, 100 iter vs R NMF ≥100×）
 
 重跑：`Rscript bench/m1s/nmf/run_bench.R`。同 V/W0/H0（CSV 逐字节交换）、同 T=100；

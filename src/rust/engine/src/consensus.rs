@@ -1650,7 +1650,7 @@ mod tests {
         // Upstream counting: `convergence_count == 10` breaks AFTER a round
         // whose average differs from the previous — with max_rounds = 0 the
         // very first round trips the cap (deterministic cap pin, memo §5
-        // item 5 "10 次上限").
+        // item 5 "max 10 rounds").
         let fit = consensus_from_centroids(
             &perfect_fixture(),
             2,
@@ -1862,7 +1862,7 @@ mod tests {
 
     #[test]
     fn tp_member_is_never_row_classified() {
-        // "只看行，不改指派" applies only to non-TP signatures: e0 has top-2
+        // "row-classify only, never re-assign" applies only to non-TP signatures: e0 has top-2
         // = (1.0, 0.96) both ≥ 0.9 and is STILL Matched, not Merge.
         let m = classify_once(
             &[(6.0, 8.0), (8.0, 6.0), (7.0, 7.0)],

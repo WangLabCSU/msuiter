@@ -1,5 +1,5 @@
 # U-M4 remainder: the K-selection evidence faces (CAPABILITY-MATRIX L-F
-# "K 选择证据 | ✅ M2/M4").
+# "the K-selection evidence | ✅ M2/M4").
 #
 # Anchors: layer structure, the argmin/selected marks in the title,
 # veto coloring, the schema guard, and a REAL ms_select_k round-trip

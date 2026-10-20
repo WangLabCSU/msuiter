@@ -1,25 +1,29 @@
 ---
-name: 功能请求
-about: 提议新能力或改进
+name: Feature request
+about: Propose a new capability or an improvement
 title: "[feature] "
 labels: enhancement
 assignees: ""
 ---
 
-**动机 / 使用场景**
+**Motivation / use case**
 
-<!-- 你想解决什么问题？给出最小工作流示例（伪代码即可）。 -->
+<!-- What problem do you want to solve? Give a minimal workflow example
+     (pseudo-code is fine). -->
 
-**期望的接口形态**
+**Expected interface shape**
 
 ```r
-# 期望的 ms_* 调用方式
+# the expected ms_* call
 ```
 
-**与现状的关系**
+**Relation to the current state**
 
-<!-- 已查过 docs/CAPABILITY-MATRIX.md 与 docs/ROADMAP.md 吗？是否已在某个里程碑（M 线）排期？ -->
+<!-- Have you checked docs/CAPABILITY-MATRIX.md and docs/ROADMAP.md? Is this
+     already scheduled under some milestone (an M-line)? -->
 
-**补充**
+**Additional context**
 
-<!-- 相关文献/工具实现、性能预期、替代方案等。注意：外部工具只作 bench 对照，不进 ms_* API（决策 D9）。 -->
+<!-- Relevant literature / tool implementations, performance expectations,
+     alternatives, etc. Note: external tools serve as bench references only
+     and never enter the ms_* API (decision D9). -->

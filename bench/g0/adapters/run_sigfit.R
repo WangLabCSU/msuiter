@@ -1,21 +1,21 @@
 #!/usr/bin/env Rscript
-# G0 Tier-1 adapter: sigfit v2.2.0（kgori/sigfit，Gori & Baez-Ortega, bioRxiv 372896）
+# G0 Tier-1 adapter: sigfit v2.2.0 (kgori/sigfit, Gori & Baez-Ortega, bioRxiv 372896)
 #
-# 契约：adapter_protocol.md（2026-09-28 修订版）。counts.csv + catalog.csv + params.json 进，
-# intervals.csv（absolute + raw 两 estimand）+ manifest.json + errors.log 出。
+# The contract: adapter_protocol.md (the 2026-09-28 revised edition). counts.csv + catalog.csv + params.json in,
+# intervals.csv (the two estimands absolute + raw) + manifest.json + errors.log out.
 #
-# ── W1/D2 对账结论（已按 g0-sigfit:2.2.0 容器内实测核对，详见协议 §5）──
-# 1) 正确入口是 fit_signatures()（fit_signatures_counts 不存在于 2.2.0）；
-#    counts 行 = 样本，signatures 须传 t(catalog)（行 = 签名）。
-# 2) fit_signatures 的 seed/chains/iter/warmup 经 ... 透传 rstan::sampling；
-#    未提供时用包默认 chains=4 / iter=2000 / warmup=1000。
-# 3) retrieve_pars(mcmc, par="exposures", hpd_prob=0.95) —— hpd_prob（不是
-#    sig_level/CI/hpd/threshold.lower）；返回 mean/lower_95/upper_95（样本 × 签名）。
-# 4) 2.2.0 **没有内建清零参数**（无 threshold.lower）：清零规则是 harness 的
-#    后处理，本 runner 只输出 zeroed 标志（absolute 区间 lower<0.01 ⇒ 标志 1）。
-# 5) **关键陷阱**：multinomial 模型下 exposures 是占比（每样本和 ≈ 1），
-#    绝对 counts = 占比 × 该样本突变总数。本 runner 落盘前做占比和=1 与
-#    还原后总数守恒两条断言（覆盖判定以 absolute estimand 为准）。
+# ── The W1/D2 API reconciliation conclusions (verified by direct measurement inside the g0-sigfit:2.2.0 container; see the protocol §5)──
+# 1) The correct entry is fit_signatures() (fit_signatures_counts does not exist in 2.2.0);
+#    counts rows = samples; signatures must be passed as t(catalog) (rows = signatures).
+# 2) fit_signatures' seed/chains/iter/warmup are pass-through to rstan::sampling via ...;
+#    when not provided the package defaults apply: chains=4 / iter=2000 / warmup=1000.
+# 3) retrieve_pars(mcmc, par="exposures", hpd_prob=0.95) —— hpd_prob (not
+#    sig_level/CI/hpd/threshold.lower); it returns mean/lower_95/upper_95 (samples × signatures).
+# 4) 2.2.0 **has no built-in zeroing parameter** (no threshold.lower): the zeroing rule is the harness's
+#    post-processing; this runner only emits the zeroed flag (in the absolute interval lower<0.01 ⇒ flag 1).
+# 5) **The key trap**: under the multinomial model the exposures are fractions (per-sample sum ≈ 1),
+#    the absolute counts = the fraction × the sample's total mutation count. Before landing to disk this runner runs
+#    the two assertions: fraction-sum=1 and post-restoration total conservation (the coverage judgment is governed by the absolute estimand).
 # ─────────────────────────────────────────────────────────────────────
 
 suppressPackageStartupMessages(library(sigfit))
@@ -29,7 +29,7 @@ get_arg <- function(flag) {
 }
 
 fail <- function(msg) {
-  # 注意：writeLines 无 append 参数——追加写必须用 cat（旧 run_stl.R 的写法）
+  # Beware: writeLines has no append parameter — appending must use cat (the old run_stl.R's writing style)
   cat(paste0(format(Sys.time()), " FATAL [run_sigfit]: ", msg, "\n"),
       file = err_log, append = TRUE, sep = "")
   quit(save = "no", status = 1)
@@ -41,8 +41,8 @@ params_path  <- get_arg("--params")
 outdir       <- get_arg("--outdir")
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
-# errors.log 先行落盘（协议 §2.1：run_grid 缓存守卫要求 out/ 必有 errors.log；
-# 先清掉上次可能残留的半截输出，失败路径绝不留 intervals.csv）
+# errors.log lands first (the protocol §2.1: the run_grid cache guard requires an errors.log under out/;
+# first clear the half-truncated residual output from a previous run, and the failure path never leaves an intervals.csv)
 err_log <- file.path(outdir, "errors.log")
 unlink(file.path(outdir, "intervals.csv"))
 unlink(file.path(outdir, "manifest.json"))
@@ -54,7 +54,7 @@ params <- jsonlite::fromJSON(params_path)
 seed   <- as.integer(params$seed)
 if (is.na(seed)) fail("params.seed missing or not an integer")
 
-# ---- 读入 + 显式数值防御（非数值列拒绝） ----
+# ---- the read-in + the explicit numeric defense (non-numeric columns are rejected) ----
 read_matrix_csv <- function(path) {
   df <- read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
   if (ncol(df) < 2) fail(paste0(path, ": need >= 2 columns (id + data)"))
@@ -71,8 +71,8 @@ read_matrix_csv <- function(path) {
   if (any(!is.finite(m))) fail(paste0(path, ": non-finite values (NA/NaN/Inf) not allowed"))
   m
 }
-counts  <- read_matrix_csv(counts_path)    # 行 = sample_id, 列 = 96 通道
-catalog <- read_matrix_csv(catalog_path)   # 行 = channel（96）, 列 = 签名
+counts  <- read_matrix_csv(counts_path)    # rows = sample_id, columns = the 96 channels
+catalog <- read_matrix_csv(catalog_path)   # rows = channel (96), columns = signatures
 
 stopifnot(ncol(counts) == 96, nrow(catalog) == 96)
 if (!identical(colnames(counts), rownames(catalog))) {
@@ -81,16 +81,16 @@ if (!identical(colnames(counts), rownames(catalog))) {
 if (any(counts < 0)) fail("counts.csv: negative counts not allowed")
 if (any(catalog < 0)) fail("catalog.csv: negative entries not allowed")
 if (any(colSums(catalog) <= 0)) fail("catalog.csv: signature column with zero mass")
-catalog <- sweep(catalog, 2, colSums(catalog), "/")   # 各列归一（防御）
+catalog <- sweep(catalog, 2, colSums(catalog), "/")   # normalize each column (defense)
 
-# 0 突变样本：工具会拒绝 → 不进拟合，按协议写 NaN 行（不中断整批）
+# 0-mutation samples: the tool would reject them → keep them out of the fit, write NaN rows per the protocol (the batch is not interrupted)
 totals <- rowSums(counts)
 fit_rows <- names(totals[totals > 0])
 skip_rows <- names(totals[totals == 0])
 if (length(fit_rows) == 0) fail("all samples have zero mutations — nothing to fit")
 counts_fit <- counts[fit_rows, , drop = FALSE]
 
-# ---- Tier-1 fit：包默认参数；params 可选 chains/iter/warmup 短链（smoke 用） ----
+# ---- Tier-1 fit: the package default parameters; the optional params chains/iter/warmup short chains (for the smoke use) ----
 extra <- list()
 if (!is.null(params$chains)) extra$chains <- as.integer(params$chains)
 if (!is.null(params$iter))   extra$iter   <- as.integer(params$iter)
@@ -99,15 +99,15 @@ fit <- do.call(sigfit::fit_signatures,
                c(list(counts = counts_fit, signatures = t(catalog),
                       model = "multinomial", seed = seed), extra))
 
-# ---- 后验提取：hpd_prob=0.95 → mean/lower_95/upper_95（样本 × 签名，占比） ----
+# ---- the posterior extraction: hpd_prob=0.95 → mean/lower_95/upper_95 (samples × signatures, fractions) ----
 pars <- sigfit::retrieve_pars(fit, par = "exposures", hpd_prob = 0.95)
 stopifnot(all(c("mean", "lower_95", "upper_95") %in% names(pars)))
 
-# 断言 1（占比口径）：每样本 exposures 占比和 ≈ 1
+# Assertion 1 (the fraction scope): the per-sample exposures fraction sum ≈ 1
 if (max(abs(rowSums(pars$mean) - 1)) > 1e-6) {
   fail("posterior exposure fractions do not sum to 1 per sample (multinomial assumption broken)")
 }
-# 断言 2（还原守恒）：占比 × 样本突变总数 = 绝对 counts，逐样本和还原回总数
+# Assertion 2 (the restoration conservation): fraction × the sample's total mutation count = the absolute counts, the per-sample sum restoring back to the total
 totals_fit <- totals[fit_rows]
 mu_abs <- sweep(pars$mean,     1, totals_fit, "*")
 lo_abs <- sweep(pars$lower_95, 1, totals_fit, "*")
@@ -123,20 +123,20 @@ rows <- list(); k <- 1
 for (s in samples) {
   for (j in seq_along(sig_names)) {
     sg <- sig_names[j]
-    # 无内建清零参数（2.2.0）：清零由 harness 按 zeroed 标志做后处理，
-    # runner 只如实打标志（协议 absolute 区间 lower<0.01 ⇒ zeroed=1）
+    # There is no built-in zeroing parameter (2.2.0): the zeroing is done by the harness as post-processing per the zeroed flag;
+    # the runner only honestly stamps the flag (per the protocol the absolute interval lower<0.01 ⇒ zeroed=1)
     zeroed <- if (lo_abs[s, j] < 0.01) 1 else 0
     rows[[k]] <- data.frame(sample_id = s, signature = sg,
                             estimate = mu_abs[s, j], lo95 = lo_abs[s, j], hi95 = hi_abs[s, j],
                             estimand = "absolute", zeroed = zeroed); k <- k + 1
-    # raw = 未清零后验区间；2.2.0 无内建清零 ⇒ 数值与 absolute 相同，
-    # 保留两行固定 schema 并与未来有内建清零的版本区分（协议 §2）
+    # raw = the un-zeroed posterior interval; 2.2.0 has no built-in zeroing ⇒ the numbers equal those of absolute;
+    # keep both rows to fix the schema and to distinguish from future versions with built-in zeroing (the protocol §2)
     rows[[k]] <- data.frame(sample_id = s, signature = sg,
                             estimate = mu_abs[s, j], lo95 = lo_abs[s, j], hi95 = hi_abs[s, j],
                             estimand = "raw", zeroed = 0); k <- k + 1
   }
 }
-for (s in skip_rows) {   # 被拒样本：NaN 行（协议 §2 guardline 口径）
+for (s in skip_rows) {   # the rejected samples: NaN rows (per the protocol §2 guardline scope)
   for (sg in colnames(catalog)) {
     rows[[k]] <- data.frame(sample_id = s, signature = sg, estimate = NaN, lo95 = NaN, hi95 = NaN,
                             estimand = "absolute", zeroed = 0); k <- k + 1
@@ -147,11 +147,11 @@ for (s in skip_rows) {   # 被拒样本：NaN 行（协议 §2 guardline 口径�
 out <- do.call(rbind, rows)
 write.csv(out, file.path(outdir, "intervals.csv"), row.names = FALSE)
 
-# ---- manifest：版本必须可溯源（tag + commit SHA；"2.2" 级别的版本号不够） ----
+# ---- manifest: the version must be traceable (tag + commit SHA; a "2.2"-level version string is not enough) ----
 pd  <- utils::packageDescription("sigfit")
 tag <- if (!is.null(pd$GithubRef)) pd$GithubRef else "v2.2.0"
 sha <- if (!is.null(pd$RemoteSha)) pd$RemoteSha else "unknown"
-ch  <- if (!is.null(extra$chains)) extra$chains else 4L     # rstan::sampling 默认
+ch  <- if (!is.null(extra$chains)) extra$chains else 4L     # the rstan::sampling defaults
 it  <- if (!is.null(extra$iter))   extra$iter   else 2000L
 wu  <- if (!is.null(extra$warmup)) extra$warmup else 1000L
 writeLines(jsonlite::toJSON(list(

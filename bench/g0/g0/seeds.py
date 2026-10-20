@@ -1,23 +1,23 @@
-"""G0 种子纪律（协议 §2.3，冻结）。
+"""The G0 seed discipline (the protocol §2.3, frozen).
 
-master seed = 20260928；逐 (arm, N, rep) 确定性派生，全部种子落盘 Seeds.txt
-manifest（research/05 §6 指出的领域缺失实践，本实验先行示范）。
+master seed = 20260928; the deterministic per-(arm, N, rep) derivation, all seeds landing on disk in Seeds.txt
+manifest (the field-missing practice pointed out by research/05 §6; this experiment demonstrates it first).
 
-派生布局（确定性、跨平台、跨 Python 版本可复现；与 ARCH §2 rng.rs 的
-SplitMix64 计数器流设计同构）：
+The derivation layout (deterministic, reproducible across platforms and across Python versions; the same
+shape as the ARCH §2 rng.rs SplitMix64 counter-stream design):
 
     label   = "g0/v1|" + "|".join(str(p) for p in parts)
-    key     = fnv1a64(label)                 # 流标签 -> 64-bit 流 key
-    seed    = splitmix64_final(MASTER_SEED XOR key)   # 计数器 + finalizer
+    key     = fnv1a64(label)                 # the stream label -> the 64-bit stream key
+    seed    = splitmix64_final(MASTER_SEED XOR key)   # the counter + finalizer
 
-- fnv1a64：FNV-1a 64-bit（仅做字符串 -> 64-bit 压缩；无随机化，不用
-  Python 内建 hash()——它对 str 有 PYTHONHASHSEED 随机化，禁用）。
-- splitmix64_final：SplitMix64 的三次混合 finalizer（Steele et al. 2014,
-  public domain），与 rng.rs 流派生同族。
-- 派生出的 64-bit 整数喂给 numpy Generator(PCG64)（np.random.default_rng）。
+- fnv1a64: FNV-1a 64-bit (only the string -> 64-bit compression; no randomization, never the
+  Python built-in hash() — it carries a PYTHONHASHSEED randomization over str, forbidden).
+- splitmix64_final: the three-round mixing finalizer of SplitMix64 (Steele et al. 2014,
+  public domain), the same family as the rng.rs stream derivation.
+- The derived 64-bit integer is fed to numpy Generator(PCG64) (np.random.default_rng).
 
-工具侧随机性（HMC / bootstrap）单独派生：derive_seed(tool, arm, N, rep)，
-与数据种子互不重叠（标签不同）。
+The tool-side randomness (HMC / bootstrap) is derived separately: derive_seed(tool, arm, N, rep),
+not overlapping the data seeds (the labels differ).
 """
 
 from __future__ import annotations
@@ -28,18 +28,18 @@ from typing import Iterable, Sequence
 
 MASK64 = (1 << 64) - 1
 
-MASTER_SEED = 20260928  # 冻结（协议 §2.3）
+MASTER_SEED = 20260928  # frozen (the protocol §2.3)
 STREAM_VERSION = "g0/v1"
 
-# 工具边界种子域（2026-10-07 G0 docker 重跑根因）：容器侧 R
-# `as.integer(params$seed)` 溢出成 NA → sigfit/stl 整 cell FATAL。
-# Stan 的 seed 与 STL 的 randomSeed 同落 int32 域；u64 派生流
-# （numpy PCG64 数据流）不经此折叠。
+# The tool-boundary seed domain (the 2026-10-07 G0 docker rerun root cause): the container-side R
+# `as.integer(params$seed)` overflowed into NA and the whole sigfit/stl cell went FATAL.
+# Stan's seed and the STL's randomSeed both land in the int32 domain; the u64 derivation stream
+# (the numpy PCG64 data stream) does not pass through this fold.
 TOOL_SEED_CAP = 1 << 31
 
 
 def _splitmix64(x: int) -> int:
-    """SplitMix64 finalizer：一个 64-bit 计数器 -> 均匀 64-bit 输出。"""
+    """The SplitMix64 finalizer: one 64-bit counter -> a uniform 64-bit output."""
     x = (x + 0x9E3779B97F4A7C15) & MASK64
     z = x
     z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & MASK64
@@ -56,10 +56,10 @@ def _fnv1a64(s: str) -> int:
 
 
 def derive_seed(*parts: Iterable) -> int:
-    """由任意标签元组确定性地派生 64-bit 种子。
+    """Deterministically derives a 64-bit seed from any tuple of labels.
 
-    例：derive_seed("main", 1000, 7) 为 (arm=main, N=1000, rep=7) 的
-    数据种子；工具侧用 tool_seed（工具边界折叠后的 int32 值）。
+    Example: derive_seed("main", 1000, 7) is the data seed of (arm=main, N=1000, rep=7);
+    the tool side uses tool_seed (the int32 value folded at the tool boundary).
     """
     label = STREAM_VERSION + "|" + "|".join(str(p) for p in parts)
     key = _fnv1a64(label)
@@ -67,24 +67,24 @@ def derive_seed(*parts: Iterable) -> int:
 
 
 def tool_seed(*parts: Iterable) -> int:
-    """工具边界种子：derive_seed 的确定性折叠，落 [0, 2^31)。
+    """The tool-boundary seed: the deterministic fold of derive_seed, landing in [0, 2^31).
 
-    喂容器（params.json 的 seed / sample_seeds、Seeds.txt 逐工具列）
-    一律经此折叠；全 u64 值保留在数据流（make_rng）与 manifest 的
-    data_seed 列。折叠确定性：tool_seed = derive_seed % 2^31。
+    Everything fed to the container (the seed / sample_seeds of params.json, the per-tool columns of
+    Seeds.txt) passes this fold; the full u64 values are kept in the data stream (make_rng) and in
+    the manifest's data_seed column. The fold is deterministic: tool_seed = derive_seed % 2^31.
     """
     return derive_seed(*parts) % TOOL_SEED_CAP
 
 
 def make_rng(*parts) -> "np.random.Generator":
-    import numpy as np  # 局部导入：纯派生函数不依赖 numpy
+    import numpy as np  # the local import: the pure derivation functions do not depend on numpy
 
     return np.random.default_rng(derive_seed(*parts))
 
 
 @dataclass(frozen=True)
 class SeedSpec:
-    """一个模拟 cell：arm × N × rep。"""
+    """One simulation cell: arm × N × rep."""
 
     arm: str
     n: int
@@ -98,10 +98,10 @@ class SeedSpec:
 def write_seeds_manifest(path: Path, specs: Sequence[SeedSpec],
                          tool_names: Sequence[str] = ("sigfit", "stl"),
                          header_note: str = "") -> Path:
-    """Seeds.txt manifest 落盘（协议 §2.3：全部种子落盘）。
+    """Lands the Seeds.txt manifest on disk (the protocol §2.3: all the seeds land on disk).
 
-    格式：制表符分隔，含头两行注释（# 开头）+ 列头。
-    每行：arm, N, rep, data_seed, 以及逐工具种子列。
+    The format: tab-separated, with the two leading comment lines (starting with #) + the column header.
+    Each row: arm, N, rep, data_seed, plus the per-tool seed columns."
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)

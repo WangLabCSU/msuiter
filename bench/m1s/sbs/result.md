@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # B2 · SBS 目录生成 bench（M1s 验收门，ARCHITECTURE §8：10⁶ 突变 SBS96 vs SPMG ≥50× 且 <5s 单核）
 
 重跑：`python3 bench/m1s/sbs/gen_fixtures.py && Rscript bench/m1s/sbs/run_bench.R`。

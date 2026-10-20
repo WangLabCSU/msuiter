@@ -1,5 +1,5 @@
 # U-M4 remainder: ms_cluster_signatures() -- the signature clustering
-# face (CAPABILITY-MATRIX L-F "签名聚类 🔶" first version).
+# face (CAPABILITY-MATRIX L-F "signature clustering", first version).
 #
 # Anchors: the designed 4-signature fixture (two near-duplicates + two
 # orthogonal), threshold monotonicity, medoid semantics, determinism

@@ -14,7 +14,8 @@
 #                 the checkout via devtools::test()) + Cargo.lock pin assertion
 #                 (ADR 0002 §4.4) as the belt-and-braces check beside dependabot.
 #   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows —
-#                 formal closure of ADR 0002 §5 residual "三平台构建证明"
+#                 formal closure of the ADR 0002 section 5 residual
+#                 "three-platform build proofs"
 #                 (macOS arm64 already proven locally in ADR 0002 §4).
 #   coverage    : R coverage via covr -> codecov upload. Wiring only, no gate
 #                 (R >= 85% is a later milestone target, ARCHITECTURE §9).
@@ -206,7 +207,7 @@ jobs:
           tool: cargo-deny
 
       # All four sections: bans (rand family), licenses, advisories, sources
-      # (src/rust/deny.toml; U-M0-09 handoff "deny 全量四节").
+      #     (src/rust/deny.toml; U-M0-09 handoff "deny: the full four sections").
       - name: cargo deny check (all sections)
         working-directory: src/rust
         run: cargo deny check

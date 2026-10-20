@@ -20,8 +20,8 @@
 //!   clip, research/02 §1.1 line 20). Backward step: for each `j` in the
 //!   support, re-solve NNLS on the support minus `j`;
 //!   `Δ_j = L_current − L_(−j)` (the cost of removal); remove the argmin if
-//!   `Δ < ϵ` (research/02 §1.1 line 15: "移除 Δ 最小者若 Δ < ϵ_backward；
-//!   否则停"). Forward step: symmetric — add the candidate with maximal
+//!   `Δ < ϵ` (research/02 §1.1 line 15: "remove the smallest Δ if Δ < ϵ_backward;
+//!   otherwise stop"). Forward step: symmetric — add the candidate with maximal
 //!   gain `L_(+j) − L_current` if it exceeds `ϵ` (line 16). Steps alternate
 //!   until both decline, capped at `max_iter` rounds (upstream 1000, the
 //!   anti-cycling cap). A final NNLS re-solve on the surviving support is
@@ -42,7 +42,7 @@
 //!   `ms_test_presence()`'s contract, U-M3a-03). The upstream PASA forward
 //!   *set search* (candidate pruning + sequential inclusion, research/02
 //!   §1.2) is NOT implemented: this unit ships the entry-wise test the task
-//!   pins ("逐签名 entry-wise presence LRT"); the set search belongs to the
+//!   pins ("per-signature entry-wise presence LRT"); the set search belongs to the
 //!   presence-testing unit.
 //!
 //! # Uniform evidence columns (documented semantics)
@@ -59,7 +59,7 @@
 //! [`msuiter_engine::likelihood::SIGFIT_ZERO_SHARE`] = 0.01, the sigfit
 //! CI-zeroing family anchor) are set to **exactly 0** and flagged
 //! `support = 0` — the [`msuiter_engine::likelihood::zeroing_mask_share`]
-//! predicate semantics, applied as the decision rule (清零). Fisher
+//! predicate semantics, applied as the decision rule (zeroing). Fisher
 //! standard errors ([`msuiter_engine::likelihood::fisher_se`]) are computed
 //! on the post-zeroing exposures: interior (kept) components only, `NaN`
 //! at the boundary — "boundary parameters get tests, not intervals"
@@ -97,8 +97,8 @@
 //! (no kernel semantics change):
 //!
 //! * [`bootstrap`] — the nonparametric (multinomial) percentile bootstrap
-//!   of the whole three-method fit (research/02 §2: "bootstrap 应重采样
-//!   突变（多项）而非通道"). Per boot `b`, every sample `j` has its `N_j`
+//!   of the whole three-method fit (research/02 §2: "the bootstrap should resample
+//!   mutations (multinomial), not channels"). Per boot `b`, every sample `j` has its `N_j`
 //!   mutations resampled from the empirical channel distribution via
 //!   [`msuiter_engine::resample::multinomial`] on the boot's own canonical
 //!   stream `StreamId { replicate: b, rank: 0, fold: 0 }` (the
@@ -131,11 +131,11 @@
 //! # U-M3a-05 extension: TMB rescale + connected-signature rejoin
 //!
 //! The two whole-fit post-steps of the MSU-Fit table (ARCHITECTURE §5,
-//! "背景签名策略 + connected 组配置") land here as pure grid transforms on
+//! "background-signature policy + connected-group configuration") land here as pure grid transforms on
 //! the returned exposures (research/02 §1 anchors: the MuSiCal TMB rescale
-//! is `02-fitting-inference.md` line 27 — "放大到 N 总突变跑稀疏搜索，再回
-//! 原计数重解"; the connected rejoin is line 23 — "保留签名的 connected 签名
-//! 在最终 NNLS 前重新加入", groups per line 30 / `utils.py SIGS_ASSOCIATED`):
+//! is `02-fitting-inference.md` line 27 — "amplify to N total mutations, run the sparse search,
+//! then re-solve on the original counts"; the connected rejoin is line 23 — "connected signatures whose
+//! names were kept are re-added before the final NNLS", groups per line 30 / `utils.py SIGS_ASSOCIATED`):
 //!
 //! * [`rescale_to_totals`] — per-sample multiplication of the exposure
 //!   column back onto the original mutation-total scale (the MuSiCal
@@ -317,12 +317,12 @@ pub fn fit(
 
 // ======================================================================
 // U-M3a-05: TMB rescale + connected-signature rejoin (MSU-Fit whole-fit
-// post-steps; ARCHITECTURE §5 "背景签名策略 + connected 组配置").
+// post-steps; ARCHITECTURE §5 "background-signature policy + connected-group configuration").
 // ======================================================================
 
 /// Rescale the exposure grid back onto the original per-sample mutation
 /// totals (the MuSiCal TMB-rescale semantics, research/02 §1 line 27:
-/// "放大到 N 总突变跑稀疏搜索，再回原计数重解" — after any fit on a
+/// "amplify to N total mutations, run the sparse search, then re-solve on the original counts" — after any fit on a
 /// normalized/amplified catalog, exposures are brought back to the original
 /// count scale). `exposures` is the row-major k×n grid this module returns
 /// everywhere; `sample_totals[j]` is the original mutation total of sample
@@ -1128,7 +1128,7 @@ pub const FIT_MAX_ITER: usize = 1000;
 pub const BH_ALPHA: f64 = 0.05;
 
 /// Percentile levels of the bootstrap CI (the classic percentile method,
-/// research/02 §2 "重采样突变→重拟合→百分位 CI").
+/// research/02 §2 "resample mutations→refit→percentile CI").
 pub const BOOTSTRAP_CI_LEVELS: (f64, f64) = (0.025, 0.975);
 
 /// Output of [`bootstrap`]. All grids are **row-major k×n** (signatures ×
@@ -1185,12 +1185,12 @@ pub struct BcaInterval {
     /// Upper BCa bound per (signature, sample).
     pub upper: Vec<f64>,
     /// Explicit fallback flag per (signature, sample): 1 = percentile
-    /// path taken (the memo's "回退 percentile + 显式 flag 列").
+    /// path taken (the memo's "fall back to percentile + explicit flag column").
     pub fallback: Vec<i32>,
 }
 
 /// Nonparametric (multinomial) percentile bootstrap of the whole fit
-/// (U-M3a-03; research/02 §2 semantics: "per-sample 多项重采样").
+/// (U-M3a-03; research/02 §2 semantics: "per-sample multinomial resampling").
 ///
 /// For boot `b`, sample `j`: `counts_b[:, j] ~ Multinomial(N_j, v_j / N_j)`
 /// drawn with [`msuiter_engine::resample::multinomial`] — exactly `N_j`
@@ -1939,7 +1939,7 @@ pub fn presence_test(
 /// tests (research/02 §2, the mSigAct "χ²₁ + BH q" semantics): sort the
 /// p-values ascending, scale the i-th smallest by `m / i`, then enforce
 /// monotonicity with a cumulative minimum from the largest p down (the
-/// "单调折返" fold-back), capped at 1. Ties keep first-index order (stable
+/// monotone fold-back), capped at 1. Ties keep first-index order (stable
 /// sort); every adjusted value is ≥ its raw p and the adjustment is
 /// monotone in the sorted order (both pinned by tests).
 pub fn bh_adjust(p: &[f64]) -> Result<Vec<f64>, MsError> {
@@ -1977,7 +1977,7 @@ pub fn bh_adjust(p: &[f64]) -> Result<Vec<f64>, MsError> {
 
 // ======================================================================
 // Tests (authored with the implementation, engine-convention goldens):
-// per-sample kernel对拍, hand-derived bidirectional trajectory, LRT
+// per-sample kernel cross-check, hand-derived bidirectional trajectory, LRT
 // size/power smoke on the MsRng canonical streams, zeroing/SE boundary,
 // determinism for all three methods, structured validation errors.
 // ======================================================================
@@ -2022,7 +2022,7 @@ mod tests {
     const GOLDEN_COUNTS: [f64; 2] = [58.0, 42.0];
 
     // ------------------------------------------------------------------
-    // nnls: bit-exact对拍 against the per-sample kernel K-format call.
+    // nnls: bit-exact cross-check against the per-sample kernel K-format call.
     // ------------------------------------------------------------------
 
     #[test]

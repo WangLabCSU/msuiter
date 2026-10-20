@@ -16,7 +16,7 @@
 //!   baseline ≈ 0.75" is a DIFFERENT family construction and is explicitly
 //!   not an anchor here (memo §2).
 //! * [`NullFamily::Catalog`] — the "reconstruction at this burden" null
-//!   (the 零校准 semantics of the capability matrix's "按通道数×负荷"): a
+//!   (the null-calibration semantics of the capability matrix's "by channel count × burden"): a
 //!   truth μ is drawn once per call from the same uniform family and held
 //!   fixed, then each draw reconstructs it at burden N —
 //!   `Multinomial(N, μ)` (exact-N main arm) or the NB(μ, κ) stress arm

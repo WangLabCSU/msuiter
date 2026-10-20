@@ -31,7 +31,7 @@
 //!   `total > cutoff` (Sub:236, strict inequality). Upstream then rescales
 //!   flagged columns down to the cutoff; msuiter's pipeline deliberately
 //!   diverges (exclude from de novo extraction + forced refit,
-//!   ARCHITECTURE §5 "非归一化"). That downstream policy belongs to the M2
+//!   ARCHITECTURE §5 "non-normalized"). That downstream policy belongs to the M2
 //!   pipeline layer: this kernel ships the frozen cutoff rule, the
 //!   classification predicate, and nothing more.
 //!

@@ -1,14 +1,14 @@
-"""G0 先导覆盖实验 harness（自有一部分：模拟 / 种子 / 覆盖率 / LRT / 网格）。
+"""The G0 pilot-coverage-experiment harness (the own part: simulation / seeds / coverage / LRT / grid).
 
-协议事实来源（冻结，不可在代码中改动）：
-- docs/devlog/2026-09-28-G0-pi-adjudication.md   （F1–F4 冻结 + 冻结后增补两条诊断列）
-- docs/devlog/2026-09-28-G0-protocol-memo.md     （完整协议：§2.3 网格/种子、§2.4 判定规则）
-- docs/devlog/2026-09-28-G0-realism-memo.md      （网格低端 ~30、NB 臂必选、clock 混入臂）
-- docs/devlog/2026-09-28-assumption-audit-memo.md（P1/P3 增补列依据）
+The protocol's sources of fact (frozen; not alterable in the code):
+- docs/devlog/2026-09-28-G0-pi-adjudication.md   (the F1–F4 freeze + the two diagnostic columns added after the freeze)
+- docs/devlog/2026-09-28-G0-protocol-memo.md     (the full protocol: §2.3 the grid/seeds, §2.4 the judgment rules)
+- docs/devlog/2026-09-28-G0-realism-memo.md      (the grid low end ~30, the NB arm a must-pick, the clock-mixing arm)
+- docs/devlog/2026-09-28-assumption-audit-memo.md(the basis of the P1/P3 added columns)
 
-许可红线：COSMIC 签名矩阵绝不入库（D3）。签名数据只有两个来源：
-synthetic provider（默认，开发/测试）与 cosmic-file provider（用户提供
-环境变量 G0_SIGNATURES_PATH，加载时对照 SBS96.txt 标签序强校验）。
+The licensing red line: the COSMIC signature matrices are never checked into the repository (D3). The signature data has only two sources:
+the synthetic provider (the default, for development/tests) and the cosmic-file provider (the user supplies
+the environment variable G0_SIGNATURES_PATH, with a hard validation against the SBS96.txt label order on load).
 
-本包是 bench 对照物，永不进 msuiter 包本体（D9）。
+This package is a bench comparator and never enters the msuiter package body (D9).
 """

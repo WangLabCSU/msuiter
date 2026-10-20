@@ -1004,7 +1004,7 @@ mod tests {
     //
     // GOLDEN FIX (2026-09-30, green pass): the original fixture wrote BOTH
     // rank-2 folds with test = 120 while asserting CV.te(rank 2) = 120. Under
-    // the memo §2.3 rule CV.te = Σ_folds 测试误差 — pinned by golden 8, whose
+    // the memo §2.3 rule CV.te = Σ_folds test error — pinned by golden 8, whose
     // rank 3 has the identical fold pair {120, 120} and asserts Some(240) —
     // {120, 120} necessarily sums to 240, so the original assertions were
     // mutually unsatisfiable (no implementation could pass them). To realize

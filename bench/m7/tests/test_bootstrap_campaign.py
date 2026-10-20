@@ -410,7 +410,7 @@ def test_launch_ledger_appender_executes_on_the_real_filesystem_both_modes():
 # -- 9. the oj() oracle-JSON scalar pull (fifth live smoke witness) ---------------------
 # Smoke #4 cleared the probes and died inside oj(): regmatches(..., perl =
 # TRUE) raised an unused-argument hard error on the target interpreter
-# (witness verbatim: 参数没有用(perl = TRUE)). The scalar pull is how the
+# (witness verbatim, zh-localized: "unused argument (perl = TRUE)"). The scalar pull is how the
 # harness reads gate/tier/projection back from the oracle — it must execute,
 # not merely parse.
 
@@ -467,8 +467,8 @@ cat('OJ-', r, '\\n', sep = ''); quit(status = 3L)
 # argument matching refuses. So the gate asks the interpreter itself:
 # match.call(f, call) — R's own matcher, the exact runtime predicate, never
 # executing the call. Probed ground truth on this host (R 4.5.2): the
-# positional form matches closures and flags 参数没有用; the named form
-# (definition = f) is itself rejected ('definition'参数无效) for every
+# positional form matches closures and flags "unused argument"; the named form
+# (definition = f) is itself rejected ('definition': invalid argument) for every
 # callee; builtins are invalid as definition either way (skipped — the
 # instrument's primitive call sites are structural operators called
 # positionally). Partial matching stays on: commandArgs(trailing =) is a
@@ -688,7 +688,7 @@ def test_a1_arm_call_matches_the_frozen_protocol_form():
       introspection; with sig_index NULL (the default) and no sig actual,
       sig_fit.R:186-187 run send_error("'sig' cannot be found...") +
       send_stop("Exit.") — witnessed live when a repair pass stripped
-      sig = sigs: the smoke log showed only the 停止执行 banner, the
+      sig = sigs: the smoke log showed only the "execution halted" banner, the
       condition arriving at the wrapper as simpleError(message="") —
       send_stop builds an empty-message condition (sigminer R/utils.R:252),
       so this death is invisible without a condition handler.
@@ -838,7 +838,7 @@ def test_instruments_resolve_every_called_function():
 # The probe leg died inside timed(): proc.time()[["user"]] raised a subscript
 # out of bounds — this target interpreter's proc.time() carries the RAW rusage
 # names (witnessed verbatim: "user.self" "sys.self" "elapsed" "user.child"
-# "sys.child"; the 用户/系统/流逝 print headers are print-method localisation,
+# "sys.child"; the user/system/elapsed print headers are print-method localisation,
 # names() is the authority). An existence audit cannot see a wrong SUBSCRIPT;
 # this unit executes the real timed() closure on a bounded computation and
 # demands real numbers: wall > 0, cpu >= 0 non-NA, two 3-element load vectors.

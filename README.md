@@ -52,4 +52,4 @@ Apache-2.0. Reference signature data bundled from the Alexandrov-lab BSD-2 mirro
 
 ## Author
 
-Shixiang Wang (王诗翔) — Wang Lab, CSU. Author of [sigminer](https://github.com/ShixiangWang/sigminer).
+Shixiang Wang — Wang Lab, CSU. Author of [sigminer](https://github.com/ShixiangWang/sigminer).

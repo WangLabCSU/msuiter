@@ -15,7 +15,7 @@
 //!   (`musical/nnls_sparse.py`; research/02 §1.1, line 20). The per-mutation
 //!   rescaled variant [`multinomial_ll_per_mutation`] divides by the total —
 //!   exactly the scale MuSiCal's LTH threshold epsilon acts on (research/02
-//!   §1.1, line 14: "每突变（per-trial）多项对数似然尺度").
+//!   §1.1, line 14: "per-mutation (per-trial) multinomial log-likelihood scale").
 //! * **Negative binomial log-likelihood** — mSigAct's default exposure
 //!   likelihood `sum_i dnbinom(x_i; mu = recon_i, size = nbinom.size)`
 //!   (research/02 §1.2, line 38), with the upstream size anchors
@@ -44,14 +44,14 @@
 //!   floating-point noise, pinned to mSigAct v3.0.3-branch
 //!   `R/SignaturePresenceTest1.R`:
 //!   `statistic = 2 * (loglh.with - loglh.without)` (research/02 §1.2,
-//!   line 39: "统计量 = 2(ll_with − ll_without)").
+//!   line 39: "statistic = 2(ll_with − ll_without)").
 //! * **p-value (msuiter default)** — [`p_chisq1_lrt`] = **½·P(χ²₁ > D) =
 //!   ½·erfc(√(D/2))**, the Self–Liang (1987) boundary asymptotic: under
 //!   H0: θ = 0 with θ constrained to θ ≥ 0, `D → ½·δ₀ + ½·χ²₁`, so the
 //!   calibrated boundary p-value is *half* the ordinary χ²₁ upper tail and
 //!   the level-α test has simulated size ≈ α (pinned by the size/power
 //!   smoke below). This is the msuiter contract: ARCHITECTURE §5 declares
-//!   MSU-Fit presence estimand ① as "χ²₁ LRT（Self–Liang 边界渐近）", and
+//!   MSU-Fit presence estimand ① as "χ²₁ LRT (Self–Liang boundary asymptotic)", and
 //!   per its header the living ARCHITECTURE decision record supersedes the
 //!   archival research snapshot.
 //! * **p-value (mSigAct upstream convention)** — [`p_chisq1_upper`] =

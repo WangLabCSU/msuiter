@@ -4,7 +4,7 @@
 //!
 //! Pipeline order (design memo
 //! `docs/devlog/2026-09-30-M2-pipeline-design-memo.md` §1/§2/§4; ARCHITECTURE
-//! §5 framework component "共识-CV 提取流水线"):
+//! §5 framework component "consensus-CV extraction pipeline"):
 //!
 //! 1. **Ensemble** — [`replicates::nmf_ensemble`], the multi-initialization
 //!    axis only (PI ruling: no bootstrap resampling). Each replicate fits

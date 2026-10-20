@@ -31,6 +31,9 @@ test_that("label hash rejects NA and non-character input", {
 test_that("label hash handles the empty vector and unicode deterministically", {
   expect_identical(msuiter_hash_labels(character(0)), msuiter_hash_labels(character(0)))
   # Same bytes across sessions regardless of native encoding.
-  labels <- enc2utf8(c("A[C>A]A", "信号A"))
+  # The payload is deliberately non-ASCII multibyte UTF-8 (Greek here, where
+  # the historical payload was CJK): the same enc2utf8 hashing-determinism
+  # exercise, no CJK bytes in the shipped corpus.
+  labels <- enc2utf8(c("A[C>A]A", "ΣήμαA"))
   expect_identical(msuiter_hash_labels(labels), msuiter_hash_labels(labels))
 })

@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 # docs-sync: API-surface consistency check (U-M0-05; ARCHITECTURE section 9
-# "docs-sync 检查 ... drift 即红").
+#     the docs-sync check: "the drift goes red").
 #
-# Contract (docs/CAPABILITY-MATRIX.md, "矩阵治理"):
+# Contract (docs/CAPABILITY-MATRIX.md, the matrix-governance rows):
 #   every user-facing `ms_*` API name that appears in ARCHITECTURE.md or
-#   ROADMAP.md must be listed in the CAPABILITY-MATRIX "L-H API 表面" table.
+#   ROADMAP.md must be listed in the CAPABILITY-MATRIX "L-H API surface" table.
 #   FFI internals (`ms_tally_rust`, `ms_extract_rust`, i.e. any `ms_*_rust`
 #   name, governed separately by docs/ffi-surface.md) are excluded.
 #
@@ -171,7 +171,7 @@ cat("docs-sync: checkbox-truth: OK -- every in-scope checked box cites its",
 # ---------------------------------------------------------------------------
 # Half three: _pkgdown.yml reference-index completeness (U-M7-04 slice-C, C4).
 # Contract (controller ruling 2026-10-10; docs/ARCHITECTURE.md section 9
-# "docs-sync ... drift 即红", extended): every symbol NAMESPACE exports must
+#     "the drift goes red", extended): every symbol NAMESPACE exports must
 # appear in the _pkgdown.yml reference index -- pkgdown only publishes what
 # the index names, so an unlisted export is an invisible API that no site
 # build would ever flag. --namespace= / --pkgdown= override the targets so

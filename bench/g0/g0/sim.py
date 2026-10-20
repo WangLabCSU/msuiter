@@ -1,45 +1,45 @@
-"""G0 模拟生成器（协议 §2.2 生成模型 + 裁决第 3 条场景升级）。
+"""The G0 simulation generator (the protocol §2.2 generative model + the adjudication clause-3 scenario upgrade).
 
-真值混合：p = Σ_k f_k · S_k。f 来自冻结真值组合轴 grid.COMPOSITIONS
-（adjudication §3「真值组合 ≥6 组」，默认 master = F3 冻结组成），S_k =
-provider 提供的 96 通道签名向量（各和 1；cosmic-file 档 = COSMIC 实值，
-synthetic 档 = 功能类似物）。真值绝对 exposure h_k = f_k · N（counts）。
-每 rep 只重抽计数 X，不重抽组成（协议 §2.2：条件覆盖，避免组成抽样
-方差稀释判定功效）。
+The truth mixture: p = Σ_k f_k · S_k. The f comes from the frozen truth composition axis grid.COMPOSITIONS
+(adjudication §3 "the truth compositions ≥6 groups", the default master = the F3 frozen composition); the S_k =
+the 96-channel signature vectors the provider supplies (each summing to 1; the cosmic-file tier = the COSMIC actual values,
+the synthetic tier = the functional analogues). The truth's absolute exposure h_k = f_k · N (counts).
+Each rep re-draws only the counts X, never the composition (the protocol §2.2: the conditional coverage, avoiding
+composition-sampling variance from diluting the judgment power).
 
-臂算法（全部文档化的确定算法；同 seed 必产出同 counts）：
+The arm algorithms (all documented deterministic algorithms; the same seed must produce the same counts):
 
-  main   X ~ Multinomial(N, p)。
-         协议主生成模型：竞品自身假设的世界，在其理想设定下失准是最强、
-         混淆最少的证据。params["composition"] ∈ grid.COMPOSITIONS
-         （master / clock_only / mmr / pole / flat_triple / strong_flat）。
+  main   X ~ Multinomial(N, p).
+         The protocol main generative model: the world the competitors themselves assume; the miscalibration under their ideal settings is the strongest,
+         least-confounded evidence. params["composition"] ∈ grid.COMPOSITIONS
+         (master / clock_only / mmr / pole / flat_triple / strong_flat).
 
-  nb     X_c ~ Poisson(λ_c),  λ_c ~ Gamma(shape=size, rate=size/μ_c)，
-         μ_c = N·p_c。边际 X_c ~ NB(mean=μ_c, size)，Var = μ + μ²/size。
-         逐通道独立的 Gamma-Poisson 混合（即 NB 的标准构造）；通道间
-         独立、总量不再固定为 N（期望 Σμ = N，实际总量有 NB 波动——
-         这是过散世界的一部分，记入输出 realized_total）。
-         size 语义与 mSigAct 默认 nbinom.size=8 对齐（P3 增补列共用此臂）。
+  nb     X_c ~ Poisson(λ_c),  λ_c ~ Gamma(shape=size, rate=size/μ_c),
+         μ_c = N·p_c. The marginal X_c ~ NB(mean=μ_c, size), Var = μ + μ²/size.
+         The per-channel independent Gamma-Poisson mixture (i.e. the standard NB construction); the channels are
+         independent of one another and the total is no longer pinned to N (the expectation Σμ = N, the actual total carries NB fluctuation —
+         this is part of the over-dispersed world, recorded in the output realized_total).
+         The size semantics is aligned with the mSigAct default nbinom.size=8 (the P3 addendum columns share this arm).
 
-  clock  p_obs = ρ·p_tumor + (1−ρ)·p_normal，再 Multinomial(N, p_obs)。
-         ρ = purity（冻结值 0.4）。p_normal = 正常细胞 clock 型谱，限于
-         真值集内取 SBS1 25% / SBS5 75%（正常组织突变以 clock-like
-         SBS1/5 为主的文献共识；落在 5 签名集内保证 estimand 仍可定义）。
-         ρ=0.4 时 clock 家族份额 45% → 78%（SBS1 21%、SBS5 57%），
-         即现实性备忘 §3 的"clock 份额抬升"方向。
-         **诊断口径诚实注记（P2g）**：本臂输出的真值 h_k = f_k·N 是
-         **未稀释**的肿瘤组成（混合前口径）。稀释后"工具可观测真值"
-         （h_obs_k = N·p_obs 的分解中含 normal-clock 份额如何计入
-         estimand）存在定义选择——绝对 exposure 覆盖应以哪个口径为
-         分母尚待裁决，**待定项**，当前臂只作敏感性报告列不进判定，
-         判定语义不受影响。
+  clock  p_obs = ρ·p_tumor + (1−ρ)·p_normal, then Multinomial(N, p_obs).
+         ρ = purity (the frozen value 0.4). p_normal = the normal-cell clock-type spectrum, restricted
+         within the truth set to SBS1 25% / SBS5 75% (the literature consensus that normal-tissue mutations are dominated
+         by clock-like SBS1/5; staying inside the 5-signature set guarantees the estimand remains definable).
+         At ρ=0.4 the clock-family share goes 45% → 78% (SBS1 21%, SBS5 57%),
+         i.e. the "clock share uplift" direction of the realism memo §3.
+         **The diagnostic-scope honesty note (P2g)**: the truth h_k = f_k·N emitted by this arm is the
+         **un-diluted** tumor composition (the pre-mixing scope). For the post-dilution "tool-observable truth"
+         (how the normal-clock share in the decomposition of h_obs_k = N·p_obs enters the
+         estimand) there is a definitional choice — which scope the absolute-exposure coverage should take as
+         the denominator still awaits adjudication, an **open item**; the arm currently serves only as a sensitivity report column and never enters the judgment,
+         so the judgment semantics is unaffected.
 
-  sparse p'：SPARSE 签名份额改为 share（冻结 2%），其余签名按原比例
-         重归一（×(1−share)/(1−f_sparse)），再 Multinomial(N, p')。
-         N=1000 时期望 20 counts（协议 §4：专测边界/清零行为）。
+  sparse p': the SPARSE signature's share is set to share (the frozen 2%), the remaining signatures are
+         re-normalized by their original proportions (×(1−share)/(1−f_sparse)), then Multinomial(N, p').
+         At N=1000 the expectation is 20 counts (the protocol §4: specifically testing the boundary/zeroing behaviour).
 
-输出 counts 为长度 96 的整数向量，顺序 = tools/channel-reference/
-SBS96.txt 规范序（providers.load_sbs96_labels）。
+The output counts is an integer vector of length 96; the order = the tools/channel-reference/
+SBS96.txt canonical order (providers.load_sbs96_labels).
 """
 
 from __future__ import annotations
@@ -59,21 +59,21 @@ NORMAL_CLOCK_SPECTRUM = {"SBS1": 0.25, "SBS2": 0.0, "SBS13": 0.0,
 
 @dataclass
 class SimCell:
-    """一个模拟 cell 的输入与输出。"""
+    """The inputs and outputs of one simulation cell."""
 
     arm: str
     n: int
     rep: int
     seed: int
     counts: np.ndarray            # (96,) int
-    truth_p: np.ndarray           # (96,) 生成用混合（稀释/稀疏变换后）
-    truth_h: dict                 # {签名: 真值绝对 exposure（counts，主 estimand）}
+    truth_p: np.ndarray           # (96,) the generation mixture (after the dilution/sparse transforms)
+    truth_h: dict                 # {signature: the truth's absolute exposure (counts, the main estimand)}
     realized_total: int
     params: dict = field(default_factory=dict)
 
 
 def truth_composition(arm: str, params: dict) -> dict:
-    """臂对应的真值组成（冻结组合轴 + 臂特异性变换）。"""
+    """The truth composition corresponding to the arm (the frozen composition axis + the arm-specific transforms)."""
     name = params.get("composition", DEFAULT_COMPOSITION)
     if name not in COMPOSITIONS:
         raise ProviderError(
@@ -90,7 +90,7 @@ def truth_composition(arm: str, params: dict) -> dict:
 
 
 def truth_spectrum(provider, arm: str, params: dict):
-    """返回 (p 生成混合, comp)。p = Σ_k comp[k]·S_k，S_k = provider.signature(k)。"""
+    """Returns (the p generation mixture, comp). p = Σ_k comp[k]·S_k, S_k = provider.signature(k)."""
     comp = truth_composition(arm, params)
     p = np.zeros(96)
     for name, share in comp.items():
@@ -99,7 +99,7 @@ def truth_spectrum(provider, arm: str, params: dict):
 
 
 def dilute_for_clock(p: np.ndarray, provider, purity: float) -> np.ndarray:
-    """clock 混入：p_obs = ρ·p_tumor + (1−ρ)·p_normal（文档化确定算法）。"""
+    """The clock mixing: p_obs = ρ·p_tumor + (1−ρ)·p_normal (a documented deterministic algorithm)."""
     p_normal = np.zeros(96)
     for name, w in NORMAL_CLOCK_SPECTRUM.items():
         p_normal += w * provider.truth[name]
@@ -108,7 +108,7 @@ def dilute_for_clock(p: np.ndarray, provider, purity: float) -> np.ndarray:
 
 def sample_cell(provider, arm: str, n: int, rep: int, seed: int,
                 params: dict | None = None) -> SimCell:
-    """按臂语义生成一个 counts 向量。确定性：同 (arm, n, rep, seed) 同输出。"""
+    """Generates one counts vector per the arm semantics. Deterministic: the same (arm, n, rep, seed) gives the same output."""
     params = dict(params or {})
     rng = np.random.default_rng(seed)
     p_raw, comp = truth_spectrum(provider, arm, params)
@@ -125,7 +125,7 @@ def sample_cell(provider, arm: str, n: int, rep: int, seed: int,
     if arm == "nb":
         size = float(params.get("nb_size", NB_SIZE))
         mu = n * p
-        # Gamma-Poisson 混合（NB 的标准构造；文档见模块 docstring）
+        # the Gamma-Poisson mixture (the standard NB construction; the documentation is in the module docstring)
         lam = rng.gamma(shape=size, scale=mu / size)
         counts = rng.poisson(lam)
     else:
@@ -137,8 +137,8 @@ def sample_cell(provider, arm: str, n: int, rep: int, seed: int,
 
 
 def layer_of(signature: str) -> str:
-    """报告分层：§2.4 easy/flat（判定子句引用；禁跨签名平均掩盖 flat 层）
-    + 组合轴扩展族 mmr/pole/strong（仅覆盖表报告列，不进判定子句）。"""
+    """The report stratification: §2.4 easy/flat (referenced by the judgment sub-clauses; the cross-signature averaging that masks the flat layer is forbidden)
+    + the composition-axis extended families mmr/pole/strong (the coverage-table report columns only, never entering the judgment sub-clauses)."""
     fam = SIGNATURE_FAMILY.get(signature)
     if fam is None:
         raise KeyError(signature)
