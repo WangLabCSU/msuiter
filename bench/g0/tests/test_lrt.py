@@ -1,14 +1,14 @@
-"""③ LRT size 校准：多项零假设下 2000 次检验的拒绝率 ≈ 0.05±噪声（固定种子）。"""
+"""③ LRT size calibration: the rejection rate of 2000 tests under a multinomial null ≈ 0.05±noise (fixed seed)."""
 
 import numpy as np
 
 from g0 import lrt, providers, seeds
 
 PROVIDER = providers.SyntheticProvider(seed=0)
-NAMES, W = PROVIDER.catalog_matrix()          # 索引 0–4 = 真值 slot，5–9 = 缺席签名
+NAMES, W = PROVIDER.catalog_matrix()          # indices 0–4 = truth slots, 5–9 = absent signatures
 ABSENT = [5, 6, 7, 8, 9]
 
-# 真值混合：SBS1 30% / SBS5 40% / SBS40 30%（3 签名真值 → 其余均为 H0）
+# Truth mixture: SBS1 30% / SBS5 40% / SBS40 30% (3 truth signatures → everything else is H0)
 P3 = 0.30 * W[:, 0] + 0.40 * W[:, 3] + 0.30 * W[:, 4]
 
 N_REPS = 2000
@@ -28,42 +28,42 @@ def _simulate(size=None):
 
 
 def test_chi2_sf_matches_erfc_reference():
-    assert abs(lrt.sf_chi2_1(3.841458820694124) - 0.05) < 1e-9   # χ²₁ 的 95% 分位
+    assert abs(lrt.sf_chi2_1(3.841458820694124) - 0.05) < 1e-9   # the 95% quantile of χ²₁
     assert abs(lrt.pval_boundary_lrt(3.841458820694124) - 0.025) < 1e-9
     assert lrt.pval_boundary_lrt(0.0) == 1.0
 
 
 def test_size_calibration_multinomial_null():
-    """多项零假设（缺席签名）：2000 reps × 5 缺席列，边界校准 LRT 的经验 size。
+    """Multinomial null (absent signatures): empirical size of the boundary-calibrated LRT over 2000 reps × 5 absent columns.
 
-    窗口 [0.010, 0.070]，两条都单向可辩护：
-    - 上界 0.070：P3 的实质问题——H0 下不得膨胀超过名义 α（+4σ 余量，
-      合并 n=10000 的 se≈0.0022）；
-    - 下界 0.010：统计量未退化（恒不拒绝的坏实现会被卡住）；
-      中心不取 0.05 是因为 Self–Liang 边界混合 ½δ₀⊕½χ²₁ 在有限样本
-      （N=1000，缺席签名与真值混合近共线）下可证明地保守——本种子下
-      实测 pooled size = 0.0221（该值已记录；exact 0.05 校准需更大 N，
-      属 P3 正文实验范围，非 harness 自校验范围）。固定种子 → 确定。
+    The window [0.010, 0.070] — both ends are one-directionally defensible:
+    - upper bound 0.070: the substantive question of P3 — under H0 it must not inflate past the nominal α (+4σ slack,
+      the pooled n=10000 se≈0.0022);
+    - lower bound 0.010: the statistic is not degenerate (an always-non-rejecting broken implementation would be caught);
+      the center is not taken at 0.05 because the Self–Liang boundary mixture ½δ₀⊕½χ²₁ is provably
+      conservative at finite samples (N=1000, the absent signatures are near-collinear with the truth mixture) — under this seed
+      the measured pooled size = 0.0221 (this value is on record; an exact 0.05 calibration needs a larger N,
+      which belongs to the P3 main-text experiment scope, not to the harness self-check scope). Fixed seed → deterministic.
     """
     X = _simulate(None)
     res = lrt.presence_lrt_scan(X, W, ABSENT, size=None, max_iter=500)
     rej = np.concatenate([r["reject"] for r in res])
     rate = float(rej.mean())
     assert 0.010 <= rate <= 0.070, f"empirical size {rate:.4f} out of window"
-    # 数值健全性：统计量非负；p ∈ [0,1]
+    # Numerical soundness: the statistic is non-negative; p ∈ [0,1]
     assert all(np.all(r["stat"] >= 0) for r in res)
 
 
 def test_power_on_present_signature():
-    """真值在场的签名（30% 份额 @ N=1000）：power ≈ 1。"""
+    """Signatures present in the truth (30% share @ N=1000): power ≈ 1."""
     X = _simulate(None)
     res = lrt.presence_lrt_scan(X, W, [0], size=None, max_iter=500)
     assert float(np.mean(res[0]["reject"])) >= 0.98
 
 
 def test_nb_semantics_size_not_inflated_and_poisson_misspec_diagnostic():
-    """NB 真值（size=8）：NB 语义 LRT 的 size 应保持 ≈α；Poisson 误设 LRT
-    的 size 只增不减（P3 增补列要测的膨胀方向）。窗口较宽（诊断列，非判定）。"""
+    """NB truth (size=8): the size of the NB-semantics LRT should stay ≈α; the Poisson-misspecification LRT's
+    size only rises, never falls (the inflation direction the P3 supplemental column is to measure). The window is wide (diagnostic column, not judgment)."""
     X = _simulate(size=8.0)
     res_nb = lrt.presence_lrt_scan(X, W, ABSENT, size=8.0, max_iter=500)
     size_nb = float(np.concatenate([r["reject"] for r in res_nb]).mean())
@@ -74,8 +74,8 @@ def test_nb_semantics_size_not_inflated_and_poisson_misspec_diagnostic():
         f"expected misspecification inflation, got poi={size_poi:.4f} < nb={size_nb:.4f}")
 
 
-# P1-2（2026-09-28 独立审核）：NB 语义 power 合理性底线（防回归）。
-# 冻结 F3 式份额：SBS1/SBS2/SBS13 各 15%、SBS5 30%、SBS40 25%（15–30% 量级）。
+# P1-2 (2026-09-28 independent audit): the reasonableness floor of NB-semantics power (anti-regression).
+# Frozen F3-style shares: SBS1/SBS2/SBS13 at 15% each, SBS5 30%, SBS40 25% (the 15–30% magnitude).
 P5 = 0.15 * W[:, 0] + 0.15 * W[:, 1] + 0.15 * W[:, 2] \
     + 0.30 * W[:, 3] + 0.25 * W[:, 4]
 PRESENT = [0, 1, 2, 3, 4]
@@ -93,17 +93,17 @@ def _simulate_nb_power():
 
 
 def test_nb_semantics_power_floor_frozen_shares():
-    """P1-2 底线：NB 真值（size=8）@ N=1000、15–30% 份额，修复后的 NB MM
-    更新下 NB 语义 presence LRT 必须有实质 power（2026-09-28 修复前该组合
-    全臂 power=0.04，系 NB EM 数学错误导致的假收敛）。
+    """P1-2 floor: NB truth (size=8) @ N=1000, 15–30% shares; under the repaired NB MM
+    updates the NB-semantics presence LRT must have substantive power (before the 2026-09-28 fix that combination
+    had all-arm power=0.04, a false convergence from an NB EM math error).
 
-    断言（固定种子 → 确定）：
-    - easy 层逐签名（SBS1/SBS2/SBS13，各 15% 份额）power ≥ 0.5；
-    - 5 个在场签名合并 power ≥ 0.5。
-    诚实注记：平坦近重复对（SBS5/40）逐签名 power 低（本种子实测
-    ≈0.085/0.015（当前种子实测）——3% 谱差被 NB 过散方差淹没，可辨识性极限而非回归）；
-    G0 对平坦签名的被测量是区间覆盖率（协议 §5），不是 presence power，
-    故底线只卡 easy 层与合并值。
+    Asserts (fixed seed → deterministic):
+    - per-signature on the easy layer (SBS1/SBS2/SBS13, 15% share each) power ≥ 0.5;
+    - pooled power over the 5 present signatures ≥ 0.5.
+    Honest note: the flat near-duplicate pair (SBS5/40) has low per-signature power (measured under this seed
+    ≈0.085/0.015 (current-seed measurement) — the 3% profile difference is drowned by the NB overdispersion variance, an identifiability limit rather than a regression);
+    what G0 measures on flat signatures is interval coverage (protocol §5), not presence power,
+    hence the floor gates only the easy layer and the pooled value.
     """
     X = _simulate_nb_power()
     res = lrt.presence_lrt_scan(X, W, PRESENT, size=8.0, max_iter=500)
@@ -112,6 +112,6 @@ def test_nb_semantics_power_floor_frozen_shares():
     for name, p in zip(("SBS1", "SBS2", "SBS13"), per_sig[:3]):
         assert p >= 0.5, f"NB power floor broken for {name}: {p:.3f}"
     assert pooled >= 0.5, f"NB pooled power below floor: {pooled:.3f}"
-    # 数值健全性：修复后 NB EM 不应再触及防御性 h_cap（假收敛标志）
+    # Numerical soundness: the repaired NB EM must never again touch the defensive h_cap (the false-convergence flag)
     h = lrt.fit_exposures(X[:50], W, size=8.0, max_iter=500)
     assert float(h.max()) < 1e8, "NB fit pinned at h_cap — regression to broken EM"

@@ -1,9 +1,9 @@
-"""⑤ adapter 协议与 mock runner 的往返测试。
+"""⑤ Round-trip tests of the adapter protocol and the mock runner.
 
-端到端：run_grid（smoke 档，mock adapter，synthetic provider）→
-counts → intervals → coverage → 判定文件落盘 → 表格可解析、数值有界。
-再直接驱动 mock_runner 验证估计量恢复（近重复对只看组和——可辨识性
-受限正是被测现象，单签名不苛求）。
+End-to-end: run_grid (smoke profile, mock adapter, synthetic provider) →
+counts → intervals → coverage → judgment file landed → tables parseable, values bounded.
+Then drive mock_runner directly to verify estimand recovery (the near-duplicate pair is judged
+as a group only — limited identifiability is exactly the phenomenon under test; single signatures are not demanded).
 """
 
 import csv
@@ -65,14 +65,14 @@ def test_mock_roundtrip_recovery_and_bounded_intervals():
     assert intervals.exists()
     with intervals.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
-    n_catalog = len(PROVIDER.catalog_matrix()[0])   # 真值 + 缺席 + 组合轴扩展槽
-    assert len(rows) == 8 * n_catalog               # 8 reps × 全目录签名
+    n_catalog = len(PROVIDER.catalog_matrix()[0])   # truth + absent + composition-axis extension slots
+    assert len(rows) == 8 * n_catalog               # 8 reps × full-catalog signatures
     for r in rows:
         lo, hi, est = float(r["lo95"]), float(r["hi95"]), float(r["estimate"])
         assert 0.0 <= lo <= hi or (np.isnan(lo) and np.isnan(hi))
         assert est >= 0
         assert r["estimand"] == "absolute"
-    # 真值恢复：可辨识签名（SBS1）±20%；近重复对只要求组和 ±20%
+    # Truth recovery: identifiable signature (SBS1) ±20%; the near-duplicate pair only as a group ±20%
     truth_h = {k: v * 1000 for k, v in MASTER_TRUTH_COMPOSITION.items()}
     by_sig = {}
     for r in rows:
@@ -87,7 +87,7 @@ def test_mock_roundtrip_recovery_and_bounded_intervals():
 
 
 def test_run_grid_end_to_end_smoke_mock():
-    """管线往返：run_grid.main(smoke/mock/synthetic) 全链路 + 判定产出。"""
+    """Pipeline round-trip: run_grid.main(smoke/mock/synthetic) full chain + judgment output."""
     import run_grid
     tmp = Path(tempfile.mkdtemp(prefix="g0e2e_"))
     rc = run_grid.main([
@@ -101,13 +101,13 @@ def test_run_grid_end_to_end_smoke_mock():
     assert any(f.startswith("Seeds") for f in files)
     cov_csv = [f for f in files if f.startswith("coverage_smoke")][0]
     jud_md = [f for f in files if f.startswith("judgment_smoke")][0]
-    # Seeds.txt 有数据行且种子为 64-bit
+    # Seeds.txt has data rows and the seed is 64-bit
     seeds_rows = (results / "Seeds.txt").read_text(encoding="utf-8").splitlines()
     data_rows = [l for l in seeds_rows if l and not l.startswith("#")]
-    assert len(data_rows) > 10                     # 列头 + 2 臂 × N × 5 reps
+    assert len(data_rows) > 10                     # column header + 2 arms × N × 5 reps
     seed_val = int(data_rows[1].split("\t")[3])
     assert 0 <= seed_val < 2 ** 64
-    # coverage 表可解析、数值有界
+    # the coverage table parses and its values are bounded
     with (results / cov_csv).open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     assert rows, "coverage table empty"
@@ -118,18 +118,18 @@ def test_run_grid_end_to_end_smoke_mock():
         assert r["layer"] in ("easy", "flat")
     tools_seen = {r["tool"] for r in rows}
     assert tools_seen == {"sigfit", "stl"}
-    # flat 层 P1 归因列存在
+    # the flat-layer P1 attribution column exists
     assert any(r["p1_mechanism_i"] == "1" and r["layer"] == "flat" for r in rows)
-    # 判定文件存在且含 verdict
+    # the judgment file exists and contains the verdict
     text = (results / jud_md).read_text(encoding="utf-8")
     assert "verdict:" in text
-    # P3 诊断列存在
+    # the P3 diagnostic column exists
     assert (results / "diagnostic_lrt_nb.csv").exists()
     shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_undercoverage_scale_drives_verdict_A():
-    """测试钩子：区间过窄（coverage_scale=0.3）→ 欠覆盖 → 判定走 A 支路。"""
+    """Test hook: intervals too narrow (coverage_scale=0.3) → under-coverage → the judgment takes the A branch."""
     import run_grid
     tmp = Path(tempfile.mkdtemp(prefix="g0uc_"))
     rc = run_grid.main([
@@ -146,17 +146,17 @@ def test_undercoverage_scale_drives_verdict_A():
 
 
 def test_adapter_files_conformance():
-    """协议面：Dockerfile 锁定 F2 冻结版本；协议文档与 mock runner 在位。"""
+    """Protocol surface: the Dockerfiles pin the F2 frozen versions; the protocol doc and the mock runner are in place."""
     ad = HERE / "adapters"
     sigfit_docker = (ad / "Dockerfile.sigfit").read_text(encoding="utf-8")
     stl_docker = (ad / "Dockerfile.stl").read_text(encoding="utf-8")
-    assert "kgori/sigfit@v2.2.0" in sigfit_docker      # F2 冻结版本
-    # F2 冻结版本：STL 走 git clone 钉 tag（避开 remotes API 限流，见 Dockerfile 头注）
+    assert "kgori/sigfit@v2.2.0" in sigfit_docker      # F2 frozen version
+    # F2 frozen version: STL goes via git clone pinned to a tag (evading the remotes API rate limit, see the Dockerfile header note)
     assert "Nik-Zainal-Group/signature.tools.lib" in stl_docker
     assert "--branch v2.5.2" in stl_docker
     assert (ad / "adapter_protocol.md").exists()
     assert (ad / "run_sigfit.R").exists() and (ad / "run_stl.R").exists()
     assert (ad / "mock_runner.py").exists()
-    # 协议文档记录 nboot=200（冻结）与清零规则 0.01
+    # the protocol doc records nboot=200 (frozen) and the zeroing rule 0.01
     proto = (ad / "adapter_protocol.md").read_text(encoding="utf-8")
     assert "nboot" in proto and "0.01" in proto

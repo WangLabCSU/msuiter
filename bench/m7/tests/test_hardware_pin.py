@@ -3,7 +3,7 @@
 The B1a writer path made the hardware pins POSSIBLE: every written row carries
 the trailing ``host``/``hw_profile`` columns, and "unset → present-but-empty"
 was the right contract for probes and mock plumbing. But a table whose pin
-columns are EMPTY does not attest its machine — the ROADMAP "钉硬件 bench 全表"
+columns are EMPTY does not attest its machine — the ROADMAP "hardware-pinned bench full table"
 clause (docs/ROADMAP.md:100) demands the FULL table: every row pinned from the
 measured environment, checkable from the table alone (EVIDENCE-ADDENDUM §4's
 forward path: "future authoritative runs attest their machine from the table

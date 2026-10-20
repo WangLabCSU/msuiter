@@ -6,7 +6,7 @@
 //! initializer drawn from the canonical zero stream (`StreamId::ZERO`):
 //! the replicate / consensus / K-selection machinery of the M2 extraction
 //! pipeline deliberately does not exist yet (`docs/ROADMAP.md` M1s:
-//! "ms_extract（单方法）"). The variant is the [`NmfVariant`] switch: KL
+//! "ms_extract (single method)"). The variant is the [`NmfVariant`] switch: KL
 //! (β = 1, the D6 default) or EU (β = 2), both faces of
 //! `msuiter_engine::nmf`.
 //!

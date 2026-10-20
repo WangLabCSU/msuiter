@@ -14,7 +14,7 @@
 //! share zeroing at the sigfit anchor 0.01, `rescale_to_totals`-aligned
 //! percentile CI, optional U-M3b-02 BCa face), and tallies whether the true
 //! `h*_a` lies inside the returned CI for every truth-supported signature
-//! (the "每真值 share 格" marginal tally; decoys enter the estimand-③
+//! (the "per-truth-value share cell" marginal tally; decoys enter the estimand-③
 //! confusion tally only). M replicates aggregate into the cell's coverage
 //! fraction with its binomial standard error.
 //!

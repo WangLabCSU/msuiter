@@ -1,28 +1,28 @@
 #!/usr/bin/env Rscript
-# G0 Tier-1 adapter: signature.tools.lib v2.5.2（Nik-Zainal-Group）
+# G0 Tier-1 adapter: signature.tools.lib v2.5.2 (Nik-Zainal-Group)
 #
-# 契约：adapter_protocol.md（2026-09-28 修订版）。Tier-1 口径：FitMS 包默认
-# （KLD / fixedThreshold 5%）+ useBootstrap=TRUE + nboot=params$nboot（正式冻结 200）。
+# Contract: adapter_protocol.md (2026-09-28 revision). Tier-1 regime: FitMS package defaults
+# (KLD / fixedThreshold 5%) + useBootstrap=TRUE + nboot=params$nboot (officially frozen at 200).
 #
-# ── W1/D2 对账结论（按 STL v2.5.2 源码逐条核对，详见协议 §5）──
-# 1) FitMS 实参名：catalogues=（样本为**列**，通道为行）、commonSignatures=、
-#    rareSignatures=、useBootstrap=、nboot=、nparallel=、randomSeed=。
-#    （旧代码的 signature/counts/method/nboot/parallelisation 全部不存在。）
-# 2) W1 裁决：正式实验 STL 侧**不走 organ T1**（Breast RefSig T1 不含 SBS40
-#    等真值签名）；统一走 commonSignatures=<拟合目录> 路径（正式 = 冻结
-#    v3.6 目录文件，经 G0_CATALOG_PATH 由 harness 挂成 catalog.csv）。
-#    rareSignatures= 置空 + maxRareSigsPerSample=0 ⇒ 退化为全目录 common
-#    拟合（FitMS 文档明确该用法），不做稀有签名搜索——目录即部署口径。
-# 3) **通道序陷阱**：STL 要求其经典序（C>A,C>G,C>T,T>A,T>C,T>G 外层 ×
-#    5' A/C/G/T × 3' A/C/G/T；getTypeOfMutationsFromChannels 的 SBSchannels），
-#    与仓库锚 tools/channel-reference/SBS96.txt 的字典序**不同**。输入须
-#    重排进（catalog 与 counts 同步重排；暴露量结果无通道维，无须重排回）。
-#    重排后用包自带的 :::getTypeOfMutationsFromChannels 断言 "subs"。
-# 4) 返回结构：res$exposures = 样本(行) × 签名(列)（**含 "unassigned" 列，
-#    丢弃**；全零签名列被包丢弃 ⇒ 须映射回全目录列，缺席签名如实报
-#    [0,0] 区间）；bootstrap 区间从逐样本 res$bootstrap_exposures_samples
-#    [[样本]]（签名 × nboot，未过滤 bootstrap 拟合）自算 2.5/97.5 百分位。
-#    被包过滤（est==0）的签名：区间塌缩为 [0,0]，zeroed=1。
+# ── W1/D2 reconciliation verdict (checked item-by-item against STL v2.5.2 source; see protocol §5) ──
+# 1) FitMS real parameter names: catalogues= (samples are **columns**, channels are rows), commonSignatures=,
+#    rareSignatures=, useBootstrap=, nboot=, nparallel=, randomSeed=.
+#    (the old code's signature/counts/method/nboot/parallelisation parameters do not exist at all.)
+# 2) W1 ruling: formal experiments do NOT take the STL organ T1 route (Breast RefSig T1 lacks
+#    ground-truth signatures such as SBS40); everything goes the commonSignatures=<fit catalog> route
+#    (formal = frozen v3.6 catalog file, mounted as catalog.csv by the harness via G0_CATALOG_PATH).
+#    rareSignatures= left empty + maxRareSigsPerSample=0 ⇒ degenerates to whole-catalog common
+#    fitting (FitMS docs sanction this usage), no rare-signature search -- the catalog is the deployment regime.
+# 3) **channel-order trap**: STL demands its classic order (C>A,C>G,C>T,T>A,T>C,T>G outer ×
+#    5' A/C/G/T × 3' A/C/G/T; the SBSchannels of getTypeOfMutationsFromChannels),
+#    which differs from the lexicographic order of the repo anchor tools/channel-reference/SBS96.txt. Inputs must
+#    be reordered into it (catalog and counts reordered in sync; exposure results carry no channel
+#    dimension, no reorder-back needed). After reordering, assert "subs" via the package's own :::getTypeOfMutationsFromChannels.
+# 4) Return structure: res$exposures = samples(rows) × signatures(cols) (**includes an "unassigned" column,
+#    drop it**; all-zero signature columns are dropped by the package ⇒ map back onto the full catalog
+#    columns, absent signatures reported honestly as [0,0] intervals); bootstrap intervals are computed
+#    per sample from res$bootstrap_exposures_samples[[sample]] (signatures × nboot, unfiltered bootstrap
+#    fits) as the 2.5/97.5 percentiles. Signatures the package filtered (est==0): interval collapses to [0,0], zeroed=1.
 # ─────────────────────────────────────────────────────────────────────
 
 suppressPackageStartupMessages(library(signature.tools.lib))
@@ -36,7 +36,7 @@ get_arg <- function(flag) {
 }
 
 fail <- function(msg) {
-  # 注意：writeLines 无 append 参数——追加写必须用 cat
+  # Note: writeLines has no append argument -- appending must use cat
   cat(paste0(format(Sys.time()), " FATAL [run_stl]: ", msg, "\n"),
       file = err_log, append = TRUE, sep = "")
   quit(save = "no", status = 1)
@@ -48,8 +48,8 @@ params_path  <- get_arg("--params")
 outdir       <- get_arg("--outdir")
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 
-# errors.log 先行落盘（run_grid 缓存守卫要求 out/ 必有 errors.log；失败信息
-# 追加写入——部署行为即证据，协议 §2.1）。先清残留半截输出。
+# errors.log lands first (the run_grid cache guard requires out/ to carry errors.log; failure info is
+# appended -- deployed behavior is the evidence, protocol §2.1). Clear stale half-written output first.
 err_log <- file.path(outdir, "errors.log")
 unlink(file.path(outdir, "intervals.csv"))
 unlink(file.path(outdir, "manifest.json"))
@@ -60,20 +60,20 @@ tryCatch({
 params <- jsonlite::fromJSON(params_path)
 seed   <- as.integer(params$seed)
 if (is.na(seed)) fail("params.seed missing or not an integer")
-nboot  <- as.integer(ifelse(is.null(params$nboot), 200, params$nboot))  # 正式冻结值
+nboot  <- as.integer(ifelse(is.null(params$nboot), 200, params$nboot))  # officially frozen at 200
 
-# ---- STL 经典 96 通道序（substitution 外层 × 5' × 3'，与包源码 SBSchannels 一致） ----
+# ---- STL classic 96-channel order (substitution outer × 5' × 3', matching the package's SBSchannels) ----
 stl_channels <- local({
   subs  <- c("C>A", "C>G", "C>T", "T>A", "T>C", "T>G")
   bases <- c("A", "C", "G", "T")
   unlist(lapply(subs, function(s) {
-    g <- expand.grid(b3 = bases, b5 = bases, stringsAsFactors = FALSE)  # b3 变化最快
+    g <- expand.grid(b3 = bases, b5 = bases, stringsAsFactors = FALSE)  # b3 changes fastest
     paste0(g$b5, "[", s, "]", g$b3)
   }))
 })
 stopifnot(length(stl_channels) == 96)
 
-# ---- 读入 + 显式数值防御（非数值列拒绝） ----
+# ---- read in + explicit numeric defense (non-numeric columns rejected) ----
 read_matrix_csv <- function(path) {
   df <- read.csv(path, check.names = FALSE, stringsAsFactors = FALSE)
   if (ncol(df) < 2) fail(paste0(path, ": need >= 2 columns (id + data)"))
@@ -90,8 +90,8 @@ read_matrix_csv <- function(path) {
   if (any(!is.finite(m))) fail(paste0(path, ": non-finite values (NA/NaN/Inf) not allowed"))
   m
 }
-counts  <- read_matrix_csv(counts_path)    # 行 = sample_id, 列 = 96 通道（仓库锚序）
-catalog <- read_matrix_csv(catalog_path)   # 行 = channel（96）, 列 = 签名（仓库锚序）
+counts  <- read_matrix_csv(counts_path)    # rows = sample_id, cols = 96 channels (repo-anchor order)
+catalog <- read_matrix_csv(catalog_path)   # rows = channel (96), cols = signatures (repo-anchor order)
 
 stopifnot(ncol(counts) == 96, nrow(catalog) == 96)
 if (!identical(colnames(counts), rownames(catalog))) {
@@ -103,47 +103,47 @@ if (!setequal(colnames(counts), stl_channels)) {
 if (any(counts < 0)) fail("counts.csv: negative counts not allowed")
 if (any(catalog < 0)) fail("catalog.csv: negative entries not allowed")
 if (any(colSums(catalog) <= 0)) fail("catalog.csv: signature column with zero mass")
-catalog <- sweep(catalog, 2, colSums(catalog), "/")   # 各列归一（防御）
+catalog <- sweep(catalog, 2, colSums(catalog), "/")   # column-wise normalize (defense)
 
-# 仓库锚序 → STL 经典序（catalog 与 counts 同步重排；Fit 的矩阵乘按位置对齐）
-counts_stl <- t(counts)[stl_channels, , drop = FALSE]       # 通道(行) × 样本(列)
-cat_stl    <- catalog[stl_channels, , drop = FALSE]         # 通道(行) × 签名(列)
-# 用包自带校验器断言通道序（非 "subs" 则 organ/类型识别全错）
+# repo-anchor order → STL classic order (catalog and counts reordered in sync; the fit matrix product aligns by position)
+counts_stl <- t(counts)[stl_channels, , drop = FALSE]       # channels(rows) × samples(cols)
+cat_stl    <- catalog[stl_channels, , drop = FALSE]         # channels(rows) × signatures(cols)
+# assert the channel order with the package's own checker (anything but "subs" means organ/type detection is all wrong)
 if (!identical(signature.tools.lib:::getTypeOfMutationsFromChannels(counts_stl), "subs")) {
   fail("channel reorder to STL classic order failed getTypeOfMutationsFromChannels check")
 }
 
-# 0 突变样本：STL 会给全 0 拟合 → 不进拟合，按协议写 NaN 行（不中断整批）
+# 0-mutation samples: STL would hand back an all-0 fit → keep them out of the fit, write NaN rows per the protocol (do not interrupt the batch)
 totals <- colSums(counts_stl)
 fit_cols <- names(totals[totals > 0])
 skip_cols <- names(totals[totals == 0])
 if (length(fit_cols) == 0) fail("all samples have zero mutations — nothing to fit")
 
-# ---- Tier-1 fit：FitMS 包默认 + bootstrap（不开 bootstrap 区间会静默缺失） ----
+# ---- Tier-1 fit: FitMS package defaults + bootstrap (with bootstrap off the intervals go silently missing) ----
 res <- signature.tools.lib::FitMS(
   catalogues        = counts_stl[, fit_cols, drop = FALSE],
-  commonSignatures  = cat_stl,                    # W1 裁决：全目录喂 commonSignatures
-  rareSignatures    = cat_stl[, integer(0)],      # 置空 ⇒ 无稀有签名搜索
-  maxRareSigsPerSample = 0,                       # 0 = 只做 common 拟合（包文档口径）
-  method            = "KLD",                      # 包默认
-  exposureFilterType = "fixedThreshold",           # 包默认（threshold_percent=5）
+  commonSignatures  = cat_stl,                    # W1 ruling: feed the whole catalog via commonSignatures
+  rareSignatures    = cat_stl[, integer(0)],      # left empty ⇒ no rare-signature search
+  maxRareSigsPerSample = 0,                       # 0 = common-only fitting (package-doc semantics)
+  method            = "KLD",                      # package default
+  exposureFilterType = "fixedThreshold",           # package default (threshold_percent=5)
   useBootstrap      = TRUE,
   nboot             = nboot,
   nparallel         = 1,
   randomSeed        = seed,
   verbose           = FALSE)
 
-if (is.null(res)) {   # FitMS 的错误路径是静默 return(NULL)（源码口径），须显式拦截
+if (is.null(res)) {   # FitMS's error path is a silent return(NULL) (per the source), so intercept it explicitly
   fail("FitMS returned NULL (see FitMS '[error]' message on stdout) — catalogue/channel shape rejected")
 }
 
-# ---- 提取：exposures（样本 × 签名 + "unassigned" 列，丢弃之） ----
+# ---- extraction: exposures (samples × signatures + the "unassigned" column, which is dropped) ----
 exps <- res$exposures
 if (!"unassigned" %in% colnames(exps)) fail("FitMS result lacks expected 'unassigned' column")
 exps <- exps[, setdiff(colnames(exps), "unassigned"), drop = FALSE]
 samples    <- rownames(exps)
-sig_names  <- colnames(catalog)                   # 全目录列（含被包丢掉的缺席签名）
-boot_by_sample <- res$bootstrap_exposures_samples # 逐样本：签名 × nboot
+sig_names  <- colnames(catalog)                   # full-catalog columns (incl. absent signatures the package dropped)
+boot_by_sample <- res$bootstrap_exposures_samples # per sample: signatures × nboot
 if (is.null(boot_by_sample)) fail("bootstrap_exposures_samples missing — was useBootstrap=TRUE set?")
 
 rows <- list(); k <- 1
@@ -151,8 +151,8 @@ for (s in samples) {
   bm <- boot_by_sample[[s]]
   if (is.null(bm)) fail(paste0("no bootstrap matrix for sample '", s, "'"))
   for (sg in sig_names) {
-    est <- if (sg %in% colnames(exps)) exps[s, sg] else 0   # 缺席签名 ⇒ 0
-    if (!is.finite(est)) {  # guardline：非有限估计 → NaN 行如实落盘
+    est <- if (sg %in% colnames(exps)) exps[s, sg] else 0   # absent signature ⇒ 0
+    if (!is.finite(est)) {  # guardline: a non-finite estimate lands honestly as a NaN row
       rows[[k]] <- data.frame(sample_id = s, signature = sg, estimate = NaN,
                               lo95 = NaN, hi95 = NaN, estimand = "absolute", zeroed = 1); k <- k + 1
       writeLines(paste0(format(Sys.time()), " sample '", s, "' signature '", sg,
@@ -160,7 +160,7 @@ for (s in samples) {
       next
     }
     zeroed <- (est == 0)
-    if (zeroed) {           # 包过滤（fixedThreshold 5%）⇒ 区间塌缩 [0,0]
+    if (zeroed) {           # filtered by the package (fixedThreshold 5%) ⇒ interval collapses to [0,0]
       lo <- 0; hi <- 0
     } else {
       if (!sg %in% rownames(bm)) fail(paste0("bootstrap matrix for '", s, "' lacks signature '", sg, "'"))
@@ -173,7 +173,7 @@ for (s in samples) {
                             estimand = "absolute", zeroed = as.integer(zeroed)); k <- k + 1
   }
 }
-for (s in skip_cols) {   # 被拒样本（0 突变）：NaN 行
+for (s in skip_cols) {   # rejected samples (0 mutations): NaN rows
   for (sg in sig_names) {
     rows[[k]] <- data.frame(sample_id = s, signature = sg, estimate = NaN, lo95 = NaN, hi95 = NaN,
                             estimand = "absolute", zeroed = 0); k <- k + 1
@@ -184,7 +184,7 @@ for (s in skip_cols) {   # 被拒样本（0 突变）：NaN 行
 out <- do.call(rbind, rows)
 write.csv(out, file.path(outdir, "intervals.csv"), row.names = FALSE)
 
-# ---- manifest：tag + commit SHA（build 阶段固化在 /usr/local/share/g0） ----
+# ---- manifest: tag + commit SHA (baked into /usr/local/share/g0 at the build stage) ----
 info <- list(version_tag = "v2.5.2", commit = "unknown")
 bi <- "/usr/local/share/g0/build_info.json"
 if (file.exists(bi)) {

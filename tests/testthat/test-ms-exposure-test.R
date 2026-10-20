@@ -1,5 +1,6 @@
 # U-M4 remainder: ms_exposure_test() -- the differential-mining face
-# (CAPABILITY-MATRIX L-F "exposure 嵌入 + 差异挖掘 🔶 M4" 的另一半).
+# (the differential-mining half of CAPABILITY-MATRIX L-F "exposure embedding
+# + differential mining", M4).
 #
 # Anchors: wilcox.test parity (the R twin IS the implementation -- the
 # assertions pin the BH family semantics, the NA all-tied face, and the

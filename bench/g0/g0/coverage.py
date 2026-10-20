@@ -1,28 +1,28 @@
-"""经验覆盖率计算 + Clopper–Pearson 区间 + 冻结判定规则（协议 §2.4/F1，逐字实现）。
+"""The empirical coverage-rate computation + the Clopper–Pearson interval + the frozen judgment rule (the protocol §2.4/F1, a verbatim implementation).
 
-主 estimand（协议 §2.1）：工具 T 默认部署管线（含默认清零/过滤）输出的
-95% exposure 区间对真值绝对 exposure h_j = f_j·N（counts）的频率覆盖率。
-成分版与 raw（未清零）列为次要报告，不进判定（estimand 列区分）。
+The main estimand (the protocol §2.1): the frequency coverage rate of the default deployment pipeline's
+95% exposure intervals (including the default zeroing/filtering) over the truth's absolute exposure h_j = f_j·N (counts).
+The compositional version and the raw (un-zeroed) column are secondary reports and never enter the judgment (distinguished by the estimand column).
 
-汇总纪律：逐签名逐格点（cell = tool × arm × N × signature）；easy/flat
-分层；**禁止跨签名平均掩盖 flat 层**（协议 §5）。flat 层行附加
-P1 机制 (i) 归因列（近重复目录机制；assumption-audit-memo P1）。
+The aggregation discipline: per signature per grid point (cell = tool × arm × N × signature); easy/flat
+stratification; **the cross-signature averaging that masks the flat layer is forbidden** (the protocol §5). The flat-layer rows carry an added
+P1 mechanism (i) attribution column (the near-duplicate catalogue mechanism; assumption-audit-memo P1).
 
-判定（F1 冻结，§2.4 表逐字）：
-  支持 A  ①任一 Tier-1 工具任一 cell ĉ ≤ 0.85 且 binomial 95% CI 上界 < 0.90；
-          或 ②flat 层 N≥300 全部 cell ĉ ≤ 0.90。
-  kill→B  两 Tier-1 工具全部 N≥300 cell ĉ ≥ 0.90 且随 N 无单调恶化。
-  gray    其余情形 → borderline cells 加倍 reps 至 400 重判；仍 gray
-          默认走 B（风险不对称，最终由作者裁决）。
-"单调恶化"操作化定义（文档化）：对每 (tool, signature)，N≥300 格点按
-升序的 ĉ 序列全体相邻差 ≤ 0 且至少一个严格 < 0。
-borderline cells 操作化定义（P2b）：protocol-memo §2.4 原文与裁决 §5
-均**无 N≥300 限定** → ĉ<0.90 的全部格点（含 N<300）为重判候选，供
---profile gray 加倍重复。判定输入契约（P0-2）与工具过滤（P2a）见
-judge() docstring。
+The judgment (F1 frozen, the §2.4 table verbatim):
+  Supporting A  ① any Tier-1 tool's any cell with ĉ ≤ 0.85 and the binomial 95% CI upper bound < 0.90;
+          or ② the flat layer N≥300 all the cells ĉ ≤ 0.90.
+  kill→B  both Tier-1 tools' every N≥300 cell ĉ ≥ 0.90 and no monotone worsening along N.
+  gray    the remaining cases → double the borderline cells' reps to 400 and re-judge; still gray
+          defaults to going B (the risk asymmetry, the final say by the author).
+The "monotone worsening" operationalized definition (documented): for each (tool, signature), the N≥300 grid points'
+ascending ĉ series' every adjacent difference ≤ 0 with at least one strictly < 0.
+The borderline cells operationalized definition (P2b): both the protocol-memo §2.4 original wording and the adjudication §5
+carry **no N≥300 qualification** → every grid point with ĉ<0.90 (including N<300) is a re-judgment candidate, for the
+--profile gray doubling. The judgment-input contract (P0-2) and the tool filtering (P2a) see the
+judge() docstring.
 
-Clopper–Pearson 精确二项区间：自实现正则化不完全 beta（连分式，
-Numerical Recipes betacf 算法）+ 二分反演；无 scipy。
+The Clopper–Pearson exact binomial interval: the self-implemented regularized incomplete beta (the continued fraction,
+the Numerical Recipes betacf algorithm) + the bisection inversion; no scipy.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-# ------------------------------------------------ 正则化不完全 beta（自有）
+# ------------------------------------------------ the regularized incomplete beta (own)
 
 _MAXIT, _EPS, _FPMIN = 300, 3e-16, 1e-300
 
@@ -70,7 +70,7 @@ def _betacf(a: float, b: float, x: float) -> float:
 
 
 def betainc_reg(a: float, b: float, x: float) -> float:
-    """正则化不完全 beta I_x(a,b)。"""
+    """The regularized incomplete beta I_x(a,b)."""
     if x <= 0.0:
         return 0.0
     if x >= 1.0:
@@ -84,7 +84,7 @@ def betainc_reg(a: float, b: float, x: float) -> float:
 
 
 def beta_ppf(q: float, a: float, b: float) -> float:
-    """Beta(a,b) 分位数（二分反演，200 轮到双精度极限）。"""
+    """The quantile of Beta(a,b) (the bisection inversion, 200 rounds to the double-precision limit)."""
     if not 0.0 <= q <= 1.0:
         raise ValueError(q)
     lo, hi = 0.0, 1.0
@@ -98,7 +98,7 @@ def beta_ppf(q: float, a: float, b: float) -> float:
 
 
 def clopper_pearson(k: int, n: int, conf: float = 0.95) -> tuple:
-    """Clopper–Pearson 精确二项区间 (lo, hi)。"""
+    """The Clopper–Pearson exact binomial interval (lo, hi)."""
     if n <= 0:
         return (0.0, 1.0)
     if not 0 <= k <= n:
@@ -109,11 +109,11 @@ def clopper_pearson(k: int, n: int, conf: float = 0.95) -> tuple:
     return (lo, hi)
 
 
-# ------------------------------------------------ 覆盖率与判定
+# ------------------------------------------------ the coverage rate and the judgment
 
 @dataclass
 class IntervalRecord:
-    """一条工具区间记录（adapter 输出经解析后的长表行）。"""
+    """One tool-interval record (a long-table row after parsing the adapter output)."""
 
     tool: str
     arm: str
@@ -123,9 +123,9 @@ class IntervalRecord:
     estimate: float
     lo95: float
     hi95: float
-    estimand: str = "absolute"      # absolute（主）| fraction | raw（次要）
-    zeroed: bool = False            # sigfit 清零规则触发 / STL 过滤塌缩
-    error: bool = False             # 拒跑/报错（部署行为，如实计入）
+    estimand: str = "absolute"      # absolute (the main) | fraction | raw (secondary)
+    zeroed: bool = False            # the sigfit zeroing-rule trigger / the STL filtering collapse
+    error: bool = False             # the refusal-to-run/error (the deployment behavior, counted honestly)
 
 
 @dataclass
@@ -141,21 +141,21 @@ class CellCoverage:
     coverage: float
     cp_lo: float
     cp_hi: float
-    filtered_rate: float = 0.0      # 清零/过滤触发率（次要列）
+    filtered_rate: float = 0.0      # the zeroing/filtering trigger rate (the secondary column)
     error_rate: float = 0.0
-    p1_mechanism_i: bool = False    # flat 层 P1 机制 (i) 归因列（增补诊断列）
+    p1_mechanism_i: bool = False    # the flat layer's P1 mechanism (i) attribution column (the addendum diagnostic column)
 
 
 def cell_coverage(records, truth_h_by_sig: dict, layer_of) -> list:
-    """逐 cell 计算经验覆盖率与 CP 区间（仅 estimand='absolute' 且非 error 进主判定分母）。
+    """Computes per cell the empirical coverage rate and the CP interval (only estimand='absolute' and non-error enter the main-judgment denominator).
 
-    错误/拒跑记录不计入分母但计入 error_rate（协议 §2.1：部署行为即证据；
-    N=100 端 guardline 触发率单独成列）。
+    The error/refusal-to-run records do not count into the denominator but count into the error_rate (the protocol §2.1: the deployment behavior is the evidence;
+    the N=100-end guardline trigger rate forms its own column).
     """
     cells = {}
     for r in records:
         if r.signature not in truth_h_by_sig:
-            continue                      # 目录中非真值签名（absent 列）无 estimand
+            continue                      # the non-truth signature in the catalogue (the absent column) has no estimand
         cells.setdefault((r.tool, r.arm, r.n, r.signature), []).append(r)
     out = []
     for (tool, arm, n, sig), rs in sorted(cells.items()):
@@ -176,7 +176,7 @@ def cell_coverage(records, truth_h_by_sig: dict, layer_of) -> list:
 
 
 def _monotone_worsening(series: list) -> bool:
-    """全体相邻差 ≤ 0 且至少一个严格 < 0（文档化操作化定义）。"""
+    """Every adjacent difference ≤ 0 with at least one strictly < 0 (the documented operationalized definition)."""
     if len(series) < 2:
         return False
     diffs = [series[i + 1] - series[i] for i in range(len(series) - 1)]
@@ -214,23 +214,23 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
           judge_n_min: int = 300, support_lower: float = 0.85,
           ci_upper_max: float = 0.90, flat_upper: float = 0.90,
           kill_lower: float = 0.90, judge_arms=None) -> Judgment:
-    """冻结判定规则（§2.4/F1，逐字实现）。
+    """The frozen judgment rule (the §2.4/F1, a verbatim implementation).
 
-    输入契约（P0-2，冻结增补条款 b）：敏感性臂（nb/clock/sparse）只细化
-    不推翻判定——调用方传 judge_arms（允许进判定的 main 模型臂集合，
-    即主多项 + 冻结真值组合轴），非 judge 臂的 cell 一律忽略并记 note。
+    The input contract (P0-2, the frozen addendum clause b): the sensitivity arms (nb/clock/sparse) only refine,
+    they never overturn the judgment — the caller passes judge_arms (the set of the main model arms admitted to the judgment,
+    namely the main multinomial + the frozen truth composition axis); the non-judge arms' cells are ignored wholesale and noted.
 
-    工具契约（P2a）：全部判定子句按 tier1_tools 过滤——"任一/全部/两
-    工具"均指 Tier-1 对；kill 另要求两工具在判定区（N≥300）均有 cell
-    （"两 Tier-1 工具"的字面语义，防单工具静默通过）。
+    The tool contract (P2a): every judgment sub-clause is filtered by the tier1_tools — the "any/all/both
+    tools" all mean the Tier-1 pair; the kill additionally requires both tools to have cells in the judgment
+    region (N≥300) (the literal semantics of the "two Tier-1 tools", guarding against a single tool silently passing).
 
-    borderline（P2b）：protocol-memo §2.4 原文"仅对 borderline cells 加倍
-    重复至 400 后重判"与裁决 §5 转述均**无 N≥300 限定** → 所有格点
-    （含 N<300）的失准 cell 都可进 gray 加倍流程，照冻结文本实现。
+    borderline (P2b): the protocol-memo §2.4 original wording "only for the borderline cells double the reps
+    to 400 and re-judge" and the adjudication §5 restatement both carry **no N≥300 qualification** → the miscalibrated
+    cells of every grid point (including N<300) may enter the gray doubling flow, per the frozen text.
 
-    "单调恶化"操作化定义（文档化）：对每 (tool, signature)，N≥300 格点按
-    升序的 ĉ 序列全体相邻差 ≤ 0 且至少一个严格 < 0。
-    只接受 estimand='absolute' 的主表 cells（由上游保证）。
+    The "monotone worsening" operationalized definition (documented): for each (tool, signature), the N≥300 grid points'
+    ascending ĉ series' every adjacent difference ≤ 0 with at least one strictly < 0.
+    Only the main-table cells with estimand='absolute' are accepted (guaranteed upstream).
     """
     j = Judgment(verdict="GRAY")
     pool = [c for c in cells if c.n_reps > 0]
@@ -238,16 +238,16 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
         excluded = sorted({c.arm for c in pool if c.arm not in judge_arms})
         pool = [c for c in pool if c.arm in judge_arms]
         if excluded:
-            j.notes.append("敏感性臂只出报告列不进判定（冻结增补条款 b）: "
+            j.notes.append("the sensitivity arms only emit report columns and do not enter the judgment (the frozen addendum clause b): "
                            + ", ".join(excluded))
     t1 = set(tier1_tools)
 
-    # 支持 A ①：任一 Tier-1 工具任一 cell
+    # Supporting A ①: any Tier-1 tool's any cell
     for c in pool:
         if (c.tool in t1 and c.coverage <= support_lower
                 and c.cp_hi < ci_upper_max):
             j.clause_a1_cells.append(f"{c.tool}|{c.arm}|N={c.n}|{c.signature}")
-    # 支持 A ②：flat 层 N≥300 全部 Tier-1 cell
+    # Supporting A ②: the flat layer N≥300 all the Tier-1 cells
     flat_cells = [c for c in pool
                   if c.tool in t1 and c.layer == "flat" and c.n >= judge_n_min]
     j.clause_a2 = bool(flat_cells) and all(c.coverage <= flat_upper for c in flat_cells)
@@ -255,7 +255,7 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
         j.verdict = "A"
         return j
 
-    # kill→B：两 Tier-1 工具全部 N≥300 cell ĉ ≥ 0.90 且无单调恶化
+    # kill→B: both Tier-1 tools' every N≥300 cell ĉ ≥ 0.90 and no monotone worsening
     high_cells = [c for c in pool if c.tool in t1 and c.n >= judge_n_min]
     tools_present = {c.tool for c in high_cells}
     j.kill_ok = (bool(high_cells) and t1 <= tools_present
@@ -273,10 +273,10 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
         j.verdict = "B"
         return j
 
-    # gray：borderline cells = 全部 N 的 ĉ<0.90 Tier-1 cell（P2b：冻结文本
-    # 无 N≥300 限定；加倍 reps 至 400 重判候选）
+    # gray: the borderline cells = the Tier-1 cells with ĉ<0.90 at all the N (P2b: the frozen text
+    # carries no N≥300 qualification; the candidates to double the reps to 400 and re-judge)
     j.borderline_cells = [f"{c.tool}|{c.arm}|N={c.n}|{c.signature}"
                           for c in pool if c.tool in t1 and c.coverage < kill_lower]
-    j.notes.append("gray: borderline cells 需加倍 reps 至 400 重判（协议 §2.4）；"
-                   "仍 gray → 作者裁决，默认走 B（风险不对称）。")
+    j.notes.append("gray: the borderline cells need their reps doubled to 400 and re-judged (the protocol §2.4); "
+                   "still gray → the author's adjudication, defaulting to B (the risk asymmetry).")
     return j

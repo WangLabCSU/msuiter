@@ -737,7 +737,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Random property suite: KKT + monotone trace + brute-force对拍.
+    // Random property suite: KKT + monotone trace + brute-force cross-check.
     // Fixed seeds via MsRng + StreamId (module composition).
     // ------------------------------------------------------------------
 
@@ -814,7 +814,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Ill-conditioned Grams (ARCH §9: NNLS KKT + 病态 Gram, pivot LDLᵀ)
+    // Ill-conditioned Grams (ARCH §9: NNLS KKT + ill-conditioned Gram, pivot LDLᵀ)
     // ------------------------------------------------------------------
 
     #[test]

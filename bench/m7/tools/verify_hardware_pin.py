@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Reader-side hardware-pin verifier for a committed authoritative table.
 
-(U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表.) The authoring gate in
+(U-M7-04 GO-05, ROADMAP:100 hardware-pinned bench full table.) The authoring gate in
 run_bench makes an unattested authoritative table impossible to birth; this
 tool is the other half: the check a *reader* re-runs against a table that
 already sits in the repository, so a docs citation can point at a same-window

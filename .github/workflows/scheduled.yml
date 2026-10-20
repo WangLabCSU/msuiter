@@ -37,9 +37,13 @@ env:
   _R_CHECK_LIMIT_CORES_: 'true'
 
 jobs:
+  # census-exempt tokens: 0   (the vacuous rcmdcheck step retired by the
+  # #32 remediation carried the R CMD check shell template placeholder
+  # `{0}`; the token is a shell placeholder, not a numeric claim.)
   valgrind:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # Hard gate: the archived leg carried continue-on-error (D1 class).
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -62,17 +66,9 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: check
-          extra-packages: any::rcmdcheck
 
-      - name: R CMD check under valgrind (heavy, report-only)
-        shell: Rscript {0}
-        run: |
-          res <- rcmdcheck::rcmdcheck(
-            args = c("--no-manual", "--as-cran", "--use-valgrind"),
-            error_on = "never",
-            check_dir = "check-valgrind"
-          )
-          print(res)
+      - name: Valgrind leg (issue #32): native sentry + loudness-law canaries
+        run: sh tools/deep-checks/run_valgrind_leg.sh leg
 
       - name: Upload valgrind check log
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -84,7 +80,8 @@ jobs:
 
   sanitizer:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # Hard gate: the 22 s/12 s archived legs (D1) died at target discovery.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:

@@ -1,7 +1,7 @@
 //! Per-mutation signature assignment and per-signature transcriptional
-//! strand-bias testing (U-M3a-04; `docs/CAPABILITY-MATRIX.md` L-D "每突变分配:
-//! 比例分配 + unassigned 残差伪签名" and L-E "每签名 TSB 检验: 泊松/二项
-//! UTS-vs-TS + 不确定性传播", `docs/ARCHITECTURE.md` §5 post-fit analysis,
+//! strand-bias testing (U-M3a-04; `docs/CAPABILITY-MATRIX.md` L-D "per-mutation
+//! assignment: proportional allocation + unassigned-residual pseudo-signature" and L-E "per-signature TSB test: Poisson/binomial
+//! UTS-vs-TS + uncertainty propagation", `docs/ARCHITECTURE.md` §5 post-fit analysis,
 //! `docs/research/02` §1/§5).
 //!
 //! # Per-mutation assignment — upstream semantics (pinned to source, D11/D13)
@@ -104,7 +104,7 @@
 //!   `n ≈ 1020`), so the summation form *is* the frozen protocol.
 //! * **Fractional masses (uncertainty propagation).** Per-signature TS/UTS
 //!   totals are *expected* masses from the fractional assignment — the
-//!   capability-matrix "不确定性传播" carrier (assignment probabilities, not
+//!   capability-matrix "uncertainty propagation" carrier (assignment probabilities, not
 //!   hard calls, enter the test). The exact test extends continuously by
 //!   linear-in-pmf interpolation of each discrete tail between its bounding
 //!   integers: for `hi ∈ (m, m+1)`,

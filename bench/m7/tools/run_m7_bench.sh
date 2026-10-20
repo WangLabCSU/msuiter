@@ -45,7 +45,7 @@ ADAPTER=${M7_ADAPTER:-docker}
 COMPETITORS=${M7_COMPETITORS:-sigminer,sigprofiler}
 PROVIDER=${M7_PROVIDER:-synthetic}
 
-# Hardware-pin launch assert (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench 全表):
+# Hardware-pin launch assert (U-M7-04 GO-05, ROADMAP:100 hardware-pinned bench full table):
 # run_bench.main refuses to FILE the authoritative final pass without the
 # operator's machine-class pin; catching that here, at launch, saves hours
 # of shard measurement from dying at the last invocation. The driver is

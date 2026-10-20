@@ -90,3 +90,34 @@ test_that("the full census exits green over the normative corpus", {
   expect_match(r$out, "normative CJK outside quote/code context: 0 line\\(s\\)")
   expect_match(r$out, "cjk-census: OK")
 })
+
+test_that("the specs enrollment covers the governed surface (firing control)", {
+  tool <- .ms_census_root()
+  if (is.null(tool)) {
+    skip("requires the source checkout (installed-package check context)")
+  }
+  r <- .ms_run_census(tool, character(0))
+  out_lines <- strsplit(r$out, "\n")[[1]]
+  enrolled <- function(path) {
+    # Regex-escape every non-alphanumeric path character instead of trusting
+    # the reader to spot an unescaped metacharacter.
+    esc <- paste0(vapply(strsplit(path, "")[[1L]], function(ch) {
+      if (grepl("^[[:alnum:]_/-]$", ch)) ch else paste0("\\", ch)
+    }, character(1L)), collapse = "")
+    any(grepl(paste0("^", esc, "\\s+normative\\s"), out_lines, perl = TRUE))
+  }
+  # Hidden-by-absence is the defect ([[governance-scan-integrity]]): every
+  # specs glob must demonstrably admit a representative it governs, including
+  # the files this pass pulled in from outside the old hand-curated roster.
+  for (path in c("R/zzz.R",
+                 "README.md",
+                 "tools/ci-selfcheck.py",
+                 "tools/deep-checks/run_valgrind_leg.sh",
+                 "tools/deep-checks/valgrind-canary/src/main.rs",
+                 ".github/workflows/scheduled.yml",
+                 "tests/testthat/test-cjk-census.R",
+                 "src/rust/engine/src/assign.rs",
+                 "bench/g0/g0/__init__.py")) {
+    expect_true(enrolled(path), info = paste0("not enrolled: ", path))
+  }
+})

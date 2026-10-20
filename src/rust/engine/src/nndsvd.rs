@@ -218,7 +218,7 @@ pub fn nndsvd_init(
 }
 
 /// NNDSVDa initialization: every zero of the plain NNDSVD factors is
-/// replaced with the mean of `V` (research/01 §11 "零位填均值").
+/// replaced with the mean of `V` (research/01 §11 "fill zero positions with the mean").
 ///
 /// The a-variant (Boutsidis & Gallopoulos 2008, §3) exists because MU is
 /// zero-absorbing: starting from a plain NNDSVD factor with structural zeros,

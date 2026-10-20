@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # B3 · NNLS bench（ARCHITECTURE §8：批量 NNLS 101×10³, k=10 vs scipy nnls 逐样本 ≥10×）
 
 重跑：`python3 bench/m1s/nnls/run_bench.py`。seed=20260928（numpy PCG64）；双侧预热 1 次 + 计时 3 次取中位。我方 = driver（engine `nnls_gram`，共享 Gram + 每样本 Lawson-Hanson；计时段含 Gram/b 装配，保守口径）；scipy = `scipy.optimize.nnls(W, v_j)` 逐样本。

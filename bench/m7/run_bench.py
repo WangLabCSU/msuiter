@@ -550,8 +550,8 @@ def main(argv=None) -> int:
         print(json.dumps(plan, sort_keys=True, indent=1))
         return 0
 
-    # Hardware-pin authority gate (U-M7-04 GO-05, ROADMAP:100 钉硬件 bench
-    # 全表): the authoritative pass (docker adapter, final shard-free pass)
+    # Hardware-pin authority gate (U-M7-04 GO-05, ROADMAP:100 hardware-pinned bench
+    # full table): the authoritative pass (docker adapter, final shard-free pass)
     # REFUSES TO FILE without the operator's machine-class pin — a table
     # born with empty pin columns would recite "hardware-pinned" while
     # attesting nothing (B1a's present-but-empty optionality law stays for

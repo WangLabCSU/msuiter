@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # U-M1s-14 · KL 数值协议等价对拍 result（一次性固定平台实验，不进 CI）
 
 重跑方式：`Rscript run_experiment.R`（在本目录）。本文件由脚本自动生成。

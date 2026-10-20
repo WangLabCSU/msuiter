@@ -1044,7 +1044,7 @@ def nonpass_rows(rows) -> list[dict]:
     return [r for r in rows if r["status"] not in PASS_STATUSES]
 
 
-# -- (4a) hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 钉硬件全表) --------
+# -- (4a) hardware-pin completeness (U-M7-04 GO-05, ROADMAP:100 hardware-pinned full table) --------
 # B1a made the pins possible ("unset → present-but-empty"); a table with empty
 # pin columns still does not attest its machine, and the ROADMAP's full-table
 # clause is only true of a table where EVERY row carries the pin of the

@@ -1,11 +1,11 @@
 # U-M4-01: ms_compare() -- the calibrated similarity/matching library.
 #
 # Design memo docs/devlog/2026-10-04-M4-01-design-memo.md §6 anchors:
-#   * 【逐位/整数】metric twins on independently-computed formulas; the
+#   * [bit-exact/integer] metric twins on independently-computed formulas; the
 #     Islam table re-derived on the test-islam-xval.R designed truth; a
 #     hand-built Jiang fixture with every number pinned; the Hungarian
 #     sweep identical to the raw match_solutions face;
-#   * 【数值协议等价】the null faces against the exact moment identities
+#   * [numeric-protocol-equivalence] the null faces against the exact moment identities
 #     and the burden monotonicity;
 #   * error paths structured (input/option/calibration).
 
@@ -235,7 +235,7 @@ test_that("ms_compare end-to-end: MsComparison assembly and metadata", {
     null_n = 2000L, seed = 5)
   expect_is_ms(comp, "MsComparison")
   # metrics: the requested metric + the per-pair p/BH matrices
-  # (the L-F q 注记 table face).
+  # (the L-F q-annotation table face).
   expect_named(comp@metrics, c("cosine", "p_null", "q_bh"))
   expect_identical(dim(comp@metrics$cosine), c(6L, 3L))
   expect_identical(colnames(comp@metrics$cosine)[1], "t1") # kept from input
@@ -293,7 +293,7 @@ test_that("error paths are structured msuiter_error_* conditions", {
   )
 })
 
-test_that("per-pair null p + BH q ride the metrics list (L-F q 注记)", {
+test_that("per-pair null p + BH q ride the metrics list (L-F q-annotation)", {
   labels <- msuiter:::.ms_io_channel_tables()$SBS96
   set.seed(31)
   est <- matrix(abs(rnorm(96 * 3)) + 0.01, 96, 3,

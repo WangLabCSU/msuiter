@@ -1,20 +1,30 @@
-# msuiter release workflow — 启用（2026-10-05，PI 裁决①方案 A 后执行发布链）
+# msuiter release workflow -- ENABLED (2026-10-05; the release chain runs after
+# the PI ruling (1), plan A).
 #
-# 启用记录：M1s 14/14 关闭（方案 A 口径）；版本 bump 0.1.0；本文件自
-# docs/release/release.yml-draft.yml 移入。触发 = annotated tag `v0.1.0`
-# push（打 tag 于 main 干净树）。
+# Enabling record: M1s closed 14/14 (plan-A accounting); version bump 0.1.0;
+# this file moved in from
+# docs/release/release.yml-draft.yml. Trigger = an annotated tag `v0.1.0`
+# push (the tag is cut on a clean main tree).
 #
-# 设计（对齐 .github/workflows/ci.yml U-M0-07 约定）：
-#   - vendor.tar.xz 单一生成点：仅 build-source 作业跑 `tools/vendor.sh`，
-#     二进制作业消费源码 tarball 内附的 vendor.tar.xz（ADR 0002 §3.3：发布期生成、
-#     随源码包分发、永不入 git；tarball 内存在性 = CRAN 离线模式自动生效）。
-#   - `--check` 作为发布门禁：vendor 基线漂移（ADR 0002 增量行未补，见
-#     checklist §8 P1-2）会让本 workflow 直接红——启用前必须先把基线更新转绿。
-#   - Rust 工具链钉 MSRV（rustc 1.71）：发布二进制同时充当 MSRV 构建证明
-#     （ci.yml msrv 作业语义）；如需更快构建可换 stable，但 MSRV 证明会失去。
-#   - error_on 纪律同 ci.yml：release 作业硬失败，不做静默降级。
+# Design (aligned with the .github/workflows/ci.yml U-M0-07 conventions):
+#   - Single generation point for vendor.tar.xz: only the build-source job runs
+#     `tools/vendor.sh`;
+#     the binary jobs consume the vendor.tar.xz embedded in the source tarball
+#     (ADR 0002 section 3.3: generated at release time,
+#     shipped with the source package, never committed to git; its presence in
+#     the tarball = the CRAN offline mode activates automatically).
+#   - `--check` as a release gate: vendor baseline drift (an ADR 0002 increment
+#     row not filled in, see
+#     checklist section 8 P1-2) turns this workflow straight red -- the baseline
+#     update must be green before enabling.
+#   - The Rust toolchain is pinned to the MSRV (rustc 1.71): the release
+#     binaries double as the MSRV build attestation
+#     (the ci.yml msrv-job semantics); switching to stable builds faster but
+#     loses the MSRV attestation.
+#   - The error_on discipline follows ci.yml: release jobs fail hard, no
+#     silent degradation.
 #
-# 触发：仅 tag push（v*）。不会在普通 push/PR 上运行。
+# Trigger: tag push only (v*). Never runs on an ordinary push or PR.
 
 on:
   push:
@@ -34,15 +44,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # MSRV 钉定（ADR 0002 §4 证明语义）。runner 自带 rustup。
+      # MSRV pin (the ADR 0002 section 4 attestation semantics). The runner ships rustup.
       - name: Install Rust (MSRV)
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
           cargo --version && rustc --version
 
-      # 发布门禁：vendor 生成 + 基线漂移检查（DRIFT 即红）。
-      # vendor.sh 产物固定落在 /tmp/msuiter-vendor.tar.xz。
+      # Release gate: vendor generation + baseline-drift check (DRIFT goes red).
+      # The vendor.sh artifact always lands at /tmp/msuiter-vendor.tar.xz.
       - name: Generate vendored offline tarball (release discipline, ADR 0002)
         run: |
           sh tools/vendor.sh --check
@@ -53,7 +63,8 @@ jobs:
           r-version: release
           use-public-rspm: true
 
-      # R CMD build 只打包，不装依赖；此步仅为下方版本号解析提供 R。
+      # R CMD build only packages and installs no dependencies; this step exists
+      # simply to provide R for the version parsing below.
       - name: Build source tarball (vendor.tar.xz attached)
         id: build
         run: |
@@ -71,8 +82,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Linux 二进制有 glibc 亲和性（面向 r-universe 未覆盖时的兜底）；
-        # 若只依赖 r-universe 二进制可整体裁掉 matrix。
+        # The Linux binaries carry glibc affinity (the fallback for what r-universe
+        # does not cover);
+        # if only r-universe binaries are relied on, the whole matrix can be cut.
         os: [macos-latest, ubuntu-latest, windows-latest]
         include:
           # Windows: R's official binaries are GNU-toolchain builds, and
@@ -99,7 +111,8 @@ jobs:
           r-version: release
           use-public-rspm: true
 
-      # R CMD INSTALL 需要 Imports 就位（冒烟实录：干净库缺 S7/rlang 会失败）。
+      # R CMD INSTALL needs Imports in place (smoke-test record: it fails on a clean
+      # library missing S7/rlang).
       - name: Install Imports (S7, rlang)
         run: Rscript -e 'install.packages(c("S7", "rlang"), repos = "https://cloud.r-project.org")'
 
@@ -108,15 +121,17 @@ jobs:
           name: source-tarball
           path: pkg
 
-      # 从源码 tarball 安装并产出平台二进制（CRAN 离线模式由包内
-      # src/rust/vendor.tar.xz 自动触发，无需环境变量）。
+      # Install from the source tarball and produce the platform binaries (the CRAN
+      # offline mode is triggered automatically by the package-internal
+      # src/rust/vendor.tar.xz; no environment variable needed).
       - name: Build binary package
         shell: bash
         run: |
           # $(ls pkg/...) already carries the pkg/ prefix (the audited
           # draft double-prefixed it: pkg/pkg/... -> "no packages specified").
           R CMD INSTALL --build "$(ls pkg/msuiter_*.tar.gz)" -l . --no-docs --no-multiarch
-          # 产物：macOS .tgz / Windows .zip / Linux .tgz（平台后缀见 R 文档）
+          # Artifacts: macOS .tgz / Windows .zip / Linux .tgz (see the R docs for the
+          # platform suffixes)
 
       - name: Smoke-load binary
         shell: Rscript {0}
@@ -145,7 +160,8 @@ jobs:
           path: dist
           merge-multiple: true
 
-      # Release notes：取 NEWS.md 顶部第一节（即本版本节），前置标题行。
+      # Release notes: take the top section of NEWS.md (this version's section),
+      # with a title line prepended.
       - name: Extract release notes from NEWS.md
         run: |
           awk '/^# msuiter/{n++} n==1{print} n==2{exit}' NEWS.md > release-notes.md

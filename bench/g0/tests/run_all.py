@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""测试总入口：python3 -m tests.run_all（不强制 pytest）。
+"""Test master entry: python3 -m tests.run_all (pytest not enforced).
 
-5 组测试对应任务书要求：
-  ① test_sim       模拟确定性（同 seed 同 counts）+ 各臂矩校验
-  ② test_coverage  覆盖率计算器正确性（CP 解析锚点 + 已知 σ 高斯名义 95%）
-  ③ test_lrt       LRT size 校准（多项零假设下 2000 次检验 ≈0.05±噪声）
-  ④ test_provider  cosmic-file 标签校验（错序必须拒）
-  ⑤ test_adapter   adapter 协议与 mock runner 的往返测试
+5 test groups correspond to the task-book requirements:
+  ① test_sim       simulation determinism (same seed same counts) + per-arm moment checks
+  ② test_coverage  coverage-calculator correctness (CP analytic anchors + known-σ Gauss nominal 95%)
+  ③ test_lrt       LRT size calibration (2000 tests under the multinomial null ≈0.05±noise)
+  ④ test_provider  cosmic-file label validation (a wrong order must be rejected)
+  ⑤ test_adapter   the round-trip test of the adapter protocol and the mock runner
 """
 
 from __future__ import annotations

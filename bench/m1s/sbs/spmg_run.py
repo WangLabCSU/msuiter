@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # =============================================================================
-# bench/m1s/sbs/spmg_run.py · SPMG 基线（在 bench/m1s/.venv 内运行）
+# bench/m1s/sbs/spmg_run.py · SPMG baseline (runs inside bench/m1s/.venv )
 #
-# 前置（一次性，幂等）：SigProfilerMatrixGenerator 1.3.6 自定义基因组安装——
+# prerequisites (one-shot, idempotent):SigProfilerMatrixGenerator 1.3.6 custom-genome install——
 #   genInstall.install("SYN5M", custom=True, fastaPath=cache/fasta,
 #                      transcriptPath=cache/transcripts.txt)
-#   （install_chromosomes 对 custom 走系统 gzip -d + 纯 Python 串文件；tsb 走
-#   我们提供的全长 +1 链转录本；全部落在 .venv site-packages 内。）
+#   (install_chromosomes for custom goes through system gzip -d + pure Python string-file;tsb goes
+#   the full-length we provide +1 strand transcript records; .venv site-packages  nonempty validation).
 #
-# 已知上游限制（本脚本的运行时绕过，全部上游计算路径零改动）：
-#   SPMG 1.3.6 的生成入口用硬编码 CHECKSUMS 白名单校验基因组
-#   （reference_genome_manager.is_genome_installed：genome 不在 dict 内直接
-#   raise "has not been installed"），自定义基因组永远无法通过。本脚本在
-#   运行时把本地安装产物的 md5 注册进该 dict（= 让它对我们自己的本地文件
-#   做「下载完整性」校验），不修改任何上游文件；矩阵生成代码路径全为原装。
-#   —— 如实记录于 result.md。
+# known upstream limitations (runtime bypass in this script; zero changes to upstream compute paths):
+#   SPMG 1.3.6 generation entry uses the hardcoded CHECKSUMS whitelist to validate genomes
+#   (reference_genome_manager.is_genome_installed:genome is not present in the dict , it directly
+#   raise "has not been installed"), custom genomes can never pass it. This script
+#   at runtime registers the local install products md5 into the dict(= so that it checks our own local files
+#   do a download-integrity check); it modifies no upstream file; the matrix-generation code path stays fully original.
+#   —— recorded verbatim in result.md.
 #
-# 计时：sanity（100 变异）跑一次（兼正确性对拍输入）；全量（10⁶）跑一次，
-#   perf_counter 墙钟（SPMG 无预热复用价值，多次复跑代价为分钟级——口径
-#   如实记录为单次墙钟）。
+# timing: sanity(100 mutations) is run once (doubling as the correctness cross-check input); the full set (10⁶) is run once,
+#   perf_counter wall clock (SPMG has no warm-up reuse value; the cost of repeated reruns is minute-scale——caliber
+#   is recorded verbatim as a single wall clock).
 # =============================================================================
 import hashlib
 import json
@@ -51,7 +51,7 @@ def install_if_needed(cache: Path) -> None:
 
 
 def register_checksums() -> None:
-    """运行时注册本地 tsb 产物的 md5（绕过上游硬编码白名单；见文件头说明）。"""
+    """at runtime register the local tsb products md5(bypassing the upstream hardcoded whitelist; see the file-header note)."""
     rd = ref_install.reference_dir()
     tsb_dir = Path(rd.get_tsb_dir()) / GENOME
     entries = {}
@@ -62,8 +62,8 @@ def register_checksums() -> None:
 
 
 def run(project: str, vcf_dir: Path, out_tsv: Path, cwd: Path) -> dict:
-    # SPMG 会在 <vcf_dir>/input/ 缓存转换后的逐染色体文件；夹具重生成后必须
-    # 清掉，否则重跑消费陈旧转换（实测会静默复用旧记录集）。
+    # SPMG caches per-chromosome converted products under <vcf_dir>/input/ ; after fixture regeneration it must
+    # be dropped, otherwise reruns consume stale converted state (measured: it silently reuses the old record set).
     for stale in (vcf_dir / "input", vcf_dir / "output"):
         if stale.exists():
             import shutil
@@ -85,7 +85,7 @@ def main():
     register_checksums()
 
     import os
-    os.chdir(cache)  # SPMG 把 output/ 写在 CWD 下（standard CLI 行为）
+    os.chdir(cache)  # SPMG puts output/ under CWD (thestandard CLI behavior)
     stats = {}
     stats["sanity"] = run("sanity", cache / "sanity_vcf",
                           cache / "spmg_sanity96.tsv", cache)

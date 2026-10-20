@@ -1,28 +1,29 @@
 ---
-name: Bug 报告
-about: 报告 msuiter 的错误行为
+name: Bug report
+about: Report incorrect msuiter behavior
 title: "[bug] "
 labels: bug
 assignees: ""
 ---
 
-**环境信息**
+**Environment**
 
-- msuiter 版本 / commit：
-- R 版本：`R.version.string`
-- rustc 版本：`rustc --version`（仅 dev 安装需要）
-- 操作系统：
+- msuiter version / commit:
+- R version: `R.version.string`
+- rustc version: `rustc --version` (needed only for a dev install)
+- Operating system:
 
-**复现步骤**
+**Steps to reproduce**
 
 ```r
-# 最小可复现代码
+# the minimal reproducible code
 ```
 
-**实际行为 vs 期望行为**
+**Actual vs expected behavior**
 
-<!-- 粘贴完整报错（含 condition class，如 msuiter_error_*）与期望结果。 -->
+<!-- Paste the full error (including the condition class, e.g.
+     msuiter_error_*) and the expected result. -->
 
-**补充**
+**Additional context**
 
-<!-- 会话信息 `ms_sitrep()` 输出、相关数据/夹具等。 -->
+<!-- The `ms_sitrep()` output, the relevant data/fixtures, etc. -->

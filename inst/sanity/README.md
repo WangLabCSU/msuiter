@@ -10,7 +10,7 @@
 > and real catalogs violate the fitted model (weak identifiability,
 > exposure heterogeneity). S(N) numbers are reported as a stability check
 > alongside the synthetic grid; they never enter a coverage claim
-> (ARCHITECTURE.md section 5: "真实数据 sanity").
+> (ARCHITECTURE.md section 5: "real-data sanity").
 
 ## 1. What the harness measures
 
@@ -39,7 +39,7 @@
 5. **Acceptance**: S(N) within +-0.05 of the synthetic MAIN-arm grid curve
    at the same N (run `ms_calibration_grid()` over the same N axis at the
    frozen protocol and subset to `(n, coverage)`), union the wider floor
-   band [0.90, 1.00] per level (memo: "取宽者"); and no systematic
+   band [0.90, 1.00] per level (memo: "take the wider one"); and no systematic
    monotonicity inversion along N (a level-to-level drop steeper than
    0.05 is an inversion; a strict majority of steps inverting is
    systematic).

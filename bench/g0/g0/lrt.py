@@ -1,29 +1,29 @@
-"""自有 χ²₁ presence LRT（P3 增补列；NB 语义）。零第三方依赖（numpy + math）。
+"""The own χ²₁ presence LRT (the P3 addendum column; the NB semantics). Zero third-party dependencies (numpy + math).
 
-模型（逐通道独立计数；W 列各归一化为和 1，h ≥ 0）：
-  Poisson/多项语义：x_c ~ Poisson((Wh)_c)。注意当 W 列和为 1 时，
-  Poisson 似然与多项似然在 h 上有相同的 argmax 方向，且两者的 LRT
-  统计量逐点相等（Poisson MLE 自动把总量拟合到 N；多项在总量上
-  scale-invariant）——故一个 Poisson EM 同时服务两个语义。
-  NB 语义：x_c ~ NB(mean=(Wh)_c, size=s)，Var = μ + μ²/s，精确似然用
-  lgamma 计算（_ll_nb）。NB 对数似然对 μ 的得分为
-      ∂ll/∂μ_c = x_c/μ_c − (x_c+s)/(μ_c+s)，
-  依其正/负部拆分的乘法 MM 上升更新（Lee–Seung 式梯度拆分）为
-      h ← h · Wᵀ(x/μ) / Wᵀ((x+s)/(μ+s))，
-  每步 NB 对数似然单调不降（数值验证见 tests/test_lrt.py 与 2026-09-28
-  独立审核记录；s→∞ 时退化为经典 Poisson EM h ← h·Wᵀ(x/μ)/Wᵀ1）。
-  注意：把 Gamma-Poisson 分层的 E 步权重 z_c=(x_c+s)μ_c/(μ_c+s) 直接当
-  乘法权重的做法**不是**该边际似然的 MM 更新——ll 会单调下降并在
-  h_cap 处假收敛（2026-09-28 修复前的错误实现，实测 ll 一次评估内
-  −1.3×10⁵ → −4.7×10⁵；修复后同一数据 ll = −1.0×10⁴ 且单调上升）。
+The model (independent per-channel counts; the W columns each normalized to sum 1, h ≥ 0):
+  The Poisson/multinomial semantics: x_c ~ Poisson((Wh)_c). Note that when the W columns sum to 1,
+  the Poisson likelihood and the multinomial likelihood share the same argmax over h, and their LRT
+  statistics are pointwise equal (the Poisson MLE automatically fits the total to N; the multinomial is
+  scale-invariant on the total) — hence one Poisson EM serves both semantics.
+  The NB semantics: x_c ~ NB(mean=(Wh)_c, size=s), Var = μ + μ²/s, the exact likelihood via
+  lgamma (_ll_nb). The score of the NB log likelihood over μ is
+      ∂ll/∂μ_c = x_c/μ_c − (x_c+s)/(μ_c+s),
+  the multiplicative MM ascent update split by its positive/negative parts (the Lee–Seung style gradient split) is
+      h ← h · Wᵀ(x/μ) / Wᵀ((x+s)/(μ+s)),
+  the NB log likelihood monotonically non-decreasing each step (numerical validation in tests/test_lrt.py and the 2026-09-28
+  independent-audit record; at s→∞ it degenerates to the classic Poisson EM h ← h·Wᵀ(x/μ)/Wᵀ1).
+  Beware: taking the Gamma-Poisson stratified E-step weights z_c=(x_c+s)μ_c/(μ_c+s) directly as
+  the multiplicative weights is **not** an MM update of this marginal likelihood — the ll would monotonically descend and
+  falsely converge at h_cap (the pre-2026-09-28-fix wrong implementation; the measured ll in a single evaluation went
+  −1.3×10⁵ → −4.7×10⁵; after the fix the same data gives ll = −1.0×10⁴ and monotonically rises).
 
-检验：H0: h_j = 0 vs H1: h_j > 0（边界）。Self–Liang (1987, JASA 82:605)
-边界渐近：LRT 统计量的零分布 ≈ ½δ₀ ⊕ ½χ²₁，故边界校准 p 值为
-  p = ½·sf_χ²₁(stat) = ½·erfc(√(stat/2))（stat>0；stat=0 时 p=1），
-由 math.erfc 实现（无 scipy）。报告列同时给出朴素 χ²₁ sf 作对照。
+The test: H0: h_j = 0 vs H1: h_j > 0 (the boundary). The Self–Liang (1987, JASA 82:605)
+boundary asymptotics: the statistic's null distribution ≈ ½δ₀ ⊕ ½χ²₁, hence the boundary-calibrated p value is
+  p = ½·sf_χ²₁(stat) = ½·erfc(√(stat/2)) (stat>0; at stat=0 p=1),
+implemented via math.erfc (no scipy). The report columns additionally give the naive χ²₁ sf as a contrast.
 
-协议依据：P3（assumption-audit-memo §2）——"Self–Liang 边界渐近为名义
-参照"；裁决后增补第 1 条——NB 臂追加经验 size 报告列，与 G0 共用种子数据。
+The protocol basis: P3 (assumption-audit-memo §2) — "the Self–Liang boundary asymptotics as the nominal
+reference"; the post-ruling addendum clause 1 — the NB arm appends the empirical size report column, sharing the seeded data with G0.
 """
 
 from __future__ import annotations
@@ -34,49 +34,49 @@ import numpy as np
 
 
 def sf_chi2_1(stat: float) -> float:
-    """χ²₁ 生存函数 = erfc(√(x/2))。"""
+    """The χ²₁ survival function = erfc(√(x/2))."""
     return math.erfc(math.sqrt(max(stat, 0.0) / 2.0))
 
 
 def pval_boundary_lrt(stat: float) -> float:
-    """Self–Liang 边界校准 p 值 = ½·sf_χ²₁（stat>0）。"""
+    """The Self–Liang boundary-calibrated p value = ½·sf_χ²₁ (stat>0)."""
     if stat <= 0.0:
         return 1.0
     return 0.5 * sf_chi2_1(stat)
 
 
 def _mu(W: np.ndarray, h: np.ndarray) -> np.ndarray:
-    """μ = h @ Wᵀ；h (B,K)，W (96,K) → (B,96)。"""
+    """μ = h @ Wᵀ; h (B,K), W (96,K) → (B,96)."""
     return h @ W.T
 
 
 def _em(counts: np.ndarray, W: np.ndarray, size: float | None = None,
         max_iter: int = 500, tol: float = 1e-10, h_cap: float = 1e9) -> np.ndarray:
-    """批量 EM/MM 求 MLE ĥ。counts (B,96) ≥0 整数；返回 (B,K)。
+    """Batch EM/MM for the MLE ĥ. counts (B,96) ≥0 integers; returns (B,K).
 
-    Poisson（size=None）：h ← h·(Wᵀ(x/μ))/colsum（经典 Poisson EM；
-    列和 1 ⇒ 分母 1）。
-    NB（size=s）：乘法 MM 上升
-        h ← h · Wᵀ(x/μ) / Wᵀ((x+s)/(μ+s))，
-    即 NB 对数似然得分 x/μ − (x+s)/(μ+s) 的正/负部梯度拆分更新；
-    每步 ll 单调不降。固定点即 NB 得分方程的驻点（列和 1 时两 W 权重
-    的公共因子相消，尺度自洽）。
-    初始化 h = (Σx/96)·1/K + ε，保证离开精确零边界（乘法更新保号）。
-    h_cap：防御性上界（≫ 任何合法 MLE exposure——MLE ≤ 总计数），对
-    正常拟合无影响。
-    收敛判据是相对步长；NB 的 MM 收敛是线性的，500 轮内 ll 已进入
-    驻点 0.1% 量级邻域（LRT 的全/约减模型同步欠收敛只会轻微收缩
-    stat，方向保守），不追求机器精度不动点。
+    Poisson (size=None): h ← h·(Wᵀ(x/μ))/colsum (the classic Poisson EM;
+    column sums 1 ⇒ the denominator 1).
+    NB (size=s): the multiplicative MM ascent
+        h ← h · Wᵀ(x/μ) / Wᵀ((x+s)/(μ+s)),
+    i.e. the update from the positive/negative-part gradient split of the NB log-likelihood score x/μ − (x+s)/(μ+s);
+    the ll is monotonically non-decreasing each step. The fixed point is the stationary point of the NB score equation (with column sums 1 the common factors of the two W
+    weights cancel, the scale self-consistent).
+    The initialization h = (Σx/96)·1/K + ε guarantees leaving the exact zero boundary (the multiplicative update preserves the sign).
+    h_cap: a defensive upper bound (≫ any legitimate MLE exposure — the MLE ≤ the total counts), with no
+    effect on normal fits.
+    The convergence criterion is the relative step length; the NB's MM convergence is linear; within 500 rounds the ll has entered the
+    0.1% magnitude neighbourhood of the stationary point (the LRT's full/reduced models synchronously under-converging only slightly shrinks
+    the stat, in the conservative direction); the machine-precision fixed point is not pursued.
     """
     B, C = counts.shape
     K = W.shape[1]
     x = counts.astype(float)
     total = x.sum(axis=1, keepdims=True)                       # (B,1)
     h = np.full((B, K), 1.0 / K) * (total / C) + 1e-12
-    colsum = W.sum(axis=0)                                     # (K,)（归一后=1）
+        # the floor commensurate with the counts scale (the G0 channel counts ≤1e6): avoids the division by zero
     for _ in range(max_iter):
         mu = _mu(W, h)
-        # 下限与计数尺度相称（G0 通道计数 ≤1e6）：避免除零
+        colsum = W.sum(axis=0)                                     # (K,) (=1 after normalization)
         mu = np.maximum(mu, 1e-12)
         if size is None:
             z = x / mu
@@ -95,14 +95,14 @@ def _em(counts: np.ndarray, W: np.ndarray, size: float | None = None,
 
 
 def _ll_poisson(counts: np.ndarray, mu: np.ndarray) -> np.ndarray:
-    """逐数据集 Poisson 对数似然（去掉与 h 无关的阶乘常数不影响 LRT）。"""
+    """The per-dataset Poisson log likelihood (dropping the h-independent factorial constants does not affect the LRT)."""
     x = counts.astype(float)
     mu = np.maximum(mu, 1e-300)
     return (x * np.log(mu) - mu).sum(axis=1)
 
 
 def _ll_nb(counts: np.ndarray, mu: np.ndarray, size: float) -> np.ndarray:
-    """NB(mean=μ, size=s) 精确对数似然（lgamma 形式）。"""
+    """The exact NB(mean=μ, size=s) log likelihood (the lgamma form)."""
     x = counts.astype(float)
     mu = np.maximum(mu, 1e-300)
     s = float(size)
@@ -115,7 +115,7 @@ def _ll_nb(counts: np.ndarray, mu: np.ndarray, size: float) -> np.ndarray:
 
 def fit_exposures(counts: np.ndarray, W: np.ndarray, size: float | None = None,
                   **kw) -> np.ndarray:
-    """单/批数据集的 MLE ĥ。counts (96,) 或 (B,96)。"""
+    """The MLE ĥ of a single/batch dataset. counts (96,) or (B,96)."""
     c = np.atleast_2d(counts)
     return _em(c, W, size=size, **kw)
 
@@ -123,14 +123,14 @@ def fit_exposures(counts: np.ndarray, W: np.ndarray, size: float | None = None,
 def presence_lrt_scan(counts_batch: np.ndarray, W: np.ndarray,
                       test_cols: list, size: float | None = None,
                       alpha: float = 0.05, **em_kw) -> list:
-    """对若干目录列做 presence LRT 扫描。
+    """Runs the presence LRT scan over several catalogue columns.
 
-    counts_batch (B,96)；W (96,K) 列和 1；test_cols 为被检验的列号列表。
-    对每个 j∈test_cols：全模型 fit（K 列）一次复用；约减模型 fit（去掉
-    第 j 列）。返回逐 j 的 dict：stat, p_boundary, p_naive_chi2_1, reject。
+    counts_batch (B,96); W (96,K) with column sums 1; test_cols is the list of column indices to test.
+    For each j∈test_cols: one reused full-model fit (K columns); the reduced-model fit (dropping
+    the j-th column). Returns the per-j dict: stat, p_boundary, p_naive_chi2_1, reject.
 
-    注意：stat = 2(ll_full − ll_reduced)，数值上截到 ≥0（EM 收敛误差
-    可能产生微小负值）。
+    Note: stat = 2(ll_full − ll_reduced), numerically clipped to ≥0 (the EM convergence error
+    may produce tiny negative values).
     """
     results = []
     x = np.atleast_2d(counts_batch)

@@ -1,5 +1,6 @@
 # U-M4 remainder: the bootstrap CI/stability faces (CAPABILITY-MATRIX
-# L-F "bootstrap：CI 误差条、分布、覆盖率曲线 | ✅ M3b/M4" -- the
+# L-F "bootstrap: CI error bars, the distribution, the coverage curve |
+# ✅ M3b/M4" -- the
 # coverage curve is the M3b face; this adds the MsFit interval faces).
 #
 # Anchors: attribute contract reading (ci_lower/ci_upper/stability),

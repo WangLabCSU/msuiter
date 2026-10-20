@@ -1,4 +1,4 @@
-"""② 覆盖率计算器正确性：CP 解析锚点 + 已知 σ 高斯名义 95% + 判定规则三叉。"""
+"""② Coverage calculator correctness: CP analytic anchors + known-σ Gaussian nominal 95% + three-way judgment rules."""
 
 import numpy as np
 
@@ -18,14 +18,14 @@ def test_cp_closed_form_anchors():
 
 
 def test_cp_reference_value_and_monotonicity():
-    # 教科书值：k=95, n=100 → (0.8872, 0.9836)
+    # Textbook value: k=95, n=100 → (0.8872, 0.9836)
     lo, hi = cov.clopper_pearson(95, 100)
     assert abs(lo - 0.8872) < 1e-3 and abs(hi - 0.9836) < 1e-3
-    # k 增大 → 区间整体右移（lo、hi 均随 k 上升）
+    # k grows → the interval shifts right as a whole (both lo and hi rise with k)
     lo_a, hi_a = cov.clopper_pearson(160, 200)
     lo_b, hi_b = cov.clopper_pearson(180, 200)
     assert lo_b > lo_a and hi_b > hi_a
-    # ĉ 本体恒在 CP 区间内
+    # ĉ itself is always inside the CP interval
     c = 160 / 200
     assert lo_a <= c <= hi_a
 
@@ -33,17 +33,17 @@ def test_cp_reference_value_and_monotonicity():
 def test_betainc_reg_against_symmetry_and_bounds():
     assert cov.betainc_reg(2.0, 3.0, 0.0) == 0.0
     assert cov.betainc_reg(2.0, 3.0, 1.0) == 1.0
-    # 对称性 I_x(a,b) = 1 − I_{1−x}(b,a)
+    # Symmetry I_x(a,b) = 1 − I_{1−x}(b,a)
     a, b, x = 3.5, 7.2, 0.37
     assert abs(cov.betainc_reg(a, b, x) + cov.betainc_reg(b, a, 1 - x) - 1.0) < 1e-12
 
 
 def test_known_sigma_gaussian_nominal_coverage():
-    """已知 σ 高斯：x̂ ± 1.96σ 的实测覆盖 ≈ 0.95±噪声；CP 区间与 Wald 近似一致。"""
+    """Known-σ Gaussian: measured coverage of x̂ ± 1.96σ ≈ 0.95±noise; the CP interval agrees with the Wald approximation."""
     rng = np.random.default_rng(20260928)
     n_reps, theta, sigma = 5000, 10.0, 2.0
     xs = rng.normal(theta, sigma, size=n_reps)
-    z = 1.959963984540054                     # 逐位 Φ⁻¹(0.975)
+    z = 1.959963984540054                     # digit-exact Φ⁻¹(0.975)
     recs = [cov.IntervalRecord(tool="gauss", arm="m", n=1, signature="SBS1",
                                rep=i, estimate=float(x),
                                lo95=float(x - z * sigma), hi95=float(x + z * sigma))
@@ -52,9 +52,9 @@ def test_known_sigma_gaussian_nominal_coverage():
     assert len(cells) == 1
     c = cells[0]
     assert c.n_reps == n_reps
-    assert abs(c.coverage - 0.95) < 0.015     # 二项 se≈0.0031，窗口 ~5σ
-    # CP 正确性（与种子无关）：n=5000 时 CP ≈ Wald（差 < 0.005），
-    # 且点估计 ĉ 恒在 CP 区间内
+    assert abs(c.coverage - 0.95) < 0.015     # binomial se≈0.0031, window ~5σ
+    # CP correctness (seed-independent): at n=5000 CP ≈ Wald (diff < 0.005),
+    # and the point estimate ĉ is always inside the CP interval
     p_hat = c.k / n_reps
     se = (p_hat * (1 - p_hat) / n_reps) ** 0.5
     assert abs(c.cp_lo - (p_hat - z * se)) < 0.005
@@ -63,7 +63,7 @@ def test_known_sigma_gaussian_nominal_coverage():
 
 
 def _mk_cells(specs):
-    """specs: (tool, n, sig, layer, k, n_reps) → CellCoverage 列表。"""
+    """specs: (tool, n, sig, layer, k, n_reps) → list of CellCoverage."""
     out = []
     for tool, n, sig, k, n_reps in specs:
         lo, hi = cov.clopper_pearson(k, n_reps)
@@ -74,12 +74,12 @@ def _mk_cells(specs):
     return out
 
 
-NS = (300, 560, 1000, 1800, 3000, 5600, 10000)   # N≥300 判定区
+NS = (300, 560, 1000, 1800, 3000, 5600, 10000)   # the N≥300 judgment region
 ALL_SIGS = ("SBS1", "SBS2", "SBS13", "SBS5", "SBS40")
 
 
 def _fill(specs, k, n_reps=200, ns=NS):
-    """所有 (tool × n × sig) cell 取固定 k（可逐 cell 覆写）。"""
+    """All (tool × n × sig) cells take a fixed k (overridable per cell)."""
     over = dict(specs)
     for tool in ("sigfit", "stl"):
         for n in ns:
@@ -91,16 +91,16 @@ def _fill(specs, k, n_reps=200, ns=NS):
 
 
 def test_judge_support_a_clause1():
-    """clause ①：单 cell ĉ≤0.85 且 CP 上界 <0.90 → 支持 A。"""
-    cells = _fill({}, 190)                                # 全部 0.95
+    """Clause ①: a single cell with ĉ≤0.85 and CP upper bound <0.90 → supports A."""
+    cells = _fill({}, 190)                                # all 0.95
     cells += _mk_cells([("sigfit", 1000, "SBS1", 160, 200)])   # ĉ=0.80
     j = cov.judge(cells)
     assert j.verdict == "A" and len(j.clause_a1_cells) == 1
 
 
 def test_judge_support_a_clause1_ci_guard():
-    """CI 上界保护：ĉ=0.85 但 CP 上界 ≥0.90（n=100 时 k=85 → hi≈0.915）→
-    不触发 ①；且无 kill（ĉ<0.90）→ gray，borderline 记录该 cell。"""
+    """CI upper-bound guard: ĉ=0.85 but CP upper bound ≥0.90 (with n=100, k=85 → hi≈0.915) →
+    clause ① does not fire; and there is no kill either (ĉ<0.90) → gray, that cell is recorded as borderline."""
     cells = _fill({}, 190)
     cells += _mk_cells([("sigfit", 1000, "SBS1", 85, 100)])   # ĉ=0.85, hi>0.90
     j = cov.judge(cells)
@@ -109,8 +109,8 @@ def test_judge_support_a_clause1_ci_guard():
 
 
 def test_judge_support_a_clause2_flat_layer():
-    """clause ②：flat 层 N≥300 全部 cell ≤0.90（两工具）→ 支持 A。"""
-    cells = _fill({}, 191)                                 # easy 层高覆盖
+    """Clause ②: all flat-layer cells with N≥300 are ≤0.90 (both tools) → supports A."""
+    cells = _fill({}, 191)                                 # easy-layer high coverage
     flat = {(t, n, s): 178 for t in ("sigfit", "stl") for n in NS
             for s in ("SBS5", "SBS40")}                    # ĉ=0.89
     cells = _fill(flat, 191)
@@ -119,18 +119,18 @@ def test_judge_support_a_clause2_flat_layer():
 
 
 def test_judge_kill_to_b():
-    """kill→B：两工具全部 N≥300 cell ≥0.90 且无单调恶化 → B。"""
+    """kill→B: for both tools every N≥300 cell is ≥0.90 and there is no monotone worsening → B."""
     cells = _fill({}, 195)
     cells += _mk_cells([(t, 100, s, 180, 200)
-                        for t in ("sigfit", "stl") for s in ALL_SIGS])  # N=100 不进判定
+                        for t in ("sigfit", "stl") for s in ALL_SIGS])  # N=100 does not enter the judgment
     j = cov.judge(cells)
     assert j.verdict == "B"
 
 
 def test_judge_kill_blocked_by_monotone_worsening():
-    """全 cell ≥0.90 但 flat 签名随 N 单调恶化（唯一 kill 阻断项）→ gray。"""
+    """All cells ≥0.90 but the flat signatures worsen monotonically with N (the sole kill blocker) → gray."""
     spec = {}
-    dec = (198, 197, 196, 195, 194, 193, 192)   # 单调下降，ĉ 全部 ≥ 0.90
+    dec = (198, 197, 196, 195, 194, 193, 192)   # monotone descent, all ĉ ≥ 0.90
     for t in ("sigfit", "stl"):
         for i, n in enumerate(NS):
             spec[(t, n, "SBS5")] = dec[i]
@@ -143,31 +143,31 @@ def test_judge_kill_blocked_by_monotone_worsening():
 
 
 def test_judge_ignores_non_tier1_tools():
-    """P2a：判定全程按 tier1_tools 过滤——非 Tier-1 工具的失准 cell 不得
-    触发 clause ①/②，也不得阻断 kill（"两工具"= 两 Tier-1 工具）。"""
+    """P2a: the judgment filters by tier1_tools throughout — cells of non-Tier-1 tools must not
+    trigger clause ①/②, nor block the kill ("two tools" = the two Tier-1 tools)."""
     cells = _fill({}, 195)
-    cells += _mk_cells([("gauss", 1000, "SBS1", 100, 200),   # ĉ=0.50，非 Tier-1
+    cells += _mk_cells([("gauss", 1000, "SBS1", 100, 200),   # ĉ=0.50, not Tier-1
                         ("gauss", 1000, "SBS5", 60, 200)])
     j = cov.judge(cells)
-    assert j.verdict == "B"                                  # kill 不被非 Tier-1 阻断
+    assert j.verdict == "B"                                  # the kill is not blocked by non-Tier-1
     assert all("gauss" not in c for c in j.clause_a1_cells)
     assert all("gauss" not in c for c in j.borderline_cells)
 
 
 def test_judge_kill_requires_both_tier1_tools():
-    """P2a：kill 的"两 Tier-1 工具"是合取——判定区缺任一工具 → 不得判 B。"""
+    """P2a: kill's "two Tier-1 tools" is a conjunction — if either tool is missing from the judgment region → must not rule B."""
     cells = [c for c in _fill({}, 195) if c.tool != "stl"]
     j = cov.judge(cells)
     assert j.verdict == "GRAY" and not j.kill_ok
 
 
 def test_judge_borderline_has_no_n_floor():
-    """P2b：protocol-memo §2.4 原文（"仅对 borderline cells 加倍重复至 400
-    后重判"）与裁决 §5 转述均无 N≥300 限定 → N<300 的失准 cell 同样进
-    gray 加倍流程（照冻结文本）。
-    构造：N=1000 处 ĉ=0.88 cell 阻断 kill（→GRAY），N=100 处同分布 cell
-    仅应作为 borderline 记录（两者都 ĉ∈(0.85,0.90)，不触发 clause ①）。"""
-    cells = _fill({("sigfit", 1000, "SBS1"): 176,     # ĉ=0.88 @判定区 → 阻断 kill
+    """P2b: neither the protocol-memo §2.4 original ("double the repetitions of the borderline cells to 400
+    and re-judge only then") nor the adjudication §5 retelling carries an N≥300 qualifier → cells at N<300 that miss
+    the bar likewise enter the gray doubling flow (per the frozen text).
+    Construction: at N=1000 an ĉ=0.88 cell blocks the kill (→GRAY); a cell with the same distribution at N=100
+    should only be recorded as borderline (both have ĉ∈(0.85,0.90) and do not trigger clause ①)."""
+    cells = _fill({("sigfit", 1000, "SBS1"): 176,     # ĉ=0.88 @ judgment region → blocks the kill
                    ("sigfit", 100, "SBS1"): 176},     # ĉ=0.88 @N=100 → borderline
                   195)
     j = cov.judge(cells)
@@ -177,8 +177,8 @@ def test_judge_borderline_has_no_n_floor():
 
 
 def test_judge_arms_filter_excludes_sensitivity():
-    """P0-2（冻结增补条款 b）：敏感性臂 cell 不进判定——judge_arms 过滤后，
-    nb 臂的灾难性失准既不触发 clause ① 也不阻断 kill，只记 note。"""
+    """P0-2 (frozen supplemental clause b): sensitivity-arm cells do not enter the judgment — after the judge_arms filter,
+    the catastrophic undercoverage of the nb arm neither triggers clause ① nor blocks the kill, and is only recorded as a note."""
     from g0.coverage import CellCoverage
     cells = _fill({}, 195)
     lo, hi = cov.clopper_pearson(10, 200)

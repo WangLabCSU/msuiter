@@ -1,3 +1,7 @@
+<!-- bilingual-historical snapshot: RECORDED evidence; the CJK originals are
+     kept byte-identical per the English-only law's historical-record exemption
+     (an English rendering may prepend, never overwrite); census class: reference
+     via tools/cjk-census.R; zeroed going forward by the #32 hygiene pass. -->
 # M2 验收门 · sigminer 提取层玩具交叉验证（三方互证：msuiter vs sigminer vs 已知真值）
 
 日期：2026-09-30。执行：计算生物学家（R 侧）。产物全部在本目录；**未修改包代码与既有测试**（新增本目录与 `tests/testthat/test-xval-m2-extract.R`）。
