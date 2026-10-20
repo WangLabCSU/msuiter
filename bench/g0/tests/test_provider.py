@@ -1,6 +1,6 @@
-"""④ cosmic-file provider 标签校验（错序必须拒）+ synthetic provider 确定性。
+"""④ cosmic-file provider label validation (a wrong order must be rejected) + synthetic provider determinism.
 
-不依赖 pytest：临时目录用 tempfile 自理（run_all 直接调用 test_*()）。
+No pytest dependency: temp dirs are handled with tempfile (run_all calls test_*() directly).
 """
 
 import csv
@@ -13,7 +13,7 @@ import numpy as np
 from g0 import providers
 from g0.providers import CosmicFileProvider, ProviderError, load_sbs96_labels
 
-# 确定性伪数据（非 COSMIC——绝不入库）：值 = 1 + ((i*7+j) % 13)/13
+# Deterministic pseudo-data (not COSMIC — never committed): value = 1 + ((i*7+j) % 13)/13
 
 
 def _pseudo_mat(n_sig=5):
@@ -59,7 +59,7 @@ def test_sbs96_reference_shape():
     labels = load_sbs96_labels()
     assert len(labels) == 96
     assert labels[0] == "A[C>A]A" and labels[-1] == "T[T>G]T"
-    # ref-major：行 0–23 以 A 开头，24–47 以 C 开头
+    # ref-major: rows 0–23 start with A, rows 24–47 with C
     assert all(l.startswith("A[") for l in labels[:24])
     assert all(l.startswith("C[") for l in labels[24:48])
 
@@ -73,11 +73,11 @@ def test_synthetic_provider_determinism():
         assert not np.array_equal(a.truth[k], c.truth[k])
     names, W = a.catalog_matrix()
     assert np.allclose(W.sum(axis=0), 1.0)
-    # 近重复平坦对（P1 机制 (i) 合成探针）：cosine ≥ 0.999
+    # the near-duplicate flat pair (P1 mechanism (i) synthetic probe): cosine ≥ 0.999
     va, vb = a.truth["SBS5"], a.truth["SBS40"]
     cos = float(np.dot(va, vb) / np.linalg.norm(va) / np.linalg.norm(vb))
     assert cos >= 0.999
-    # 缺席签名（LRT 的 H0 集）存在且数量正确
+    # the absent signatures (the H0 set of the LRT) exist and their count is right
     assert len(a.absent) == a.K_EXTRA
 
 
@@ -100,10 +100,10 @@ def test_cosmic_provider_accepts_transposed():
 
 
 def test_cosmic_provider_rejects_shuffled_channels():
-    """喂错序文件必须拒（防止下游向量错位静默污染覆盖率）。"""
+    """A wrong-order file must be rejected (a downstream vector misalignment must not silently pollute coverage)."""
     labels, mat = _pseudo_mat()
     perm = list(range(96))
-    perm[0], perm[1] = perm[1], perm[0]           # 交换前两个通道
+    perm[0], perm[1] = perm[1], perm[0]           # swap the first two channels
     p = _tmpfile("shuffled.csv")
     _write_channel_major(p, [labels[i] for i in perm], mat[perm])
     _expect_reject(p, "order mismatch")

@@ -1,4 +1,4 @@
-"""① 模拟确定性 + 各臂矩/组成校验。"""
+"""① Simulation determinism + per-arm moment/composition validation."""
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def test_different_seed_different_counts():
 
 
 def test_multinomial_first_moment():
-    """主臂：E[X_c] = N·p_c（5000×40 reps，宽松容差）；总量恒为 N。"""
+    """Main arm: E[X_c] = N·p_c (5000×40 reps, loose tolerance); the total is always N."""
     n, reps = 5000, 40
     p = None
     acc = np.zeros(96)
@@ -41,7 +41,7 @@ def test_multinomial_first_moment():
 
 
 def test_nb_arm_variance_inflation():
-    """NB 臂（size=8）：均值 ≈ μ；高计数通道 Var ≈ μ + μ²/8（过散方向）。"""
+    """NB arm (size=8): mean ≈ μ; high-count channels Var ≈ μ + μ²/8 (the overdispersion direction)."""
     n, reps = 2000, 300
     acc, acc2 = np.zeros(96), np.zeros(96)
     for rep in range(reps):
@@ -51,8 +51,8 @@ def test_nb_arm_variance_inflation():
         acc2 += cell.counts ** 2
     mean = acc / reps
     var = acc2 / reps - mean ** 2
-    mu = n * (acc / (n * reps))  # 用经验谱近似 μ_c
-    hi = mu > 30                                  # 低计数通道矩估计噪声大，只看高通道
+    mu = n * (acc / (n * reps))  # approximate μ_c with the empirical spectrum
+    hi = mu > 30                                  # low-count channels have noisy moment estimates; high channels only
     assert np.allclose(mean[hi], mu[hi], rtol=0.10)
     expect_var = mu + mu ** 2 / NB_SIZE
     ratio = var[hi] / expect_var[hi]
@@ -60,7 +60,7 @@ def test_nb_arm_variance_inflation():
 
 
 def test_clock_arm_share_uplift():
-    """clock 混入臂：p_obs = ρ·p_tumor + (1−ρ)·p_normal，clock 家族份额抬升。"""
+    """clock dilution arm: p_obs = ρ·p_tumor + (1−ρ)·p_normal; the clock family share is lifted."""
     p_main = PROVIDER.truth["SBS1"] * 0.15 + PROVIDER.truth["SBS2"] * 0.15 \
         + PROVIDER.truth["SBS13"] * 0.15 + PROVIDER.truth["SBS5"] * 0.30 \
         + PROVIDER.truth["SBS40"] * 0.25
@@ -71,7 +71,7 @@ def test_clock_arm_share_uplift():
     sbs5 = CLOCK_PURITY * 0.30 + (1 - CLOCK_PURITY) * 0.75
     assert abs(sbs1 - 0.21) < 1e-12 and abs(sbs5 - 0.57) < 1e-12
     assert (sbs1 + sbs5) > fam_before              # 45% → 78%
-    # 采样均值方向一致
+    # The sampled-mean direction agrees
     acc = np.zeros(96)
     for rep in range(40):
         cell = _sample("clock", 4000, rep, seeds.derive_seed("clock", 4000, rep),
@@ -81,7 +81,7 @@ def test_clock_arm_share_uplift():
 
 
 def test_sparse_arm_composition_and_expectation():
-    """稀疏臂：SBS13 → 2%（N=1000 ⇒ E≈20 counts），其余按比例重归一。"""
+    """Sparse arm: SBS13 → 2% (N=1000 ⇒ E≈20 counts), the rest renormalized proportionally."""
     comp = sim.truth_composition("sparse", {"sparse_signature": "SBS13",
                                             "sparse_share": 0.02})
     assert abs(comp["SBS13"] - 0.02) < 1e-12
@@ -95,29 +95,29 @@ def test_sparse_arm_composition_and_expectation():
                        {"sparse_signature": "SBS13", "sparse_share": 0.02})
         tot13 += cell.truth_h["SBS13"]
         acc13 += cell.counts
-    assert abs(tot13 / reps - 20.0) < 1e-9          # 真值 h = f·N 精确 20
-    # 经验通道均值与生成谱一致（含稀疏成分）
+    assert abs(tot13 / reps - 20.0) < 1e-9          # truth h = f·N exactly 20
+    # The empirical channel means agree with the generative spectrum (sparse component incl.)
     cell0 = _sample("sparse", n, 0, seeds.derive_seed("sparse", n, 0),
                     {"sparse_signature": "SBS13", "sparse_share": 0.02})
     assert np.allclose(acc13 / (n * reps), cell0.truth_p, rtol=0.10, atol=0.002)
 
 
 def test_composition_axis_frozen_shares_and_truth_h():
-    """真值组合轴（adjudication §3「真值组合 ≥6 组」，P0-3 落库）：
-    各组合份额和恒为 1；truth_composition 落库即所写；truth_h = f·N；
-    主臂采样均值方向与组合谱一致（粗粒度）；未知组合名必须拒绝。"""
+    """Truth composition axis (adjudication §3 "truth compositions ≥6 groups", P0-3 landed):
+    the shares of each composition always sum to 1; truth_composition lands as written; truth_h = f·N;
+    the main-arm sampled-mean direction agrees with the composition spectrum (coarse); unknown composition names must be rejected."""
     from g0.grid import COMPOSITIONS
     for name, shares in COMPOSITIONS.items():
         assert abs(sum(shares.values()) - 1.0) < 1e-12, name
     comp = sim.truth_composition("main", {"composition": "mmr"})
     assert comp == dict(COMPOSITIONS["mmr"])
-    # 默认 = master（F3 冻结组成）
+    # default = master (F3 frozen composition)
     assert sim.truth_composition("main", {}) == dict(COMPOSITIONS["master"])
     cell = _sample("main", 1000, 0, seeds.derive_seed("comp", 1000, 0),
                    {"composition": "mmr"})
     assert cell.truth_h == {k: v * 1000 for k, v in COMPOSITIONS["mmr"].items()}
     assert cell.realized_total == 1000
-    # 采样均值方向：mmr 组合的生成谱 = Σ f_k·S_k（20 reps 粗校验）
+    # Sampled-mean direction: the mmr composition's generative spectrum = Σ f_k·S_k (20 reps, coarse check)
     acc = np.zeros(96)
     for rep in range(20):
         c = _sample("main", 2000, rep, seeds.derive_seed("comp", 2000, rep),

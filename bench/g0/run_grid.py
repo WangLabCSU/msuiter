@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""G0 网格编排器：生成 → adapter → 解析区间 → coverage → 判定 → 结果落盘。
+"""G0 grid orchestrator: generate → adapter → parse intervals → coverage → judgment → land results.
 
-用法（本 harness 的三种入口）：
+Usage (the three entry points of this harness):
   python3 run_grid.py --profile smoke --adapter mock --provider synthetic
   python3 run_grid.py --profile primary --adapter docker --provider cosmic-file --dry-run
   python3 run_grid.py --profile primary --adapter docker --provider cosmic-file \
       --tools sigfit,stl [--with-lrt-diagnostic]
 
-注意：`--profile primary/degraded + 真实 adapter` 是冻结协议的**正式 G0 执行**，
-须等 harness 审核通过、F5 执行环境落实后由作者开跑；smoke 档只验证管线自身。
+Note: `--profile primary/degraded + the real adapter` is the FORMAL G0 execution of the frozen
+protocol; the author may start it only after harness review passes and the F5 run environment lands; the smoke profile verifies the pipeline itself only.
 
-结果 → results/（入 git）：Seeds.txt、coverage_*.csv、judgment_*.md、timings_*.csv。
-重中间产物 → cache/（gitignored）：counts、truth、cell 输入/输出。
+Results → results/ (in git): Seeds.txt, coverage_*.csv, judgment_*.md, timings_*.csv.
+Heavy intermediates → cache/ (gitignored): counts, truth, cell inputs/outputs.
 """
 
 from __future__ import annotations
@@ -42,22 +42,22 @@ TOOL_RUNNER = {"sigfit": "run_sigfit.R", "stl": "run_stl.R"}
 
 def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
                      cat_mount: str | None = None) -> list[str]:
-    """容器 adapter 的 docker run 命令装配（adapter_protocol.md 契约）。
+    """Docker run command assembly for the container adapters (the adapter_protocol.md contract).
 
-    用户目录模式（cat_mount）：cell 输入目录与目录原文件各挂一个 ro
-    挂载，两者缺一不可（2026-10-07 sigfit FATAL 根因：cat_bind 组装后
-    从未进 cmd）。目录文件直挂 rootfs 独立路径 /work/catalog.csv——
-    叠挂在 cell 目录 bind 之内（/work/in/catalog.csv）在 Docker Desktop
-    virtiofs 驱动下 init 即失败（runc: error mounting … to rootfs，
-    smoke 全灭复现于 2026-10-07）。generated/mock 模式的 catalog.csv
-    已复制进 in/，单一挂载即可。
-    挂载源一律 resolve 为绝对路径：docker 把相对 -v 源当命名卷
-    （"invalid characters for a local volume name"，同日二根因）。
+    User-catalog mode (cat_mount): the cell input dir and the catalog original file each get
+    their own ro mount; neither may be missing (2026-10-07 sigfit FATAL root cause: cat_bind was
+    assembled but never made it into cmd). The catalog file mounts straight at a standalone
+    rootfs path /work/catalog.csv — stacking it inside the cell-dir bind (/work/in/catalog.csv)
+    fails at init under the Docker Desktop virtiofs driver (runc: error mounting … to rootfs;
+    the full-smoke-wipeout repro of 2026-10-07). In generated/mock mode catalog.csv is already
+    copied into in/, so a single mount suffices.
+    Mount sources are always resolved to absolute paths: docker treats a relative -v source as
+    a named volume ("invalid characters for a local volume name", the same day's second root cause).
     """
     cmd = ["docker", "run", "--rm"]
-    # 线程帽（2026-10-07 degraded 开台实诊）：cmdstanr 4 链独立进程 × 链内
-    # BLAS/OpenMP 默认全核线程 × 8 分片并行 = 数百线程争 10 核，冷机 20s 的
-    # cell 被拉爆至 15min+。采样语义零改动（链内本无并行语义），纯执行层封顶。
+    # Thread caps (2026-10-07 degraded live diagnosis at the bench): cmdstanr's 4 chains are independent
+    # processes × in-chain BLAS/OpenMP default all-core threads × 8 parallel shards = hundreds of
+    # threads contending for 10 cores; the cold-machine 20s cell got stretched to 15min+. Sampling
     for cap in ("OMP_NUM_THREADS", "OMP_THREAD_LIMIT",
                 "STAN_OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS"):
         cmd += ["-e", f"{cap}=1"]
@@ -76,8 +76,8 @@ def build_docker_cmd(ind: Path, outd: Path, image: str, runner: str,
 
 
 def git_sha() -> str:
-    """运行时捕获仓库 commit SHA（P2d：manifest 可溯源纪律）；
-    非 git 环境/无 git 可执行文件时如实记 unknown。"""
+    """Runtime capture of the repo commit SHA (P2d: manifest traceability discipline);
+    honestly records unknown outside a git checkout or without a git executable."""
     try:
         out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(HERE),
                              capture_output=True, text=True, check=True)
@@ -95,22 +95,22 @@ def parse_args(argv=None):
                     choices=["synthetic", "cosmic-file"])
     ap.add_argument("--tools", default="sigfit,stl")
     ap.add_argument("--arms", default=None,
-                    help="逗号分隔的臂过滤（默认全部：main + 组合轴 comp_* "
-                         "+ 敏感性臂 nb,clock,sparse）")
+                    help="comma-separated arm filter (default: all — main + composition axis comp_* "
+                         "+ sensitivity arms nb,clock,sparse)")
     ap.add_argument("--reps", type=int, default=None,
-                    help="覆盖重复数（gray 重判用 400；否则用 profile 默认）")
+                    help="override the repetition count (gray re-judication uses 400; otherwise the profile default)")
     ap.add_argument("--grid", default=None, choices=["primary", "degraded"],
-                    help="覆盖全网格臂的网格（默认用 profile 默认）")
+                    help="override the grid for the full-grid arms (default: the profile default)")
     ap.add_argument("--provider-seed", type=int, default=0,
-                    help="synthetic provider 的种子（cosmic-file 忽略）")
+                    help="seed of the synthetic provider (ignored by cosmic-file)")
     ap.add_argument("--coverage-scale", type=float, default=1.0,
-                    help="mock 测试钩子：区间宽度缩放（默认 1.0）")
+                    help="mock test hook: interval-width scaling (default 1.0)")
     ap.add_argument("--with-lrt-diagnostic", action="store_true",
-                    help="NB 臂追加自有 χ²₁ presence LRT 经验 size/power 报告列（P3）")
+                    help="NB arm: append the own χ²₁ presence LRT empirical size/power report column (P3)")
     ap.add_argument("--dry-run", action="store_true",
-                    help="只落盘 Seeds.txt + counts/truth（不调 adapter、不出覆盖率）")
+                    help="land only Seeds.txt + counts/truth (no adapter call, no coverage output)")
     ap.add_argument("--force-rerun", action="store_true",
-                    help="忽略 cache 中已有产出，强制重跑全部 cell")
+                    help="ignore existing outputs in cache; force a full re-run of every cell")
     ap.add_argument("--outdir", default=str(HERE / "results"))
     ap.add_argument("--cachedir", default=str(HERE / "cache"))
     return ap.parse_args(argv)
@@ -141,16 +141,16 @@ def write_catalog_csv(path: Path, labels, names, W):
 
 
 def build_catalog_reference(args, provider, cachedir: Path):
-    """目录来源：synthetic → 生成 catalog.csv；cosmic-file → 用户原文件
-    （G0_CATALOG_PATH 优先；只做原样引用/复制，绝不改写、绝不入库）。"""
+    """Catalog source: synthetic → generate catalog.csv; cosmic-file → the user's original file
+    (G0_CATALOG_PATH takes precedence; referenced/copied verbatim only — never rewritten, never committed)."""
     labels = provider.channel_labels
     user_catalog = os.environ.get("G0_CATALOG_PATH")
     if args.provider == "cosmic-file":
         src = Path(user_catalog) if user_catalog else None
         if src is None or not src.exists():
             raise SystemExit(
-                "cosmic-file provider 需要 G0_CATALOG_PATH 指向用户自备的拟合目录 CSV"
-                "（F3 = COSMIC v3.6 SBS96 GRCh37 全 101 签名；数据获取与许可是用户动作）")
+                "the cosmic-file provider needs G0_CATALOG_PATH pointing at the user's own fit-catalog CSV"
+                "(F3 = COSMIC v3.6 SBS96 GRCh37, all 101 signatures; data acquisition and licensing are a user action)")
         return {"kind": "file", "path": src.resolve()}
     names, W = provider.catalog_matrix()
     path = cachedir / "catalog__synthetic.csv"
@@ -159,7 +159,7 @@ def build_catalog_reference(args, provider, cachedir: Path):
 
 
 def stage_generation(args, provider, arms, cachedir: Path):
-    """生成 counts 与 truth，落盘 cache；返回 (cell_keys, per-cell truths)。"""
+    """Generate counts and truth, land them in cache; return (cell_keys, per-cell truths)."""
     labels = provider.channel_labels
     cells = []
     for arm in arms:
@@ -189,10 +189,10 @@ def stage_generation(args, provider, arms, cachedir: Path):
 
 
 def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
-    """逐 (tool, arm, N) 调 adapter；返回 timings 与失败清单。
+    """Call the adapter per (tool, arm, N); return timings and the failure list.
 
-    cache 一致性：每个 cell 的 in/ 目录记 counts 内容 sha256；重跑时若
-    数据/参数变化则整体重建（防止陈旧中间产物静默污染覆盖率）。
+    Cache consistency: each cell's in/ dir records the counts content sha256; on a re-run, if
+    the data/params changed the cell is rebuilt wholesale (so stale intermediates cannot silently pollute coverage).
     """
     timings, failures = [], []
     for tool in tools:
@@ -200,21 +200,21 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
             stamp = f"{tool}__{arm.name}__N{n}"
             cell_dir = cachedir / "cells" / stamp
             ind, outd = cell_dir / "in", cell_dir / "out"
-            # 输入装配（总是重写 counts；hash 变了才重建 cell 目录其余部分）
+            # Input assembly (always rewrite counts; rebuild the rest of the cell dir only when the hash changed)
             counts_text = counts_path.read_text(encoding="utf-8")
             params = {"tool": tool, "seed": seeds.tool_seed(tool, arm.name, n),
-                      "notes": "Tier-1 默认参数照用（协议 §2.3）"}
+                      "notes": "Tier-1 default parameters as-is (protocol §2.3)"}
             if tool != "sigfit":
-                params["nboot"] = 200                       # 冻结值
+                params["nboot"] = 200                       # frozen value
             if args.adapter == "mock":
                 params["coverage_scale"] = args.coverage_scale
             sample_seeds = {sample_id(arm.name, n, r):
                             seeds.tool_seed(tool, arm.name, n, r)
                             for r in range(arm.reps)}
             params["sample_seeds"] = sample_seeds
-            # data_hash 覆盖 counts + 臂参数 + 重复数 + 工具参数（含种子）：
-            # 种子/参数漂移必须使陈旧 cell 输出失效（2026-10-07 陈旧缓存根因：
-            # 旧 hash 不含工具参数，换 provider 后仍命中 synthetic 时代旧区间）
+            # data_hash covers counts + arm params + repetition count + tool params (seeds incl.):
+            # seed/param drift must invalidate stale cell outputs (2026-10-07 stale-cache root cause:
+            # the old hash omitted the tool params, so after a provider switch it still hit synthetic-era intervals)
             data_hash = hashlib.sha256(
                 (counts_text + json.dumps(arm.params, sort_keys=True)
                  + str(arm.reps)
@@ -228,7 +228,7 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
             dest_counts.write_text(counts_text, encoding="utf-8")
             (ind / "params.json").write_text(json.dumps(params, indent=1),
                                              encoding="utf-8")
-            # 目录装配：mock/生成目录复制；docker + 用户文件 → 单文件只读挂载
+            # Catalog assembly: mock/generated catalogs get copied; docker + user file → single-file read-only mount
             cat_mount = None
             if catalog_ref["kind"] == "generated" or args.adapter == "mock":
                 dest_cat = ind / "catalog.csv"
@@ -237,12 +237,12 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
                         Path(catalog_ref["path"]).read_text(encoding="utf-8"),
                         encoding="utf-8")
             else:
-                cat_mount = catalog_ref["path"]   # 用户原文件原样只读挂载
+                cat_mount = catalog_ref["path"]   # the user's original file mounted verbatim read-only
 
             (ind / ".data_hash").write_text(data_hash, encoding="utf-8")
 
-            # 复跑守卫：数据/参数未变且已有产出时跳过（docker 档可断点续跑）；
-            # --force-rerun 强制全量重跑。
+            # Re-run guard: skip when data/params are unchanged and outputs exist (the docker profile can resume
+            # from a breakpoint); --force-rerun forces a full re-run.
             if (not args.force_rerun
                     and (outd / "intervals.csv").exists()
                     and (outd / "errors.log").exists()):
@@ -273,7 +273,7 @@ def stage_adapter(args, tools, cells, catalog_ref, cachedir: Path):
 
 
 def stage_parse(cells, tools, cachedir: Path):
-    """解析各 cell 的 intervals.csv → IntervalRecord 长表。"""
+    """Parse each cell's intervals.csv → the IntervalRecord long table."""
     records = []
     for arm, n, _, _ in cells:
         for tool in tools:
@@ -302,7 +302,7 @@ def stage_parse(cells, tools, cachedir: Path):
 
 
 def stage_coverage(records, cells, layer_of):
-    """逐 cell 覆盖率（主 estimand=absolute；secondary estimand 单独标记）。"""
+    """Per-cell coverage (main estimand=absolute; secondary estimands flagged separately)."""
     tables = {}
     for estimand in ("absolute", "raw", "fraction"):
         sub = [r for r in records if r.estimand == estimand]
@@ -310,7 +310,7 @@ def stage_coverage(records, cells, layer_of):
             continue
         cc = []
         for arm, n, _, truth_h in cells:
-            truth_by_sig = dict(truth_h)        # {签名: 真值绝对 exposure}
+            truth_by_sig = dict(truth_h)        # {signature: truth absolute exposure}
             cc += cov.cell_coverage([r for r in sub if r.arm == arm.name and r.n == n],
                                     truth_by_sig, layer_of)
         tables[estimand] = cc
@@ -334,12 +334,12 @@ def write_coverage_csv(path: Path, tables):
 
 
 def stage_lrt_diagnostic(provider, arms, cachedir: Path, outdir: Path):
-    """P3 增补列：NB 臂上自有 χ²₁ presence LRT 的经验 size / power。
+    """P3 supplemental column: empirical size / power of the own χ²₁ presence LRT on the NB arm.
 
-    与 G0 共用种子数据；NB 语义（size=8）与 Poisson 语义（size=None）
-    双列对照——后者在 NB 真值下的 size 膨胀正是要测的量。
-    H0 集 = provider 的 designated 缺席槽（ABS*，与真值无构造性共线），
-    不把组合轴扩展槽混入（它们与真值可能近重复，会污染 size 解读）。
+    Shares the G0 seed data; the NB semantics (size=8) and the Poisson semantics (size=None)
+    run as twin columns — the latter's size inflation under NB truth is exactly the quantity to measure.
+    The H0 set = the provider's designated absent slots (ABS*, no constructive collinearity with the truth),
+    and the composition-axis extension slots are kept out (they may be near-duplicates of the truth and would pollute the size reading).
     """
     from g0 import lrt
     nb_arms = [a for a in arms if a.name == "nb"]
@@ -381,14 +381,14 @@ def main(argv=None) -> int:
     tools = [t.strip() for t in args.tools.split(",") if t.strip()]
     for t in tools:
         if t not in ("sigfit", "stl"):
-            raise SystemExit(f"unknown tool: {t} (Tier-1 = sigfit,stl; F2 冻结)")
+            raise SystemExit(f"unknown tool: {t} (Tier-1 = sigfit,stl; F2 frozen)")
 
     outdir, cachedir = Path(args.outdir), Path(args.cachedir)
     outdir.mkdir(parents=True, exist_ok=True)
     for sub in ("counts", "truth", "cells"):
         (cachedir / sub).mkdir(parents=True, exist_ok=True)
 
-    # 1) 臂与种子
+    # 1) Arms and seeds
     arms = grid.arms_for_profile(args.profile)
     if args.arms:
         keep = set(args.arms.split(","))
@@ -411,18 +411,18 @@ def main(argv=None) -> int:
                                tool_names=tools, header_note=note)
     print(f"[seeds] {len(specs)} cells -> {outdir / 'Seeds.txt'}")
 
-    # 2) provider 与目录
+    # 2) Provider and catalog
     provider = provider_by_name(args.provider, seed=args.provider_seed)
     catalog_ref = build_catalog_reference(args, provider, cachedir)
     print(f"[provider] {args.provider}; catalog={catalog_ref['path']}")
 
-    # 3) 生成
+    # 3) Generation
     t0 = time.time()
     cells = stage_generation(args, provider, arms, cachedir)
     print(f"[sim] {len(cells)} (arm,N) cells x reps -> cache/ "
           f"({time.time() - t0:.1f}s)")
     if args.dry_run:
-        print("[dry-run] seeds + counts + truth 已落盘；未调 adapter。")
+        print("[dry-run] seeds + counts + truth landed; adapter not called.")
         return 0
 
     # 4) adapter
@@ -439,10 +439,10 @@ def main(argv=None) -> int:
     if failures:
         print(f"[adapter] FAILED cells: {failures[:5]}{'...' if len(failures) > 5 else ''}")
 
-    # 5) 解析 + 覆盖率 + 判定
+    # 5) Parse + coverage + judgment
     records = stage_parse(cells, tools, cachedir)
     if not records:
-        print("[coverage] no intervals parsed — adapter 未产出（见 timings）")
+        print("[coverage] no intervals parsed — adapter produced nothing (see timings)")
         return 1
     tables = stage_coverage(records, cells, sim.layer_of)
     stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -450,42 +450,42 @@ def main(argv=None) -> int:
     write_coverage_csv(cov_path, tables)
 
     primary = tables.get("absolute", [])
-    # P0-2（冻结增补条款 b）：敏感性臂（nb/clock/sparse）只细化不推翻判定——
-    # 判定路径只吃 judge=True 的 main 模型臂（主多项 + 冻结真值组合轴
-    # comp_*，adjudication §PI 已裁决 3 场景升级）；敏感性臂仅出报告列。
+    # P0-2 (frozen supplemental clause b): the sensitivity arms (nb/clock/sparse) refine but never overturn the verdict —
+    # the judgment path consumes only the judge=True main-model arms (the main multinomial + the frozen
+    # truth composition axis comp_*, adjudication §PI scenario-3 upgrade already ruled); sensitivity arms are report-only.
     judge_arms = {a.name for a in arms if a.judge}
     sens_arms = sorted({a.name for a in arms if not a.judge})
     main_cells = [c for c in primary if c.arm in judge_arms]
     judgment = cov.judge(primary, tier1_tools=tuple(tools), judge_arms=judge_arms)
     jd_path = outdir / f"judgment_{args.profile}_{stamp}.md"
     md = [
-        f"# G0 判定摘要 — profile={args.profile}, adapter={args.adapter}, provider={args.provider}",
+        f"# G0 judgment summary — profile={args.profile}, adapter={args.adapter}, provider={args.provider}",
         f"",
-        f"- 工具（F2 冻结）: {', '.join(tools)}",
-        f"- 判定输入 cells: {len(main_cells)}（estimand=absolute 主 estimand；"
-        f"arm ∈ {sorted(judge_arms)}）",
-        f"- 敏感性臂（不进判定，仅报告列，冻结增补条款 b）: {sens_arms}",
+        f"- Tools (F2 frozen): {', '.join(tools)}",
+        f"- Judgment input cells: {len(main_cells)} (estimand=absolute main estimand; "
+        f"arm ∈ {sorted(judge_arms)})",
+        f"- Sensitivity arms (not judged, report column only; frozen supplemental clause b): {sens_arms}",
         f"- commit: {git_sha()}",
-        f"- 重复数: {arms[0].reps}" + ("（DEGRADED 档，须记入 memo）"
+        f"- Repetitions: {arms[0].reps}" + (" (DEGRADED profile; must be recorded in the memo)"
                                        if args.profile == "degraded" else ""),
         "",
         "```",
         judgment.summary(),
         "```",
         "",
-        "次要 estimand（不进判定）: "
+        "secondary estimands (not judged): "
         + "; ".join(f"{k} ({len(v)} cells)" for k, v in tables.items() if k != "absolute"),
         "",
-        "注意: 本文件为 harness 输出。正式 G0 判定仅可出自冻结协议"
-        "（docs/devlog/2026-09-28-G0-pi-adjudication.md §PI 已裁决 5）"
-        "在真实 adapter（docker）+ cosmic-file provider 下的 primary/degraded 运行；"
-        "smoke/mock 结果只证明管线连通。",
+        "Note: this file is harness output. Formal G0 judgments may issue only from the frozen protocol"
+        "(docs/devlog/2026-09-28-G0-pi-adjudication.md §PI ruling 5)"
+        "under the real adapter (docker) + the cosmic-file provider, in a primary/degraded run;"
+        "smoke/mock results prove only pipeline connectivity.",
     ]
     jd_path.write_text("\n".join(md), encoding="utf-8")
     print(f"[coverage] -> {cov_path}")
     print(f"[judgment] verdict={judgment.verdict} -> {jd_path}")
 
-    # 6) P3 诊断列（可选）
+    # 6) P3 diagnostic column (optional)
     if args.with_lrt_diagnostic:
         rows = stage_lrt_diagnostic(provider, arms, cachedir, outdir)
         if rows:
