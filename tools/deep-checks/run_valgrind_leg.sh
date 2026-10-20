@@ -53,27 +53,43 @@ probe_valgrind() {
   note "$(valgrind --version | head -1) accepted; wall-clock budget ${valgrind_budget_s}s per invocation"
 }
 
-# The interpreter's known-noise suppressions ship with R; without them a
-# valgrind-R run drowns the report census, and a drowns-out census gates
-# nothing.
-resolve_suppressions() {
+# Suppression precedence: env override > vendored reviewed file > opportunistic
+# R-installed copies > none. R ships no valgrind.supp of its own -- falsified
+# 2026-10-21 against the R 4.6.1 source tarball (full listing, zero hits);
+# distro packages maintain their own, and ours is the reviewed artifact
+# tools/deep-checks/valgrind.supp. With none in force the ERROR SUMMARY census
+# must measure zero unadorned -- suppressions can never soften that gate, and
+# the canary pair proves memcheck stays live under whatever file is in force.
+resolve_suppressions() { # sets $suppressions ("" allowed) and $suppressions_kind
+  suppressions=""; suppressions_kind=""
   cand=${VALGRIND_SUPPRESSIONS:-}
-  if [ -z "$cand" ]; then
+  if [ -n "$cand" ]; then
+    [ -f "$cand" ] || die "VALGRIND_SUPPRESSIONS names a missing file: $cand"
+    suppressions=$cand
+    suppressions_kind=env-override
+  elif [ -f "$here/valgrind.supp" ]; then
+    suppressions=$here/valgrind.supp
+    suppressions_kind=vendored-reviewed
+  else
     home=$(Rscript -e 'cat(R.home())')
-    for cand in "$home/etc/valgrind.supp" "$home/../etc/valgrind.supp"; do
-      [ -f "$cand" ] && break
+    for probe in "$home/etc/valgrind.supp" "$home/../etc/valgrind.supp"; do
+      if [ -f "$probe" ]; then
+        suppressions=$probe
+        suppressions_kind=R-installed
+        break
+      fi
     done
+    [ -n "$suppressions_kind" ] || suppressions_kind=none-measured-clean
   fi
-  [ -f "$cand" ] || die "no R valgrind.supp found (set VALGRIND_SUPPRESSIONS to one)"
-  printf '%s\n' "$cand"
 }
 
 run_valgrind() { # run_valgrind <log> <cmd...> -> sets vg_rc (0 | vg_error_rc ok)
   log=$1; shift
+  [ -n "$suppressions" ] && set -- --suppressions="$suppressions" "$@"
   if timeout --kill-after=60 "$valgrind_budget_s" \
       valgrind --tool=memcheck --leak-check=full --track-origins=yes \
         --error-exitcode="$vg_error_rc" --num-callers=20 \
-        --suppressions="$suppressions" "$@" > "$log" 2>&1
+        "$@" > "$log" 2>&1
   then vg_rc=0; else vg_rc=$?; fi
   case "$vg_rc" in
     0 | "$vg_error_rc") ;;
@@ -199,8 +215,8 @@ is not discriminating (log $log_dir/canary-clean.log)"
 
 mkdir -p "$log_dir"
 probe_valgrind
-suppressions=$(resolve_suppressions)
-note "using R suppressions $suppressions"
+resolve_suppressions
+note "suppressations in force: $suppressions_kind${suppressions:+ (file $suppressions)}"
 
 case "$mode" in
   selftest)

@@ -1,0 +1,17 @@
+# msuiter valgrind-leg suppressions -- reviewed artifact, authored in-tree.
+#
+# R ships no valgrind.supp of its own: falsified 2026-10-21 against the
+# R 4.6.1 source tarball (full listing, zero valgrind hits). Distro packages
+# maintain their own; this file is ours.
+#
+# Opening state: zero suppressions -- every memcheck report is treated as
+# real. An entry is added only by adjudication of an observed report, each
+# citing its evidence (log path + one-line reason). The canary pair in
+# run_valgrind_leg.sh fails the leg if this file ever deadens detection.
+#
+# Entry format follows the memcheck suppressions grammar:
+#   {
+#      name=<label>
+#      Memcheck:<kind-of-error>
+#      ...frame fun/call lines...
+#   }
