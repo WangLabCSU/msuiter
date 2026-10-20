@@ -230,7 +230,7 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
 
     The "monotone worsening" operationalized definition (documented): for each (tool, signature), the N≥300 grid points'
     ascending ĉ series' every adjacent difference ≤ 0 with at least one strictly < 0.
-    Only the main-table cells with estimand='absolute' are accepted (guaranteed upstream)."""
+    Only the main-table cells with estimand='absolute' are accepted (guaranteed upstream).
     """
     j = Judgment(verdict="GRAY")
     pool = [c for c in cells if c.n_reps > 0]
@@ -278,5 +278,5 @@ def judge(cells: list, tier1_tools=("sigfit", "stl"),
     j.borderline_cells = [f"{c.tool}|{c.arm}|N={c.n}|{c.signature}"
                           for c in pool if c.tool in t1 and c.coverage < kill_lower]
     j.notes.append("gray: the borderline cells need their reps doubled to 400 and re-judged (the protocol §2.4); "
-                   "still gray → the author's adjudication, defaulting to B (the risk asymmetry)."))
+                   "still gray → the author's adjudication, defaulting to B (the risk asymmetry).")
     return j

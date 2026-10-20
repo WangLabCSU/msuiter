@@ -130,7 +130,7 @@ def presence_lrt_scan(counts_batch: np.ndarray, W: np.ndarray,
     the j-th column). Returns the per-j dict: stat, p_boundary, p_naive_chi2_1, reject.
 
     Note: stat = 2(ll_full − ll_reduced), numerically clipped to ≥0 (the EM convergence error
-    may produce tiny negative values)."""
+    may produce tiny negative values).
     """
     results = []
     x = np.atleast_2d(counts_batch)
