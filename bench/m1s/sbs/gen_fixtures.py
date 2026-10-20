@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 # =============================================================================
-# bench/m1s/sbs/gen_fixtures.py · M1s 验收门 SBS 目录生成 bench 的确定性夹具
-# （docs/ARCHITECTURE.md §8 预算行：目录生成 SBS96（10⁶ 突变）≥50× SPMG 且
-#   <5s 单核。CI 只放 sanity bound，本 bench 不进 CI。）
+# bench/m1s/sbs/gen_fixtures.py · M1s acceptance-gate SBS catalog generation bench deterministic fixtures
+# (docs/ARCHITECTURE.md §8 budget row: catalog generation SBS96(10⁶ mutations)≥50× SPMG and
+#   <5s single-core. CI only ships  sanity bound, this bench does not enter CI ).
 #
-# 生成物（全部落在 cache/，gitignore；seeds 记录在案，重跑逐字节可复现）：
-#   cache/genome.2bit          我方 ms_tally 的合成参考（2 染色体 × 2.5Mb，
-#                              src/rust/catalog/tests/genome/fixture.rs 夹具
-#                              生成器的放大版：chr1 TCAG…、chr2 (i*7+3) 模式，
-#                              带 N blocks；2bit 打包 T=0 C=1 A=2 G=3，首碱基
-#                              在高位，N 块下打包位写 0——与 fixture.rs 一致）
-#   cache/fasta/{1,2}.fasta.gz SPMG 自定义基因组安装输入（文件名=染色体名，
-#                              save_chrom_strings 的命名约定；gzip mtime=0）
-#   cache/transcripts.txt      SPMG install 必需的转录本文件（每染色体一条
-#                              全长 +1 链转录本；SBS96 与转录无关，仅满足
-#                              install_chromosomes_tsb 的非空校验）
-#   cache/vcf/{S1,S2}.vcf      SPMG 输入：每样本一个 VCF（SPMG 以文件名识别
-#                              样本），坐标排序，共 10⁶ SNV
-#   cache/variants.csv         我方输入：chrom,pos,ref,alt,sample（1-based）
+# generated artifacts (all land under cache/,gitignore;seeds are recorded in the manifest; reruns are byte-reproducible):
+#   cache/genome.2bit          our ms_tally synthetic reference (2 chromosomes × 2.5Mb,
+#                              src/rust/catalog/tests/genome/fixture.rs of the
+#                              enlarged version of the generator:chr1 TCAG…,chr2 (i*7+3) pattern,
+#                              carries N blocks;2bit packing T=0 C=1 A=2 G=3, first base
+#                              is in the high bits,N blocks write 0——agrees with fixture.rs )
+#   cache/fasta/{1,2}.fasta.gz SPMG custom-genome install input (file name=chromosome name,
+#                              save_chrom_strings naming convention;gzip mtime=0)
+#   cache/transcripts.txt      SPMG install required transcript records (one
+#                              full-length +1 +1 strand transcripts;SBS96 is independent of transcription; it only requires
+#                              install_chromosomes_tsb nonempty validation)
+#   cache/vcf/{S1,S2}.vcf      SPMG input: one per sample VCF(SPMG recognizes samples by file name
+#                              samples); coordinate-sorted; total 10⁶ SNV
+#   cache/variants.csv         our input:chrom,pos,ref,alt,sample(1-based)
 #   cache/sanity_vcf/{S1,S2}.vcf + cache/sanity.csv
-#                              正确性对拍子集（100 变异：92 个间隔 ≥2bp 的
-#                              SNV + 2 对同样本相邻 SNV（→DBS，双侧排除出
-#                              SBS96）+ 1 对跨样本相邻 SNV（双侧均保持 SBS，
-#                              SPMG dinuc_sub==1 为单样本判据）+ 2 个贴近
-#                              染色体边缘的极端合法位置）
+#                              correctness cross-check subset (100 mutations:92 at least ≥2bp apart:
+#                              SNV + 2 pairs of same-sample adjacent SNV(→DBS, excluded from both sides into the
+#                              SBS96)+ 1 cross-sample adjacent pair SNV(both sides keep SBS,
+#                              SPMG dinuc_sub==1 is the single-sample criterion)+ 2 items close to
+#                              the chromosome edges).
 #
-# SPMG 与我方消费同一序列（pattern 函数逐位一致 ⇒ REF 与参考必然一致）。
+# SPMG and ours consume the same sequence (thepattern function agrees bit by bit ⇒ REF necessarily match the reference).
 # =============================================================================
 import gzip
 import time
@@ -38,13 +38,13 @@ CACHE = HERE / "cache"
 
 CHROM_LEN = 2_500_000
 N_VAR = 1_000_000
-SEED = 20260928  # numpy PCG64，记录在案
-BASES = np.frombuffer(b"TCAG", dtype=np.uint8)  # fixture.rs 的字母表（ASCII）
-# 2bit 打包码（UCSC）：T=0 C=1 A=2 G=3 —— BASES 的下标即打包码
+SEED = 20260928  # numpy PCG64; recorded in the manifest
+BASES = np.frombuffer(b"TCAG", dtype=np.uint8)  # fixture.rs alphabet table (ASCII)
+# 2bit packing codes (UCSC):T=0 C=1 A=2 G=3 —— BASES index is the packing code
 CODE = np.full(256, 255, dtype=np.uint8)
 for _i, _letter in enumerate(BASES):
     CODE[_letter] = _i
-CHROMS = ["1", "2"]  # SPMG 侧染色体名（= FASTA 文件名词干）；我方 CSV 用 chr1/chr2
+CHROMS = ["1", "2"]  # SPMG side chromosome names (= FASTA file-name stem); our CSV use chr1/chr2
 
 N_BLOCKS = {
     "1": [(1_000, 10), (1_250_000, 10), (2_499_000, 10)],
@@ -53,7 +53,7 @@ N_BLOCKS = {
 
 
 def pattern(chrom: str) -> np.ndarray:
-    """与 fixture.rs specs() 同族的确定性模式（放大版）。"""
+    """the deterministic pattern of the same family as fixture.rs specs() the enlarged variant)."""
     i = np.arange(CHROM_LEN, dtype=np.int64)
     if chrom == "1":
         return BASES[i % 4]
@@ -68,7 +68,7 @@ def seq_with_n(chrom: str) -> np.ndarray:
 
 
 def in_n_zone(pos0: np.ndarray, chrom: str) -> np.ndarray:
-    """±2bp 窗口触及 N 块的位置（双侧都会 skip，bench 夹具直接避开）。"""
+    """±2bp positions whose window touches N the blocks (both sides will skip, thebench fixtures dodge them directly)."""
     bad = np.zeros(pos0.shape, dtype=bool)
     for start, length in N_BLOCKS[chrom]:
         bad |= (pos0 >= start - 2) & (pos0 <= start + length + 1)
@@ -76,15 +76,15 @@ def in_n_zone(pos0: np.ndarray, chrom: str) -> np.ndarray:
 
 
 def write_2bit(path: Path) -> None:
-    """UCSC 2bit（LE）：放大版 fixture.rs 布局。染色体名 = chr1/chr2
-    （我方 variants.csv 的精确匹配名；SPMG 的 FASTA 文件名仍为 1/2）。"""
+    """UCSC 2bit(LE): the enlarged fixture.rs layout. The chromosome names = chr1/chr2
+    (our variants.csv exact-match names;SPMG the FASTA file names remain 1/2)"""
     import struct
 
     recs = []
     for chrom in CHROMS:
         seq = pattern(chrom)
         for start, length in N_BLOCKS[chrom]:
-            seq[start:start + length] = 0  # N 块下打包位写 0（fixture.rs 同）
+            seq[start:start + length] = 0  # N block packed bits write 0(fixture.rs as in fixture.rs)
         codes = CODE[seq]
         pad = (-len(codes)) % 4
         codes = np.concatenate([codes, np.zeros(pad, dtype=np.uint8)])
@@ -119,14 +119,14 @@ def write_fasta(path: Path, chrom: str) -> None:
     for i in range(0, len(seq), 60):
         lines.append(seq[i:i + 60].tobytes().decode("ascii"))
     data = ("\n".join(lines) + "\n").encode("ascii")
-    # mtime=0：确定性 gzip（重跑逐字节一致）
+    # mtime=0: deterministic gzip(byte-identical on reruns)
     with open(path, "wb") as raw:
         with gzip.GzipFile(fileobj=raw, mode="wb", mtime=0) as gz:
             gz.write(data)
 
 
 def _alt_for(ref: np.ndarray, rng) -> np.ndarray:
-    """打包码域 +1..+3（mod 4）必为另一碱基，映射回字母。"""
+    """in the packing-code domain +1..+3(mod 4) guaranteed to be another base, mapped back to letters."""
     shift = rng.integers(1, 4, size=ref.shape)
     alt = BASES[(CODE[ref] + shift) % 4]
     assert not np.any(alt == ref), "alt must differ from ref"
@@ -134,7 +134,7 @@ def _alt_for(ref: np.ndarray, rng) -> np.ndarray:
 
 
 def _resample_n_zone_dense(pos0: np.ndarray, chrom: str, rng):
-    """dense 臂：仅避 N ±2 窗的独立重采样（保留自然相邻/重复密度）。"""
+    """dense arm: independent resampling avoiding only the N ±2 window; keeps natural adjacency/duplicate density)."""
     for _ in range(64):
         bad = in_n_zone(pos0, chrom)
         if not bad.any():
@@ -144,8 +144,8 @@ def _resample_n_zone_dense(pos0: np.ndarray, chrom: str, rng):
 
 
 def _resample_n_zone(pos0: np.ndarray, chrom: str, rng):
-    """把 ±2bp 触 N 块的位置在同奇数栅格内重采样：无放回抽签 + 「避 N、避重」
-    过滤，迭代到全净；整体断言唯一性与最小间隔。"""
+    """resample the positions that touch ±2bp the N blocks inside the same odd lattice: draw without replacement +  + avoid N, avoid duplicates;
+    then filter, iterating until fully clean; assert uniqueness and the minimum gap overall."""
     slot_max = (CHROM_LEN - 3 - 3) // 2
 
     def in_n(v: np.ndarray) -> np.ndarray:
@@ -159,7 +159,7 @@ def _resample_n_zone(pos0: np.ndarray, chrom: str, rng):
     else:
         raise RuntimeError("N-zone rejection did not converge")
 
-    # 去重（重采样可能与保留位冲突）：对重复值按批重抽，直到唯一
+    # Dedupe (resampling may collide with kept positions): redraw duplicated values in batches until unique
     for _ in range(64):
         uniq, counts = np.unique(pos0, return_counts=True)
         dups = uniq[counts > 1]
@@ -188,11 +188,11 @@ def _resample_n_zone(pos0: np.ndarray, chrom: str, rng):
 
 
 def sample_variants():
-    """主臂（dbsfree）：10⁶ SNV，同样本同染色体位置最小间隔 2（奇数栅格
-    pos0 = 3 + 2·slot），天然无重复（pos0,sample 唯一）⇒ 双侧记录集逐条
-    对齐、SBS96 逐格可比（SPMG 1.3.6 会整条丢弃完全重复记录、且把 DBS 对
-    成员一并计入 SBS96——见 sanity 臂与 result.md 的 P0 注记）。跨样本相邻
-    仍会发生并被双侧一致判为 SBS（dinuc 判据是单样本的）。"""
+    """Main arm (dbsfree): 10⁶ SNV, same-sample same-chromosome minimum spacing 2(odd lattice
+    pos0 = 3 + 2·slot) and thus naturally duplicate-free (pos0,sample unique)⇒ the two-sided record sets align record by record
+    aligned and SBS96 comparable cell by cell (SPMG 1.3.6SPMG 1.3.6 drops fully duplicate records whole-row and also counts the DBS pair
+    members into SBS96——see the sanity arm and result.md  P0 note). Cross-sample adjacency
+    still happens and both sides consistently judge it as SBS(dinuc the criterion is single-sample)."""
     rng = np.random.default_rng(SEED)
     per_sample_chrom = N_VAR // 4  # 250k
     slot_max = (CHROM_LEN - 3 - 3) // 2
@@ -216,10 +216,10 @@ def sample_variants():
 
 
 def sample_variants_dense():
-    """次臂（dense）：独立均匀采样（自然相邻密度，天然出现 DBS 对与完全
-    重复记录）；按 (chrom,pos0,sample) 去重使两侧记录集一致——SPMG 会丢弃
-    完全重复记录（1.3.6 实测 16,019 条「duplicate single base substitution」），
-    我们整位丢弃更保守。用于全尺度总量对账与速度参考。"""
+    """Secondary arm (dense): independent uniform sampling (natural adjacency density; DBS pairs and fully DBS duplicates
+    duplicate records); dedupe by (chrom,pos0,sample) so the two record sets agree——SPMG drops
+    fully duplicate records (1.3.6 measured1.3.6 occurrences of 16,019 duplicate single base substitution);
+    we drop them wholesale, which is more conservative. Used for full-scale total reconciliation and speed reference."""
     rng = np.random.default_rng(SEED)
     chrom_idx = rng.integers(0, 2, size=N_VAR)
     pos0 = rng.integers(2, CHROM_LEN - 2, size=N_VAR)
@@ -233,7 +233,7 @@ def sample_variants_dense():
         ref[mask] = pattern(chrom)[pos0[mask]]
     alt = _alt_for(ref, rng)
     sample = np.where(np.arange(N_VAR) % 2 == 0, "S1", "S2")
-    # 去重：同 (chrom,pos0,sample) 只保留一条
+    # Dedupe: for the same (chrom,pos0,sample) only one record is kept
     seen = set()
     rows = []
     order = np.argsort(pos0 * 2 + chrom_idx, kind="stable")
@@ -249,7 +249,7 @@ def sample_variants_dense():
 
 
 def sanity_rows():
-    """100 变异对拍子集（构图见文件头注释）。"""
+    """100 mutation cross-check subset (construction see the file-header note)."""
     rng = np.random.default_rng(SEED + 1)
     rows = []
 
@@ -263,7 +263,7 @@ def sanity_rows():
     def zone_clean(chrom, pos0):
         return not in_n_zone(np.array([pos0]), chrom)[0]
 
-    # 92 个间隔 ≥2bp 的常规 SNV（两样本交替、两染色体交替）
+    # 92 regular ≥2bp , SNV(alternating the two samples, alternating the two chromosomes)
     p = 100
     while len(rows) < 92:
         chrom = CHROMS[len(rows) % 2]
@@ -273,16 +273,16 @@ def sanity_rows():
         add(chrom, p, f"S{1 + len(rows) % 2}")
         p += 7 + int(rng.integers(0, 5))
 
-    # 2 对同样本相邻（→ DBS：双侧均排除出 SBS96）
+    # 2 same-sample adjacent pairs (→ DBS: excluded from both sides out of SBS96)
     for chrom, base, sample in (("1", 300_000, "S1"), ("2", 800_000, "S2")):
         add(chrom, base, sample)
         add(chrom, base + 1, sample)
 
-    # 1 对跨样本相邻（双侧均保持 SBS：dinuc 判据是单样本的）
+    # 1 cross-sample adjacent pair (both sides keep SBS:dinuc the criterion is single-sample)
     add("1", 1_500_000, "S1")
     add("1", 1_500_001, "S2")
 
-    # 2 个极端合法位置（0-based 2 与 LEN-3：±2 窗恰好不出界）
+    # 2 extreme legal positions (0-based 2 and LEN-3:±2 window stays exactly in bounds)
     add("2", 2, "S1")
     add("2", CHROM_LEN - 3, "S2")
 
@@ -291,7 +291,7 @@ def sanity_rows():
 
 
 def write_vcf(path: Path, rows, chrom_prefix: bool):
-    rows = sorted(rows, key=lambda r: r[1])  # 坐标排序（SPMG 输入约定）
+    rows = sorted(rows, key=lambda r: r[1])  # coordinate-sorted (SPMG input convention)
     with open(path, "w") as fh:
         fh.write("##fileformat=VCFv4.2\n")
         fh.write("##source=msuiter-m1s-bench synthetic fixtures\n")
@@ -349,8 +349,8 @@ def main():
     )
     print(f"fixtures written to {CACHE} in {time.perf_counter()-t0:.1f}s")
     print(f"  main (dbsfree): {len(rows)} (S1={sum(1 for r in rows if r[4]=='S1')}, "
-          f"S2={sum(1 for r in rows if r[4]=='S2')}; 同样本同染色体最小间隔 2)")
-    print(f"  dense (去重后): {len(drows)}")
+          f"S2={sum(1 for r in rows if r[4]=='S2')}; same-sample same-chromosome minimum spacing 2)")
+    print(f"  dense (after dedupe): {len(drows)}")
     print(f"  sanity: {len(srows)} rows, same-sample adjacent pairs (-> DBS) = {n_dbs_like}")
 
 
