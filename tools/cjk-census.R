@@ -75,6 +75,7 @@ options(warn = 1)
   "docs/ffi-surface.md"                           = "normative",
   "CONTRIBUTING.md"                               = "normative",
   "NEWS.md"                                      = "normative",
+  "README.md"                                    = "normative",
   "docs/research/00-executive-summary.md"         = "normative",
   "docs/research/01-extraction-methods.md"        = "normative",
   "docs/research/02-fitting-inference.md"         = "normative",
@@ -103,7 +104,13 @@ options(warn = 1)
   "docs/release/v0.1-checklist.md"                = "bilingual",
   "bench/m1s/nmf/result.md"                       = "reference",
   "bench/m1s/nnls/result.md"                      = "reference",
-  "bench/m1s/sbs/result.md"                       = "reference"
+  "bench/m1s/sbs/result.md"                       = "reference",
+  # Recorded evidence carries the bilingual-historical stamp at its head;
+  # its CJK originals are frozen bytes, reported never gated.
+  "tools/kl-crosscheck/result.md"                 = "reference",
+  "bench/xval/result.md"                          = "reference",
+  "bench/xval-m2/result.md"                       = "reference",
+  "bench/results/docker_degraded_pi_20261007-212438/judgment_degraded_20261008-013750.md" = "reference"
 )
 
 # Glob enrollment (CJK corpus phase 2, issue #25): the normative R roxygen
@@ -112,13 +119,40 @@ options(warn = 1)
 # hide from the gate by being absent from the explicit roster
 # ([[governance-scan-integrity]]: the instrument covers the corpus).
 .expand_corpus_globs <- function(corpus) {
-  patterns <- c(R = "[.]R$", man = "[.]Rd$")
-  for (dir_ in names(patterns)) {
-    hits <- list.files(file.path(.repo_root, dir_), pattern = patterns[[dir_]],
-                       full.names = FALSE)
-    hits <- hits[!grepl("^helper", hits)]          # testthat helpers are not shipped docs
+  # The enrollment surface (issue #32 governance-integrity pass, phase 2): the
+  # governance instruments themselves, the shipped Rust sources, the testthat
+  # suite, the shipped inst/ and data-raw/ sources, the .github/ project
+  # surface and the bench/ harness code are normative English sources and
+  # must not be able to hide CJK outside the gate's corpus while it governs.
+  # Recorded evidence (result.md / judgment files) joins in the explicit
+  # roster above as `reference`, never here.
+  specs <- list(
+    R       = list(dir = "R",        pattern = "[.]R$"),
+    man     = list(dir = "man",      pattern = "[.]Rd$"),
+    tools   = list(dir = "tools",    pattern = "[.](py|sh|R|md|yml|yaml)$",
+                    # The census carrier embeds its firing positive controls
+                    # (Han/Hiragana literals) BY DESIGN -- see .self_test; the
+                    # instrument is never a scan subject. kl-crosscheck's
+                    # result.md is recorded evidence (explicit reference row).
+                    exclude = "cjk-census[.]R$|kl-crosscheck/result[.]md$"),
+    canary  = list(dir = "tools/deep-checks", pattern = "[.]rs$"),
+    rust    = list(dir = "src/rust", pattern = "[.]rs$",
+                    exclude = "^target/"),              # the cargo build dir
+    tests   = list(dir = "tests",    pattern = "[.]R$"),
+    inst    = list(dir = "inst",     pattern = "[.](R|md|yml|yaml)$"),
+    dataraw = list(dir = "data-raw", pattern = "[.]R$"),
+    github  = list(dir = ".github",  pattern = "[.](yml|yaml|md)$"),
+    bench   = list(dir = "bench",    pattern = "[.](py|sh|R|md)$",
+                    exclude = "^results/")              # recorded campaign trees
+  )
+  for (nm in names(specs)) {
+    sp <- specs[[nm]]
+    hits <- list.files(file.path(.repo_root, sp$dir), pattern = sp$pattern,
+                       full.names = FALSE, recursive = TRUE)
+    hits <- hits[!grepl("^helper", hits)]      # testthat helpers are not shipped docs
+    if (!is.null(sp$exclude)) hits <- hits[!grepl(sp$exclude, hits)]
     for (h in hits) {
-      rel <- paste0(dir_, "/", h)
+      rel <- paste0(sp$dir, "/", h)
       if (!(rel %in% names(corpus))) corpus[[rel]] <- "normative"
     }
   }

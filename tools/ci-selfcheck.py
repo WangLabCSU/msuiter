@@ -32,7 +32,8 @@ import action_pins
 try:
     import yaml
 except ImportError:
-    # P2e 降级行为：PyYAML 不可用时给明确报错与安装提示，而不是 traceback。
+    # P2e degraded-mode behavior: when PyYAML is unavailable, fail with a
+    # clear error naming what to install, rather than surfacing a raw traceback.
     sys.stderr.write(
         "ci-selfcheck: cannot run — PyYAML is not installed.\n"
         "  This script validates workflow YAML with yaml.safe_load().\n"
@@ -130,6 +131,39 @@ def loudness_law_markers():
         return list(LOUDNESS_LAW_MARKERS) + ["tools/deep-checks/run_sanitizer_leg.sh"]
     h = harness.read_text(encoding="utf-8")
     return [m for m in LOUDNESS_LAW_MARKERS if m not in h]
+
+
+# The valgrind counterpart (issue #32, D4): the weekly arm used to re-run the
+# FULL testthat suite under valgrind through R CMD check --use-valgrind --
+# measured 5 h 56 m on a single 'Running testthat.R' before the 360-min
+# platform ceiling killed the job (2026-10-19 and 2026-10-20 cancelled;
+# 2026-10-12 completed at 5 h 40 m 53 s, barely under). The arm's report was
+# a weekly coin-flip AND its conclusion was masked by job-level
+# continue-on-error. The bounded law: a nominated native-sentry roster runs
+# under valgrind with an executed-work census, the ERROR SUMMARY / LEAK
+# SUMMARY totals are required evidence (absence = valgrind never ran = red),
+# the canaries prove the tool is live both ways, and a hard wall-clock budget
+# makes slow-to-death impossible. Pinned by name so gutting any instrument is
+# a guards failure, not a silent weakening.
+VALGRIND_LOUDNESS_MARKERS = (
+    "valgrind_report_census",  # ERROR SUMMARY / LEAK SUMMARY totals are required
+    "census",                  # executed-work census: zero executed work -> red
+    "build_canary",            # reviewed leaky/clean canaries
+    "run_canary",
+    "assert_trip_reported",    # valgrind-wrapped trip MUST be reported
+    "assert_trip_silent",      # unwrapped trip MUST stay silent (discrimination)
+    "assert_clean_silent",     # clean canary under valgrind MUST stay silent
+    "valgrind_budget",         # hard wall-clock budget: slow-to-death impossible
+)
+
+
+def valgrind_loudness_markers():
+    """Return the loudness-law markers missing from the valgrind harness."""
+    harness = REPO / "tools/deep-checks/run_valgrind_leg.sh"
+    if not harness.is_file():
+        return list(VALGRIND_LOUDNESS_MARKERS) + ["tools/deep-checks/run_valgrind_leg.sh"]
+    h = harness.read_text(encoding="utf-8")
+    return [m for m in VALGRIND_LOUDNESS_MARKERS if m not in h]
 
 
 def main():
@@ -291,10 +325,34 @@ def main():
           bool(crons) and re.fullmatch(r"\S+ \S+ \* \* \S+",
                                        crons[0].get("cron", "")) is not None,
           str(crons))
-    check("scheduled: valgrind job, allowed to fail",
-          "valgrind" in sched["jobs"]
-          and sched["jobs"]["valgrind"].get("continue-on-error") is True
-          and "valgrind" in job_script(sched, "valgrind"))
+    # ---- valgrind leg: the loudness-law extension (issue #32, D1 class) ----
+    # Law change (this selfcheck moves WITH the contract it governs): the
+    # retired valgrind job ran `rcmdcheck(..., error_on="never",
+    # --use-valgrind)` -- it could not fail even when valgrind reported real
+    # defects, it raced the 6 h platform ceiling and lost (measured history:
+    # one completed/success at 5 h 40 m 53 s, then cancelled at 6 h 00 m 53 s),
+    # and its job-level continue-on-error: true masked even the cancellation
+    # as a green job. A report-only arm that never demonstrably produced its
+    # report is the D1 vacuous-green class exactly. The arm now runs the
+    # bounded native-sentry leg: nominated roster, REQUIRED ERROR/LEAK
+    # SUMMARY totals, canaries both ways, hard wall-clock budget -- and it is
+    # a HARD gate: no continue-on-error on either heavy leg.
+    vg = sched["jobs"].get("valgrind", {})
+    check("scheduled: valgrind job is a hard gate (no continue-on-error)",
+          bool(vg) and vg.get("continue-on-error") is not True)
+    check("scheduled: valgrind job carries a timeout-minutes budget",
+          isinstance(vg.get("timeout-minutes"), (int, float))
+          and 0 < vg.get("timeout-minutes") <= 120,
+          f"got {vg.get('timeout-minutes')}")
+    vt = job_script(sched, "valgrind")
+    check("scheduled: valgrind step invokes the loudness-law leg harness",
+          "run_valgrind_leg.sh leg" in vt)
+    check("scheduled: the vacuous whole-suite --use-valgrind mode is retired",
+          "--use-valgrind" not in vt)
+    missing_vg = valgrind_loudness_markers()
+    check("valgrind harness exists and enforces the loudness law "
+          "(report census, canary trip/silent gates, wall-clock budget)",
+          not missing_vg, f"missing {missing_vg}")
     sani = sched["jobs"].get("sanitizer", {})
     sani_matrix = sani.get("strategy", {}).get("matrix", {}) or {}
     sani_set = set(sani_matrix.get("sanitizer", []))
@@ -319,6 +377,18 @@ def main():
     check("sanitizer harness exists and enforces the loudness law "
           "(rustc probe, executed-work census, canary trip/clean gates)",
           not missing_markers, f"missing {missing_markers}")
+    # Issue #32: the sanitizer job's continue-on-error:true is retired with
+    # the harness. Pre-#37 archived weekly logs show the pre-harness legs
+    # "passing" in 22 s/12 s (whole jobs, checkout included) -- a masked dead
+    # arm is exactly what the flag let through. The harness now dies loudly
+    # on every vacuous shape, so the mask is gone: green means the harness
+    # said LEG GREEN, never "the step never failed".
+    check("scheduled: sanitizer job is a hard gate (no continue-on-error)",
+          bool(sani) and sani.get("continue-on-error") is not True)
+    check("scheduled: sanitizer job carries a timeout-minutes budget",
+          isinstance(sani.get("timeout-minutes"), (int, float))
+          and 0 < sani.get("timeout-minutes") <= 120,
+          f"got {sani.get('timeout-minutes')}")
 
     # ---- scheduled pkgdown site build (U-M7-04 slice-C, C5) ----------------
     # The per-PR 13-check topology is frozen, so the site render is pinned
