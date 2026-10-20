@@ -47,6 +47,8 @@ esac
 probe_valgrind() {
   command -v valgrind >/dev/null 2>&1 \
     || die "the valgrind binary is missing -- an arm without its tool attests nothing"
+  command -v Rscript >/dev/null 2>&1 \
+    || die "Rscript is missing -- an arm that cannot spawn its subject attests nothing"
   command -v timeout >/dev/null \
     || die "coreutils timeout is missing -- the wall-clock budget cannot be enforced"
   valgrind --version >/dev/null || die "valgrind --version failed"
@@ -83,18 +85,22 @@ resolve_suppressions() { # sets $suppressions ("" allowed) and $suppressions_kin
   fi
 }
 
-run_valgrind() { # run_valgrind <log> <cmd...> -> sets vg_rc (0 | vg_error_rc ok)
+# run_valgrind executes; it adjudicates only the wall-clock budget. Whether
+# the run COUNTS is decided by the report census (tool completion is the
+# census's authority), then by the guest exit code -- in that order, so an
+# incomplete census can never be masked by an exit-code gate firing first.
+run_valgrind() { # run_valgrind <log> <cmd...> -> sets vg_rc (caller adjudicates)
   log=$1; shift
-  [ -n "$suppressions" ] && set -- --suppressions="$suppressions" "$@"
+  if [ -n "$suppressions" ]; then
+    set -- --suppressions="$suppressions" "$@"
+  fi
   if timeout --kill-after=60 "$valgrind_budget_s" \
       valgrind --tool=memcheck --leak-check=full --track-origins=yes \
         --error-exitcode="$vg_error_rc" --num-callers=20 \
         "$@" > "$log" 2>&1
   then vg_rc=0; else vg_rc=$?; fi
   case "$vg_rc" in
-    0 | "$vg_error_rc") ;;
     124 | 137) die "the ${valgrind_budget_s}s wall-clock budget was exceeded by: $*" ;;
-    *) die "valgrind exited rc=$vg_rc under budget: $* (log $log)" ;;
   esac
 }
 
@@ -111,19 +117,35 @@ build_driver() {
   driver=$(mktemp "${TMPDIR:-/tmp}/valgrind-sentry-XXXXXX")
   # Structured per-file attestations give the executed-work census a
   # machine-checkable signal (the counterpart of cargo's "test result: ok").
+  # Load semantics mirror tests/testthat.R's test_check idiom: the leg
+  # consumes the INSTALLED package (load_package="none"), never a pkgload
+  # reload of the source tree; the reporter must be a real exported object.
+  # Both laws are CI-measured lessons (2026-10-20): an unresolvable symbol
+  # CRASHED every file instantly, and auto-loading FAILED the native-bound
+  # tests -- the CRASH lines now carry the verbatim reasons so this never
+  # again needs an artifact download to diagnose.
+  # <!-- census-exempt tokens: 0 --> the superseded CRASH "0 0" placeholder
+  # was structural filler, not a measurement; verdicts ride the reason line.
   cat > "$driver" <<'EOF'
 args <- commandArgs(TRUE)
 files <- strsplit(args[[1]], ";")[[1]]
 library(msuiter)
+cat(sprintf("VG_BOOT R=%s testthat=%s msuiter-lib=%s\n",
+            paste(R.version[6:7], collapse="."),
+            as.character(packageVersion("testthat")),
+            dirname(dirname(find.package("msuiter")))))
 ok <- TRUE
 for (f in files) {
   res <- tryCatch(
-    testthat::test_file(f, reporter = testthat::silent_reporter(),
+    testthat::test_file(f, package = "msuiter", load_package = "none",
+                        reporter = testthat::SilentReporter$new(),
                         stop_on_failure = FALSE),
-    error = function(e) NULL)
-  if (is.null(res)) {
-    cat(sprintf("VG_TESTFILE %s CRASH 0 0\n", f)); ok <- FALSE; next
-  }
+    error = function(e) {
+      msg <- gsub("[\r\n]+", " | ", conditionMessage(e), perl = TRUE)
+      cat(sprintf("VG_TESTFILE %s CRASH %s\n", f, substr(msg, 1, 400)))
+      NULL
+    })
+  if (is.null(res)) { ok <- FALSE; next }
   df <- as.data.frame(res)
   npass <- sum(df$passed); nbad <- sum(df$failed + df$error + df$warning)
   cat(sprintf("VG_TESTFILE %s %s %d %d\n", f,
@@ -148,10 +170,11 @@ valgrind_report_census() { # <suite-log> -- every attestation line is REQUIRED
     || die "memcheck reported $errors errors under the native-sentry roster (log $log)"
   [ "$lost" -eq 0 ] \
     || die "memcheck reports $lost bytes definitely lost under the native-sentry roster (log $log)"
-  files_passed=$(grep -c '^VG_TESTFILE .* PASS ' "$log" || true)
-  tests_passed=$(sed -n 's/^VG_TESTFILE [^ ]* PASS \([0-9]*\) .*/\1/p' "$log" | awk '{s+=$1} END {print s+0}')
+  files_passed=$(grep -cE '^VG_TESTFILE [^ ]+ PASS [0-9]+ [0-9]+$' "$log" || true)
+  tests_passed=$(sed -n 's/^VG_TESTFILE [^ ]* PASS \([0-9]*\) [0-9]*$/\1/p' "$log" | awk '{s+=$1} END {print s+0}')
   [ "$files_passed" -eq "$roster_n" ] \
-    || die "executed-work census mismatch: $files_passed roster file(s) passed of $roster_n nominated (an arm that runs no files gates nothing -- the D1 lesson)"
+    || { vg_evidence=$(grep '^VG_TESTFILE' "$log" | grep -v ' PASS ' | head -6 | tr '\n' ' ' || true)
+         die "executed-work census mismatch: $files_passed roster file(s) passed of $roster_n nominated -- attestations: [$vg_evidence] (an arm that runs no files gates nothing -- the D1 lesson)" ; }
   [ "$tests_passed" -ge 1 ] \
     || die "executed-work census is ZERO -- an arm that ran no tests gates nothing (the D1 lesson)"
   note "report census: ERROR SUMMARY 0, definitely-lost 0, roster $files_passed/$roster_n files, $tests_passed test(s) passed"
@@ -238,9 +261,9 @@ case "$mode" in
     note "running the native-sentry roster [$roster] under memcheck"
     suite_log=$log_dir/valgrind-suite.log
     run_valgrind "$suite_log" Rscript "$driver" "$roster_files"
-    [ "$vg_rc" -eq 0 ] \
-      || die "the native-sentry roster did not pass under memcheck (rc $vg_rc; log $suite_log)"
     valgrind_report_census "$suite_log"
+    [ "$vg_rc" -eq 0 ] \
+      || die "the roster run exited rc=$vg_rc although the census claims completion -- memcheck's own error count (exit code $vg_error_rc) contradicts its report (log $suite_log)"
     build_canary
     assert_trip_silent heap
     assert_trip_silent leak
