@@ -37,9 +37,13 @@
   if (!identical(if (is.null(st)) 0L else as.integer(st), 0L)) {
     # The census report (VIOLATION rows carry file:line previews) lives in the
     # CAPTURED stdout -- speak it on red, or the shard transcript loses the
-    # very evidence the gate exists to emit (windows fan-out run 39657954877:
-    # three assertions, zero actuals).
-    message(out)
+    # very evidence the gate exists to emit (fan-out runs 39657954877 +
+    # 39665540072: three assertions, zero actuals). message() does not work:
+    # the test_that context installs a message handler and swallows it (the
+    # first emission vanished from the log). Write the unbuffered stderr
+    # connection directly -- the census reporter's FAIL[] lines ride exactly
+    # this channel and have always reached the transcript.
+    cat(paste0(out, collapse = "\n"), "\n", sep = "", file = stderr())
   }
   list(status = if (is.null(st)) 0L else as.integer(st), out = out)
 }
