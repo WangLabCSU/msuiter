@@ -10,6 +10,13 @@
 # proves detection: a committed violation REPORTS, the clean run and the
 # uninstrumented run stay SILENT.
 #
+# The 2026-10-21 runner forensics adds the TOOL ATTESTATION ORDER: an
+# instrumented canary trip must demonstrably complete its lifecycle (its
+# ERROR SUMMARY is REQUIRED) before the roster's census may speak at all,
+# and a reportless roster run whose guest produced attestations while
+# memcheck exited on a signal adjudicates as the tool's death, not the
+# guest's (the silent-core-dump class).
+#
 # Usage:
 #   run_valgrind_leg.sh leg        # the gate itself (the CI arm)
 #   run_valgrind_leg.sh selftest   # canary-only discriminating control
@@ -158,8 +165,14 @@ EOF
 
 valgrind_report_census() { # <suite-log> -- every attestation line is REQUIRED
   log=$1
-  grep -q '^ERROR SUMMARY:' "$log" \
-    || die "LOUDNESS LAW: no ERROR SUMMARY line in $log -- memcheck never completed; a reportless run attests nothing (the D1 lesson)"
+  if ! grep -q '^ERROR SUMMARY:' "$log"; then
+    guest_saw=$(grep -c '^VG_TESTFILE' "$log" || true)
+    tail_ctx=$(tail -5 "$log" | tr '\n' '|' | cut -c1-300)
+    if [ "$vg_rc" -ge 129 ] && [ "$vg_rc" -le 192 ]; then
+      die "MEMCHECK CORE DIED on signal $((vg_rc - 128)) (rc=$vg_rc) with $guest_saw guest attestation(s) and no report ever produced -- the tool's death is not the guest's (silent-core-dump class; log $log, tail [$tail_ctx])"
+    fi
+    die "LOUDNESS LAW: no ERROR SUMMARY line in $log (rc=$vg_rc, guest-lines=$guest_saw, tail [$tail_ctx]) -- memcheck never completed; a reportless run attests nothing (the D1 lesson)"
+  fi
   grep -q '^HEAP SUMMARY:' "$log" \
     || die "LOUDNESS LAW: no HEAP SUMMARY line in $log -- the run terminated before the census could speak"
   errors=$(sed -n 's/^ERROR SUMMARY: \([0-9]*\) error.*/\1/p' "$log" | tail -1)
@@ -205,11 +218,13 @@ trip_signal() { # the report text each class is known to produce
   esac
 }
 
-assert_trip_reported() { # <class> -- the instrumented trip must REPORT
+assert_trip_reported() { # <class> -- the instrumented trip must REPORT and COMPLETE
   class=$1
   run_canary "$log_dir/canary-trip-$class.log" yes "$class"
+  grep -q '^ERROR SUMMARY:' "$log_dir/canary-trip-$class.log" \
+    || die "TOOL ATTESTATION: the instrumented $class trip committed its violation but memcheck never emitted its ERROR SUMMARY (rc=$vg_rc) -- the tool cannot complete its lifecycle on this runner; the canaries precede the roster precisely to surface this here (log $log_dir/canary-trip-$class.log)"
   if grep -Eq "$(trip_signal "$class")" "$log_dir/canary-trip-$class.log"; then
-    note "control: the instrumented $class trip REPORTED its violation (memcheck is live)"
+    note "control: the instrumented $class trip REPORTED its violation under a completed report (memcheck is live)"
   else
     die "LOUDNESS LAW: the $class canary committed its violation and memcheck stayed \
 silent -- the instrumentation never ran (log $log_dir/canary-trip-$class.log)"
@@ -252,6 +267,15 @@ case "$mode" in
     note "SELFTEST OK: the harness distinguishes a live memcheck from a dead one"
     ;;
   leg)
+    # Tool attestation precedes guest attestation (2026-10-21 forensics):
+    # the canary battery must prove memcheck completes its lifecycle on
+    # this runner before a roster census is allowed to adjudicate it.
+    build_canary
+    assert_trip_silent heap
+    assert_trip_silent leak
+    assert_trip_reported heap
+    assert_trip_reported leak
+    assert_clean_silent
     install_package
     build_driver
     cd "$root"
@@ -264,12 +288,6 @@ case "$mode" in
     valgrind_report_census "$suite_log"
     [ "$vg_rc" -eq 0 ] \
       || die "the roster run exited rc=$vg_rc although the census claims completion -- memcheck's own error count (exit code $vg_error_rc) contradicts its report (log $suite_log)"
-    build_canary
-    assert_trip_silent heap
-    assert_trip_silent leak
-    assert_trip_reported heap
-    assert_trip_reported leak
-    assert_clean_silent
-    note "LEG GREEN: memcheck completed and reported, the roster ran, the canaries discriminated live from dead"
+    note "LEG GREEN: memcheck completed and reported (canary-attested), the roster ran, the canaries discriminated live from dead"
     ;;
 esac
