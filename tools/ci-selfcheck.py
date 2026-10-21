@@ -154,7 +154,63 @@ VALGRIND_LOUDNESS_MARKERS = (
     "assert_trip_silent",      # unwrapped trip MUST stay silent (discrimination)
     "assert_clean_silent",     # clean canary under valgrind MUST stay silent
     "valgrind_budget",         # hard wall-clock budget: slow-to-death impossible
+    # PR #45 census-law markers: under --trace-children=yes the log is a
+    # forest of per-pid report blocks in race order, so the census sums
+    # across pids and adjudicates ownership; the blindness classes below
+    # are regression-pinned by the fixture battery.
+    "--trace-children=yes",    # the execve-escape cure (repro6 forensics)
+    "sum_err",                 # ERROR SUMMARY is SUMMED over pids, never tail -1
+    "HARD ZERO",               # any definitely-lost byte kills the leg
+    "UNADJUDICATED",           # unowned loss records kill the leg loudly
+    "UNACCOUNTED",             # counted errors without record heads kill the leg
+    "NO SELF-DECEPTION",       # a dead suppression engine may guard nothing
+    "run_census_fixtures",     # the census laws are fixture-tested, not assumed
+    "census_fixture",
 )
+
+
+def census_law_problems():
+    """Selfcheck the census layer of the valgrind harness (PR #45)."""
+    harness = REPO / "tools/deep-checks/run_valgrind_leg.sh"
+    if not harness.is_file():
+        return ["tools/deep-checks/run_valgrind_leg.sh"]
+    h = txt(harness)
+    problems = []
+    # The census function body must SUM, never take the last writer: a
+    # per-pid line read through tail -1 is exactly the wrapper-masking bug
+    # the repro6 forensics convicted (wrapper 0s over guest 2s).
+    start = h.find("valgrind_report_census()")
+    end = h.find("\n}", start) if start != -1 else -1
+    census_body = h[start:end] if start != -1 and end != -1 else ""
+    if not census_body:
+        problems.append("census function not found")
+    else:
+        if any("tail -1" in line and not line.strip().startswith("#")
+               for line in census_body.splitlines()):
+            problems.append("tail -1 inside the census (last-writer masking)")
+        if "sum_err" not in census_body:
+            problems.append("ERROR SUMMARY not summed over pids")
+        if "CENSUS pids=" not in census_body:
+            problems.append("census attestation machine line missing")
+    # The fixture battery must exist, be registered in both modes, and
+    # balance its pass/die controls -- a fixture set that cannot fail is
+    # the vacuous-green class wearing a lab coat.
+    calls = re.findall(r"^\s*census_fixture (\S+) (pass|die) ", h, re.M)
+    registered = {name for name, _ in calls}
+    expected = {
+        "clean-single", "tool-swarm", "guest-caches", "wrapper-mask",
+        "unknown-owner", "definitely-lost", "silent-child", "unaccounted",
+        "self-deception",
+    }
+    if missing := sorted(expected - registered):
+        problems.append(f"census fixtures unregistered: {missing}")
+    if sum(k == "die" for _, k in calls) < 4:
+        problems.append("census fixtures lack sufficient firing controls")
+    if sum(k == "pass" for _, k in calls) < 3:
+        problems.append("census fixtures lack sufficient passing controls")
+    if h.count("run_census_fixtures") < 3:  # definition + selftest + leg
+        problems.append("fixture battery not wired into both modes")
+    return problems
 
 
 def valgrind_loudness_markers():
@@ -353,6 +409,10 @@ def main():
     check("valgrind harness exists and enforces the loudness law "
           "(report census, canary trip/silent gates, wall-clock budget)",
           not missing_vg, f"missing {missing_vg}")
+    census_problems = census_law_problems()
+    check("valgrind census enforces the census law (summed over pids, no "
+          "last-writer reads; fixture battery with firing and passing controls)",
+          not census_problems, f"{census_problems}")
     sani = sched["jobs"].get("sanitizer", {})
     sani_matrix = sani.get("strategy", {}).get("matrix", {}) or {}
     sani_set = set(sani_matrix.get("sanitizer", []))
