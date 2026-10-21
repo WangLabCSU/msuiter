@@ -10,6 +10,21 @@
 # proves detection: a committed violation REPORTS, the clean run and the
 # uninstrumented run stay SILENT.
 #
+# The 2026-10-21 runner forensics adds the TOOL ATTESTATION ORDER: an
+# instrumented canary trip must demonstrably complete its lifecycle (its
+# ERROR SUMMARY is REQUIRED) before the roster's census may speak at all,
+# and a reportless roster run whose guest produced attestations while
+# memcheck exited on a signal adjudicates as the tool's death, not the
+# guest's (the silent-core-dump class).
+#
+# The same day's live-fire adds the REPORT SHAPE LAW: every line memcheck
+# authors is ==pid== prefixed while the guest's own stdout is not, so the
+# census patterns are pid-tolerant; a fully-freed heap omits the
+# definitely-lost line entirely and attests zero loss by its own words
+# ("All heap blocks were freed") -- absence of that line is a verdict, not
+# an incompleteness. Violation headings likewise ride byte-true (no "bytes"
+# suffix), and a trip's content words must be matched by a counted error.
+#
 # Usage:
 #   run_valgrind_leg.sh leg        # the gate itself (the CI arm)
 #   run_valgrind_leg.sh selftest   # canary-only discriminating control
@@ -158,12 +173,22 @@ EOF
 
 valgrind_report_census() { # <suite-log> -- every attestation line is REQUIRED
   log=$1
-  grep -q '^ERROR SUMMARY:' "$log" \
-    || die "LOUDNESS LAW: no ERROR SUMMARY line in $log -- memcheck never completed; a reportless run attests nothing (the D1 lesson)"
-  grep -q '^HEAP SUMMARY:' "$log" \
+  if ! grep -qE '^(==[0-9]+== )?ERROR SUMMARY:' "$log"; then
+    guest_saw=$(grep -c '^VG_TESTFILE' "$log" || true)
+    tail_ctx=$(tail -5 "$log" | tr '\n' '|' | cut -c1-300)
+    if [ "$vg_rc" -ge 129 ] && [ "$vg_rc" -le 192 ]; then
+      die "MEMCHECK CORE DIED on signal $((vg_rc - 128)) (rc=$vg_rc) with $guest_saw guest attestation(s) and no report ever produced -- the tool's death is not the guest's (silent-core-dump class; log $log, tail [$tail_ctx])"
+    fi
+    die "LOUDNESS LAW: no ERROR SUMMARY line in $log (rc=$vg_rc, guest-lines=$guest_saw, tail [$tail_ctx]) -- memcheck never completed; a reportless run attests nothing (the D1 lesson)"
+  fi
+  grep -qE '^(==[0-9]+== )?HEAP SUMMARY:' "$log" \
     || die "LOUDNESS LAW: no HEAP SUMMARY line in $log -- the run terminated before the census could speak"
-  errors=$(sed -n 's/^ERROR SUMMARY: \([0-9]*\) error.*/\1/p' "$log" | tail -1)
-  lost=$(sed -n 's/^definitely lost: \([0-9]*\) bytes.*/\1/p' "$log" | tail -1)
+  errors=$(sed -nE 's/^(==[0-9]+== )?ERROR SUMMARY: ([0-9]+) error.*/\2/p' "$log" | tail -1)
+  lost=$(sed -nE 's/^(==[0-9]+== )?definitely lost: ([0-9]+) bytes.*/\2/p' "$log" | tail -1)
+  # a fully-freed heap omits the definitely-lost line and attests zero loss itself
+  if [ -z "$lost" ]; then
+    grep -qE '^(==[0-9]+== )?All heap blocks were freed' "$log" && lost=0 || true
+  fi
   [ -n "$errors" ] && [ -n "$lost" ] \
     || die "the report census is incomplete (ERROR SUMMARY=$errors, definitely-lost=$lost) in $log"
   [ "$errors" -eq 0 ] \
@@ -198,18 +223,24 @@ run_canary() { # run_canary <log> <valgrind:yes|no> <class>
   fi
 }
 
-trip_signal() { # the report text each class is known to produce
+trip_signal() { # the report text each class is known to produce -- byte-true vs
+  # the captured reports (the renamed fork's violation heading carries no "bytes")
   case $1 in
-    heap) printf '%s\n' 'Invalid read of size [0-9]* bytes' ;;
-    leak) printf '%s\n' 'definitely lost: [1-9][0-9]* bytes' ;;
+    heap) printf '%s\n' 'Invalid read of size [0-9]+' ;;
+    leak) printf '%s\n' 'definitely lost' ;;
   esac
 }
 
-assert_trip_reported() { # <class> -- the instrumented trip must REPORT
+assert_trip_reported() { # <class> -- the instrumented trip must REPORT and COMPLETE
   class=$1
   run_canary "$log_dir/canary-trip-$class.log" yes "$class"
+  grep -qE '^(==[0-9]+== )?ERROR SUMMARY:' "$log_dir/canary-trip-$class.log" \
+    || die "TOOL ATTESTATION: the instrumented $class trip committed its violation but memcheck never emitted its ERROR SUMMARY (rc=$vg_rc) -- the tool cannot complete its lifecycle on this runner; the canaries precede the roster precisely to surface this here (log $log_dir/canary-trip-$class.log)"
+  trip_count=$(sed -nE 's/^(==[0-9]+== )?ERROR SUMMARY: ([0-9]+) error.*/\2/p' "$log_dir/canary-trip-$class.log" | tail -1)
+  [ -n "$trip_count" ] && [ "$trip_count" -ge 1 ] \
+    || die "TOOL ATTESTATION: the instrumented $class trip committed its violation but memcheck's own summary counts $trip_count errors -- content words without a counted error are a contradiction, not a report (log $log_dir/canary-trip-$class.log)"
   if grep -Eq "$(trip_signal "$class")" "$log_dir/canary-trip-$class.log"; then
-    note "control: the instrumented $class trip REPORTED its violation (memcheck is live)"
+    note "control: the instrumented $class trip REPORTED its violation under a completed report (memcheck is live)"
   else
     die "LOUDNESS LAW: the $class canary committed its violation and memcheck stayed \
 silent -- the instrumentation never ran (log $log_dir/canary-trip-$class.log)"
@@ -229,7 +260,7 @@ memcheck-style report -- the leg could not tell a live tool from a dead one"
 
 assert_clean_silent() {
   run_valgrind "$log_dir/canary-clean.log" "$canary_bin" clean
-  if grep -Eq '^ERROR SUMMARY: [1-9]|^definitely lost: [1-9]' "$log_dir/canary-clean.log"; then
+  if grep -Eq '^(==[0-9]+== )?(ERROR SUMMARY: [1-9]|definitely lost: [1-9])' "$log_dir/canary-clean.log"; then
     die "the CLEAN canary (no violation) produced a memcheck report -- the detection \
 is not discriminating (log $log_dir/canary-clean.log)"
   fi
@@ -252,6 +283,15 @@ case "$mode" in
     note "SELFTEST OK: the harness distinguishes a live memcheck from a dead one"
     ;;
   leg)
+    # Tool attestation precedes guest attestation (2026-10-21 forensics):
+    # the canary battery must prove memcheck completes its lifecycle on
+    # this runner before a roster census is allowed to adjudicate it.
+    build_canary
+    assert_trip_silent heap
+    assert_trip_silent leak
+    assert_trip_reported heap
+    assert_trip_reported leak
+    assert_clean_silent
     install_package
     build_driver
     cd "$root"
@@ -264,12 +304,6 @@ case "$mode" in
     valgrind_report_census "$suite_log"
     [ "$vg_rc" -eq 0 ] \
       || die "the roster run exited rc=$vg_rc although the census claims completion -- memcheck's own error count (exit code $vg_error_rc) contradicts its report (log $suite_log)"
-    build_canary
-    assert_trip_silent heap
-    assert_trip_silent leak
-    assert_trip_reported heap
-    assert_trip_reported leak
-    assert_clean_silent
-    note "LEG GREEN: memcheck completed and reported, the roster ran, the canaries discriminated live from dead"
+    note "LEG GREEN: memcheck completed and reported (canary-attested), the roster ran, the canaries discriminated live from dead"
     ;;
 esac
