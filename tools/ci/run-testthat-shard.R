@@ -52,6 +52,64 @@ source(file.path(root, "tests", "testthat", "helper-ci-shard-census.R"))
   if (rp$n_executed() <= 0L) 1L else 0L
 }
 
+# Loudness lives in the DATA STREAM, not the reporter chain: test_dir returns
+# the full expectation list, and we render failures from that object directly.
+# Rationale (run 39646023270, fan-out macos/oldrel-1, shard-5): with
+# stop_on_failure = TRUE, testthat's StopReporter wraps our reporter and the
+# halt races the delegation -- on that arm's testthat the process died before
+# the wrapped reporter could print the failed expectation, leaving
+# "! Test failures. Execution halted" with ZERO failure detail in the log
+# (the injected-failure control on this host proves the delegation order is
+# testthat-version-dependent, so evidence may not depend on it).
+# stop_on_failure is therefore FALSE and the verdict below re-reads results.
+.ci_is_failure <- function(r) {
+  inherits(r, "expectation_failure") || inherits(r, "expectation_error")
+}
+
+# A reported failure counts unless it is an EXPECTED failure (expect_failure()
+# / known_fail(): testthat marks those expected = TRUE) -- those are passes.
+.ci_counts_failure <- function(r) {
+  .ci_is_failure(r) && !isTRUE(attr(r, "expected")) && !isTRUE(tryCatch(r$expected, error = function(e) FALSE))
+}
+
+# Walk testthat's result nesting (results -> files -> expectations) and print
+# one block per counted failure, independently of any reporter delegation.
+# NO unlist(): unlist FLATTENS a lone expectation object into its fields (the
+# probe that pinned this law), and for-in over a list iterates elements
+# without flattening. An expectation IS a list, so the class check must
+# precede the recursion.
+.ci_loud_failures <- function(res, lane, shard) {
+  n <- 0L
+  for (r in res) {
+    if (inherits(r, "expectation")) {
+      if (!.ci_counts_failure(r)) next
+    } else if (is.list(r)) {
+      n <- n + .ci_loud_failures(r, lane, shard)
+      next
+    } else next
+    n <- n + 1L
+    test <- attr(r, "test")
+    if (is.null(test)) test <- tryCatch(r$test, error = function(e) NULL)
+    if (is.null(test)) test <- "<file level>"
+    msg <- tryCatch(conditionMessage(r), error = function(e) NULL)
+    if (is.null(msg) || !nzchar(msg)) msg <- tryCatch(as.character(r$message), error = function(e) "")
+    if (!nzchar(msg)) msg <- paste0("<", paste0(class(r), collapse = "/"), ">")
+    msg <- sub("[\r\n].*$", "", as.character(msg)[1L])
+    # message(): the unbuffered stderr channel that survives a halt AND is
+    # capturable by the self-test's capture.output(type = "message") -- raw
+    # cat(stderr = TRUE) bypasses the sink (pinned empirically).
+    message(paste0("LOUDFAIL[", lane, "#", shard, "] ", test, "\n  : ", msg))
+  }
+  n
+}
+
+# Verdict from the data stream: counted failures die even if every reporter
+# in the chain swallowed them.
+.ci_result_verdict <- function(res, lane, shard) {
+  f <- .ci_loud_failures(res, lane, shard)
+  if (f > 0L) 1L else 0L
+}
+
 is.self.test <- function() {
   hit <- grep("^--?self-test($|[=])", .args)
   if (!length(hit)) return(FALSE)
@@ -66,17 +124,22 @@ if (is.self.test()) {
   tf <- function(name, lines) writeLines(lines, file.path(dir, name))
   tf("test-good.R", c("test_that('two passes', { expect_true(TRUE); expect_true(TRUE) })"))
   tf("test-allskip.R", "test_that('skips', skip('by design'))")
+  tf("test-red.R", "test_that('loud red', { expect_identical(1L, 2L) })")
   manifest <- file.path(dir, "manifest.tsv")
-  writeLines(c("# k=2", "shard\tfile\tseconds",
-               "1\ttest-good.R\t1", "2\ttest-allskip.R\t1"), manifest)
+  writeLines(c("# k=3", "shard\tfile\tseconds",
+               "1\ttest-good.R\t1", "2\ttest-allskip.R\t1",
+               "3\ttest-red.R\t1"), manifest)
   m <- .ci_parse_manifest(manifest)
 
   run_shard <- function(shard) {
     rp <- .ci_census_reporter()$new(lane = "selftest", shard = shard)
-    test_dir(dir, filter = .ci_shard_filter(m$rows, shard), reporter = rp,
-             stop_on_failure = FALSE, load_helpers = FALSE,
-             load_package = "none")
-    list(rp = rp, verdict = .ci_gate_verdict(rp))
+    res <- test_dir(dir, filter = .ci_shard_filter(m$rows, shard), reporter = rp,
+                    stop_on_failure = FALSE, load_helpers = FALSE,
+                    load_package = "none")
+    loud <- capture.output(
+      rv <- .ci_result_verdict(res, "selftest", shard),
+      type = "message")
+    list(rp = rp, verdict = max(.ci_gate_verdict(rp), rv), loud = loud)
   }
   g <- run_shard(1L)
   if (!identical(g$rp$n_executed(), 1L) || identical(g$rp$n_pass, 0L) ||
@@ -96,6 +159,19 @@ if (is.self.test()) {
     quit(status = 1L)
   }
   cat("vacuous attestation FIR\n", sep = "")
+  # The L6 law: a counted failure speaks through the data stream and dies --
+  # with reporter-independence proven by counting the block, not trusting
+  # delegation. This control is the injected-failure incident made permanent.
+  rd <- run_shard(3L)
+  if (!any(grepl("LOUDFAIL[selftest#3] loud red", rd$loud, fixed = TRUE))) {
+    cat("RUNNER SELF-TEST FAILED: loud-failure control did not SPEAK\n", sep = "")
+    quit(status = 1L)
+  }
+  if (rd$verdict == 0L) {
+    cat("RUNNER SELF-TEST FAILED: loud-failure control did not DIE\n", sep = "")
+    quit(status = 1L)
+  }
+  cat("loud-failure control SPEAK+FI\n", sep = "")
   cat("RUNNER SELF-TEST OK\n", sep = "")
   quit(status = 0L)
 }
@@ -122,17 +198,18 @@ filter <- .ci_shard_filter(m$rows, shard)
 tdir <- file.path(root, "tests", "testthat")
 if (identical(mode, "repo")) {
   if (!requireNamespace("devtools", quietly = TRUE)) quit(status = 2L)
-  devtools::test(pkg = root, filter = filter, reporter = rp,
-                 stop_on_failure = TRUE)
+  res <- devtools::test(pkg = root, filter = filter, reporter = rp,
+                        stop_on_failure = FALSE)
 } else {
   old <- getwd(); setwd(root); on.exit(setwd(old))
   pkg <- sub("^Package:\\s*", "",
              grep("^Package:", readLines(file.path(root, "DESCRIPTION"),
                                           warn = FALSE), value = TRUE)[1L])
-  test_dir(tdir, filter = filter, reporter = rp, stop_on_failure = TRUE,
-           package = pkg, load_package = "installed")
+  res <- test_dir(tdir, filter = filter, reporter = rp,
+                  stop_on_failure = FALSE, package = pkg,
+                  load_package = "installed")
 }
-v <- .ci_gate_verdict(rp)
+v <- max(.ci_gate_verdict(rp), .ci_result_verdict(res, kind, shard))
 writeLines(rp$attestation(), attest)
 cat(rp$attestation(), "\n", sep = "")
 if (v != 0L) {
