@@ -33,8 +33,15 @@
   res <- suppressWarnings(system2(.ms_rscript(), c(tool, args),
                                   stdout = TRUE, stderr = TRUE))
   st <- attr(res, "status")
-  list(status = if (is.null(st)) 0L else as.integer(st),
-        out = paste0(as.character(res), collapse = "\n"))
+  out <- paste0(as.character(res), collapse = "\n")
+  if (!identical(if (is.null(st)) 0L else as.integer(st), 0L)) {
+    # The census report (VIOLATION rows carry file:line previews) lives in the
+    # CAPTURED stdout -- speak it on red, or the shard transcript loses the
+    # very evidence the gate exists to emit (windows fan-out run 39657954877:
+    # three assertions, zero actuals).
+    message(out)
+  }
+  list(status = if (is.null(st)) 0L else as.integer(st), out = out)
 }
 
 test_that("the census controls FIRE on the shipped scanner (green attestation)", {

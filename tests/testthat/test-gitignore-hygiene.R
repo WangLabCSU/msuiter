@@ -49,8 +49,14 @@
     stop("git check-ignore errored with status ", st, ": ",
          paste0(as.character(res), collapse = " | "))
   }
-  list(status = st, out = as.character(res))
+  # Windows' git reports the probe path with native backslashes although the
+  # probe travelled forward-slash; the suffix law below is authored against
+  # the forward-slash form. Normalize at the boundary (patterns here never
+  # carry backslashes -- the .gitignore rule forms are slash-only).
+  list(status = st, out = .ms_hyg_norm(as.character(res)))
 }
+
+.ms_hyg_norm <- function(out) gsub("\\", "/", out, fixed = TRUE)
 
 # The report suffix a firing rule must produce (exact -- the pattern text
 # and the tab-separated path, so a shadowing rule with a different shape
@@ -142,4 +148,21 @@ test_that("rule form is attested red/green in a scratch repo (no shadowing oracl
   # bearing suffix: the shipped rule fired from .gitignore line 1 on the probe.
   expect_true(length(r$out) == 1L && endsWith(r$out,
     paste0(".gitignore:1:", tools_rule, "\t", probe)))
+})
+
+test_that("the windows report shape normalizes (synthetic backslash oracle, no git needed)", {
+  # The normalization above exists for a platform this runner cannot reach:
+  # fire it from the native shape directly. The control is LIVE by
+  # construction -- the same tail assertion must FAIL on the un-normalized
+  # bytes, proving the discrimination is real and not a vacuous pass.
+  probe <- "tools/hyg_probe/__pycache__/w.pyc"
+  rule <- "/tools/**/__pycache__/"
+  win <- paste0("D:/a/msuiter/.gitignore:1:", rule, "\t",
+                gsub("/", "\\", probe, fixed = TRUE))
+  suffix <- paste0(rule, "\t", probe)
+  tail_norm <- substring(.ms_hyg_norm(win),
+                         nchar(.ms_hyg_norm(win)) - nchar(suffix) + 1L)
+  tail_raw <- substring(win, nchar(win) - nchar(suffix) + 1L)
+  expect_identical(tail_norm, suffix)      # normalized: the law matches
+  expect_false(identical(tail_raw, suffix))# native shape: law must NOT match
 })
