@@ -78,9 +78,9 @@
   # swallows message() (measured) -- the failure message is the only way out.
   expect_identical(tail, suffix,
                    info = paste0("tail-bytes: ",
-                                 paste0(as.integer(charToRaw(tail, "ascii")), collapse = ","),
+                                 paste0(as.integer(charToRaw(tail, type = "single")), collapse = ","),
                                  " suffix-bytes: ",
-                                 paste0(as.integer(charToRaw(suffix, "ascii")), collapse = ",")))
+                                 paste0(as.integer(charToRaw(suffix, type = "single")), collapse = ",")))
 }
 
 test_that("the shipped .gitignore rules FIRE for their declared classes", {
@@ -163,7 +163,10 @@ test_that("rule form is attested red/green in a scratch repo (no shadowing oracl
   # source is reported relative to the invoking context, so pin the load-
   # bearing suffix: the shipped rule fired from .gitignore line 1 on the probe.
   expect_true(length(r$out) == 1L && endsWith(r$out,
-    paste0(".gitignore:1:", tools_rule, "\t", probe)))
+    paste0(".gitignore:1:", tools_rule, "\t", probe)),
+    info = paste0("rows=", length(r$out), ": ",
+                  paste0(vapply(r$out, function(z) paste0("[", z, "]"),
+                               character(1L)), collapse = " | ")))
 })
 
 test_that("the windows report shape normalizes (synthetic backslash oracle, no git needed)", {

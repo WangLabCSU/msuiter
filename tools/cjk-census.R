@@ -161,21 +161,28 @@ options(warn = 1)
 .corpus <- .expand_corpus_globs(.corpus)
 
 # Per-line markdown context: TRUE where CJK is permitted to survive
-# (blockquote or fenced code).
+# (blockquote or fenced code). Both probes ride the .cjk_hit sentinel armour:
+# run 39676652892 fan-out windows/oldrel-1 attested the law -- the .cjk_hit
+# lines (armoured) fired while the bare per-line grepl context probes went
+# blind en bloc, promoting quote/fence-preserved CJK to VIOLATION. A
+# non-ASCII-bearing single subject can degrade Oniguruma's compile mode
+# exactly as the 183-187 comment documents for the corpus batch; the same
+# sentinel fixes both sites for the same reason.
 .context_flags <- function(lines) {
   n <- length(lines)
   quote <- logical(n)
   fence <- logical(n)
   open <- FALSE
   fence_re <- "^\\s*(```+|~{3,})"
+  probe <- function(re, l) grepl(re, c(l, .SENTINEL), perl = TRUE)[1L]
   for (i in seq_len(n)) {
-    if (grepl(fence_re, lines[i], perl = TRUE)) {
+    if (probe(fence_re, lines[i])) {
       fence[i] <- TRUE          # the fence line itself is code context
       open <- !open
       next
     }
     fence[i] <- open
-    quote[i] <- grepl("^\\s*>", lines[i], perl = TRUE)
+    quote[i] <- probe("^\\s*>", lines[i])
   }
   list(quote = quote, fence = fence)
 }
