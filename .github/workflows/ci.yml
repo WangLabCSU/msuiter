@@ -229,10 +229,12 @@ jobs:
       # the check-layout-sim family execute -- a superset of what the old
       # single devtools::test() process covered, never weaker.
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
+        shell: bash
         run: |
           R CMD INSTALL --no-docs --no-build-vignettes .
 
       - name: Repo-layout testthat shards (parallel, attested)
+        shell: bash
         run: |
           mkdir -p attest-out shard-logs
           k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
@@ -446,10 +448,12 @@ jobs:
           upload-snapshots: true
 
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
+        shell: bash
         run: |
           R CMD INSTALL --no-docs --no-build-vignettes .
 
       - name: Repo-layout testthat fan-out (K shards, attested)
+        shell: bash
         run: |
           mkdir -p attest-out shard-logs
           k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
