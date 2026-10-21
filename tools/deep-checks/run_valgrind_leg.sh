@@ -22,7 +22,8 @@
 # census patterns are pid-tolerant; a fully-freed heap omits the
 # definitely-lost line entirely and attests zero loss by its own words
 # ("All heap blocks were freed") -- absence of that line is a verdict, not
-# an incompleteness.
+# an incompleteness. Violation headings likewise ride byte-true (no "bytes"
+# suffix), and a trip's content words must be matched by a counted error.
 #
 # Usage:
 #   run_valgrind_leg.sh leg        # the gate itself (the CI arm)
@@ -222,10 +223,11 @@ run_canary() { # run_canary <log> <valgrind:yes|no> <class>
   fi
 }
 
-trip_signal() { # the report text each class is known to produce
+trip_signal() { # the report text each class is known to produce -- byte-true vs
+  # the captured reports (the renamed fork's violation heading carries no "bytes")
   case $1 in
-    heap) printf '%s\n' 'Invalid read of size [0-9]* bytes' ;;
-    leak) printf '%s\n' 'definitely lost: [1-9][0-9]* bytes' ;;
+    heap) printf '%s\n' 'Invalid read of size [0-9]+' ;;
+    leak) printf '%s\n' 'definitely lost' ;;
   esac
 }
 
@@ -234,6 +236,9 @@ assert_trip_reported() { # <class> -- the instrumented trip must REPORT and COMP
   run_canary "$log_dir/canary-trip-$class.log" yes "$class"
   grep -qE '^(==[0-9]+== )?ERROR SUMMARY:' "$log_dir/canary-trip-$class.log" \
     || die "TOOL ATTESTATION: the instrumented $class trip committed its violation but memcheck never emitted its ERROR SUMMARY (rc=$vg_rc) -- the tool cannot complete its lifecycle on this runner; the canaries precede the roster precisely to surface this here (log $log_dir/canary-trip-$class.log)"
+  trip_count=$(sed -nE 's/^(==[0-9]+== )?ERROR SUMMARY: ([0-9]+) error.*/\2/p' "$log_dir/canary-trip-$class.log" | tail -1)
+  [ -n "$trip_count" ] && [ "$trip_count" -ge 1 ] \
+    || die "TOOL ATTESTATION: the instrumented $class trip committed its violation but memcheck's own summary counts $trip_count errors -- content words without a counted error are a contradiction, not a report (log $log_dir/canary-trip-$class.log)"
   if grep -Eq "$(trip_signal "$class")" "$log_dir/canary-trip-$class.log"; then
     note "control: the instrumented $class trip REPORTED its violation under a completed report (memcheck is live)"
   else
