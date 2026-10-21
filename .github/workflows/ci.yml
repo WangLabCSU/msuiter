@@ -390,7 +390,7 @@ jobs:
     timeout-minutes: 60
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
-    name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
     strategy:
       fail-fast: false
       matrix:
@@ -455,7 +455,8 @@ jobs:
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir attest-out --kind fanout \
-            --fanout-configs tools/ci/fanout-configs.tsv
+            --fanout-configs tools/ci/fanout-configs.tsv \
+            --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
 
       - name: Upload fan-out attestations
         if: always()

@@ -23,6 +23,12 @@ trips is a vacuous green in the gate itself.
 import argparse, os, sys, tempfile, shutil
 
 
+def die2(msg):
+    """Loud, counted death: a DEFECT line and exit 2 (usage-class)."""
+    print(msg, flush=True)
+    sys.exit(2)
+
+
 def parse_manifest(path):
     k, rows = None, []
     with open(path, encoding="utf-8") as fh:
@@ -38,10 +44,10 @@ def parse_manifest(path):
             if parts[0] == "shard":
                 continue
             if len(parts) != 3:
-                raise SystemExit("malformed manifest row: %r" % line)
+                die2("DEFECT malformed manifest row: %r" % line)
             rows.append((int(parts[0]), parts[1]))
     if k is None or not rows:
-        raise SystemExit("manifest unusable: %s" % path)
+        die2("DEFECT manifest unusable: %s" % path)
     return k, rows
 
 
@@ -64,6 +70,23 @@ def expected_files(kind, shard, configs):
     if kind != "fanout" or configs is None:
         return ["shard-%d.attest" % shard]
     return ["shard-%d-%s-%s.attest" % (shard, os_, cfg) for (os_, cfg) in configs]
+
+
+def scope_configs(configs, expect, out):
+    """Fan-out scoping (run 39616815087 forensics): each arm holds ONLY its
+    own attestation forest. The expected set must therefore be pinned to the
+    arm's own config -- an arm censusing the whole roster declared the other
+    arms' six-shard sets missing (18 vacuous DEFECTs, all four fan-out arms
+    doomed). --expect-config is mandatory for fan-out: unscoped censuses
+    cannot distinguish other-arms-absent from other-arms-dead."""
+    if expect is None:
+        out("DEFECT fan-out census requires --expect-config OS-RCFG (the arm's own tag)")
+        return None
+    scoped = [(o, c) for (o, c) in configs if "%s-%s" % (o, c) == expect]
+    if not scoped:
+        out("DEFECT --expect-config %r is not in the fan-out roster" % expect)
+        return None
+    return scoped
 
 
 def census(manifest, attest_dir, kind, configs, out):
@@ -165,6 +188,42 @@ def self_test(out):
         n = census(man, adir, "guards", None, collected.append)
         fired.append(n == 0)
         out("good control stays GREEN" if n == 0 else "SELF-TEST BROKEN: good set went RED: %s" % collected)
+        # -- Fan-out scoping law (run 39616815087: unscoped arms censused the
+        # whole roster and doomed each other with 18 vacuous DEFECTs) --
+        for nm in list(os.listdir(adir)):
+            os.remove(os.path.join(adir, nm))
+        def fanatt(shard, tag):
+            return attest(shard, "fanout", 2 if shard == 1 else 1, 3,
+                          extra={"tag": tag})
+        mine = "macos-latest-release"
+        other = "windows-latest-oldrel_1".replace("_", "-")
+        for shard in (1, 2):
+            with open(os.path.join(adir, "shard-%d-%s.attest" % (shard, mine)), "w") as fh:
+                fh.write(fanatt(shard, mine) + "\n")
+        cfgs = [(mine.rpartition("-")[0], mine.rpartition("-")[2]),
+                (other.rpartition("-")[0], other.rpartition("-")[2])]
+        collected = []
+        n = census(man, adir, "fanout", [(mine.rpartition("-")[0], mine.rpartition("-")[2])],
+                   collected.append)
+        fired.append(n == 0)
+        out("scoped-arm control stays GREEN" if n == 0
+            else "SELF-TEST BROKEN: scoped arm went RED: %s" % collected)
+        collected = []
+        n = census(man, adir, "fanout", [(other.rpartition("-")[0], other.rpartition("-")[2])],
+                   collected.append)
+        fired.append(n > 0 and any("missing attestation" in c for c in collected))
+        out("other-config-missing control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: other-config control silent: %s" % collected)
+        collected = []
+        sc = scope_configs(cfgs, None, collected.append)
+        fired.append(sc is None and any("expect-config" in c for c in collected))
+        out("unscoped refusal control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: unscoped refusal silent: %s" % collected)
+        collected = []
+        sc = scope_configs(cfgs, "bogus-9", collected.append)
+        fired.append(sc is None and any("not in the fan-out roster" in c for c in collected))
+        out("bogus-config control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: bogus-config control silent: %s" % collected)
         if not all(fired):
             out("AGGREGATE SELF-TEST FAILED")
             return 1
@@ -179,6 +238,7 @@ def main(argv=None):
     ap.add_argument("--manifest"); ap.add_argument("--attest-dir")
     ap.add_argument("--kind", choices=["guards", "fanout", "coverage"], default="guards")
     ap.add_argument("--fanout-configs"); ap.add_argument("--advisory", action="store_true")
+    ap.add_argument("--expect-config", help="fan-out: the arm's own OS-RCFG tag; the expected set is scoped to it")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     out = lambda s: print(s, flush=True)
@@ -199,6 +259,13 @@ def main(argv=None):
             if len(parts) != 2:
                 out("DEFECT malformed fanout-configs row: %r" % line); return 2
             configs.append(tuple(parts))
+        scoped = scope_configs(configs, a.expect_config, out)
+        if scoped is None:
+            return 2
+        configs = scoped
+    elif a.expect_config is not None:
+        out("DEFECT --expect-config is fan-out only (kind=%s)" % a.kind)
+        return 2
     n = census(a.manifest, a.attest_dir, a.kind, configs, out)
     if n and a.advisory:
         out("ADVISORY kind=%s: %d defects tolerated (non-gating lane)" % (a.kind, n))
