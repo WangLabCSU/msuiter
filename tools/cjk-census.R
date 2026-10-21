@@ -56,13 +56,24 @@ options(warn = 1)
 .baseline <- .get_opt("--baseline", "HEAD")
 .quiet    <- "--quiet" %in% .args
 
-# CJK class: Han ideographs (incl. ext-a), Japanese syllabaries, Hangul,
-# CJK punctuation and the fullwidth/halfwidth block. Written with \p{} and
-# \x{} escapes so this file stays pure ASCII (English-only law).
+# CJK class: Han (main + ext-a + compat), Hangul, Japanese syllabaries, CJK
+# punctuation/radicals and the fullwidth block. PURE numeric \x{} ranges on
+# purpose: run 39681287158 attested \p{Han}-class UCD drift -- macos/release
+# and windows/oldrel-1 promoted em dashes and middots (—, ·, non-CJK at any
+# UCD) to CJK while two Linux builds (R 4.5.2, R 4.6.1) measured zero; the
+# property classes hand the law's verdict to the Oniguruma/ICU data set the
+# platform happens to ship. Numeric ranges mean the same in every engine.
+# Firing controls below pin every renamed-in block, so a dropped range shows
+# up as a dark control, not as a silent corpus blind spot.
 .cjk_regex <- paste0(
-  "[\\p{Han}\\p{Hiragana}\\p{Katakana}\\p{Hangul}",
-  "\\x{3000}-\\x{303f}\\x{3040}-\\x{30ff}",
-  "\\x{ff00}-\\x{ffef}]"
+  "[\\x{3000}-\\x{303f}\\x{3040}-\\x{30ff}",   # CJK punctuation + kana
+  "\\x{3100}-\\x{312f}\\x{3130}-\\x{318f}",   # bopomo + hangul jamo
+  "\\x{1100}-\\x{11ff}\\x{a960}-\\x{a97f}\\x{a4d0}-\\x{a4ff}",
+  "\\x{ac00}-\\x{d7a3}",                        # hangul syllables
+  "\\x{2e80}-\\x{2eff}\\x{2f00}-\\x{2fdf}",     # radicals
+  "\\x{4e00}-\\x{9fff}\\x{3400}-\\x{4dbf}\\x{f900}-\\x{faff}",
+  "\\x{fe30}-\\x{fe4f}",                        # cjk compat forms
+  "\\x{ff00}-\\x{ffef}]"                        # fullwidth forms
 )
 
 # Corpus roster: path -> compliance class.
@@ -222,6 +233,15 @@ options(warn = 1)
               why = "two Han ideographs (U+4F60 U+597D)"),
     kana  = c(lit = "\u{3042}\u{3044}", want = TRUE,
               why = "two hiragana (U+3042 U+3044)"),
+    hang  = c(lit = "\u{d55c}\u{c54c}", want = TRUE,
+              why = "two hangul syllables (U+D55C U+C54C)"),
+    fwin  = c(lit = "\u{ff21}\u{ff10}", want = TRUE,
+              why = "fullwidth A + fullwidth zero (U+FF21 U+FF10)"),
+    puns  = c(lit = "verdict \u{2014} middot \u{00b7} section \u{00a7} superscript-two \u{00b2} circled \u{2460}",
+              want = FALSE,
+              why = paste("latin-1/general-punctuation negative control (the",
+                         "run-39681287158 false-match faces: em dash, middot,",
+                         "section, superscript-two, circled digit)")),
     ascii = c(lit = "plain ascii baseline: 0123456789 [Cjk] {}",
               want = FALSE, why = "pure-ASCII negative control")
   )
