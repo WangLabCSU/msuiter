@@ -10,6 +10,11 @@
 # the rule-form half is exercised as a red/green pair in a scratch repo
 # (TDD: the red half shows the assertions are live before the rules ship).
 
+# <!-- census-exempt tokens: 0 -->
+# (run 39686575425 forensics: the version-refuted charToRaw(type =) byte
+# dump -- one 0 of its paste0 carriers -- retired for the version-stable
+# utf8ToInt dump; every remaining numeral claim stands.)
+
 # Shared capability probe: the rules live in the checkout's .gitignore and
 # the oracle is git itself; installed-package check layouts skip on the
 # sanctioned ledger phrase (Skip Law).
@@ -38,9 +43,17 @@
 # itself load-bearing evidence, asserted by every caller. This base's
 # system2(stdin=) is a file redirect, so the probes travel in a tempfile.
 .ms_check_ignore <- function(root, probes, excl = NULL) {
+  # A Windows text-mode stdin leg can graft a CR onto each probe; the probe on
+  # disk is CR-free, so the graft is stripped at the source and (second line
+  # of defence, below) normalized back out of the report.
+  probes <- gsub("[\r]+$", "", probes)
   pf <- tempfile("hyg-probes-")
   writeLines(probes, pf, useBytes = TRUE)
-  args <- c("-C", root, "check-ignore", "--no-index", "-v", "--stdin")
+  # core.quotePath=false: an unquoted report is the report the suffix laws are
+  # authored for. A CR-grafted probe otherwise arrives C-quoted
+  # (tab "path\r\n") and every suffix law misses it (run 39686575425).
+  args <- c("-c", "core.quotePath=false",
+            "-C", root, "check-ignore", "--no-index", "-v", "--stdin")
   if (!is.null(excl)) args <- c("-c", excl, args)
   res <- suppressWarnings(system2("git", args, stdin = pf,
     stdout = TRUE, stderr = TRUE))
@@ -56,11 +69,22 @@
 
 .ms_hyg_norm <- function(out) {
   # Transport-layer report normalization only (never the law's semantics):
-  # native path separators, and carriage-return tails from a process pipe the
-  # line splitter left standing. Bytes beyond THESE surface as the length
-  # probe's numbers, naming the residue exactly.
-  x <- gsub("\\", "/", as.character(out), fixed = TRUE)
-  gsub("[\r]+$", "", x)
+  # raw carriage-return tails the line splitter left standing; the C-quoted
+  # shape a text-mode stdin graft produces (git escapes the grafted CR/LF
+  # inside quotes -- literal backslash sequences at this point); and native
+  # path separators. Bytes beyond THESE surface as the length probe's
+  # numbers, naming the residue exactly.
+  x <- gsub("[\r]+$", "", as.character(out))      # raw CR line tails
+  x <- gsub("(\t)\"(.*)\"$", "\\1\\2", x)          # strip the quote shell
+  x <- gsub("([\\\\][rn])+$", "", x)               # stdin-grafted CR/LF escapes
+  gsub("\\", "/", x, fixed = TRUE)                 # native separators
+}
+
+# Byte dump through utf8ToInt, version-safe: the oldrel-1 floor R refuses
+# charToRaw's type= argument outright ("unused argument", run 39686575425),
+# and an evidence channel may not bet on a version-sensitive signature.
+.ms_hyg_bytes <- function(x) {
+  paste0(utf8ToInt(strsplit(x, "")[[1L]]), collapse = ",")
 }
 
 # The report suffix a firing rule must produce (exact -- the pattern text
@@ -77,10 +101,8 @@
   # raw bytes ride info= because the test context sinks stdout/stderr and
   # swallows message() (measured) -- the failure message is the only way out.
   expect_identical(tail, suffix,
-                   info = paste0("tail-bytes: ",
-                                 paste0(as.integer(charToRaw(tail, type = "single")), collapse = ","),
-                                 " suffix-bytes: ",
-                                 paste0(as.integer(charToRaw(suffix, type = "single")), collapse = ",")))
+                   info = paste0("tail-bytes: ", .ms_hyg_bytes(tail),
+                                 " suffix-bytes: ", .ms_hyg_bytes(suffix)))
 }
 
 test_that("the shipped .gitignore rules FIRE for their declared classes", {
