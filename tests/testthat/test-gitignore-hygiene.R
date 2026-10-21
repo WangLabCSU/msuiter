@@ -49,14 +49,19 @@
     stop("git check-ignore errored with status ", st, ": ",
          paste0(as.character(res), collapse = " | "))
   }
-  # Windows' git reports the probe path with native backslashes although the
-  # probe travelled forward-slash; the suffix law below is authored against
-  # the forward-slash form. Normalize at the boundary (patterns here never
-  # carry backslashes -- the .gitignore rule forms are slash-only).
+  # The check-ignore report arrives with the runner's native line/report
+  # shape; .ms_hyg_norm brings it to the form the suffix law is authored for.
   list(status = st, out = .ms_hyg_norm(as.character(res)))
 }
 
-.ms_hyg_norm <- function(out) gsub("\\", "/", out, fixed = TRUE)
+.ms_hyg_norm <- function(out) {
+  # Transport-layer report normalization only (never the law's semantics):
+  # native path separators, and carriage-return tails from a process pipe the
+  # line splitter left standing. Bytes beyond THESE surface as the length
+  # probe's numbers, naming the residue exactly.
+  x <- gsub("\\", "/", as.character(out), fixed = TRUE)
+  gsub("[\r]+$", "", x)
+}
 
 # The report suffix a firing rule must produce (exact -- the pattern text
 # and the tab-separated path, so a shadowing rule with a different shape
@@ -64,6 +69,10 @@
 .ms_expect_fires <- function(out, i, probe, pattern) {
   suffix <- paste0(pattern, "\t", probe)
   tail <- substring(out[i], nchar(out[i]) - nchar(suffix) + 1L)
+  # Length first: a bytes-mismatch alone leaves the residue uncounted, and a
+  # delta of one is a standing \r, of two a \r\n pair, of a path length a
+  # separator class the normalization does not yet know.
+  expect_identical(nchar(tail), nchar(suffix))
   expect_identical(tail, suffix)
 }
 
