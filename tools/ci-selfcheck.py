@@ -14,6 +14,11 @@ contracts it is supposed to implement:
     Linux + Windows (section 4.4/5), and the Cargo.lock pins
     (matrixmultiply 0.3.9, rayon 1.10.x, lock v3) asserted by a CI
     step next to the dependabot ignore rules (belt and braces);
+  * the sharded CI contract (restructure 2026-10-21) is coherent: the
+    representative check arms keep the full test phase and the fan-out arms
+    (tools/ci/fanout-configs.tsv) run --no-tests plus the attested shard
+    fan-out, together covering every test on every platform; the
+    instruments the lanes invoke exist and the attestation gate is wired;
   * every repository path referenced by a workflow actually exists
     (sanctioned build-output roots are excepted by EXACT token only, and a
     built-in firing control proves a genuinely dangling path still reddens).
@@ -173,7 +178,15 @@ def main():
               REPO / "tools/check-dep-direction.sh",
               REPO / "tools/vendor.sh",
               REPO / "tools/rng-kat.py",
-              REPO / "tools/docs-sync.R"):
+              REPO / "tools/docs-sync.R",
+              REPO / "tools/ci/gen-shard-manifest.R",
+              REPO / "tools/ci/run-testthat-shard.R",
+              REPO / "tools/ci/run-covr-shard.R",
+              REPO / "tools/ci/ci-shard-aggregate.py",
+              REPO / "tools/ci/covmerge.py",
+              REPO / "tools/ci/shard-manifest.tsv",
+              REPO / "tools/ci/shard-weights.tsv",
+              REPO / "tools/ci/fanout-configs.tsv"):
         check(f"file exists: {p.relative_to(REPO)}", p.is_file())
 
     try:
@@ -196,10 +209,28 @@ def main():
     check("ci.yml env _R_CHECK_LIMIT_CORES_ (FFI contract 6)",
           "_R_CHECK_LIMIT_CORES_" in (ci.get("env") or {}))
 
-    # ---- R-CMD-check matrix ----------------------------------------------
+    # ---- R-CMD-check matrix (representative arms) + fan-out arms ----------
+    # The 8-(arm) platform roster is frozen as a contract; the wall-clock
+    # restructure (2026-10-21) splits it between two jobs: four
+    # representative arms keep the FULL check -- test phase verbatim -- and
+    # four fan-out arms (roster committed in tools/ci/fanout-configs.tsv,
+    # emitted by guard-prep as a fromJSON matrix) run check --no-tests plus
+    # the attested shard fan-out. The union must be exactly the frozen set,
+    # disjointly: same eight arms, same per-platform test coverage, a
+    # different schedule.
     rjob = ci["jobs"]["R-CMD-check"]
     configs = rjob["strategy"]["matrix"]["config"]
-    pairs = {(c["os"], str(c["r"])) for c in configs}
+    reps = {(c["os"], str(c["r"])) for c in configs}
+    fanout_job = ci["jobs"].get("R-CMD-check-fanout", {})
+    fan_pairs = set()
+    fan_tsv = REPO / "tools/ci/fanout-configs.tsv"
+    if fan_tsv.is_file():
+        for line in fan_tsv.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    fan_pairs.add((parts[0], parts[1]))
     expected = {
         ("macos-latest", "release"), ("windows-latest", "release"),
         ("ubuntu-latest", "release"),
@@ -208,8 +239,20 @@ def main():
         ("ubuntu-latest", "4.3"),      # package floor, Linux
         ("ubuntu-latest", "devel"),
     }
-    check("R matrix = 3 OS x {release, oldrel-1} + {4.3 Linux, devel}",
-          pairs == expected, f"got {sorted(pairs)}")
+    check("R matrix union (reps job + fan-out TSV) = 3 OS x {release, oldrel-1} "
+          "+ {4.3 Linux, devel}, disjoint",
+          (reps | fan_pairs) == expected and not (reps & fan_pairs),
+          f"reps={sorted(reps)} fanout={sorted(fan_pairs)}")
+    check("fan-out arms are data-driven (committed TSV via guard-prep fromJSON)",
+          "fromJSON(needs.guard-prep.outputs.fanout-matrix)" in str(fanout_job)
+          and "tools/ci/fanout-configs.tsv" in job_script(ci, "guard-prep"))
+    check("fan-out arms bind the displaced test phase (--no-tests)",
+          '"--no-tests"' in str(fanout_job))
+    check("representative arms keep the full test phase (no --no-tests)",
+          "--no-tests" not in str(rjob))
+    check("fan-out arms gate on the fan-out attestation census",
+          "ci-shard-aggregate.py" in job_script(ci, "R-CMD-check-fanout")
+          and "--kind fanout" in job_script(ci, "R-CMD-check-fanout"))
     check("devel only on Linux", all(c["os"] == "ubuntu-latest"
                                      for c in configs if str(c["r"]) == "devel"))
     check("R-4.3 only on Linux", all(c["os"] == "ubuntu-latest"
@@ -271,19 +314,48 @@ def main():
           any(u.startswith("taiki-e/install-action@") and "cargo-deny" in str(d)
               for d in ci["jobs"]["rust"]["steps"] for u in uses_list(d)))
 
-    # ---- guards job (U-M0-01/02/05/06 handoff) ----------------------------
-    g = job_script(ci, "guards")
+    # ---- guard-prep / guards / guards-shards (U-M0-01/02/05/06 handoff) --
+    # The static guard scripts, the single vendor generation point, and the
+    # shard-manifest byte-gate live in guard-prep; the suite executes as K
+    # attested parallel shard processes in guards-shards; `guards` keeps the
+    # name and now IS the attestation census gate -- a vanished or
+    # zero-executed shard cannot pass it (the instruments self-test that,
+    # and test-ci-shard-map.R demands the controls fire).
+    gp = job_script(ci, "guard-prep")
     for name, needle in [
         ("tools/check-dep-direction.sh", "sh tools/check-dep-direction.sh"),
         ("tools/vendor.sh --check", "sh tools/vendor.sh --check"),
         ("tools/rng-kat.py", "python3 tools/rng-kat.py"),
         ("tools/docs-sync.R", "Rscript tools/docs-sync.R"),
-        ("repo-mode testthat (devtools::test)", "devtools::test("),
+        ("tools/ci-selfcheck.py", "python3 tools/ci-selfcheck.py"),
+        ("shard-manifest byte-gate", "gen-shard-manifest.R"),
     ]:
-        check(f"guards job runs {name}", needle in g)
-    check("guards job asserts Cargo.lock pins (matrixmultiply 0.3.9)",
-          'version = "0.3.9"' in g)
-    check("guards job asserts lock v3", "version = 3" in g)
+        check(f"guard-prep runs {name}", needle in gp)
+    check("guard-prep asserts Cargo.lock pins (matrixmultiply 0.3.9)",
+          'version = "0.3.9"' in gp)
+    check("guard-prep asserts lock v3", "version = 3" in gp)
+    check("guard-prep is the single vendor-tarball generation point",
+          "upload-artifact@" in str(ci["jobs"]["guard-prep"])
+          and all("download-artifact@" in str(j) or j is ci["jobs"]["guard-prep"]
+                   for j in ci["jobs"].values()
+                   if "vendor-tarball" in str(j)))
+    g = job_script(ci, "guards")
+    check("guards job is the strict attestation census gate",
+          "ci-shard-aggregate.py" in g and "--kind guards" in g
+          and "--advisory" not in g)
+    check("guards job needs the shard fleet",
+          set(ci["jobs"]["guards"].get("needs", [])) == {"guard-prep", "guards-shards"})
+    gs = job_script(ci, "guards-shards")
+    check("guards-shards runs the sharded repo-layout suite (K parallel attested processes)",
+          "run-testthat-shard.R" in gs and "--kind=guards" in gs
+          and "--mode=installed" in gs)
+    check("guards-shards attestation upload cannot be silently empty",
+          any(s2.get("with", {}).get("if-no-files-found") == "error"
+              for s2 in ci["jobs"]["guards-shards"]["steps"]
+              if isinstance(s2, dict) and "upload-artifact@" in str(s2.get("uses", ""))))
+    check("every manifest file reaches a shard: census unit ships in the suite",
+          (REPO / "tests/testthat/test-ci-shard-map.R").is_file()
+          and (REPO / "tests/testthat/helper-ci-shard-census.R").is_file())
 
     # ---- MSRV proof job (ADR 0002 §4.4/§5 residual) ------------------------
     msrv = ci["jobs"]["msrv"]
@@ -299,6 +371,18 @@ def main():
     # ---- coverage (wiring only, no gate) ----------------------------------
     cov_job_text = str(ci["jobs"].get("coverage", {}))
     check("coverage job uses covr", "covr::" in cov_job_text)
+    check("coverage test leg is sharded through the shared runner",
+          "run-covr-shard.R" in cov_job_text)
+    check("coverage merges fragments through covmerge (single cobertura contract)",
+          "covmerge.py" in cov_job_text and "cobertura.xml" in cov_job_text)
+    coe_steps = [s2 for s2 in ci["jobs"].get("coverage", {}).get("steps", [])
+                 if isinstance(s2, dict) and s2.get("continue-on-error") is True]
+    # One non-fatal step carries the whole parallel covr wave (test shards +
+    # examples/vignettes ride the same background-pid wave).
+    check("coverage census is ADVISORY, matching the arm's long-standing non-gating law",
+          "--advisory" in cov_job_text and len(coe_steps) >= 1
+          and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps),
+          f"advisory aggregator + {len(coe_steps)} continue-on-error steps")
     check("codecov upload wired", "codecov/codecov-action@" in cov_job_text)
     codecov_steps = [s for s in ci["jobs"].get("coverage", {}).get("steps", [])
                      if "codecov/codecov-action@" in str(s.get("uses", ""))]
@@ -391,7 +475,9 @@ def main():
           f"got {sani.get('timeout-minutes')}")
 
     # ---- scheduled pkgdown site build (U-M7-04 slice-C, C5) ----------------
-    # The per-PR 13-check topology is frozen, so the site render is pinned
+    # The per-PR check-run topology is frozen (13 arms through the pre-shard
+    # era; 15 since the 2026-10-21
+    # shard restructure: +guard-prep, +guards-shards), so the site render is pinned
     # to the weekly deep check -- and it is a HARD gate: no continue-on-error.
     site = sched["jobs"].get("site", {})
     check("scheduled: pkgdown site job exists", bool(site))

@@ -561,10 +561,28 @@ runner <- file.path(work, "sim-runner.R")
   "runner.file <- file.path(.cfgf$tests, 'testthat.R')",
   "if (!file.exists(runner.file)) stop('shipped tests/testthat.R missing')",
   "shipped <- parse(file = runner.file)",
-  "if (!length(shipped) == 3L ||",
-  "    !identical(as.character(shipped[[3L]][[1L]]), 'test_check') ||",
-  "    !identical(as.character(shipped[[3L]][[2L]]), 'msuiter')) {",
-  "  stop('shipped runner is no longer the measured library/library/test_check shape')",
+  # Two shapes are the measured truth: the historical three-expression
+  # library/library/test_check runner, and the documented shard-handoff
+  # runner (tests/testthat.R, 2026-10-21) whose only difference is that
+  # the bare call became the env-unset fallback of a documented dispatch.
+  # Both are policed: the handoff shape is only accepted when the file
+  # STILL carries the verbatim bare test_check('msuiter') call -- so a
+  # future edit cannot drop the suite without this preflight dying.
+  ".has_bare_call <- function(e, target) {",
+  "  if (identical(e, target)) return(TRUE)",
+  "  if (!is.call(e)) return(FALSE)",
+  "  any(vapply(as.list(e), .has_bare_call, logical(1), target = target))",
+  "}",
+  "bare <- quote(test_check('msuiter'))",
+  "hist_shape <- length(shipped) == 3L &&",
+  "  identical(as.character(shipped[[3L]][[1L]]), 'test_check') &&",
+  "  identical(as.character(shipped[[3L]][[2L]]), 'msuiter')",
+  "runner.txt <- paste0(readLines(runner.file, warn = FALSE), collapse = '\\n')",
+  "handoff_shape <- grepl('MSUITER_TESTTHAT_FILTER', runner.txt) &&",
+  "  grepl('MSUITER_CENSUS_ATTEST', runner.txt) &&",
+  "  any(vapply(as.list(shipped), .has_bare_call, logical(1), target = bare))",
+  "if (!hist_shape && !handoff_shape) {",
+  "  stop('shipped runner is no longer the measured library/library/test_check shape (nor the documented shard-handoff shape)')",
   "}",
   "res <- testthat::test_check(package = 'msuiter', stop_on_failure = FALSE)",
   "if (!inherits(res, 'testthat_results') && !is.list(res)) {",

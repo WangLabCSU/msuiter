@@ -1,24 +1,49 @@
-# msuiter CI (U-M0-07) — docs/ARCHITECTURE.md §9 CI contract.
+# msuiter CI (U-M0-07) -- docs/ARCHITECTURE.md §9 CI contract.
 #
 # Jobs:
-#   R-CMD-check : 3 OS x {release, oldrel-1} + {4.3 (Linux), devel (allowed to fail)},
-#                 rcmdcheck --as-cran --no-manual, _R_CHECK_LIMIT_CORES_ (FFI contract 6).
-#                 Rust toolchain installed at the DESCRIPTION MSRV (rustc >= 1.71)
-#                 in every R job: src/rust cannot compile without cargo/rustc.
-#   rust        : cargo test --workspace, clippy -D warnings, cargo deny check
-#                 (all four sections: bans / licenses / advisories / sources)
-#                 and cargo audit (RustSec advisories, hard-fail on findings).
-#   guards      : repo-root guard scripts (U-M0-01/02/05/06 handoff, see
-#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07) + repo-mode testthat
-#                 (drift-guard tests skip under R CMD check; they must run from
-#                 the checkout via devtools::test()) + Cargo.lock pin assertion
-#                 (ADR 0002 §4.4) as the belt-and-braces check beside dependabot.
-#   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows —
-#                 formal closure of the ADR 0002 section 5 residual
-#                 "three-platform build proofs"
-#                 (macOS arm64 already proven locally in ADR 0002 §4).
-#   coverage    : R coverage via covr -> codecov upload. Wiring only, no gate
-#                 (R >= 85% is a later milestone target, ARCHITECTURE §9).
+#   guard-prep  : fast static guards + the single vendor-tarball generation
+#                 point + the shard-manifest byte-gate; emits the fan-out
+#                 matrix consumed by the non-representative check arms.
+#   R-CMD-check : the four REPRESENTATIVE arms keep the full check with its
+#                 test phase verbatim: {release on macos/windows/ubuntu,
+#                 4.3 (Linux), devel (allowed to fail)} -- rcmdcheck
+#                 --as-cran --no-manual, _R_CHECK_LIMIT_CORES_ (FFI
+#                 contract 6). The remaining four arms (fan-out roster in
+#                 tools/ci/fanout-configs.tsv) run check --no-tests plus
+#                 the sharded repo-layout testthat fan-out, so every test
+#                 still runs on every platform -- same coverage, K-way
+#                 parallel instead of serial.
+#                 Rust toolchain installed at the DESCRIPTION MSRV
+#                 (rustc >= 1.71) in every R job.
+#   rust        : cargo test --workspace, clippy -D warnings, cargo deny
+#                 (all four sections) and cargo audit (hard-fail findings).
+#   guards      : the attestation gate: it demands one ok MSUITER-ATTEST
+#                 verdict per manifest shard from guards-shards (and,
+#                 structurally, that no arm gated zero executed tests --
+#                 tools/ci/ci-shard-aggregate.py, self-tested). The name
+#                 continues to carry the branch-protection semantics; the
+#                 repo-root guard scripts it names run in guard-prep
+#                 (U-M0-01/02/05/06 handoff, see
+#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07), and its
+#                 Cargo.lock pin assertion (ADR 0002 §4.4) stays as the
+#                 belt-and-braces check beside dependabot.
+#   guards-shards : K parallel repo-layout testthat shard processes against
+#                 one shared R CMD INSTALL of the tree under test; attests
+#                 every file of the committed shard manifest.
+#   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows
+#                 (formal closure of the ADR 0002 section 5 residual
+#                 "three-platform build proofs"; macos arm64 already proven
+#                 locally in ADR 0002 §4).
+#   coverage    : R coverage via covr -> codecov upload. Sharded for the
+#                 test legs, examples/vignettes as before. Wiring only,
+#                 no gate (R >= 85% is a later milestone target,
+#                 ARCHITECTURE §9); the aggregator runs --advisory and says so.
+#
+# The shard partition lives once, in tools/ci/shard-manifest.tsv, and is
+# consumed by guards-shards, the check fan-out arms, and coverage; it is
+# machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
+# guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
+# docs/devlog/2026-10-21-ci-shard-parallel.md.
 #
 # This repository currently has remote origin (WangLabCSU/msuiter); these
 # workflows activate on the next push.
@@ -44,8 +69,193 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  guard-prep:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    outputs:
+      fanout-matrix: ${{ steps.fanout-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
+      # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
+      - name: Assert ADR 0002 pinned versions in Cargo.lock
+        run: |
+          awk '/^version = /{print; exit}' src/rust/Cargo.lock | grep -qx 'version = 3'
+          grep -A1 '^name = "matrixmultiply"$' src/rust/Cargo.lock | grep -qx 'version = "0.3.9"'
+          grep -A1 '^name = "rayon"$' src/rust/Cargo.lock | grep -qE '^version = "1\.10\.[0-9]+"$'
+          echo "Cargo.lock: v3, matrixmultiply 0.3.9, rayon 1.10.x -- ADR 0002 §4.4 holds"
+
+      - name: Dependency-direction guard (ffi->catalog->engine)
+        run: sh tools/check-dep-direction.sh
+
+      - name: RNG known-answer test (pure-stdlib Python vs Rust goldens)
+        run: python3 tools/rng-kat.py
+
+      - name: "G0 harness test suite (bench/g0 -- sim/coverage/lrt/provider/adapter/seeds)"
+        working-directory: bench/g0
+        run: |
+          python3 -m pip install --quiet numpy
+          python3 -m tests.run_all
+
+      - name: CI selfcheck (workflow YAML + referenced paths + pins)
+        run: python3 tools/ci-selfcheck.py
+
+      # The shard manifest is generated, never hand-edited: regenerate at
+      # the committed weights and demand byte equality with the committed
+      # witness. The same census runs as in-suite units (test-ci-shard-map.R);
+      # this is the belt beside the braces for edits made outside the suite.
+      - name: Shard-manifest byte-gate (generator vs committed witness)
+        shell: Rscript {0}
+        run: |
+          tmp <- tempfile("shard-manifest-gate-")
+          system2("Rscript", c("tools/ci/gen-shard-manifest.R",
+                               "--weights=tools/ci/shard-weights.tsv",
+                               paste0("--out=", tmp), "--root=."))
+          if (!identical(readLines(tmp, warn = FALSE),
+                         readLines("tools/ci/shard-manifest.tsv", warn = FALSE))) {
+            stop("committed shard-manifest.tsv is not the generator's output; run: ",
+                 "Rscript tools/ci/gen-shard-manifest.R --weights=tools/ci/shard-weights.tsv ",
+                 "--out=tools/ci/shard-manifest.tsv")
+          }
+          cat("shard-manifest.tsv byte-matches the generator\n")
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - name: Export R_HOME
+        shell: bash
+        run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
+
+      - name: docs-sync guard (API surface drift)
+        run: Rscript tools/docs-sync.R
+
+      # vendor.sh regenerates the tarball into /tmp and asserts the exact
+      # byte budget frozen in ADR 0002 §2 (needs cargo + xz; both on runner).
+      # Single generation point: every consumer downloads this artifact.
+      - name: Vendor budget check (ADR 0002 §2 drift guard)
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+          sh tools/vendor.sh --check
+          # vendor.sh keeps the tarball in /tmp; stage it for the R jobs
+          # (single generation point; works on every runner OS).
+          cp /tmp/msuiter-vendor.tar.xz vendor.tar.xz
+
+      - name: Upload vendor tarball (consumed by every R job)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: vendor-tarball
+          path: vendor.tar.xz
+          retention-days: 1
+          if-no-files-found: error
+
+      # The non-representative arms are data, not YAML: one source of truth
+      # (tools/ci/fanout-configs.tsv) feeds the matrix below, and
+      # test-ci-shard-map.R pins the roster.
+      - name: Emit fan-out matrix
+        id: fanout-matrix
+        shell: bash
+        run: |
+          rows=$(awk '!/^#/ && NF { printf "%s{\"os\":\"%s\",\"r\":\"%s\"}", sep, $1, $2; sep="," }' \
+            tools/ci/fanout-configs.tsv)
+          echo "matrix={\"config\":[${rows}]}" >> "$GITHUB_OUTPUT"
+
+  # The attestation gate. It exists so a shard that vanished -- or ran
+  # nothing -- cannot hide behind a green matrix: every manifest shard must
+  # attest status=ok with executed >= 1 (tools/ci/ci-shard-aggregate.py).
+  guards:
+    timeout-minutes: 15
+    needs: [guard-prep, guards-shards]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Download guard attestations
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: attest-guards
+          path: attest-guards
+
+      - name: Aggregate guard attestations (strict census)
+        run: |
+          python3 tools/ci/ci-shard-aggregate.py \
+            --manifest tools/ci/shard-manifest.tsv \
+            --attest-dir attest-guards --kind guards
+
+  guards-shards:
+    timeout-minutes: 45
+    needs: guard-prep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Fetch vendored offline tarball (built by guard-prep)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - name: Export R_HOME
+        shell: bash
+        run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: soft # Suggests (testthat, withr) for the repo-layout suite
+          use-cache: true
+
+      # One shared INSTALL of the tree under test; the K shard processes run
+      # it back in parallel, each filtering the manifest to its roster. The
+      # run is from the CHECKOUT with load_package="installed", so the
+      # helpers' ancestor walk resolves .ms_root and the drift guards and
+      # the check-layout-sim family execute -- a superset of what the old
+      # single devtools::test() process covered, never weaker.
+      - name: R CMD INSTALL (one build of the tree, shared by all shards)
+        run: |
+          R CMD INSTALL --no-docs --no-build-vignettes .
+
+      - name: Repo-layout testthat shards (parallel, attested)
+        run: |
+          mkdir -p attest-out shard-logs
+          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          pids=""; rc=0
+          for s in $(seq 1 "$k"); do
+            Rscript tools/ci/run-testthat-shard.R \
+              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
+              --kind=guards --mode=installed \
+              --attest="attest-out/shard-$s.attest" \
+              > "shard-logs/shard-$s.log" 2>&1 &
+            pids="$pids $!"
+          done
+          for p in $pids; do wait "$p" || rc=1; done
+          echo "::group::shard transcripts (tail)"
+          for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
+          echo "::endgroup::"
+          exit "$rc"
+
+      - name: Upload guard attestations
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: attest-guards
+          path: attest-out
+          retention-days: 1
+          if-no-files-found: error
+
   R-CMD-check:
-    needs: guards
+    # The four representative arms: full check, test phase verbatim.
+    timeout-minutes: 90
+    needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
     # R devel is informative only (r-lib convention)
@@ -54,12 +264,11 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
+          # Representative arms per the 2026-10-21 restructure: ubuntu and
+          # windows release, the 4.3 floor, and devel. macos/release is a
+          # fan-out arm (roster: tools/ci/fanout-configs.tsv).
           - {os: windows-latest, r: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
-          - {os: macos-latest,   r: 'oldrel-1'}
-          - {os: windows-latest, r: 'oldrel-1'}
-          - {os: ubuntu-latest,  r: 'oldrel-1'}
           # Package floor: HARD dependencies only -- the Suggests chain
           # (BSgenome.Hsapiens.UCSC.hg19, maftools, Biobase) no longer
           # solves on the R-4.3 Bioc view (pak 404, CI audit 2026-10-06);
@@ -71,10 +280,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # CRAN-mode offline build: the vendored tarball generated once by the
-      # guards job is dropped where Makevars expects it, so R CMD INSTALL
+      # guard-prep job is dropped where Makevars expects it, so R CMD INSTALL
       # never touches the network (a --as-cran WARNING otherwise, and no
-      # vendor.tar.xz is ever committed — ADR 0002 §3.3).
-      - name: Fetch vendored offline tarball (built by guards job)
+      # vendor.tar.xz is ever committed -- ADR 0002 §3.3).
+      - name: Fetch vendored offline tarball (built by guard-prep)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: vendor-tarball
@@ -91,8 +300,8 @@ jobs:
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: ${{ matrix.config.r }}
-          http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+          http-user-agent: ${{ matrix.config.http-user-agent }}
 
       # Windows: the Rust lib must build for x86_64-pc-windows-gnu (R's
       # Makevars force it); the gnu target std is not preinstalled on
@@ -118,6 +327,7 @@ jobs:
         with:
           needs: check
           extra-packages: any::rcmdcheck
+          use-cache: true
 
       # install-pandoc must be explicit on the floor arm: the action's auto
       # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
@@ -146,6 +356,7 @@ jobs:
             any::rcmdcheck, any::knitr, any::rmarkdown,
             any::testthat, any::withr, any::ggplot2,
             any::ggalluvial, any::uwot
+          use-cache: true
 
       - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
@@ -156,7 +367,7 @@ jobs:
           # intended-to-be-informative warning gate). Error-level gate only:
           # --as-cran strictness depends on optional external tools not
           # uniformly available across runner OSes (checkbashisms is in
-          # devscripts, absent on macos/windows runners) and flags every
+          # devtools, absent on macos/windows runners) and flags every
           # fresh submission ("New submission" NOTE). The hard gates live in
           # the guards job and the scheduled valgrind workflow.
           # action convention: inputs are RAW R expressions (cf. the `args`
@@ -166,6 +377,93 @@ jobs:
           # "object 'error' not found" (CI audit 2026-10-07, round 4).
           error-on: '"error"'
           upload-snapshots: true
+
+  # The four non-representative arms (roster: tools/ci/fanout-configs.tsv,
+  # emitted by guard-prep). Their check keeps vignettes, Rd and CRAN gates
+  # but drops only the serial test phase; the suite then runs on the same
+  # platform as K parallel shard processes against one shared INSTALL, and
+  # the fan-out attestation census gates the arm. Every test still executes
+  # on every platform -- the restructure moves the schedule, not the
+  # coverage.
+  R-CMD-check-fanout:
+    timeout-minutes: 60
+    needs: [guard-prep]
+    runs-on: ${{ matrix.config.os }}
+    name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJSON(needs.guard-prep.outputs.fanout-matrix).config }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Fetch vendored offline tarball (built by guard-prep)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: check
+          extra-packages: any::rcmdcheck
+          use-cache: true
+
+      # --no-tests removes the serial test phase only; vignettes still
+      # build, Rd/CRAN lint still gate (see the reps arms above for the
+      # full-phase verbatim).
+      - name: Check without the test phase
+        uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          args: 'c("--no-manual", "--as-cran", "--no-tests")'
+          error-on: '"error"'
+          upload-snapshots: true
+
+      - name: R CMD INSTALL (one build of the tree, shared by all shards)
+        run: |
+          R CMD INSTALL --no-docs --no-build-vignettes .
+
+      - name: Repo-layout testthat fan-out (K shards, attested)
+        run: |
+          mkdir -p attest-out shard-logs
+          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          pids=""; rc=0
+          for s in $(seq 1 "$k"); do
+            Rscript tools/ci/run-testthat-shard.R \
+              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
+              --kind=fanout --mode=installed \
+              --attest="attest-out/shard-$s-${{ matrix.config.os }}-${{ matrix.config.r }}.attest" \
+              > "shard-logs/shard-$s.log" 2>&1 &
+            pids="$pids $!"
+          done
+          for p in $pids; do wait "$p" || rc=1; done
+          echo "::group::shard transcripts (tail)"
+          for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
+          echo "::endgroup::"
+          test "$rc" -eq 0 || exit "$rc"
+          python3 tools/ci/ci-shard-aggregate.py \
+            --manifest tools/ci/shard-manifest.tsv \
+            --attest-dir attest-out --kind fanout \
+            --fanout-configs tools/ci/fanout-configs.tsv
+
+      - name: Upload fan-out attestations
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: attest-fanout-${{ matrix.config.os }}-${{ matrix.config.r }}
+          path: attest-out
+          retention-days: 1
+          if-no-files-found: error
 
   rust:
     runs-on: ubuntu-latest
@@ -212,7 +510,7 @@ jobs:
         working-directory: src/rust
         run: cargo deny check
 
-      # cargo-audit: the named RustSec advisory gate the ROADMAP .github line
+      # cargo-audit: the named RustSec advisories gate the ROADMAP .github line
       # and ARCHITECTURE §9 CI line claim. Controller ruling U-M7-04 slice-A
       # (2026-10-10): the claim is made true by implementation. Hard-fail on
       # findings; --deny warnings only by a later controller ruling. The
@@ -225,78 +523,6 @@ jobs:
       - name: cargo audit (RustSec advisories, hard-fail on findings)
         working-directory: src/rust
         run: cargo audit
-
-  guards:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
-      # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
-      - name: Assert ADR 0002 pinned versions in Cargo.lock
-        run: |
-          awk '/^version = /{print; exit}' src/rust/Cargo.lock | grep -qx 'version = 3'
-          grep -A1 '^name = "matrixmultiply"$' src/rust/Cargo.lock | grep -qx 'version = "0.3.9"'
-          grep -A1 '^name = "rayon"$' src/rust/Cargo.lock | grep -qE '^version = "1\.10\.[0-9]+"$'
-          echo "Cargo.lock: v3, matrixmultiply 0.3.9, rayon 1.10.x — ADR 0002 §4.4 holds"
-
-      - name: Dependency-direction guard (ffi->catalog->engine)
-        run: sh tools/check-dep-direction.sh
-
-      - name: RNG known-answer test (pure-stdlib Python vs Rust goldens)
-        run: python3 tools/rng-kat.py
-
-      - name: "G0 harness test suite (bench/g0 — sim/coverage/lrt/provider/adapter/seeds)"
-        working-directory: bench/g0
-        run: |
-          python3 -m pip install --quiet numpy
-          python3 -m tests.run_all
-
-      - name: CI selfcheck (workflow YAML + referenced paths + pins)
-        run: python3 tools/ci-selfcheck.py
-
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          r-version: 'release'
-          use-public-rspm: true
-      - name: Export R_HOME
-        shell: bash
-        run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
-
-      - name: docs-sync guard (API surface drift)
-        run: Rscript tools/docs-sync.R
-
-      # vendor.sh regenerates the tarball into /tmp and asserts the exact
-      # byte budget frozen in ADR 0002 §2 (needs cargo + xz; both on runner).
-      - name: Vendor budget check (ADR 0002 §2 drift guard)
-        run: |
-          rustup toolchain install 1.71.0 --profile minimal
-          rustup default 1.71.0
-          sh tools/vendor.sh --check
-          # vendor.sh keeps the tarball in /tmp; stage it for the R jobs
-          # (single generation point; works on every runner OS).
-          cp /tmp/msuiter-vendor.tar.xz vendor.tar.xz
-
-      - name: Upload vendor tarball (consumed by R-CMD-check jobs)
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: vendor-tarball
-          path: vendor.tar.xz
-          retention-days: 1
-          if-no-files-found: error
-
-      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          needs: soft # Suggests (testthat, withr) for repo-mode devtools::test()
-          extra-packages: any::devtools
-
-      # Repo-mode full suite: drift-guard tests (test-channels-sync,
-      # test-channels-reference, ffi-surface-drift) skip under R CMD check's
-      # installed-package context; they must run against the checkout.
-      - name: Repo-mode testthat (full suite incl. drift guards)
-        shell: Rscript {0}
-        run: |
-          devtools::test(stop_on_failure = TRUE)
 
   msrv:
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
@@ -373,6 +599,11 @@ jobs:
   coverage:
     # R-side coverage upload only; no gate here (R >= 85% is a later target,
     # ARCHITECTURE §9). Rust coverage is not gated (also ARCHITECTURE §9).
+    # The lane's non-gating posture is structural, not a continue-on-error
+    # mask: the shard covr runs attest their own executed work and the
+    # aggregator prints the census -- with --advisory, defects are LOUD but
+    # not fatal, exactly the semantics this arm has always had.
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -391,40 +622,85 @@ jobs:
         with:
           needs: coverage
           extra-packages: any::covr
+          use-cache: true
 
-      # Coverage is UPLOAD-ONLY (ARCHITECTURE §9: no gate on R coverage).
-      # covr's instrumentation can break individual tests without
-      # implying a package regression (the same suite passes in
-      # R-CMD-check on the same commit), so this step is
-      # continue-on-error; the failure artifact (Rout.fail tail) is
-      # echoed for diagnosability.
-      - name: Generate R coverage (covr)
-        shell: Rscript {0}
+      # Test-phase coverage, sharded: one instrumented package_coverage
+      # (type="tests") per manifest shard, in parallel. covr's
+      # instrumentation can break individual tests without implying a
+      # package regression (the same suite passes in R-CMD-check on the
+      # same commit), so each shard is continue-on-error and the merged
+      # artifacts are what the upload consumes.
+      - name: Generate R coverage per shard (covr, attested)
         continue-on-error: true
         run: |
-          cov <- tryCatch(
-            covr::package_coverage(type = "all", quiet = FALSE,
-                                   clean = FALSE),
-            error = function(e) {
-              cat("covr coverage failed under instrumentation:",
-                  conditionMessage(e), "\n")
-              NULL
+          mkdir -p covr-out covr-srt covr-logs
+          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          # The examples/vignettes legs ride the SAME parallel wave as the
+          # test shards (the historical type="all" was tests+examples+
+          # vignettes in one process; here the shards carry the tests leg
+          # and these two instrumented passes carry the rest). Their
+          # covr pre-clean is off for the same shared-cargo-target law the
+          # shard runner documents (run-covr-shard.R).
+          cat > extras-coverage.R <<'RS'
+          for (ty in c("examples", "vignettes")) {
+            cov <- tryCatch(
+              covr::package_coverage(type = ty, quiet = TRUE,
+                                     pre_clean = FALSE,
+                                     install_path = tempfile("covr-lib-")),
+              error = function(e) {
+                cat("covr coverage failed under instrumentation (", ty, "): ",
+                    conditionMessage(e), "\n", sep = "")
+                NULL
+              }
+            )
+            if (!is.null(cov)) {
+              writeLines(covr::to_srt(cov),
+                         paste0("/tmp/msuiter-extras-", ty, ".srt"))
             }
-          )
-          if (is.null(cov)) {
-            quit(status = 1) # annotated by continue-on-error, non-gating
           }
-          print(cov)
-          covr::to_cobertura(cov, filename = "cobertura.xml")
+          RS
+          pids=""
+          for s in $(seq 1 "$k"); do
+            Rscript tools/ci/run-covr-shard.R \
+              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
+              --out-srt="covr-srt/shard-$s.srt" \
+              --attest="covr-out/shard-$s.attest" \
+              > "covr-logs/shard-$s.log" 2>&1 &
+            pids="$pids $!"
+          done
+          Rscript extras-coverage.R > covr-logs/extras.log 2>&1 &
+          pids="$pids $!"
+          rc=0
+          for p in $pids; do wait "$p" || rc=1; done
+          echo "::group::covr transcripts (tail)"
+          for f in covr-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
+          echo "::endgroup::"
+          python3 tools/ci/ci-shard-aggregate.py \
+            --manifest tools/ci/shard-manifest.tsv \
+            --attest-dir covr-out --kind coverage --advisory || true
+          exit "$rc"
+
       - name: Echo failed testthat output (diagnosability)
         if: failure()
         shell: bash
         run: |
+          for f in covr-logs/*.log; do echo "-- $f (tail) --"; tail -n 40 "$f"; done
           FAILFILE=$(find /tmp -name "testthat.Rout.fail" 2>/dev/null | head -1)
           if [ -n "$FAILFILE" ]; then
             echo "=== $FAILFILE (tail) ==="
             tail -80 "$FAILFILE"
           fi
+
+      - name: Merge coverage fragments (covmerge)
+        run: |
+          fragments=""
+          for f in covr-srt/*.srt /tmp/msuiter-extras-*.srt; do
+            [ -f "$f" ] && fragments="$fragments $f"
+          done
+          test -n "$fragments" || { echo "no coverage fragments produced"; exit 0; }
+          # shellcheck-disable-next-line SC2086: fragment paths are CI-owned
+          python3 tools/ci/covmerge.py --fragments $fragments \
+            --out-srt /tmp/msuiter-merged.srt --cobertura cobertura.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7

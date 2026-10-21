@@ -1,0 +1,10 @@
+# Non-representative check platforms that additionally run the repo-mode
+# sharded testthat fan-out (the sharding target for those arms). The
+# representative arms -- ubuntu/release, windows/release, 4.3, devel -- keep
+# the full R CMD check with its test phase and are NOT fan-out arms.
+# Consumed by the guard-prep matrix emission and gated by test-ci-shard-map.R.
+# One 'os<TAB>config' row per arm; order is part of the committed witness.
+ubuntu-latest	oldrel-1
+macos-latest	release
+macos-latest	oldrel-1
+windows-latest	oldrel-1
