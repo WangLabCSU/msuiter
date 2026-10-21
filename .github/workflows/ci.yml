@@ -251,6 +251,7 @@ jobs:
           echo "::group::shard transcripts (tail)"
           for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
           echo "::endgroup::"
+          [ "$rc" -eq 0 ] || bash tools/ci/shard-transcripts.sh
           exit "$rc"
 
       - name: Upload guard attestations
@@ -470,6 +471,7 @@ jobs:
           echo "::group::shard transcripts (tail)"
           for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
           echo "::endgroup::"
+          [ "$rc" -eq 0 ] || bash tools/ci/shard-transcripts.sh
           test "$rc" -eq 0 || exit "$rc"
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
