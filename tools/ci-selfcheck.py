@@ -331,6 +331,21 @@ def main():
         ("shard-manifest byte-gate", "gen-shard-manifest.R"),
     ]:
         check(f"guard-prep runs {name}", needle in gp)
+    # Toolchain-precedence law: a step may only speak a language whose
+    # toolchain step already ran in its job. CI run 39614157155 proved the
+    # cost of the assumption: the Rscript byte-gate at step 8 died on
+    # "Rscript: command not found" while setup-r sat at step 9.
+    gp_steps = ci["jobs"]["guard-prep"]["steps"]
+    setup_idx = next((i for i, s2 in enumerate(gp_steps)
+                      if "setup-r@" in str(s2.get("uses", ""))), None)
+    gate_idx = next((i for i, s2 in enumerate(gp_steps)
+                     if "gen-shard-manifest.R" in str(s2.get("run", ""))), None)
+    def precedes(a, b):
+        return a is not None and b is not None and a < b
+    check("guard-prep: setup-r precedes the shard-manifest byte-gate",
+          precedes(setup_idx, gate_idx), f"setup-r@{setup_idx} gate@{gate_idx}")
+    check("precedence-detector firing control: missing steps cannot pass",
+          not precedes(setup_idx, None) and not precedes(None, gate_idx))
     check("guard-prep asserts Cargo.lock pins (matrixmultiply 0.3.9)",
           'version = "0.3.9"' in gp)
     check("guard-prep asserts lock v3", "version = 3" in gp)

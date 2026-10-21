@@ -101,10 +101,19 @@ jobs:
       - name: CI selfcheck (workflow YAML + referenced paths + pins)
         run: python3 tools/ci-selfcheck.py
 
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      - name: Export R_HOME
+        shell: bash
+        run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
+
       # The shard manifest is generated, never hand-edited: regenerate at
       # the committed weights and demand byte equality with the committed
       # witness. The same census runs as in-suite units (test-ci-shard-map.R);
       # this is the belt beside the braces for edits made outside the suite.
+      # (Runs after setup-r: the gate speaks Rscript.)
       - name: Shard-manifest byte-gate (generator vs committed witness)
         shell: Rscript {0}
         run: |
@@ -119,14 +128,6 @@ jobs:
                  "--out=tools/ci/shard-manifest.tsv")
           }
           cat("shard-manifest.tsv byte-matches the generator\n")
-
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          r-version: 'release'
-          use-public-rspm: true
-      - name: Export R_HOME
-        shell: bash
-        run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
       - name: docs-sync guard (API surface drift)
         run: Rscript tools/docs-sync.R
