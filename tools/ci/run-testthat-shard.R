@@ -185,8 +185,11 @@ attest <- .kv("attest", file.path(tempdir(), paste0("msuiter-attest-", kind,
 if (is.na(shard) || !mode %in% c("repo", "installed")) quit(status = 2L)
 m <- .ci_parse_manifest(manifest)
 if (shard < 1L || shard > m$k) {
-  cat("run-testthat-shard: DEFECT shard ", shard, " outside k=", m$k, "\n",
-      sep = "", stderr = TRUE)
+  # file = stderr(): the house print idiom. cat's R-4.5 stderr= argument
+  # ECHOES the value (cat("y\n", stderr = TRUE) prints "y TRUE" -- measured),
+  # poisoning transcripts with phantom TRUE tokens.
+  cat(paste0("run-testthat-shard: DEFECT shard ", shard, " outside k=", m$k, "\n"),
+      sep = "", file = stderr())
   quit(status = 2L)
 }
 dir.create(dirname(attest), recursive = TRUE, showWarnings = FALSE)
@@ -213,7 +216,13 @@ v <- max(.ci_gate_verdict(rp), .ci_result_verdict(res, kind, shard))
 writeLines(rp$attestation(), attest)
 cat(rp$attestation(), "\n", sep = "")
 if (v != 0L) {
-  cat("run-testthat-shard: DEFECT shard ", shard, " completed having executed ",
-      "zero non-skipped tests -- vacuous shard dies\n", sep = "", stderr = TRUE)
+  cause <- if (rp$n_executed() <= 0L) {
+    "completed having executed zero non-skipped tests -- vacuous shard dies"
+  } else {
+    paste0(rp$n_fail + rp$n_error,
+           " counted failure(s)/error(s) -- see the LOUDFAIL blocks above")
+  }
+  cat(paste0("run-testthat-shard: DEFECT shard ", shard, " ", cause, "\n"),
+      sep = "", file = stderr())
 }
 quit(status = v)
