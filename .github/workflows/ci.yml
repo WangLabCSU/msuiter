@@ -139,6 +139,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
           sh tools/vendor.sh --check
           # vendor.sh keeps the tarball in /tmp; stage it for the R jobs
           # (single generation point; works on every runner OS).
@@ -202,6 +205,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
@@ -297,6 +303,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
@@ -314,6 +323,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
           rustup target add x86_64-pc-windows-gnu
 
       # Never pass an empty `dependencies` input: the action interpolates it
@@ -408,6 +420,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
@@ -561,7 +576,9 @@ jobs:
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
       - name: Install rustc 1.71.0 (rustup)
-        run: rustup toolchain install 1.71.0 --profile minimal
+        run: |-
+          rustup toolchain install 1.71.0 --profile minimal
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
@@ -614,6 +631,9 @@ jobs:
         run: |
           rustup toolchain install 1.71.0 --profile minimal
           rustup default 1.71.0
+          # Makevars.win builds for the GNU triple; minimal ships no targets,
+          # and a missing target core fakes 766 prelude errors (2026-10-21).
+          if [ "$RUNNER_OS" = "Windows_NT" ]; then rustup target add x86_64-pc-windows-gnu; fi
 
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
