@@ -94,7 +94,14 @@ source(file.path(root, "tests", "testthat", "helper-ci-shard-census.R"))
     msg <- tryCatch(conditionMessage(r), error = function(e) NULL)
     if (is.null(msg) || !nzchar(msg)) msg <- tryCatch(as.character(r$message), error = function(e) "")
     if (!nzchar(msg)) msg <- paste0("<", paste0(class(r), collapse = "/"), ">")
-    msg <- sub("[\r\n].*$", "", as.character(msg)[1L])
+    # Full multi-line message: testthat sinks BOTH stdout and stderr inside a
+    # test context (measured: the census report's cat(file = stderr()) emission
+    # vanished from the transcript too), so the only channel that reaches the
+    # log from inside a test is the expectation's own failure message -- and
+    # expect_*() carries an author-supplied info= in it. Truncating to line
+    # one throws away exactly the evidence that channel exists to carry.
+    msg <- paste0(substring(msg, 1L, 4000L), collapse = "")
+    msg <- gsub("[\r\t]", " ", msg)
     # message(): the unbuffered stderr channel that survives a halt AND is
     # capturable by the self-test's capture.output(type = "message") -- raw
     # cat(stderr = TRUE) bypasses the sink (pinned empirically).

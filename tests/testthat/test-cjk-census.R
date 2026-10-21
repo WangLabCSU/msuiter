@@ -9,6 +9,11 @@
 # the historic failure mode (BSD grep -P no-op, undecoded perl) -- a control
 # that cannot fail attests nothing, hence the tamper half is mandatory.
 
+# <!-- census-exempt tokens: 0 -->
+# (fan-out run 39671292067 forensics: the refuted cat(file = stderr()) report
+# emission and its guard -- two 0L operands plus one run-id zero -- left this
+# file as a proven-dead channel; every remaining numeral claim stands.)
+
 .ms_census_root <- function() {
   root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
   if (!file.exists(file.path(root, "DESCRIPTION")) ||
@@ -34,17 +39,11 @@
                                   stdout = TRUE, stderr = TRUE))
   st <- attr(res, "status")
   out <- paste0(as.character(res), collapse = "\n")
-  if (!identical(if (is.null(st)) 0L else as.integer(st), 0L)) {
-    # The census report (VIOLATION rows carry file:line previews) lives in the
-    # CAPTURED stdout -- speak it on red, or the shard transcript loses the
-    # very evidence the gate exists to emit (fan-out runs 39657954877 +
-    # 39665540072: three assertions, zero actuals). message() does not work:
-    # the test_that context installs a message handler and swallows it (the
-    # first emission vanished from the log). Write the unbuffered stderr
-    # connection directly -- the census reporter's FAIL[] lines ride exactly
-    # this channel and have always reached the transcript.
-    cat(paste0(out, collapse = "\n"), "\n", sep = "", file = stderr())
-  }
+  # Evidence rides the expectation's info= (call sites below), not a print:
+  # a test context sinks stdout AND stderr AND swallows message() (all three
+  # measured across fan-out runs 39657954877 / 39665540072 / 39671292067),
+  # so the failure message -- which expect_* embeds info= into and the shard
+  # runner renders in full -- is the only channel out of a red test.
   list(status = if (is.null(st)) 0L else as.integer(st), out = out)
 }
 
@@ -96,10 +95,11 @@ test_that("the full census exits green over the normative corpus", {
     skip("requires the source checkout (installed-package check context)")
   }
   r <- .ms_run_census(tool, character(0))
-  expect_identical(r$status, 0L)
-  expect_match(r$out, "cjk-census: SELF-TEST OK")              # controls ride every run
-  expect_match(r$out, "normative CJK outside quote/code context: 0 line\\(s\\)")
-  expect_match(r$out, "cjk-census: OK")
+  expect_identical(r$status, 0L, info = r$out)
+  expect_match(r$out, "cjk-census: SELF-TEST OK", info = r$out)   # controls ride every run
+  expect_match(r$out, "normative CJK outside quote/code context: 0 line\\(s\\)",
+               info = r$out)
+  expect_match(r$out, "cjk-census: OK", info = r$out)
 })
 
 test_that("the specs enrollment covers the governed surface (firing control)", {

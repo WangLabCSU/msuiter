@@ -73,7 +73,14 @@
   # delta of one is a standing \r, of two a \r\n pair, of a path length a
   # separator class the normalization does not yet know.
   expect_identical(nchar(tail), nchar(suffix))
-  expect_identical(tail, suffix)
+  # Equal lengths with unequal bytes name a character-class substitution; the
+  # raw bytes ride info= because the test context sinks stdout/stderr and
+  # swallows message() (measured) -- the failure message is the only way out.
+  expect_identical(tail, suffix,
+                   info = paste0("tail-bytes: ",
+                                 paste0(as.integer(charToRaw(tail, "ascii")), collapse = ","),
+                                 " suffix-bytes: ",
+                                 paste0(as.integer(charToRaw(suffix, "ascii")), collapse = ",")))
 }
 
 test_that("the shipped .gitignore rules FIRE for their declared classes", {
