@@ -10,25 +10,34 @@
 #   (b) the installed tree via system.file().
 # NA when neither source has it -- callers skip with an explicit reason,
 # never read blind.
+#
+# The walk reads the FULL DESCRIPTION now: the Built: discriminator can
+# land past line 40, so the old n = 40L window is gone, digit and all.
+# <!-- census-exempt tokens: 40 -->
 
 .ms_root <- local({
   found <- NA_character_
   d <- try(normalizePath(getwd()), silent = TRUE)
-  if (!inherits(d, "try-error") && nzchar(d)) {
-    repeat {
-      f <- file.path(d, "DESCRIPTION")
-      if (file.exists(f)) {
-        l <- try(readLines(f, n = 40L, warn = FALSE), silent = TRUE)
-        if (!inherits(l, "try-error") &&
-            length(grep("^Package:[[:space:]]*msuiter[[:space:]]*$", l))) {
-          found <- d
-          break
-        }
+  ok <- !inherits(d, "try-error") && nzchar(d)
+  while (ok && is.na(found)) {
+    f <- file.path(d, "DESCRIPTION")
+    if (file.exists(f)) {
+      l <- try(readLines(f, warn = FALSE), silent = TRUE)
+      if (!inherits(l, "try-error") &&
+          length(grep("^Package:[[:space:]]*msuiter[[:space:]]*$", l)) &&
+          # An INSTALLED DESCRIPTION also says `Package: msuiter`; the
+          # Built: stamp INSTALL writes is what separates a checkout from
+          # an install tree (covr's installed testthat child otherwise
+          # resolves .ms_root INTO the temp lib and the committed-file
+          # laws there LOUDLY die -- banked: run 39536641469 coverage log,
+          # "covr coverage failed under instrumentation").
+          !any(grepl("^Built:", l, useBytes = FALSE))) {
+        found <- d
       }
-      up <- dirname(d)
-      if (identical(up, d)) break
-      d <- up
     }
+    up <- dirname(d)
+    if (identical(up, d)) ok <- FALSE
+    d <- up
   }
   found
 })
