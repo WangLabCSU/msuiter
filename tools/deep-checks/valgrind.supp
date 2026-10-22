@@ -33,3 +33,9 @@
 # R 4.6.1 source tarball (full listing, zero valgrind hits). Distro
 # packages maintain their own; this file is ours and remains a zero-entry
 # attestation of that fact.
+#
+# The one adjudicated violation class to date -- the issue-#36
+# wrapper-epilogue CJU, allowlisted by four signature locks and
+# regression-tested in run_valgrind_leg.sh's census -- lives there as code,
+# evidence citation and fixtures, exactly where an entry here could not
+# put it (2026-10-22 adjudication).

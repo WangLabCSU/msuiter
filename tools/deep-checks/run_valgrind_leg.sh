@@ -59,7 +59,11 @@ vg_error_rc=42
 #   ffi-probes -- the msffi_* call/error protocol, the direct FFI surface
 #   fit        -- the fit numeric path through the engine/catalog call sites
 #   extract    -- the extract numeric path (index arithmetic, the ASan class)
-roster="ffi-probes fit extract"
+#   ms-compare -- the compare-null numeric path through the compare engine;
+#     returned to the roster 2026-10-22 with the issue-#36 adjudication --
+#     the roster-narrowing commit had silently dropped this FFI boundary
+#     from observation, and an adjudicated surface is a measured surface.
+roster="ffi-probes fit extract ms-compare"
 
 die() { printf 'valgrind-leg: FAIL: %s\n' "$1" >&2; exit 1; }
 note() { printf 'valgrind-leg: %s\n' "$1"; }
@@ -215,10 +219,12 @@ valgrind_report_census() { # <suite-log> -- summed, adjudicated, per-pid (PR #45
   #   OWNERSHIP ADJUDICATION -- every loss record is allowed only by a
   #     reviewed evidence-cited signature below, else the leg dies naming
   #     pid, Command and record;
-  #   FULL ACCOUNTING -- sum(ERROR SUMMARY) == count(loss-record headers):
-  #     memcheck prints one header per counted error, so an excess is an
-  #     error class with no owner and a deficit is a report that counted
-  #     what it did not print;
+  #   FULL ACCOUNTING -- sum(ERROR SUMMARY) == count(loss-record headers)
+  #     + adjudicated CJU hits: memcheck prints one header per counted
+  #     leak error, so an excess is an error class with no owner, a
+  #     deficit is a report that counted what it did not print, and a
+  #     per-pid surplus is lawed only by its CAPTURED error context -- an
+  #     arithmetic surplus alone never adjudicates;
   #   EXECUTED-WORK -- the roster attestation census (the D1 lesson).
   # The allowlists are byte-true against the 2026-10-21 13:42 truth-run
   # capture (/tmp/vgart5/repro6/check-valgrind/valgrind-suite.log):
@@ -235,38 +241,67 @@ valgrind_report_census() { # <suite-log> -- summed, adjudicated, per-pid (PR #45
   #     initialised static, a by-design one-time cache (loss record
   #     4,591 of 4,593). The conjunction is the signature; neither word
   #     alone admits anything.
+  #   wrapper-epilogue-CJU (issue #36 adjudication, 2026-10-22) -- the ten
+  #     counted hits of one conditional-jump context inside the
+  #     extendr-0.9.0 GENERATED closure of wrap__ms_compare_null_rust (the
+  #     kernel is in no frame). Dissection of the shipped .so: the tested
+  #     branch is the epilogue tbnz at closure+0x22F0 (vaddr 0xE0140 in both
+  #     witnesses, base-independent), reading bit 0 of a never-written owns
+  #     flag at [sp,#140] of the closure's own frame -- created by the
+  #     sub sp,sp,#0x350 stack allocation at closure+0x24 (vaddr 0xDDE74)
+  #     that the origin report names. The decision only picks the vector's
+  #     __rust_dealloc path; with the flag's residue the observed path frees
+  #     correctly (no invalid free, no leak, 167/167 tests across both
+  #     witnesses, error count pinned at ten). Upstream: the crate's latest
+  #     release is the pinned 0.9.0, so no adopted fix exists; the
+  #     suppression file stays empty -- the census, not the fork's provably
+  #     dead matcher, owns the adjudication. The four locks: captured context
+  #     with wrapper-name AND closure AND stack-origin conjunctions,
+  #     surplus == 10, contexts == records + 1.
   rc=0
   out=$(awk -v roster_n="$roster_n" \
-    -v TOOL_RE='^(/usr)?/bin/(sh|sed|uname|rm|which|grep|cat|cut|dirname|basename|expr|mktemp)( .*|$)' '
+    -v TOOL_RE='^(/usr)?/bin/(sh|sed|uname|rm|which|grep|cat|cut|dirname|basename|expr|mktemp)( .*|$)' \
+    -v CJU_HITS_PIN=10 '
     function noslash(s) { gsub(/,/, "", s); return s + 0 }
     function speak(p) { if (!(p in say)) { say[p] = 1; npids++ } }
     /^==[0-9]+== +(at|by) / {
       if (pid in pend) { k = pid SUBSEP pend[pid]
         frames[k] = (k in frames ? frames[k] "\037" : "") $0 }
+      else if (cjuopen[pid] == 1) { cjuf[pid] = (pid in cjuf ? cjuf[pid] "\037" : "") $0 }
       next
     }
     /^==[0-9]+==/ {
       pid = substr($0, 3, index(substr($0, 3), "==") - 1)
-      if ($0 ~ /HEAP SUMMARY:/) { speak(pid); heap[pid] = 1 }
+      if ($0 ~ /Conditional jump or move depends on uninitialised value/) {
+        speak(pid); cjud[pid] = 1; cjuopen[pid] = 1
+        cjuf[pid] = (pid in cjuf ? cjuf[pid] "\037" : "") $0
+      }
+      else if ($0 ~ /Uninitialised value was created by a stack allocation/) {
+        if (cjuopen[pid] == 1) { cjuf[pid] = cjuf[pid] "\037" $0 }
+      }
+      else if ($0 ~ /HEAP SUMMARY:/) { cjuopen[pid] = 0; speak(pid); heap[pid] = 1 }
       else if ($0 ~ /ERROR SUMMARY:/) {
-        speak(pid); errseen[pid] = 1
+        cjuopen[pid] = 0; speak(pid); errseen[pid] = 1
         if (match($0, /ERROR SUMMARY: [0-9]+/)) { e = noslash(substr($0, RSTART + 15, RLENGTH - 15)) } else { e = 0 }
-        sum_err += e
+        ecount[pid] = e; sum_err += e
+        if (match($0, /from [0-9]+/)) { ccount[pid] = noslash(substr($0, RSTART + 5, RLENGTH - 5)) }
         if (match($0, /\(suppressed: [0-9]+/)) { supp += noslash(substr($0, RSTART + 13, RLENGTH - 13)) }
       }
-      else if ($0 ~ /All heap blocks were freed/) { speak(pid); freed[pid] = 1 }
-      else if ($0 ~ /definitely lost: [0-9]/) { speak(pid); dlseen[pid] = 1 }
+      else if ($0 ~ /All heap blocks were freed/) { cjuopen[pid] = 0; speak(pid); freed[pid] = 1 }
+      else if ($0 ~ /definitely lost: [0-9]/) { cjuopen[pid] = 0; speak(pid); dlseen[pid] = 1 }
       else if (index($0, "Command: ") > 0) {
         c = substr($0, index($0, "Command: ") + 9)
         cmd[pid] = (pid in cmd ? cmd[pid] "\037" : "") c
       }
       else if (match($0, / bytes in [0-9,]+ blocks are (definitely|indirectly|possibly) lost in loss record /)) {
+        cjuopen[pid] = 0
         speak(pid); pend[pid] = ++nrec[pid]; sum_rec++
         m = substr($0, RSTART, RLENGTH)
         k = (m ~ /definitely/) ? "definitely" : ((m ~ /indirectly/) ? "indirectly" : "possibly")
         key = pid SUBSEP pend[pid]; head[key] = $0; kind[key] = k
         if (k == "definitely") { dl[pid] += noslash($2); dl_total += noslash($2) }
       }
+      else { cjuopen[pid] = 0 }
       next
     }
     /^VG_TESTFILE [^ ]+ PASS [0-9]+ [0-9]+$/ { files++; tests += $4 }
@@ -279,6 +314,22 @@ valgrind_report_census() { # <suite-log> -- summed, adjudicated, per-pid (PR #45
         if (!(pid in heap)) { missing = missing ", HEAP SUMMARY" }
         if (missing != "") { printf "INCOMPLETE: pid %s (Command: %s) opened a report but never spoke%s -- he who opens his mouth must finish (a child that dies mid-report is the death of the tool, not of the guest)\n", pid, cmd[pid], missing; exit 5 }
         if (nrec[pid] > 0 && !(pid in dlseen)) { printf "INCOMPLETE: pid %s (Command: %s) reported %d loss records but no per-class loss summary -- the classes cannot back the records\n", pid, cmd[pid], nrec[pid]; exit 5 }
+      }
+      for (pid in ecount) {
+        recs = (pid in nrec ? nrec[pid] : 0)
+        surplus = ecount[pid] - recs
+        if (surplus <= 0) continue
+        owned = (cjud[pid] == 1 && (pid in cjuf) &&
+          cjuf[pid] ~ /wrap__ms_compare_null_rust/ &&
+          cjuf[pid] ~ /closure/ &&
+          cjuf[pid] ~ /Uninitialised value was created by a stack allocation/ &&
+          surplus == CJU_HITS_PIN &&
+          ccount[pid] == recs + 1)
+        if (owned) { allow_cju++; cju_hits += surplus; continue }
+        unadjudicated++
+        printf "UNADJUDICATED: pid %s (Command: %s) -- %d counted error(s) beyond the %d adjudicated loss record(s) with no owning context\n", pid, cmd[pid], surplus, recs
+        if (pid in cjuf) { t = cjuf[pid]; gsub(/\037/, "\n  ", t); printf "  %s\n", t }
+        else printf "  (no error context was captured for this pid -- an arithmetic surplus alone never adjudicates)\n"
       }
       for (pid in nrec) {
         tool = 0; n = split(cmd[pid], segs, "\037")
@@ -294,11 +345,11 @@ valgrind_report_census() { # <suite-log> -- summed, adjudicated, per-pid (PR #45
         }
       }
       if (unadjudicated > 0) { exit 4 }
-      if (sum_err != sum_rec) { printf "UNACCOUNTED: ERROR SUMMARY total %d vs %d loss-record headers -- every counted error must be an adjudicated loss record (one header per error); an excess is an error class with no owner, a deficit is a report that counted what it did not print\n", sum_err, sum_rec; exit 3 }
+      if (sum_err != sum_rec + cju_hits) { printf "UNACCOUNTED: ERROR SUMMARY total %d vs %d loss-record headers + %d adjudicated CJU hits -- every counted error must be backed by an adjudicated record or an adjudicated context; an excess is an error class with no owner, a deficit is a report that counted what it did not print\n", sum_err, sum_rec, cju_hits; exit 3 }
       if (files + 0 != roster_n + 0) { printf "EXECUTED-WORK MISMATCH: %d roster file(s) attested PASS of %d nominated -- an arm that runs no files gates nothing (the D1 lesson)\n", files, roster_n; exit 6 }
       if (tests + 0 < 1) { printf "ZERO WORK: no attested test passed -- an arm that ran nothing gates nothing (the D1 lesson)\n"; exit 7 }
-      printf "CENSUS pids=%d err=%d rec=%d dlbytes=%d tool=%d cache=%d epoch=%d onc=%d files=%d tests=%d\n", \
-        npids + 0, sum_err + 0, sum_rec + 0, dl_total + 0, allow_tool + 0, allow_cache + 0, sig_epoch + 0, sig_once + 0, files + 0, tests + 0
+      printf "CENSUS pids=%d err=%d rec=%d dlbytes=%d tool=%d cache=%d epoch=%d onc=%d cju=%d hits=%d files=%d tests=%d\n", \
+        npids + 0, sum_err + 0, sum_rec + 0, dl_total + 0, allow_tool + 0, allow_cache + 0, sig_epoch + 0, sig_once + 0, allow_cju + 0, cju_hits + 0, files + 0, tests + 0
     }
   ' "$log" 2>&1) || rc=$?
   if [ "$rc" -ne 0 ]; then
@@ -311,12 +362,14 @@ valgrind_report_census() { # <suite-log> -- summed, adjudicated, per-pid (PR #45
   c_tool=$(printf '%s\n' "$out" | sed -nE 's/.* tool=([0-9]+) .*/\1/p')
   c_epoch=$(printf '%s\n' "$out" | sed -nE 's/.* epoch=([0-9]+) .*/\1/p')
   c_onc=$(printf '%s\n' "$out" | sed -nE 's/.* onc=([0-9]+) .*/\1/p')
+  c_cju=$(printf '%s\n' "$out" | sed -nE 's/.* cju=([0-9]+) .*/\1/p')
+  c_hits=$(printf '%s\n' "$out" | sed -nE 's/.* hits=([0-9]+) .*/\1/p')
   c_files=$(printf '%s\n' "$out" | sed -nE 's/.* files=([0-9]+) .*/\1/p')
   c_tests=$(printf '%s\n' "$out" | sed -nE 's/.* tests=([0-9]+)$/ \1/p' | tr -d ' ')
   [ -n "$c_pids" ] && [ -n "$c_err" ] && [ -n "$c_tests" ] \
     || die "the census machine line is malformed: [$out]"
   printf '%s\n' "$out"    # the machine line is evidence, spoken
-  note "report census: $c_err error(s) fully adjudicated ambient (tool-swarm $c_tool, static caches epoch-registrar $c_epoch + once-cell-probe $c_onc), $c_rec record headers backing the count, definitely-lost 0 bytes, roster $c_files/$roster_n files, $c_tests test(s) passed over $c_pids attested pids"
+  note "report census: $c_err error(s) fully adjudicated ambient (tool-swarm $c_tool, static caches epoch-registrar $c_epoch + once-cell-probe $c_onc, wrapper-epilogue CJU $c_cju context(s)/$c_hits hit(s) per the issue-#36 adjudication), $c_rec record headers backing the count, definitely-lost 0 bytes, roster $c_files/$roster_n files, $c_tests test(s) passed over $c_pids attested pids"
 }
 
 build_canary() {
@@ -518,6 +571,99 @@ VG_TESTFILE fixture PASS 1 0
 ==7208== All heap blocks were freed -- no leaks are possible
 ==7208== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 3 from 3)
 EOF
+  # The issue-#36 context: the extendr-0.9.0 GENERATED closure of
+  # wrap__ms_compare_null_rust reports one CJU whose tested word is a
+  # never-written stack slot of the wrapper frame (origin: stack allocation
+  # inside that same closure). Ten counted hits, one context, two adjudicated
+  # records -- byte-true to the 2026-10-22 instrumented-roster capture
+  # (leg mode, test-ms-compare.R PASS 167) and to the isolated reproduction
+  # (same branch at closure+0x22F0 in both witnesses). Adjudication requires
+  # four locks -- captured CJU context carrying the wrapper-name, closure and
+  # stack-origin conjunctions; surplus == the witnessed 10; contexts ==
+  # records + 1 -- so the guest pid's block below is verbatim evidence.
+  write_fixture cju-adjudicated <<'EOF'
+VG_TESTFILE fixture PASS 1 0
+==7301== Command: Rscript /tmp/valgrind-sentry-DF70TY tests/testthat/test-ms-compare.R
+==7301== Command: /usr/local/lib/R/bin/R --no-echo --no-restore --file=/tmp/valgrind-sentry-DF70TY --args tests/testthat/test-ms-compare.R
+==7301== Conditional jump or move depends on uninitialised value(s)
+==7301==    at 0x259B0140: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==    by 0x259ADC9B: wrap__ms_compare_null_rust (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==    by 0x49910A3: R_doDotCall (dotcode.c:884)
+==7301==  Uninitialised value was created by a stack allocation
+==7301==    at 0x259ADE74: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==
+==7301== HEAP SUMMARY:
+==7301==    in use at exit: 120,435,674 bytes in 24,640 blocks
+==7301==
+==7301== 20,736 bytes in 9 blocks are possibly lost in loss record 4,043 of 4,981
+==7301==    by 0x259CBE03: crossbeam_epoch::collector::Collector::register (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==
+==7301== 3,276,808 bytes in 1 blocks are possibly lost in loss record 4,979 of 4,981
+==7301==    by 0x25A22DDF: once_cell::imp::initialize_or_wait (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==    by 0x2599BF27: wrap__msffi_column_major_probe (in /tmp/tmp.ejvrNu5h2t/msuiter/libs/msuiter.so)
+==7301==
+==7301== LEAK SUMMARY:
+==7301==    definitely lost: 0 bytes in 0 blocks
+==7301==    indirectly lost: 0 bytes in 0 blocks
+==7301==      possibly lost: 3,297,544 bytes in 10 blocks
+==7301==    still reachable: 117,138,130 bytes in 24,630 blocks
+==7301== ERROR SUMMARY: 12 errors from 3 contexts (suppressed: 0 from 0)
+EOF
+  # The conjunction binds: a CJU whose frames name a different owner is no
+  # one's property and may not ride the allowlist's coattails.
+  write_fixture cju-wrong-owner <<'EOF'
+VG_TESTFILE fixture PASS 1 0
+==7302== Command: /usr/bin/Rscript fixture-driver
+==7302== Conditional jump or move depends on uninitialised value(s)
+==7302==    at 0x259B0140: msuiter::compare_null_kernel::{closure} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7302==  Uninitialised value was created by a stack allocation
+==7302==    at 0x259ADE74: msuiter::compare_null_kernel::{closure} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7302==
+==7302== HEAP SUMMARY:
+==7302==    in use at exit: 0 bytes in 0 blocks
+==7302== All heap blocks were freed -- no leaks are possible
+==7302== ERROR SUMMARY: 10 errors from 1 contexts (suppressed: 0 from 0)
+EOF
+  # The count is pinned to the witnessed ten: a drift is new behaviour, not
+  # a courtesy.
+  write_fixture cju-count-drift <<'EOF'
+VG_TESTFILE fixture PASS 1 0
+==7303== Command: /usr/bin/Rscript fixture-driver
+==7303== Conditional jump or move depends on uninitialised value(s)
+==7303==    at 0x259B0140: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7303==  Uninitialised value was created by a stack allocation
+==7303==    at 0x259ADE74: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7303==
+==7303== HEAP SUMMARY:
+==7303==    in use at exit: 0 bytes in 0 blocks
+==7303== All heap blocks were freed -- no leaks are possible
+==7303== ERROR SUMMARY: 11 errors from 1 contexts (suppressed: 0 from 0)
+EOF
+  # One context beyond the records plus the one adjudicated CJU is a hidden
+  # second error class wearing the allowlist's coat.
+  write_fixture cju-context-drift <<'EOF'
+VG_TESTFILE fixture PASS 1 0
+==7304== Command: /usr/bin/Rscript fixture-driver
+==7304== Conditional jump or move depends on uninitialised value(s)
+==7304==    at 0x259B0140: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7304==  Uninitialised value was created by a stack allocation
+==7304==    at 0x259ADE74: msuiter::wrap__ms_compare_null_rust::{{closure}} (in /tmp/tmp.X/msuiter/libs/msuiter.so)
+==7304==
+==7304== HEAP SUMMARY:
+==7304==    in use at exit: 0 bytes in 0 blocks
+==7304== All heap blocks were freed -- no leaks are possible
+==7304== ERROR SUMMARY: 10 errors from 2 contexts (suppressed: 0 from 0)
+EOF
+  # A surplus that cites no captured context at all may never be laundered
+  # through the allowlist by the ERROR SUMMARY's arithmetic alone.
+  write_fixture cju-no-context <<'EOF'
+VG_TESTFILE fixture PASS 1 0
+==7305== Command: /usr/bin/Rscript fixture-driver
+==7305== HEAP SUMMARY:
+==7305==    in use at exit: 0 bytes in 0 blocks
+==7305== All heap blocks were freed -- no leaks are possible
+==7305== ERROR SUMMARY: 10 errors from 0 contexts (suppressed: 0 from 0)
+EOF
   roster_n=1
   census_fixture clean-single pass 'pids=1 err=0 rec=0 dlbytes=0 tool=0 cache=0'
   census_fixture tool-swarm pass 'err=1 rec=1 dlbytes=0 tool=1 cache=0'
@@ -526,8 +672,18 @@ EOF
   census_fixture unknown-owner die 'UNADJUDICATED'
   census_fixture definitely-lost die 'HARD ZERO'
   census_fixture silent-child die 'INCOMPLETE'
-  census_fixture unaccounted die 'UNACCOUNTED'
+  # the surplus law hardened 2026-10-22: a counted error with no owning
+  # context is refused per-pid (UNADJUDICATED names it) before the global
+  # balance speaks -- the global UNACCOUNTED keeper remains as the last bell
+  census_fixture unaccounted die 'UNADJUDICATED'
   census_fixture self-deception die 'NO SELF-DECEPTION'
+  # needle = the byte-true machine line as witnessed in the sealed run
+  # (grep -F: a law must name contiguous bytes, never a schema imagined).
+  census_fixture cju-adjudicated pass 'CENSUS pids=1 err=12 rec=2 dlbytes=0 tool=0 cache=2 epoch=1 onc=1 cju=1 hits=10 files=1 tests=1'
+  census_fixture cju-wrong-owner die 'UNADJUDICATED'
+  census_fixture cju-count-drift die 'UNADJUDICATED'
+  census_fixture cju-context-drift die 'UNADJUDICATED'
+  census_fixture cju-no-context die 'UNADJUDICATED'
 }
 
 mkdir -p "$log_dir"
