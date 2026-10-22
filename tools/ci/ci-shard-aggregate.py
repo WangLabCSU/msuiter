@@ -89,17 +89,100 @@ def scope_configs(configs, expect, out):
     return scoped
 
 
-def census(manifest, attest_dir, kind, configs, out):
+def parse_exclusions(path, out):
+    """Read the sanctioned-skip ledger: 'os<TAB>config<TAB>shard<TAB>cause'.
+
+    The ledger is the single authority for what an arm may DECLARAbLY not
+    run (round-2, run 39753886611 forensics: the M2 xval reference is
+    uninstallable at R 4.3 -- Bioc 3.18 trees 404 on every mirror). An
+    exclusion is not a permission to say nothing: it inverts the burden of
+    proof -- the arm must now carry a marker where an attestation used to
+    be, and any attestation appearing under an active exclusion is drift
+    between the plan and the run, so it dies too."""
+    rows = {}
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) != 4 or not all(p.strip() for p in parts):
+                out("DEFECT malformed shard-exclusions row: %r" % line)
+                return None
+            os_, cfg, shard, cause = parts
+            key = (os_, cfg, shard)
+            if key in rows:
+                out("DEFECT duplicate shard-exclusions row: %r" % line)
+                return None
+            rows[key] = cause
+    return rows
+
+
+def exclusion_marker(tag, shard, cause):
+    """The exact bytes a sanctioned marker must carry, and nothing else."""
+    return ["MSUITER-EXCL shard=%s tag=%s" % (shard, tag), cause]
+
+
+def write_exclusion_marker(registry, tag, shard, out_path, out):
+    """Render the marker for a registered (tag, shard) from the ledger.
+
+    ci.yml asks for markers instead of synthesizing them: the only way a
+    marker can exist is by being read out of the committed ledger, so a
+    marker that drifts from the ledger cannot be produced by accident."""
+    rows = parse_exclusions(registry, out)
+    if rows is None:
+        return 2
+    hits = [k for k in rows if "%s-%s" % (k[0], k[1]) == tag and k[2] == str(shard)]
+    if not hits:
+        out("DEFECT exclusion not registered: tag=%s shard=%s" % (tag, shard))
+        return 3
+    os_, cfg, sh = hits[0]
+    with open(out_path, "w") as fh:
+        fh.write("\n".join(exclusion_marker(tag, sh, rows[hits[0]])) + "\n")
+    out("EXCL-MARKER %s (cause of record: %s)" % (out_path, rows[hits[0]][:80]))
+    return 0
+
+
+def census(manifest, attest_dir, kind, configs, out, exclusions=None):
     k, rows = parse_manifest(manifest)
     roster = {}
     for shard, fname in rows:
         roster.setdefault(shard, []).append(fname)
     defects, executed_total, files_total, fails, errs = [], 0, 0, 0, 0
     shards_ok = 0
+    excluded_total = 0
     seen = set()
     for shard in range(1, k + 1):
         for name in expected_files(kind, shard, configs):
             path = os.path.join(attest_dir, name)
+            excl_name = None
+            if kind == "fanout" and exclusions:
+                for (os_, cfg) in configs:
+                    if (os_, cfg, str(shard)) in exclusions:
+                        excl_name = "shard-%d-%s-%s.excl" % (shard, os_, cfg)
+            if excl_name is not None:
+                # The ledger says this arm may not run this shard. Silence
+                # is not accepted either: exactly the marker, exactly the
+                # ledger's bytes, and never both an attestation and it.
+                marker_path = os.path.join(attest_dir, excl_name)
+                if os.path.exists(path):
+                    defects.append("ran under an active exclusion (ledger is stale?): %s" % name)
+                    seen.add(excl_name)
+                    continue
+                if not os.path.exists(marker_path):
+                    defects.append("exclusion marker missing: %s (shard %d is registered as excluded)"
+                                   % (excl_name, shard))
+                    continue
+                with open(marker_path, encoding="utf-8") as fh:
+                    body = fh.read()
+                want = "\n".join(exclusion_marker("%s-%s" % (os_, cfg), shard,
+                                                  exclusions[(os_, cfg, str(shard))])) + "\n"
+                if body != want:
+                    defects.append("exclusion marker off the ledger: %s" % excl_name)
+                    continue
+                seen.add(excl_name)
+                excluded_total += 1
+                continue
             if not os.path.exists(path):
                 defects.append("missing attestation: %s (shard %d)" % (name, shard))
                 continue
@@ -136,8 +219,11 @@ def census(manifest, attest_dir, kind, configs, out):
     for name in sorted(os.listdir(attest_dir)):
         if name.endswith(".attest") and name not in seen:
             defects.append("unknown attestation (outside manifest): %s" % name)
-    out("AGGREGATE kind=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d defects=%d"
-        % (kind, shards_ok, k, files_total, len(rows), executed_total, fails, errs, len(defects)))
+        if name.endswith(".excl") and name not in seen:
+            defects.append("rogue exclusion marker (unregistered): %s" % name)
+    out("AGGREGATE kind=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d excluded=%d defects=%d"
+        % (kind, shards_ok, k, files_total, len(rows), executed_total, fails, errs,
+           excluded_total, len(defects)))
     for d in defects:
         out("DEFECT " + d)
     return len(defects)
@@ -224,6 +310,65 @@ def self_test(out):
         fired.append(sc is None and any("not in the fan-out roster" in c for c in collected))
         out("bogus-config control FIR" if fired[-1]
             else "SELF-TEST BROKEN: bogus-config control silent: %s" % collected)
+        # -- Sanctioned-exclusion ledger law (shard-exclusions.tsv; run
+        # 39753886611: the M2 xval reference is uninstallable at R 4.3 --
+        # Bioc 3.18 404 everywhere). An arm that cannot run a shard must say
+        # so from the committed ledger AND carry the rendered marker;
+        # silence, drift and unregistered skips all die. --
+        scoped = [(mine.rpartition("-")[0], mine.rpartition("-")[2])]
+        reg = os.path.join(base, "exclusions.tsv")
+        excl_cause = "reference not installable at the arm R floor (self-test fixture)"
+        def write_reg(with_row):
+            with open(reg, "w") as fh:
+                fh.write("# ledger\n")
+                if with_row:
+                    fh.write("macos-latest\trelease\t2\t%s\n" % excl_cause)
+        mk_path = os.path.join(adir, "shard-2-%s.excl" % mine)
+        at_path = os.path.join(adir, "shard-2-%s.attest" % mine)
+        os.remove(at_path)
+        write_reg(True)
+        rows = parse_exclusions(reg, out)
+        if rows is None or write_exclusion_marker(reg, mine, "2", mk_path, lambda s: None) != 0:
+            out("SELF-TEST BROKEN: exclusion writer rejected its own ledger")
+            fired.append(False)
+        else:
+            collected = []
+            n = census(man, adir, "fanout", scoped, collected.append, exclusions=rows)
+            fired.append(n == 0 and any("excluded=1" in c for c in collected))
+            out("sanctioned-exclusion control stays GREEN" if fired[-1]
+                else "SELF-TEST BROKEN: sanctioned exclusion went RED: %s" % collected)
+            os.remove(mk_path)
+            collected = []
+            n = census(man, adir, "fanout", scoped, collected.append, exclusions=rows)
+            fired.append(n > 0 and any("exclusion marker missing" in c for c in collected))
+            out("missing-marker control FIR" if fired[-1]
+                else "SELF-TEST BROKEN: missing-marker control silent: %s" % collected)
+            write_exclusion_marker(reg, mine, "2", mk_path, lambda s: None)
+            with open(at_path, "w") as fh:
+                fh.write(fanatt(2, mine) + "\n")
+            collected = []
+            n = census(man, adir, "fanout", scoped, collected.append, exclusions=rows)
+            fired.append(n > 0 and any("ran under an active exclusion" in c for c in collected))
+            out("drift control FIR" if fired[-1]
+                else "SELF-TEST BROKEN: drift control silent: %s" % collected)
+            os.remove(at_path)
+            write_reg(False)
+            empty = parse_exclusions(reg, out)
+            collected = []
+            n = census(man, adir, "fanout", scoped, collected.append, exclusions=empty)
+            fired.append(n > 0 and any("rogue exclusion marker" in c for c in collected))
+            out("rogue-marker control FIR" if fired[-1]
+                else "SELF-TEST BROKEN: rogue-marker control silent: %s" % collected)
+            with open(mk_path, "w") as fh:
+                fh.write("MSUITER-EXCL shard=2 tag=%s\ndoctored cause\n" % mine)
+            collected = []
+            n = census(man, adir, "fanout", scoped, collected.append, exclusions=rows)
+            fired.append(n > 0 and any("off the ledger" in c for c in collected))
+            out("marker-off-ledger control FIR" if fired[-1]
+                else "SELF-TEST BROKEN: marker-off-ledger control silent: %s" % collected)
+            os.remove(mk_path)
+            with open(at_path, "w") as fh:
+                fh.write(fanatt(2, mine) + "\n")
         if not all(fired):
             out("AGGREGATE SELF-TEST FAILED")
             return 1
@@ -239,11 +384,20 @@ def main(argv=None):
     ap.add_argument("--kind", choices=["guards", "fanout", "coverage"], default="guards")
     ap.add_argument("--fanout-configs"); ap.add_argument("--advisory", action="store_true")
     ap.add_argument("--expect-config", help="fan-out: the arm's own OS-RCFG tag; the expected set is scoped to it")
+    ap.add_argument("--exclusions", help="fan-out: the sanctioned-skip ledger (shard-exclusions.tsv)")
+    ap.add_argument("--write-exclusion-marker", action="store_true",
+                    help="render the marker ci.yml must leave for a registered (tag, shard)")
+    ap.add_argument("--tag"); ap.add_argument("--shard"); ap.add_argument("--out")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args(argv)
     out = lambda s: print(s, flush=True)
     if a.self_test:
         return self_test(out)
+    if a.write_exclusion_marker:
+        if not (a.exclusions and a.tag and a.shard and a.out):
+            out("DEFECT --write-exclusion-marker needs --exclusions, --tag, --shard, --out")
+            return 2
+        return write_exclusion_marker(a.exclusions, a.tag, a.shard, a.out, out)
     if not a.manifest or not a.attest_dir:
         out("DEFECT --manifest and --attest-dir are required"); return 2
     configs = None
@@ -266,7 +420,15 @@ def main(argv=None):
     elif a.expect_config is not None:
         out("DEFECT --expect-config is fan-out only (kind=%s)" % a.kind)
         return 2
-    n = census(a.manifest, a.attest_dir, a.kind, configs, out)
+    exclusions = None
+    if a.exclusions:
+        if a.kind != "fanout":
+            out("DEFECT --exclusions is fan-out only (kind=%s)" % a.kind)
+            return 2
+        exclusions = parse_exclusions(a.exclusions, out)
+        if exclusions is None:
+            return 2
+    n = census(a.manifest, a.attest_dir, a.kind, configs, out, exclusions=exclusions)
     if n and a.advisory:
         out("ADVISORY kind=%s: %d defects tolerated (non-gating lane)" % (a.kind, n))
         return 0

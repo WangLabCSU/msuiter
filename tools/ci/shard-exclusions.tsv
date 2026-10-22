@@ -1,0 +1,26 @@
+# Config-scoped shard exclusions -- the sanctioned-skip ledger of the fan-out
+# census (round-2, 2026-10-22). One 'os<TAB>config<TAB>shard<TAB>cause' row
+# per (arm, shard) that the arm is DECLARED unable to run. A shard listed
+# here must NOT produce its .attest file but MUST produce its .excl marker
+# (rendered by the aggregator's --write-exclusion-marker from this row, so
+# the marker can never drift from the ledger); any other combination --
+# missing marker, rogue marker, or an attestation under an active exclusion
+# -- is a DEFECT. Exclusion is thus louder than silence: the arm still
+# carries a witnessed, censused record of why it ran nothing here.
+#
+# ubuntu-latest/4.3, shard 3 (its sole file test-xval-m2-extract.R is fully
+# gated on sigminer -- skip_if_not_installed() guards its one test_that at
+# the top, so 4.3 has no runnable surface there to lose): the M2 xval
+# reference is not installable at R 4.3. Both sigminer 2.3.3 (the pinned
+# ground truth) and CRAN 2.4.0 Import maftools, whose Imports (VariantTools,
+# S4Vectors) are Bioconductor Software packages of the 3.18 release series;
+# the 3.18 trees answer 404 on every canonical mirror as measured 2026-10-22
+# (bioconductor.posit.co/packages/3.18/* and bioconductor.org old-release
+# paths 404, while the live 3.21 series answers 200). Installing a
+# half-resolved reference and calling the shard green is the vacuous-green
+# this census exists to refuse; the xval pillar is carried by every other
+# arm of the fan-out, and that carriage is itself attested: the same census
+# demands shard 3's attestation with executed >= 1 on each of them. Consumed
+# by tools/ci/ci-shard-aggregate.py (--exclusions) and gated for shape by
+# tools/ci-selfcheck.py.
+ubuntu-latest	4.3	3	sigminer 2.3.3/2.4.0 Import maftools -> VariantTools/S4Vectors (Bioconductor 3.18, EOL: posit and bioconductor.org both 404 the 3.18 trees, measured 2026-10-22); reference not installable at R 4.3

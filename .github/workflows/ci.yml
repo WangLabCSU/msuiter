@@ -225,7 +225,6 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr) for the repo-layout suite
-          use-cache: true
 
       # One shared INSTALL of the tree under test; the K shard processes run
       # it back in parallel, each filtering the manifest to its roster. The
@@ -363,7 +362,6 @@ jobs:
         with:
           needs: check
           extra-packages: any::rcmdcheck
-          use-cache: true
 
       # install-pandoc must be explicit on the floor arm: the action's auto
       # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
@@ -372,11 +370,13 @@ jobs:
       # audit 2026-10-07). 'true' skips the probe and ships the pandoc the
       # knitr vignette needs; the CRAN-only extras keep the Bioc Suggests
       # chain out of the solve while keeping the vignette build (this arm's
-      # check still builds it) and the sharded tests runnable -- absorbed
-      # verbatim from the retired monolithic 4.3 arm so the floor arm loses
-      # no dependency it needs to RUN its tests or vignettes -- sigminer
-      # added after run 39735155940: the zero-executed law fired on its
-      # xval shard there, the hard-mode solve had silently dropped it.
+      # check still builds it) and the sharded tests runnable. sigminer must
+      # NOT join these extras: it imports maftools -> VariantTools/S4Vectors,
+      # which live only in the Bioc 3.18 series that 4.3 needs -- and that
+      # series answers 404 on every canonical mirror (run 39753886611's
+      # solve died exactly there). The xval shard it alone powers is
+      # therefore EXCLUDED BY DECLARATION for this arm
+      # (tools/ci/shard-exclusions.tsv), not silently vacuous.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r == '4.3'
         with:
@@ -386,8 +386,7 @@ jobs:
           extra-packages: >-
             any::rcmdcheck, any::knitr, any::rmarkdown,
             any::testthat, any::withr, any::ggplot2,
-            any::ggalluvial, any::uwot, any::sigminer
-          use-cache: true
+            any::ggalluvial, any::uwot
 
       # The displaced serial test phase returns below as K attested shards;
       # the Rd-examples leg rides the check phase of this call and the
@@ -444,12 +443,32 @@ jobs:
         run: |
           mkdir -p attest-out shard-logs
           k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          tag="${{ matrix.config.os }}-${{ matrix.config.r }}"
           pids=""; rc=0
           for s in $(seq 1 "$k"); do
+            # Sanctioned-skip ledger (tools/ci/shard-exclusions.tsv): a
+            # registered (arm, shard) pair is spoken for by the aggregator's
+            # own --write-exclusion-marker renderer, so the marker bytes can
+            # never drift from the ledger and this script invents nothing.
+            # rc=3 means "not registered: run the shard"; any other nonzero
+            # is a broken ledger and dies the arm loud.
+            exclrc=0
+            python3 tools/ci/ci-shard-aggregate.py --write-exclusion-marker \
+              --exclusions tools/ci/shard-exclusions.tsv \
+              --tag "$tag" --shard "$s" \
+              --out "attest-out/shard-$s-$tag.excl" || exclrc=$?
+            if [ "$exclrc" -eq 0 ]; then
+              echo "shard $s: excluded by the sanctioned-skip ledger for $tag"
+              continue
+            elif [ "$exclrc" -ne 3 ]; then
+              echo "sanctioned-skip ledger lookup failed (rc=$exclrc) for shard $s of $tag"
+              exit 2
+            fi
+            rm -f "attest-out/shard-$s-$tag.excl"
             Rscript tools/ci/run-testthat-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --kind=fanout --mode=installed \
-              --attest="attest-out/shard-$s-${{ matrix.config.os }}-${{ matrix.config.r }}.attest" \
+              --attest="attest-out/shard-$s-$tag.attest" \
               > "shard-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
           done
@@ -463,6 +482,7 @@ jobs:
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir attest-out --kind fanout \
             --fanout-configs tools/ci/fanout-configs.tsv \
+            --exclusions tools/ci/shard-exclusions.tsv \
             --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
 
       - name: Upload fan-out attestations
@@ -638,7 +658,6 @@ jobs:
         with:
           needs: coverage
           extra-packages: any::covr
-          use-cache: true
 
       # Test-phase coverage, sharded: one instrumented package_coverage
       # (type="tests") per manifest shard, in parallel. covr's

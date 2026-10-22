@@ -119,3 +119,60 @@ same four names). `tools/ci-selfcheck.py` polices the new contract (roster
 count, matrix union disjointness vs. fan-out TSV, `--no-tests` binding,
 strict-vs-advisory posture per arm, instrument existence) with its
 deep-checks sections untouched.
+
+## Round 2 (2026-10-22): every check arm fans out; the monolith rides the scheduled gate
+
+The user-facing mandate for round 2 was wall-clock: the Actions runtime runs
+far too long and deserves real design work -- measured, the retired monolithic
+CRAN-shape check arm owned an 81-minute
+serial test phase (run 39691982548, windows/release, 4881 s) that no PR
+needed to wait for. Round 2 displaces it: all eight check platforms (roster:
+`tools/ci/fanout-configs.tsv`) now run `rcmdcheck` with `--no-tests` plus
+one shared `R CMD INSTALL` of the tree, and the test phase itself is the K
+parallel attested shard wave that `guards-shards` proved out in round 1.
+The monolithic CRAN-shape check survives where it belongs -- the scheduled
+gate (`.github/workflows/scheduled.yml`, `cran-shape-check`), off the PR
+critical path. The full before/after per-arm table is banked in the PR #47
+body once its adjudicating run completes.
+
+What round 2 paid for itself immediately -- the new laws CAUGHT gaps rather
+than being decoration (runs 39735155940, 39753886611):
+
+* **The zero-executed law caught a real 4.3 vacuity.** `shard-3`
+  (`test-xval-m2-extract.R`, its sole file) completed having executed zero
+  non-skipped tests on ubuntu/4.3: the hard-mode CRAN-only solve had
+  silently dropped `sigminer` from the floor arm's provisioning, so
+  `skip_if_not_installed()` had been leaving the M2 xval gate unrun there
+  all along. The system was speaking, not flaking -- the same run's other
+  thirteen arms were green.
+* **The fix is a DECLARATION, not an install.** `sigminer` (2.3.3, the
+  pinned ground truth, and CRAN-current 2.4.0 alike) imports `maftools ->
+  VariantTools/S4Vectors`, which live only in the Bioconductor 3.18 series
+  the 4.3 platform needs -- and the 3.18 trees answer 404 on every
+  canonical mirror (`bioconductor.posit.co/packages/3.18/*`, the
+  bioconductor.org old-release paths; the live 3.21 series answers 200).
+  Measured 2026-10-22; run 39753886611's provisioning step died on
+  exactly that solve (`Can't find package called maftools, bioc`). A
+  half-resolved reference would have been a vacuous green wearing a green
+  hat, so the arm now EXCLUDES the shard by ledger:
+  `tools/ci/shard-exclusions.tsv` is the sanctioned-skip registry, the
+  aggregator's `--write-exclusion-marker` is its only lawful renderer, and
+  the census demands the marker's exact bytes -- silence, drift, an
+  unregistered marker and an attestation appearing under an active
+  exclusion all DEFECT. An exclusion is thus louder than a pass.
+* **The windows file-sharing law (bounded witnessed retry).** Concurrent
+  sibling shards executing the live checkout make R CMD build's internal
+  tree copy intermittently hit `Permission denied` (run 39735155940,
+  windows/release transcript). The class is transient by construction, so
+  the build/install spawns ride `.run_copy` in `tools/check-layout-sim.R`:
+  bounded tries against named needles with logged retries; any other
+  failure still dies loud -- the retry masks nothing.
+* **devel's budget is its own.** The devel arm spends ~36 minutes inside
+  `setup-r-dependencies` alone (nightly P3M lag, source-built solves --
+  measured run 39753886611) and would die on the shared 60-minute arm
+  budget before its shard wave could complete; it inherits the retired
+  monolithic devel arm's 120-minute allowance.
+* **Dead input purge.** Four `use-cache: true` lines survived the port
+  from the `setup-r` era into `setup-r-dependencies` blocks that have no
+  such input -- a permanent noisy warning and a lie about caching. All
+  four deleted; the action's own `cache` default governs.

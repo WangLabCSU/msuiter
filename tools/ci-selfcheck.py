@@ -369,6 +369,51 @@ def main():
     check("4.3 floor arm skips the pandoc probe",
           "install-pandoc" in str(fanout_job))
 
+    # ---- sanctioned-skip ledger (tools/ci/shard-exclusions.tsv) --------------
+    # An arm that cannot run a shard must say so from this ledger, and the
+    # only lawful renderer of the on-disk marker is the aggregator itself:
+    # ci.yml asks for one, it never synthesizes one. The validator is the
+    # aggregator's own parse_exclusions -- loaded from source so the gate and
+    # the census can never drift into disagreeing about what the ledger says.
+    # The validator IS the census's own parser: loaded by exec of the
+    # aggregator source (importlib's module_from_spec returns an unexecuted
+    # module in this interpreter, measured 2026-10-22 -- the load must not
+    # depend on that behavior).
+    _agg_ns = {"__name__": "agg_law", "__file__": str(REPO / "tools/ci/ci-shard-aggregate.py")}
+    _agg_src_path = str(REPO / "tools/ci/ci-shard-aggregate.py")
+    with open(_agg_src_path, encoding="utf-8") as _fh:
+        exec(compile(_fh.read(), _agg_src_path, "exec"), _agg_ns)
+    _agg = _agg_ns
+    excl_tsv = REPO / "tools/ci/shard-exclusions.tsv"
+    _quiet = lambda s: None
+    rows = _agg["parse_exclusions"](str(excl_tsv), _quiet) if excl_tsv.exists() else None
+    check("sanctioned-skip ledger parses under the census's own parser",
+          rows is not None, "path=%s" % excl_tsv)
+    if rows:
+        k_man = int(next((ln.split("=")[1] for ln in txt(excl_tsv.parent / "shard-manifest.tsv").splitlines()
+                         if ln.startswith("# k=")), "0"))
+        roster_shards = {int(sh) for sh, _ in (ln.split("\t")[:2]
+                         for ln in txt(excl_tsv.parent / "shard-manifest.tsv").splitlines()
+                         if not ln.startswith("#") and not ln.startswith("shard") and ln.strip())}
+        check("ledger arms are fan-out arms",
+              all((o, c) in fan_pairs for (o, c, _s) in rows))
+        check("ledger shards exist in the manifest",
+              all(int(s) in roster_shards for (_o, _c, s) in rows))
+        check("ledger never empties an arm (some shard must always run)",
+              all(sum(1 for (o2, c2, _s) in rows if (o2, c2) == (o, c)) < k_man
+                  for (o, c, _s) in rows))
+        check("no ledger row for the repo lanes (fan-out only, kind=repo has no tags)",
+              all(o.endswith("-latest") for (o, _c, _s) in rows))
+        check("ledger cause of record is a real sentence (not a placeholder)",
+              all(len(c) >= 60 and " " in c for c in rows.values()))
+        gutted = dict(rows); gutted[("ghost-latest", "release", "1")] = "ghost"
+        check("ledger gate firing control: an off-roster row is caught by the same law",
+              all((o, c) in fan_pairs for (o, c, _s) in gutted) is False)
+    check("fan-out wave renders markers ONLY via the aggregator writer",
+          "--write-exclusion-marker" in fs and "shard-exclusions.tsv" in fs)
+    check("fan-out census is handed the ledger",
+          "--exclusions" in fs and "tools/ci/shard-exclusions.tsv" in fs)
+
     # ---- check-run census ([ci-checkrun-level-green] convention) ------------
     # Run-level green can hide a dead arm, so the expected PR-gate check-run
     # count is pinned: 8 fan-out arms (the TSV is the source) + guard-prep +
