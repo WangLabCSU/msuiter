@@ -294,7 +294,11 @@ jobs:
   # fragments of those same deleted lines (version digits, step numbers)
   # that carry no numeric claim of their own.
   R-CMD-check-fanout:
-    timeout-minutes: 60
+    # devel spends ~36 min in setup-r-dependencies alone (nightly P3M lag,
+    # source-built solves -- run 39735155940 measured) and would die on the
+    # shared budget before its shard wave completes; it inherits the retired
+    # monolithic devel arm's 120-minute allowance.
+    timeout-minutes: ${{ matrix.config.r == 'devel' && 120 || 60 }}
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
