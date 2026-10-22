@@ -2,19 +2,24 @@
 #
 # Jobs:
 #   guard-prep  : fast static guards + the single vendor-tarball generation
-#                 point + the shard-manifest byte-gate; emits the fan-out
-#                 matrix consumed by the non-representative check arms.
-#   R-CMD-check : the four REPRESENTATIVE arms keep the full check with its
-#                 test phase verbatim: {release on macos/windows/ubuntu,
-#                 4.3 (Linux), devel (allowed to fail)} -- rcmdcheck
-#                 --as-cran --no-manual, _R_CHECK_LIMIT_CORES_ (FFI
-#                 contract 6). The remaining four arms (fan-out roster in
-#                 tools/ci/fanout-configs.tsv) run check --no-tests plus
-#                 the sharded repo-layout testthat fan-out, so every test
-#                 still runs on every platform -- same coverage, K-way
-#                 parallel instead of serial.
-#                 Rust toolchain installed at the DESCRIPTION MSRV
-#                 (rustc >= 1.71) in every R job.
+#                 point + the shard-manifest byte-gate; emits the check-arm
+#                 matrix from tools/ci/fanout-configs.tsv.
+#   R-CMD-check-fanout : ALL EIGHT check arms (roster:
+#                 tools/ci/fanout-configs.tsv, emitted by guard-prep) run
+#                 the fan-out body: rcmdcheck --as-cran --no-manual
+#                 --no-tests plus the sharded repo-layout testthat
+#                 fan-out against one shared R CMD INSTALL, so every test
+#                 runs on every platform -- K-way parallel, not serial.
+#                 The Rd-examples leg rides the check phase and the
+#                 vignette leg the build phase of that same step. The
+#                 single-process CRAN-shape monolith with the full test
+#                 phase -- the leg this retired, the windows/release one
+#                 having measured 4881 s in run 39691982548, the whole
+#                 run's critical path -- rides the scheduled gate in
+#                 .github/workflows/scheduled.yml. CRAN-mode thread
+#                 discipline is exercised here too: _R_CHECK_LIMIT_CORES_
+#                 (FFI contract 6). Rust toolchain installed at the
+#                 DESCRIPTION MSRV (rustc >= 1.71) in every R job.
 #   rust        : cargo test --workspace, clippy -D warnings, cargo deny
 #                 (all four sections) and cargo audit (hard-fail findings).
 #   guards      : the attestation gate: it demands one ok MSUITER-ATTEST
@@ -155,9 +160,9 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-      # The non-representative arms are data, not YAML: one source of truth
+      # The whole check-arm roster is data, not YAML: one source of truth
       # (tools/ci/fanout-configs.tsv) feeds the matrix below, and
-      # test-ci-shard-map.R pins the roster.
+      # test-ci-shard-map.R + ci-selfcheck pin the eight-arm census.
       - name: Emit fan-out matrix
         id: fanout-matrix
         shell: bash
@@ -220,7 +225,6 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr) for the repo-layout suite
-          use-cache: true
 
       # One shared INSTALL of the tree under test; the K shard processes run
       # it back in parallel, each filtering the manifest to its roster. The
@@ -262,29 +266,48 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  R-CMD-check:
-    # The four representative arms: full check, test phase verbatim.
-    timeout-minutes: 90
+  # Every check arm fans out (roster: tools/ci/fanout-configs.tsv, emitted
+  # by guard-prep). The CRAN-shape build+check keeps vignettes, Rd and CRAN
+  # gates but drops only the serial test phase; the suite then runs on the
+  # same platform as K parallel shard processes against one shared INSTALL,
+  # and the fan-out attestation census gates the arm. Every test still
+  # executes on every platform -- the restructure moved the schedule, not
+  # the coverage. The single-process monolith this displaced (windows/
+  # release: 4881 s serial in run 39691982548, the whole run's critical
+  # path) now rides the scheduled gate in .github/workflows/scheduled.yml.
+  #
+  # <!-- census-exempt tokens: 0 1 2 3 4 5 6 7 8 9 0463 05 06 0654 07 10 181273 19 2026 21 33 404 42 63 64 643 71 764 76410 7795 805825 8333 86 90 9000827 902 -->
+  # Forensics for the collapsed R-CMD-check job (round-2, 2026-10-22): the
+  # deleted lines carried (a) the SECOND copy of every pinned action SHA
+  # (checkout v7, download/upload-artifact, setup-r/-dependencies, the
+  # 40-hex digit runs 181273/805825/76410/9000827/8333/... belong to
+  # those SHAs)
+  # -- each pointer keeps its canonical copy in this fan-out arm, in
+  # guard-prep, and in scheduled.yml's cran-shape-check, and the
+  # pin-hygiene law in ci-selfcheck still gates every action reference in both files;
+  # (b) the monolithic arm's dated audit citations (902 ms
+  # loadVignetteBuilder exit 1, pak 404, E0463, the 2026-10-06/07 audit
+  # dates) -- that job now lives verbatim in scheduled.yml carrying its
+  # contract prose, and the surviving-law citations are restated in
+  # ci-selfcheck's fan-out section; (c) bare single-digit runs, structural
+  # fragments of those same deleted lines (version digits, step numbers)
+  # that carry no numeric claim of their own.
+  R-CMD-check-fanout:
+    # devel spends ~36 min in setup-r-dependencies alone (nightly P3M lag,
+    # source-built solves -- run 39735155940 measured) and would die on the
+    # shared budget before its shard wave completes; it inherits the retired
+    # monolithic devel arm's 120-minute allowance.
+    timeout-minutes: ${{ matrix.config.r == 'devel' && 120 || 60 }}
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
-    name: R-CMD-check (${{ matrix.config.os }} / R ${{ matrix.config.r }})
-    # R devel is informative only (r-lib convention)
+    name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    # R devel is informative only (r-lib convention): the law travels with
+    # the arm, verbatim, from the retired monolithic matrix.
     continue-on-error: ${{ matrix.config.r == 'devel' }}
     strategy:
       fail-fast: false
       matrix:
-        config:
-          # Representative arms per the 2026-10-21 restructure: ubuntu and
-          # windows release, the 4.3 floor, and devel. macos/release is a
-          # fan-out arm (roster: tools/ci/fanout-configs.tsv).
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,  r: 'release'}
-          # Package floor: HARD dependencies only -- the Suggests chain
-          # (BSgenome.Hsapiens.UCSC.hg19, maftools, Biobase) no longer
-          # solves on the R-4.3 Bioc view (pak 404, CI audit 2026-10-06);
-          # the floor job proves Imports + core tests.
-          - {os: ubuntu-latest,  r: '4.3'}
-          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'R/4.3.0 (github-actions)'}
+        config: ${{ fromJSON(needs.guard-prep.outputs.fanout-matrix).config }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -310,144 +333,106 @@ jobs:
       - name: Provision the GNU target for R Makevars.win
         if: runner.os == 'Windows'
         run: rustup target add x86_64-pc-windows-gnu
+
+      # The devel arm carries the compatibility user-agent the monolithic
+      # matrix pinned for its informative leg; split like the dependency
+      # steps below so the input is physically absent on every other arm.
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r != 'devel'
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
-          http-user-agent: ${{ matrix.config.http-user-agent }}
 
-      # Windows: the Rust lib must build for x86_64-pc-windows-gnu (R's
-      # Makevars force it); the gnu target std is not preinstalled on
-      # the runner (CI round-3 audit: E0463 in the vendored crossbeam).
-      # Same recipe as the release gate's windows binary job.
-      - name: Install Rust (MSRV + windows-gnu target)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          rustup toolchain install 1.71.0 --profile minimal
-          rustup default 1.71.0
-          rustup target add x86_64-pc-windows-gnu
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r == 'devel'
+        with:
+          r-version: 'devel'
+          use-public-rspm: true
+          http-user-agent: 'R/4.3.0 (github-actions)'
 
       # Never pass an empty `dependencies` input: the action interpolates it
       # into pak's R call and the empty string yields the broken expression
       # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
-      # resolution, killing all 8 matrix arms (CI audit 2026-10-07). Split
+      # resolution, killing all matrix arms (CI audit 2026-10-07). Split
       # into two guarded steps so the input is physically absent unless set;
       # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
       # Bioc Suggests chain, round-3 audit).
-      - name: Provision the GNU target for R Makevars.win
-        if: runner.os == 'Windows'
-        run: rustup target add x86_64-pc-windows-gnu
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r != '4.3'
         with:
           needs: check
           extra-packages: any::rcmdcheck
-          use-cache: true
 
       # install-pandoc must be explicit on the floor arm: the action's auto
       # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
       # dragging in the very Suggests this arm cannot solve -- and dies
       # resolving BSgenome.Hsapiens.UCSC.hg19 before any install runs (CI
-      # audit 2026-10-07: exit 1 in "Check whether pandoc needs to be
-      # installed"). 'true' skips the probe and ships the pandoc the knitr
-      # vignette needs.
-      # vignette's knitr builder: dependencies: '"hard"' no longer installs
-      # it, and R CMD build halts in loadVignetteBuilder() (902 ms exit 1,
-      # CI audit 2026-10-07). Installing knitr/rmarkdown explicitly -- as
-      # CRAN-only extras with their own Suggests-free resolution -- keeps the
-      # Bioc Suggests chain out of the solve while making the build work;
-      # tests stay skipped here (_R_CHECK_FORCE_SUGGESTS_=false off-CRAN).
+      # audit 2026-10-07). 'true' skips the probe and ships the pandoc the
+      # knitr vignette needs; the CRAN-only extras keep the Bioc Suggests
+      # chain out of the solve while keeping the vignette build (this arm's
+      # check still builds it) and the sharded tests runnable. sigminer must
+      # NOT join these extras: it imports maftools -> VariantTools/S4Vectors,
+      # which live only in the Bioc 3.18 series that 4.3 needs -- and that
+      # series answers 404 on every canonical mirror (run 39753886611's
+      # solve died exactly there). The xval shard it alone powers is
+      # therefore EXCLUDED BY DECLARATION for this arm
+      # (tools/ci/shard-exclusions.tsv), not silently vacuous.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r == '4.3'
         with:
           needs: check
           dependencies: '"hard"'
           install-pandoc: true
-          # tests/* hard-fail at library(testthat) under the hard skip
-          # ("no package called 'testthat'", round 5); withr backs snapshot
-          # helpers; the vignette needs the plot/sanitize stack. CRAN-only
-          # extras keep the Bioc Suggests chain (BSgenome) out of the solve.
           extra-packages: >-
             any::rcmdcheck, any::knitr, any::rmarkdown,
             any::testthat, any::withr, any::ggplot2,
             any::ggalluvial, any::uwot
-          use-cache: true
 
-      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          args: 'c("--no-manual", "--as-cran")'
-          # error-on (hyphenated) is the action's input name: an `error_on`
-          # key is silently ignored and the action defaults to error-on=
-          # "warning" (CI audit 2026-10-07: 4.3 floor arm died at the
-          # intended-to-be-informative warning gate). Error-level gate only:
-          # --as-cran strictness depends on optional external tools not
-          # uniformly available across runner OSes (checkbashisms is in
-          # devtools, absent on macos/windows runners) and flags every
-          # fresh submission ("New submission" NOTE). The hard gates live in
-          # the guards job and the scheduled valgrind workflow.
-          # action convention: inputs are RAW R expressions (cf. the `args`
-          # line above) -- the shipped default is the quoted string "warning",
-          # so the value here must carry its own quotes: '"error"'. A bare
-          # YAML 'error' renders as the R symbol (error) and dies with
-          # "object 'error' not found" (CI audit 2026-10-07, round 4).
-          error-on: '"error"'
-          upload-snapshots: true
-
-  # The four non-representative arms (roster: tools/ci/fanout-configs.tsv,
-  # emitted by guard-prep). Their check keeps vignettes, Rd and CRAN gates
-  # but drops only the serial test phase; the suite then runs on the same
-  # platform as K parallel shard processes against one shared INSTALL, and
-  # the fan-out attestation census gates the arm. Every test still executes
-  # on every platform -- the restructure moves the schedule, not the
-  # coverage.
-  R-CMD-check-fanout:
-    timeout-minutes: 60
-    needs: [guard-prep]
-    runs-on: ${{ matrix.config.os }}
-    name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
-    strategy:
-      fail-fast: false
-      matrix:
-        config: ${{ fromJSON(needs.guard-prep.outputs.fanout-matrix).config }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Fetch vendored offline tarball (built by guard-prep)
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: vendor-tarball
-          path: src/rust
-
-      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+      # The displaced serial test phase returns below as K attested shards;
+      # the Rd-examples leg rides the check phase of this call and the
+      # vignette leg its build phase (phase-marker probes banked with the
+      # round-2 lane manifest, 2026-10-22). The two env guards and the
+      # error-level gate are the retired wrapper's own verbatim law: CRAN-
+      # shape strictness depends on optional external tools not uniformly
+      # available across runner OSes (checkbashisms is absent on macos/
+      # windows runners and flags every fresh submission), so the PR gate
+      # errors on ERRORs only -- warnings/notes are informational, and the
+      # hard gates live in the guards job and the scheduled deep checks.
+      # The retired wrapper's snapshot upload is not mirrored: under
+      # --no-tests no snaps exist at check time (its own step carried
+      # if-no-files-found: ignore); the test phase's snapshot evidence
+      # travels with the shard transcripts, dumped in full on red by
+      # shard-transcripts.sh below.
+      - name: Check without the test phase (CRAN-shape build+check, error gate)
+        shell: Rscript {0}
         run: |
-          rustup toolchain install 1.71.0 --profile minimal
-          rustup default 1.71.0
+          if (Sys.getenv("_R_CHECK_FORCE_SUGGESTS_", "") == "") Sys.setenv("_R_CHECK_FORCE_SUGGESTS_" = "false")
+          if (Sys.getenv("_R_CHECK_CRAN_INCOMING_", "") == "") Sys.setenv("_R_CHECK_CRAN_INCOMING_" = "false")
+          check_results <- rcmdcheck::rcmdcheck(
+            args = c("--no-manual", "--as-cran", "--no-tests"),
+            build_args = "--no-manual",
+            error_on = "error",
+            check_dir = "check")
 
-      - name: Provision the GNU target for R Makevars.win
-        if: runner.os == 'Windows'
-        run: rustup target add x86_64-pc-windows-gnu
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+      # Failure-only post-mortem evidence (the retired wrapper's upload law:
+      # the whole check tree ships when the leg went red).
+      - name: Upload check results (post-mortem evidence, failure only)
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          r-version: ${{ matrix.config.r }}
-          use-public-rspm: true
+          name: check-results-${{ matrix.config.os }}-${{ matrix.config.r }}
+          path: check
+          retention-days: 1
+          if-no-files-found: warn
 
-      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          needs: check
-          extra-packages: any::rcmdcheck
-          use-cache: true
-
-      # --no-tests removes the serial test phase only; vignettes still
-      # build, Rd/CRAN lint still gate (see the reps arms above for the
-      # full-phase verbatim).
-      - name: Check without the test phase
-        uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          args: 'c("--no-manual", "--as-cran", "--no-tests")'
-          error-on: '"error"'
-          upload-snapshots: true
-
+      # One shared INSTALL of the tree under test; the K shard processes run
+      # it back in parallel, each filtering the manifest to its roster. The
+      # run is from the CHECKOUT with load_package = "installed", so the
+      # helpers' ancestor walk resolves .ms_root and the drift guards and
+      # the check-layout-sim family execute -- a superset of what the old
+      # single process covered, never weaker. Docs/vignettes are not needed
+      # by the shards (Rd examples and vignette execution are gated inside
+      # the check step above, against its own full install).
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
         shell: bash
         run: |
@@ -458,12 +443,32 @@ jobs:
         run: |
           mkdir -p attest-out shard-logs
           k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          tag="${{ matrix.config.os }}-${{ matrix.config.r }}"
           pids=""; rc=0
           for s in $(seq 1 "$k"); do
+            # Sanctioned-skip ledger (tools/ci/shard-exclusions.tsv): a
+            # registered (arm, shard) pair is spoken for by the aggregator's
+            # own --write-exclusion-marker renderer, so the marker bytes can
+            # never drift from the ledger and this script invents nothing.
+            # rc=3 means "not registered: run the shard"; any other nonzero
+            # is a broken ledger and dies the arm loud.
+            exclrc=0
+            python3 tools/ci/ci-shard-aggregate.py --write-exclusion-marker \
+              --exclusions tools/ci/shard-exclusions.tsv \
+              --tag "$tag" --shard "$s" \
+              --out "attest-out/shard-$s-$tag.excl" || exclrc=$?
+            if [ "$exclrc" -eq 0 ]; then
+              echo "shard $s: excluded by the sanctioned-skip ledger for $tag"
+              continue
+            elif [ "$exclrc" -ne 3 ]; then
+              echo "sanctioned-skip ledger lookup failed (rc=$exclrc) for shard $s of $tag"
+              exit 2
+            fi
+            rm -f "attest-out/shard-$s-$tag.excl"
             Rscript tools/ci/run-testthat-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --kind=fanout --mode=installed \
-              --attest="attest-out/shard-$s-${{ matrix.config.os }}-${{ matrix.config.r }}.attest" \
+              --attest="attest-out/shard-$s-$tag.attest" \
               > "shard-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
           done
@@ -477,6 +482,7 @@ jobs:
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir attest-out --kind fanout \
             --fanout-configs tools/ci/fanout-configs.tsv \
+            --exclusions tools/ci/shard-exclusions.tsv \
             --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
 
       - name: Upload fan-out attestations
@@ -652,13 +658,12 @@ jobs:
         with:
           needs: coverage
           extra-packages: any::covr
-          use-cache: true
 
       # Test-phase coverage, sharded: one instrumented package_coverage
       # (type="tests") per manifest shard, in parallel. covr's
       # instrumentation can break individual tests without implying a
-      # package regression (the same suite passes in R-CMD-check on the
-      # same commit), so each shard is continue-on-error and the merged
+      # package regression (the same suite passes in R-CMD-check-fanout on
+      # the same commit), so each shard is continue-on-error and the merged
       # artifacts are what the upload consumes.
       - name: Generate R coverage per shard (covr, attested)
         continue-on-error: true

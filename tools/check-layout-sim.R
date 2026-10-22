@@ -92,6 +92,60 @@ if (identical(Sys.getenv("SIM_CHECK_LAYOUT_ACTIVE", ""), "1")) {
   if (file.exists(ef)) txt <- c(txt, readLines(ef, warn = FALSE))
   list(rc = rc, log = txt)
 }
+
+## Transient copy-denial law (run 39735155940, windows-latest/R release):
+## a live sibling-shard file handle (or Defender re-scan) denied R CMD
+## build's internal tree copy mid-spawn -- "problem copying ...:
+## Permission denied" + "copying to build directory failed". The same
+## spawn against a quiet tree completes, so the class is transient: retry
+## it BOUNDED, one witness line per retry; a failure outside the transient
+## needles, or one that outlives the budget, returns untouched and dies
+## on the existing loud verdicts (retry never masks). The test-only knob
+## below injects N synthetic denials at the copy-phase spawns (no spawn
+## happens for them) so the units fire the law deterministically.
+.TRANSIENT_TRIES <- 3L
+.TRANSIENT_DELAY <- 20L
+.TRANSIENT_NEEDLES <- c("Permission denied", "copying to build directory failed")
+.transient.left <- local({
+  n <- suppressWarnings(as.integer(Sys.getenv(
+    "MSUITER_SIM_TEST_TRANSIENT_COPY_DENIAL", unset = "0")))
+  if (length(n) != 1L || is.na(n) || n < 0L) 0L else n
+})
+.is_transient_denial <- function(log)
+  any(unlist(lapply(.TRANSIENT_NEEDLES,
+                    function(n) grepl(n, log, fixed = TRUE)), use.names = FALSE))
+.wait <- function(seconds) {
+  if (exists("Sys.sleep", mode = "function")) {
+    Sys.sleep(seconds); return(invisible(NULL))
+  }
+  # pre-4.5 floors (4.3/oldrel) have no Sys.sleep: bounded busy-check. Rare
+  # path only (transient retries), bounded by .TRANSIENT_TRIES * delay.
+  t0 <- as.numeric(Sys.time()[["elapsed"]])
+  while (as.numeric(Sys.time()[["elapsed"]]) - t0 < seconds) next
+}
+.run_copy <- function(cmd, args, tag) {
+  last <- NULL
+  for (i in seq_len(.TRANSIENT_TRIES)) {
+    if (.transient.left > 0L) {
+      .transient.left <<- .transient.left - 1L
+      last <- list(rc = 1L, log = c(
+        "Warning in file.copy(pkgname, Tdir, recursive = TRUE) :",
+        "  problem copying synthetic injected denial: Permission denied",
+        "copying to build directory failed"))
+    } else {
+      last <- .run3(cmd, args, tag)
+    }
+    if (identical(last$rc, 0L)) return(last)
+    if (!.is_transient_denial(last$log)) return(last)
+    if (i < .TRANSIENT_TRIES) {
+      cat("check-layout-sim: transient copy denial on ", tag, " (attempt ",
+          i, "/", .TRANSIENT_TRIES, ") -- retrying in ", .TRANSIENT_DELAY,
+          "s under the windows file-sharing law\n", sep = "")
+      .wait(.TRANSIENT_DELAY)
+    }
+  }
+  last
+}
 # Every subprocess must resolve R.home-ABSOLUTE: when this harness is
 # driven from an in-check suite (the in-suite unit under a real R CMD
 # check), the parent's PATH carries tools:::add_dummies' par. 1.6 stubs
@@ -217,10 +271,10 @@ if (!keep) on.exit(unlink(work, recursive = TRUE))
 ## 1. the real tarball ------------------------------------------------------
 .wd0 <- getwd()
 invisible(setwd(work))   # this build's system2 has no wd= argument (measured)
-b <- .run3(.Rbin,
-           c("CMD", "build", "--no-build-vignettes", "--no-manual",
-             "--compact-vc-exclusions", root),
-           "build")
+b <- .run_copy(.Rbin,
+               c("CMD", "build", "--no-build-vignettes", "--no-manual",
+                 "--compact-vc-exclusions", root),
+               "build")
 invisible(setwd(.wd0))
 if (!identical(b$rc, 0L)) {
   cat(b$log, sep = "\n")
@@ -232,6 +286,13 @@ if (length(tar) != 1L) {
   cat("check-layout-sim: ERROR expected one tarball, found: ",
       paste0(tar, collapse = ", "), "\n", sep = "")
   quit(status = 2L)
+}
+if (identical(Sys.getenv("MSUITER_SIM_TEST_STOP_AFTER", unset = ""), "build")) {
+  # test-only seam: stop after the copy-phase spawns so the transient
+  # retry-law units ride the build cost, not the full simulate.
+  cat("check-layout-sim: TEST-ONLY stop-after=build reached (tarball ",
+      tar[1L], ")\n", sep = "")
+  quit(status = 0L)
 }
 
 ## 2. the MEASURED check layout --------------------------------------------
@@ -484,9 +545,9 @@ for (absent in c("_pkgdown.yml", "docs", "bench")) {
   # has no local= arm -- measured -- so its attach-frame is not leaned on.)
   # --library= (NOT -l=): this build warns "unknown option" on -l= and then
   # silently targets the USER library (measured near-miss 2026-10-10).
-  .install <- function() .run3(.Rbin, c("CMD", "INSTALL", "--no-byte-compile",
-                                        "--no-docs",
-                                        paste0("--library=", new), root), "install")
+  .install <- function() .run_copy(.Rbin, c("CMD", "INSTALL", "--no-byte-compile",
+                                            "--no-docs",
+                                            paste0("--library=", new), root), "install")
   sdk <- .sdkroot_default()
   ins <- if (is.na(sdk)) .install() else {
     cat("check-layout-sim: SDKROOT unset -- self-discovered ", sdk,

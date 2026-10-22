@@ -92,14 +92,33 @@ test_that("the weights roster keeps lockstep with the test roster", {
   expect_gte(min(secs), -1L)   # weights steer balance only; the reporter census is the truth
 })
 
-test_that("the fan-out roster pins the four non-representative arms", {
+test_that("the fan-out roster covers all eight check arms (round-2: tests sharded everywhere)", {
   .ci_require_checkout()
   lines <- readLines(.ci_ci_locate("fanout-configs.tsv"), warn = FALSE)
   rows <- strsplit(lines[!grepl("^\\s*(#|$)", lines)], "\t", fixed = TRUE)
   got <- paste0(vapply(rows, `[`, character(1), 1L), "/",
                 vapply(rows, `[`, character(1), 2L))
-  expect_identical(sort(got), sort(c("ubuntu-latest/oldrel-1", "macos-latest/release",
-                                     "macos-latest/oldrel-1", "windows-latest/oldrel-1")))
+  # Round-1 shipped four non-representative arms; the representative four kept the
+  # monolithic serial test phase and one of them (windows/release) became the whole
+  # run's 4881s critical path. Round-2 shards the tests leg on every arm.
+  expect_identical(sort(got), sort(c("ubuntu-latest/4.3", "ubuntu-latest/release",
+                                     "ubuntu-latest/devel", "ubuntu-latest/oldrel-1",
+                                     "windows-latest/release", "windows-latest/oldrel-1",
+                                     "macos-latest/release", "macos-latest/oldrel-1")))
+})
+
+test_that("the CRAN-shape monolithic check rides the scheduled gate, not the PR gate", {
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  rd <- function(f) readLines(file.path(root, ".github", "workflows", f), warn = FALSE)
+  ci <- rd("ci.yml")
+  sched <- rd("scheduled.yml")
+  # The single-process CRAN-shape check keeps its science (serial state, CRAN
+  # gates) but loses its per-PR wall-clock veto: it moves to the daily gate.
+  expect_false(any(grepl("check-r-package", ci, fixed = TRUE)),
+               info = "ci.yml still invokes the monolithic check-r-package action")
+  expect_true(any(grepl("check-r-package", sched, fixed = TRUE)),
+               info = "scheduled.yml lost the CRAN-shape monolithic check")
 })
 
 test_that("the aggregator census FIRES on its shipped self-test controls", {

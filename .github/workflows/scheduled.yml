@@ -19,6 +19,21 @@
 #               violation is actually reported (a dead instrumentation can
 #               no longer masquerade as a green/red build).
 #   site      : pkgdown::build_site render of the reference site + artifact.
+#   vendor-prep : the vendored offline tarball, generated once per run at
+#               the ADR 0002 §2 budget (mirror of ci.yml's guard-prep point;
+#               a run is its own single generation point).
+#   cran-shape-check : the single-process CRAN-shape monolith the PR gate
+#               retired from its critical path on 2026-10-22 (round-2): one
+#               build+install+check process with the FULL test phase, args
+#               c("--no-manual","--as-cran") and the error-level gate
+#               verbatim from the leg it displaces. The eight fan-out arms
+#               in ci.yml prove the same coverage K-way parallel per PR; this
+#               job keeps the one-process CRAN-fidelity witness on this
+#               workflow's cadence (weekly cron + manual dispatch). The 4.3
+#               floor and devel legs are deliberately NOT duplicated here:
+#               their provisioning law (hard-mode Suggests skip, the devel
+#               user-agent pin) is carried by the fan-out roster in ci.yml,
+#               and a second copy would be budget, not signal.
 #
 # Sanitizers need -Z flags => nightly toolchain (engine/catalog compile on
 # nightly: no unsafe, budget deps only).
@@ -154,3 +169,80 @@ jobs:
           name: pkgdown-site
           path: docs
           retention-days: 14
+
+  vendor-prep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Same generation recipe as ci.yml's guard-prep (ADR 0002 §3.3): the
+      # tarball is built here once and the monolith never touches the
+      # network during its --as-cran build.
+      - name: Vendor budget check (ADR 0002 §2 drift guard)
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+          sh tools/vendor.sh --check
+          cp /tmp/msuiter-vendor.tar.xz vendor.tar.xz
+
+      - name: Upload vendor tarball (consumed by cran-shape-check)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: vendor-tarball
+          path: vendor.tar.xz
+          retention-days: 14
+          if-no-files-found: error
+
+  cran-shape-check:
+    needs: [vendor-prep]
+    runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 90 # the retired leg measured 4881 s in run 39691982548
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: windows-latest, r: 'release'}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Fetch vendored offline tarball (built by vendor-prep)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - name: Provision the GNU target for R Makevars.win
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: check
+          extra-packages: any::rcmdcheck
+          use-cache: true
+
+      # The monolith itself, verbatim from the retired PR-gate leg: the
+      # action's build+install+check runs the FULL test phase in one
+      # process. args/error-on are the sealed contract values; error-on is
+      # hyphenated (an error_on key is silently dropped -> the warning
+      # default) and carries its own quotes (the input is a RAW R
+      # expression; CI audit 2026-10-07). upload-snapshots stays true: the
+      # test phase executes here, so snapshot evidence is real.
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"error"'
+          upload-snapshots: true
