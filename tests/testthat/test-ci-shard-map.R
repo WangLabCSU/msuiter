@@ -181,3 +181,34 @@ test_that("shard filters select exactly their roster and nothing else", {
     expect_true(!any(grepl(f, alien)), info = paste0("shard ", s, " reached foreign files"))
   }
 })
+
+test_that("job budgets cover the measured tails -- no arm dies on its own timer", {
+  # Law from run 39815352743 (2026-10-22): four strikes that read as external
+  # cancels were the platform faithfully executing self-declared budgets.
+  # ubuntu/oldrel-1 measured 19m45s setup-r + 15m25s setup-r-deps of runner
+  # slowness before its 60-minute timer severed a healthy testthat wave at
+  # 21 of ~25 minutes; guard-prep likewise died at its 30-minute mark behind
+  # a stalled runner. A budget is a hang detector, not a starvation engine:
+  # it must exceed the measured tail with headroom.
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
+  budget_line <- function(key) {
+    hdr <- paste0("  ", key, ":")
+    h <- which(ci == hdr)
+    expect_identical(length(h), 1L, info = key)
+    win <- ci[(h + 1L):length(ci)]
+    t <- win[grepl("timeout-minutes:", win, fixed = TRUE)]
+    expect_gte(length(t), 1L)   # a job without an explicit budget is a green-hang invitation
+    trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE))
+  }
+  expect_identical(budget_line("guard-prep"), "45")     # hot path 1 min; stall class needs slack (strike-3 witness)
+  expect_identical(budget_line("guards"), "15")          # aggregator-only, measured 0 min
+  expect_identical(budget_line("guards-shards"), "60")   # measured 31 min; tail headroom
+  expect_identical(budget_line("coverage"), "90")        # hot 18 min; second witness: PR-49 arm saw 40 min of setup slowness, covr beheaded at 60
+  # Second witness (run 39839340513, 2026-10-23): the slow-runner class is a
+  # RUNNER property, not an arm property -- the 10-22 strike hit ubuntu/oldrel-1,
+  # this one hit ubuntu/release + coverage. An arm whitelist is whack-a-mole;
+  # every fan-out arm rides the uniform hang-detector ceiling.
+  expect_identical(budget_line("R-CMD-check-fanout"), "120")
+})

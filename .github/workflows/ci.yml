@@ -75,7 +75,10 @@ concurrency:
 
 jobs:
   guard-prep:
-    timeout-minutes: 30
+    # Hot path measures 1 min; the stall class stalls the runner 28+ min before
+    # the first work step and the 30-min timer severed it (run 39815352743,
+    # 2026-10-22). The budget must survive runner slowness, not starve it.
+    timeout-minutes: 45
     runs-on: ubuntu-latest
     outputs:
       fanout-matrix: ${{ steps.fanout-matrix.outputs.matrix }}
@@ -194,7 +197,8 @@ jobs:
             --attest-dir attest-guards --kind guards
 
   guards-shards:
-    timeout-minutes: 45
+    # Measured 31 min (run 39815352743); headroom for the slow-runner tail.
+    timeout-minutes: 60
     needs: guard-prep
     runs-on: ubuntu-latest
     steps:
@@ -293,11 +297,14 @@ jobs:
   # fragments of those same deleted lines (version digits, step numbers)
   # that carry no numeric claim of their own.
   R-CMD-check-fanout:
-    # devel spends ~36 min in setup-r-dependencies alone (nightly P3M lag,
-    # source-built solves -- run 39735155940 measured) and would die on the
-    # shared budget before its shard wave completes; it inherits the retired
-    # monolithic devel arm's 120-minute allowance.
-    timeout-minutes: ${{ matrix.config.r == 'devel' && 120 || 60 }}
+    # Uniform 120: budgets are hang detectors sized to the measured tail, and
+    # the measured tail is RUNNER-random, not arm-random. Witness 1 (run
+    # 39815352743): ubuntu/oldrel-1 ate 19m45s setup-r + 15m25s deps, its
+    # healthy wave severed at the 60 mark. Witness 2 (run 39839340513):
+    # ubuntu/release ate 23m16s + 10m45s of the same slowness and died the
+    # same death -- an arm whitelist is whack-a-mole. Healthy arms measure
+    # 24-41 min; 120 carries a 40-min stalled setup plus wave with headroom.
+    timeout-minutes: 120
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
@@ -636,7 +643,11 @@ jobs:
     # mask: the shard covr runs attest their own executed work and the
     # aggregator prints the census -- with --advisory, defects are LOUD but
     # not fatal, exactly the semantics this arm has always had.
-    timeout-minutes: 60
+    # Hot path measures 18 min (run 39815352743); witness run 39839340513
+    # ate 40 min of runner-slowness setup before covr even started, and the
+    # 60-minute timer beheaded a healthy shard mid-flight -- 90 carries the
+    # stall class with headroom.
+    timeout-minutes: 90
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
