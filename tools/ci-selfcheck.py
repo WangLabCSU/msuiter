@@ -14,11 +14,12 @@ contracts it is supposed to implement:
     Linux + Windows (section 4.4/5), and the Cargo.lock pins
     (matrixmultiply 0.3.9, rayon 1.10.x, lock v3) asserted by a CI
     step next to the dependabot ignore rules (belt and braces);
-  * the sharded CI contract (restructure 2026-10-21) is coherent: the
-    representative check arms keep the full test phase and the fan-out arms
-    (tools/ci/fanout-configs.tsv) run --no-tests plus the attested shard
-    fan-out, together covering every test on every platform; the
-    instruments the lanes invoke exist and the attestation gate is wired;
+  * the sharded CI contract (round 2, 2026-10-22) is coherent: ALL eight
+    check arms run the fan-out --no-tests check plus the attested shard
+    fan-out (roster tools/ci/fanout-configs.tsv) against one shared
+    INSTALL; the full-test-phase CRAN-shape monolith lives on the
+    scheduled gate (scheduled.yml cran-shape-check); the instruments the
+    lanes invoke exist and the attestation gate is wired;
   * every repository path referenced by a workflow actually exists
     (sanctioned build-output roots are excepted by EXACT token only, and a
     built-in firing control proves a genuinely dangling path still reddens).
@@ -265,19 +266,25 @@ def main():
     check("ci.yml env _R_CHECK_LIMIT_CORES_ (FFI contract 6)",
           "_R_CHECK_LIMIT_CORES_" in (ci.get("env") or {}))
 
-    # ---- R-CMD-check matrix (representative arms) + fan-out arms ----------
-    # The 8-(arm) platform roster is frozen as a contract; the wall-clock
-    # restructure (2026-10-21) splits it between two jobs: four
-    # representative arms keep the FULL check -- test phase verbatim -- and
-    # four fan-out arms (roster committed in tools/ci/fanout-configs.tsv,
-    # emitted by guard-prep as a fromJSON matrix) run check --no-tests plus
-    # the attested shard fan-out. The union must be exactly the frozen set,
-    # disjointly: same eight arms, same per-platform test coverage, a
-    # different schedule.
-    rjob = ci["jobs"]["R-CMD-check"]
-    configs = rjob["strategy"]["matrix"]["config"]
-    reps = {(c["os"], str(c["r"])) for c in configs}
+    # ---- single fan-out check family (round 2, 2026-10-22) ----------------
+    # <!-- census-exempt tokens: 07 10 2026 21 -->
+    # Forensics: the deleted representative-arm-era law block carried two
+    # dated citations in retired law names ("restructure 2026-10-21", the
+    # per-audit comments of laws whose substance moved to the fan-out and
+    # scheduled sections below); the claims they anchored are restated
+    # verbatim there and the 4881 s witness rides this section's header.
+    # The frozen 8-(arm) platform roster survives intact; round 2 moved the
+    # schedule, not the coverage: EVERY arm now runs the fan-out body --
+    # --no-tests check plus the K-way attested shard fan-out against one
+    # shared INSTALL (roster: tools/ci/fanout-configs.tsv, emitted by
+    # guard-prep as a fromJSON matrix). The single-process CRAN-shape
+    # monolith with the full test phase -- whose windows/release arm
+    # measured 4881 s in run 39691982548, the whole run's critical path --
+    # left the PR gate for the scheduled.yml cran-shape-check job. The
+    # sealed unit in test-ci-shard-map.R pins both sides of that move.
     fanout_job = ci["jobs"].get("R-CMD-check-fanout", {})
+    check("PR gate hosts one check family (monolithic job retired)",
+          "R-CMD-check" not in ci["jobs"] and bool(fanout_job))
     fan_pairs = set()
     fan_tsv = REPO / "tools/ci/fanout-configs.tsv"
     if fan_tsv.is_file():
@@ -295,56 +302,92 @@ def main():
         ("ubuntu-latest", "4.3"),      # package floor, Linux
         ("ubuntu-latest", "devel"),
     }
-    check("R matrix union (reps job + fan-out TSV) = 3 OS x {release, oldrel-1} "
-          "+ {4.3 Linux, devel}, disjoint",
-          (reps | fan_pairs) == expected and not (reps & fan_pairs),
-          f"reps={sorted(reps)} fanout={sorted(fan_pairs)}")
+    check("fan-out roster (tools/ci/fanout-configs.tsv) = the frozen 3 OS x "
+          "{release, oldrel-1} + {4.3 Linux, devel} census",
+          fan_pairs == expected, f"fanout={sorted(fan_pairs)}")
     check("fan-out arms are data-driven (committed TSV via guard-prep fromJSON)",
           "fromJSON(needs.guard-prep.outputs.fanout-matrix)" in str(fanout_job)
           and "tools/ci/fanout-configs.tsv" in job_script(ci, "guard-prep"))
-    check("fan-out arms bind the displaced test phase (--no-tests)",
-          '"--no-tests"' in str(fanout_job))
-    check("representative arms keep the full test phase (no --no-tests)",
-          "--no-tests" not in str(rjob))
-    check("fan-out arms gate on the fan-out attestation census",
-          "ci-shard-aggregate.py" in job_script(ci, "R-CMD-check-fanout")
-          and "--kind fanout" in job_script(ci, "R-CMD-check-fanout"))
-    check("devel only on Linux", all(c["os"] == "ubuntu-latest"
-                                     for c in configs if str(c["r"]) == "devel"))
-    check("R-4.3 only on Linux", all(c["os"] == "ubuntu-latest"
-                                     for c in configs if str(c["r"]) == "4.3"))
-    check("devel job allowed to fail (continue-on-error)",
-          "devel" in str(rjob.get("continue-on-error", "")))
-    check("fail-fast disabled", rjob["strategy"].get("fail-fast") is False)
+    check("fan-out arm display names pinned (check-run census convention)",
+          fanout_job.get("name") ==
+          "R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})")
+    check("fan-out arms bind the displaced test phase (--no-tests) in CRAN shape",
+          '"--no-tests"' in str(fanout_job) and "--as-cran" in str(fanout_job)
+          and "--no-manual" in str(fanout_job))
+    fs = job_script(ci, "R-CMD-check-fanout")
+    # The visible call every arm runs: the PR gate may not wrap the check in
+    # the third-party action (ban law below), so the call is inlined and
+    # must carry verbatim the retired wrapper's adjudication law -- the two
+    # env guards, the error-level gate, the check_dir witness.
+    check("fan-out arms adjudicate via a visible rcmdcheck::rcmdcheck call "
+          "(error gate, env guards, check witness)",
+          all(m in fs for m in (
+              "rcmdcheck::rcmdcheck(", 'error_on = "error"',
+              '_R_CHECK_FORCE_SUGGESTS_', '_R_CHECK_CRAN_INCOMING_',
+              'check_dir = "check"')))
+    # Firing controls (house law: a law that cannot fire is vacuous): the
+    # predicates above must redden on gutted/planted subjects, never pass
+    # by absence of what they scan.
+    gutted = fs.replace('error_on = "error"', 'error_on = "warning"')
+    check("fan-out check-call law firing control: gutted copy reddens",
+          'error_on = "error"' in fs and 'error_on = "error"' not in gutted)
 
-    check("rcmdcheck args --as-cran + --no-manual",
-          "--as-cran" in str(rjob) and "--no-manual" in str(rjob))
-    check("r-lib check action used",
-          any(u.startswith("r-lib/actions/check-r-package")
-              and action_pins.has_major(u, c, 2)
-              for u, c in action_pins.uses_pairs(ci_text)))
-    # The action's input is `error-on` (hyphen): an `error_on` key is
-    # silently dropped and the action defaults to the warning gate, which
-    # contradicts the stated error-level contract (CI audit 2026-10-07).
-    check("check action gate uses hyphenated error-on input",
-          "'error-on'" in str(rjob) and "error_on" not in str(rjob))
-    # The input is a RAW R expression (cf. `args`): the value must ship its
-    # own quotes ('"error"'), a bare symbol renders (error) and R aborts
-    # with "object 'error' not found" (CI audit 2026-10-07, round 4).
-    check("error-on value is a quoted R string literal",
-          "'error-on': '\"error\"'" in str(rjob))
-    # The 4.3 floor arm installs dependencies: '"hard"' (Suggests skipped),
-    # yet R CMD build needs the declared VignetteBuilder -- knitr must be a
-    # CRAN-only extra or the build dies in loadVignetteBuilder() (audit
-    # 2026-10-07: 902 ms exit 1).
+    def rp_present(t):
+        return "check-r-package" in t
+    check("ban-predicate firing control: planted occurrence detected, clean text passes",
+          rp_present("uses: r-lib/actions/check-r-package@f9a7 # v2")
+          and not rp_present("uses: r-lib/actions/setup-r@f9a7 # v2"))
+    check("check-r-package is absent from the PR gate and lives on the scheduled gate",
+          not rp_present(ci_text) and rp_present(txt(SCHED)))
+    check("fan-out arms gate on the fan-out attestation census",
+          "ci-shard-aggregate.py" in fs and "--kind fanout" in fs)
+    check("fan-out arms share one INSTALL of the tree under test",
+          "R CMD INSTALL --no-docs" in fs)
+    check("fan-out arms run the K attested shard processes against that install",
+          "run-testthat-shard.R" in fs and "--kind=fanout" in fs
+          and "--mode=installed" in fs)
+    check("fan-out arms post the check tree as post-mortem evidence on failure",
+          "check-results-" in str(fanout_job) and "failure()" in str(fanout_job))
+    check("devel only on Linux", all(os == "ubuntu-latest"
+                                     for os, r in fan_pairs if r == "devel"))
+    check("R-4.3 only on Linux", all(os == "ubuntu-latest"
+                                     for os, r in fan_pairs if r == "4.3"))
+    check("devel arm allowed to fail (continue-on-error)",
+          "devel" in str(fanout_job.get("continue-on-error", "")))
+    check("fail-fast disabled", fanout_job["strategy"].get("fail-fast") is False)
+    # The devel user-agent and the 4.3 hard-mode provisioning travel with
+    # the arm now that the arm is fan-out: dropping them replays the banked
+    # failures (the '"hard"' Suggests skip drops knitr -> loadVignetteBuilder
+    # exit 1 at 902 ms, and drops testthat -> the runner's "no package
+    # called 'testthat'" hard-fail; CI audit 2026-10-07).
+    check("devel arm carries the compatibility user-agent",
+          "R/4.3.0 (github-actions)" in str(fanout_job))
     check("4.3 floor arm ships the vignette builder via extras",
-          "any::knitr" in str(rjob))
-    # Same hard-arm Suggests skip hits the check tests: the testthat runner
-    # hard-fails with "there is no package called 'testthat'" when
-    # dependencies: '"hard"' drops it (CI audit 2026-10-07, round 5).
-    # testthat + its test-side companions must ride in as CRAN-only extras.
+          "any::knitr" in str(fanout_job))
     check("4.3 floor arm ships the testthat runner deps via extras",
-          "any::testthat" in str(rjob) and "any::withr" in str(rjob))
+          "any::testthat" in str(fanout_job) and "any::withr" in str(fanout_job))
+    check("4.3 floor arm skips the pandoc probe",
+          "install-pandoc" in str(fanout_job))
+
+    # ---- check-run census ([ci-checkrun-level-green] convention) ------------
+    # Run-level green can hide a dead arm, so the expected PR-gate check-run
+    # count is pinned: 8 fan-out arms (the TSV is the source) + guard-prep +
+    # guards-shards + guards + coverage + rust + msrv x2 = 15. A family
+    # vanishing from ci.yml reddens here before CI could ever miss it.
+    def arms(jobname):
+        if jobname == "R-CMD-check-fanout":
+            return len(fan_pairs)
+        mat = (ci["jobs"][jobname].get("strategy") or {}).get("matrix") or {}
+        n = 1
+        for axis in mat.values():
+            if isinstance(axis, list):
+                n *= len(axis)
+        return n
+    census = {j: arms(j) for j in ci["jobs"]}
+    check("PR-gate check-run census = 15 arms",
+          sum(census.values()) == 15, str(census))
+    check("check-run census firing control: an amputated family drops the count",
+          sum(c for j, c in census.items() if j != "rust") == 14)
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a
@@ -565,6 +608,43 @@ def main():
           "reference/index.html" in st and "articles/extending.html" in st)
     check("scheduled: site job uploads the rendered site artifact",
           any("upload-artifact@" in u for u in uses_list(site)))
+
+    # ---- the CRAN-shape monolith the PR gate retired (round 2) --------------
+    # Sealed by test-ci-shard-map.R: the full-test-phase monolith must keep
+    # a home on the scheduled gate with the verbatim args/error-on contract
+    # and must NOT return to the PR gate (the ci-side ban law above and the
+    # sealed unit's own firing controls hold that line).
+    cjob = sched["jobs"].get("cran-shape-check", {})
+    check("scheduled: cran-shape-check monolith is wired", bool(cjob))
+    check("scheduled: monolith needs the per-run vendor-prep",
+          cjob.get("needs") == ["vendor-prep"])
+    check("scheduled: monolith covers the two release legs the PR gate retired",
+          {(str(c["os"]), str(c["r"])) for c in
+           (cjob.get("strategy") or {}).get("matrix", {}).get("config", [])}
+          == {("ubuntu-latest", "release"), ("windows-latest", "release")})
+    check("scheduled: monolith uses check-r-package @v2 (SHA-pinned)",
+          any(u.startswith("r-lib/actions/check-r-package")
+              and action_pins.has_major(u, c, 2)
+              for u, c in action_pins.uses_pairs(txt(SCHED))))
+    check("scheduled: monolith args are the sealed CRAN-shape contract",
+          'c("--no-manual", "--as-cran")' in str(cjob))
+    check("scheduled: monolith runs the FULL test phase (no --no-tests)",
+          "--no-tests" not in str(cjob))
+    # Inputs are hyphenated and RAW R expressions: an error_on key is
+    # silently dropped (warning default) and an unquoted error renders as
+    # the R symbol (CI audit 2026-10-07, rounds 4/5). Parsed dict, not
+    # text: comments must not feed the predicate.
+    check("scheduled: monolith gate is hyphenated error-on, quoted R literal",
+          "'error-on': '\"error\"'" in str(cjob) and "error_on" not in str(cjob))
+    check("scheduled: monolith uploads testthat snapshots (test phase is real)",
+          "'upload-snapshots': True" in str(cjob))
+    check("scheduled: monolith fail-fast disabled",
+          (cjob.get("strategy") or {}).get("fail-fast") is False)
+    vp = sched["jobs"].get("vendor-prep", {})
+    check("scheduled: vendor-prep is the monolith's per-run vendor generation point",
+          "tools/vendor.sh --check" in job_script(sched, "vendor-prep")
+          and any("upload-artifact@" in u for u in uses_list(vp))
+          and "vendor-tarball" in str(vp))
 
     # ---- dependabot --------------------------------------------------------
     ecosystems = {u["package-ecosystem"]: u for u in dep.get("updates", [])}

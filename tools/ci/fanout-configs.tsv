@@ -1,10 +1,23 @@
-# Non-representative check platforms that additionally run the repo-mode
-# sharded testthat fan-out (the sharding target for those arms). The
-# representative arms -- ubuntu/release, windows/release, 4.3, devel -- keep
-# the full R CMD check with its test phase and are NOT fan-out arms.
-# Consumed by the guard-prep matrix emission and gated by test-ci-shard-map.R.
-# One 'os<TAB>config' row per arm; order is part of the committed witness.
-ubuntu-latest	oldrel-1
+# Check platforms of the PR gate, all run as the FAN-OUT body (round-2,
+# 2026-10-22): the CRAN-shape build+check with the serial test phase
+# displaced (--no-tests), one R CMD INSTALL of the tree shared by the K
+# parallel attested testthat shards, the Rd-examples leg carried by the
+# check phase and the vignette leg by the build phase of that same step
+# (measured, /tmp/ciopt2/logs/probe-*). Every check arm now fans out: the
+# single-process monolithic check -- full test phase, CRAN gates -- no
+# longer vetoes PRs on an 81-minute serial leg; it rides the scheduled gate
+# (.github/workflows/scheduled.yml, cran-shape-check).
+# Consumed by the guard-prep matrix emission, the fan-out attestation
+# census (--fanout-configs/--expect-config) and gated by
+# tests/testthat/test-ci-shard-map.R + tools/ci-selfcheck.py.
+# One 'os<TAB>config' row per arm; order is part of the committed witness
+# (deterministic: os alphabetical, config in the retired matrix's order
+# within an os -- release first, then the Linux specials, oldrel-1 last).
 macos-latest	release
 macos-latest	oldrel-1
+ubuntu-latest	release
+ubuntu-latest	4.3
+ubuntu-latest	devel
+ubuntu-latest	oldrel-1
+windows-latest	release
 windows-latest	oldrel-1
