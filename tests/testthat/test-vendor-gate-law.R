@@ -68,6 +68,16 @@
         lines = as.character(res))
 }
 
+# Capability gate (farm .kpp.posix.rig() lineage: the probe reaches for the
+# same absolute binary the mechanism certifies). The rig spawns /bin/sh
+# absolute, so the probe reads that exact path. Production enforces the gate
+# on Linux and darwin ships a real /bin/sh; the absence is a platform fact,
+# not a coverage gap -- and the reason speaks the sanctioned ledger phrase
+# (SANCTIONED_HAS "not installed").
+if (!file.exists("/bin/sh")) {
+  skip("the vendor-gate rig spawns /bin/sh absolute (PATH untrusted): the POSIX shell rig is not installed on this platform")
+}
+
 # Deterministic synthetic vendor tree: fixed byte fills at fixed sizes, so
 # every rebuild is byte-identical and a calibration stays valid across the
 # scenario's runs. One non-multiple-of-512 file keeps tar block padding in

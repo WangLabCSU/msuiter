@@ -1,17 +1,35 @@
-# msuiter valgrind-leg suppressions -- reviewed artifact, authored in-tree.
+# msuiter valgrind-suppressations file -- deliberately, verifiably EMPTY.
+#
+# Doctrine: no violation is ever silenced by this file. Ownership of an
+# observed report is adjudicated in run_valgrind_leg.sh's census layer --
+# where the allowances are code, carry evidence citations, and are
+# regression-tested by the census_fixture battery. A suppression file can
+# do none of that on this fork, for two measured reasons (2026-10-21
+# control probes):
+#
+#   1. The renamed fork's suppression matcher is dead. A textbook
+#      invalid-read violation is suppressed by ZERO entries under every
+#      accepted spelling -- the { opener, the tool prefix, fun:/obj:
+#      frames alike. Entries parse, are counted, and never bind.
+#   2. The legacy "Memcheck:" prefix in the original grammar is FATAL
+#      here: valgrind exits "unknown tool suppression type". This file's
+#      pre-#45 header taught that illegal prefix -- a trap for whoever
+#      added an entry in good faith. The prefix this fork accepts is
+#      "Valgrind:", and it must be spelled exactly that way:
+#
+#        {
+#        name=<label>
+#        Valgrind:<kind-of-error>
+#        ...fun:/obj: frame lines...
+#        }
+#
+# Because matching is dead, an entry here could not silence anything even
+# if authored -- which is precisely why it must stay empty: a growing
+# suppressions file would advertise protection that does not exist. The
+# census refuses any report that claims (suppressed: N) with N > 0
+# (NO SELF-DECEPTION law), so leaning on this file reddens the leg loudly.
 #
 # R ships no valgrind.supp of its own: falsified 2026-10-21 against the
-# R 4.6.1 source tarball (full listing, zero valgrind hits). Distro packages
-# maintain their own; this file is ours.
-#
-# Opening state: zero suppressions -- every memcheck report is treated as
-# real. An entry is added only by adjudication of an observed report, each
-# citing its evidence (log path + one-line reason). The canary pair in
-# run_valgrind_leg.sh fails the leg if this file ever deadens detection.
-#
-# Entry format follows the memcheck suppressions grammar:
-#   {
-#      name=<label>
-#      Memcheck:<kind-of-error>
-#      ...frame fun/call lines...
-#   }
+# R 4.6.1 source tarball (full listing, zero valgrind hits). Distro
+# packages maintain their own; this file is ours and remains a zero-entry
+# attestation of that fact.
