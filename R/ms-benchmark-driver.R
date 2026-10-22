@@ -263,7 +263,13 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
                              seed = seed, burden = sc$burden)
       truth_counts <- sweep(shares, 2L, colSums(catalog@counts), "*")
       list(catalog = catalog, truth_counts = truth_counts)
-    }, error = function(e) NULL)
+    }, error = function(e) {
+      # Isolation, not silence: the rows below record the death
+      # structurally; the cause is printed too (defects are LOUD).
+      cat("ms_run_benchmark: scenario '", sc_name, "' generation failed: ",
+          conditionMessage(e), "\n", sep = "", file = stderr())
+      NULL
+    })
     if (is.null(gen)) {
       # Scenario-level generation failure: every engine of THIS scenario
       # records cell_error (the isolation boundary extended to the
@@ -357,7 +363,10 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
       }, error = function(e) {
         # The container validator rejects NA estimates: a failed cell
         # reports ONLY its cell_error row (isolation without contract
-        # violation).
+        # violation) -- and the cause is printed, never eaten.
+        cat("ms_run_benchmark: cell ", eng_name, "/", sc_name,
+            " errored: ", conditionMessage(e), "\n",
+            sep = "", file = stderr())
         c(cell_error = 1)
       })
 
