@@ -370,7 +370,9 @@ jobs:
       # chain out of the solve while keeping the vignette build (this arm's
       # check still builds it) and the sharded tests runnable -- absorbed
       # verbatim from the retired monolithic 4.3 arm so the floor arm loses
-      # no dependency it needs to RUN its tests or vignettes.
+      # no dependency it needs to RUN its tests or vignettes -- sigminer
+      # added after run 39735155940: the zero-executed law fired on its
+      # xval shard there, the hard-mode solve had silently dropped it.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         if: matrix.config.r == '4.3'
         with:
@@ -380,7 +382,7 @@ jobs:
           extra-packages: >-
             any::rcmdcheck, any::knitr, any::rmarkdown,
             any::testthat, any::withr, any::ggplot2,
-            any::ggalluvial, any::uwot
+            any::ggalluvial, any::uwot, any::sigminer
           use-cache: true
 
       # The displaced serial test phase returns below as K attested shards;
