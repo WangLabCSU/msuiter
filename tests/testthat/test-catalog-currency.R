@@ -558,8 +558,8 @@ test_that("the digest accelerator gate is byte-identical to the pure-R kernel (F
 
 test_that("with digest unloadable the gate falls back byte-identically (F2)", {
   # The gate's absent leg MEASURED, not simulated: a fresh Rscript process
-  # runs with R_LIBS_USER pointed at a symlink farm of every package this
-  # process can see EXCEPT digest, so the very predicate the gate consults
+  # runs with R_LIBS_USER pointed at a directory-link farm of every package
+  # this process can see EXCEPT digest, so the very predicate the gate consults
   # -- requireNamespace("digest"), a base-internal hidden through
   # msuiter's own namespace chain -- answers FALSE on its own merits
   # (patching an imports-env binding was measured impossible: the binding
@@ -580,8 +580,21 @@ test_that("with digest unloadable the gate falls back byte-identically (F2)", {
     for (pkg in list.files(lib, full.names = TRUE)) {
       nm <- basename(pkg)
       if (nm == "digest" || grepl("^[.]", nm)) next
-      if (!file.exists(file.path(farm, nm)))
-        suppressWarnings(file.symlink(pkg, file.path(farm, nm)))
+      dst <- file.path(farm, nm)
+      if (file.exists(dst)) next
+      # Directory links: symlink where the platform permits it, and on
+      # windows an mklink junction fallback (junctions need no elevated
+      # privilege; windows symlinks do -- measured: silent link failure
+      # leaves the farm holes and the child reddens on them).
+      ok <- suppressWarnings(tryCatch({file.symlink(pkg, dst); TRUE},
+                                      error = function(e) FALSE))
+      if (!ok && identical(.Platform$os.type, "windows")) {
+        st <- suppressWarnings(system2("cmd", c("/c", "mklink", "/J", dst, pkg),
+                                       stdout = FALSE, stderr = FALSE))
+        if (!identical(as.integer(st), 0L))
+          stop("F2: neither symlink nor junction could link ", nm,
+               " into the farm -- the control cannot run", call. = FALSE)
+      }
     }
   }
   if (dir.exists(file.path(farm, "digest")))
@@ -597,13 +610,23 @@ test_that("with digest unloadable the gate falls back byte-identically (F2)", {
     "                 list(pkg = 'digest')), envir = asNamespace('msuiter'))",
     "cat('probe=', isTRUE(probe), ' sha=', msuiter:::.ms_cc_sha256_raw(raw),",
     "    '\\n', sep = '')"), script)
-  wrap <- tempfile("cc-absent-leg-wrap-.sh")
-  writeLines(c("#!/bin/sh",
-               paste0("export R_LIBS_USER='", farm, "'"),
-               "export R_LIBS_SITE='' R_PROFILE=no R_ENIRON=no",
-               paste0("exec '", ex, "' '", script, "'")), wrap)
+  # The child's isolation is the R_LIBS_USER farm plus the R_LIBS_SITE/R_PROFILE/
+  # R_ENIRON neutralizers, set around the spawn and restored after: every
+  # platform drives the same Rscript invocation, no shell wrapper (measured:
+  # /bin/sh is absent on windows and the spawn died at exit 127 there).
+  childenv <- c(R_LIBS_USER = farm, R_LIBS_SITE = "",
+                R_PROFILE = "no", R_ENIRON = "no")
+  prior <- Sys.getenv(names(childenv), unset = NA_character_)
+  do.call(Sys.setenv, stats::setNames(as.list(childenv), names(childenv)))
+  on.exit({
+    for (i in seq_along(prior)) {
+      nm <- names(prior)[i]
+      if (is.na(prior[[i]])) Sys.unsetenv(nm)
+      else do.call(Sys.setenv, stats::setNames(list(prior[[i]]), nm))
+    }
+  })
   of <- tempfile("cc-absent-out-"); ef <- paste0(of, ".err")
-  st <- suppressWarnings(system2("/bin/sh", wrap, stdout = of, stderr = ef))
+  st <- suppressWarnings(system2(ex, script, stdout = of, stderr = ef))
   expect_identical(as.integer(st), 0L,
                    info = paste0(readLines(ef, warn = FALSE), collapse = " | "))
   line <- paste0(readLines(of, warn = FALSE), collapse = "")
