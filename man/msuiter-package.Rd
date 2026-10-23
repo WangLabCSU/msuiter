@@ -11,6 +11,14 @@ DBS, indel and beyond). Numerical kernels live in a Rust workspace
 exposed through a stateless FFI; the R side provides the object model,
 the engine registry and the tidy user interface.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/WangLabCSU/msuiter}
+  \item Report bugs at \url{https://github.com/WangLabCSU/msuiter/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Shixiang Wang \email{wangshx@csu.edu.cn} [copyright holder]
 

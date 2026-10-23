@@ -72,6 +72,7 @@ test-sitrep.R	0	13
 test-stratify.R	0	132
 test-vendor-gate-law.R	0	33
 test-viz-bootstrap.R	0	39
+test-viz-batch2.R	2	179
 test-viz-first-batch.R	11	74
 test-viz-kselect.R	0	24
 test-xval-m2-extract.R	948	7
