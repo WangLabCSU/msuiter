@@ -27,3 +27,13 @@ tests/testthat/fixtures/** -text
 # law): an unpinned Windows checkout would inject per-line \r and turn a
 # green record mechanically red. Pin the whole tool dir to raw bytes.
 tools/kl-gate-p1/** -text
+
+# Byte-pinned channel-reference bundle ------------------------------------------------
+# test-viz-batch2.R pins toolsmdsum over the EXACT bytes of the vendored
+# upstream plotting module (76f970ef...); the .tsv legends and mapping notes
+# are its second witness and the README carries their digests. Same
+# core.autocrlf=true CRLF-rewrite hazard as the stanzas above (PR #52 CI
+# audit 2026-10-24: windows-latest/R-release and R oldrel-1 fan-out died
+# actual c8864e18... == the LF->CRLF rehash of the committed blob, all
+# unix arms green). Pin the whole bundle to raw bytes.
+tools/channel-reference/** -text
