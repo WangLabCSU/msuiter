@@ -528,3 +528,118 @@ test_that("the documented official endpoint is the documented official endpoint"
   expect_identical(reg$official$documents$reference_data$url, reg$official$page_url)
   expect_identical(reg$official$documents$availability_data$url, reg$official$page_url)
 })
+
+# ===========================================================================
+# F. digest-gate and cache-dir resolution (CI warning-zero, 2026-10-23)
+# ===========================================================================
+# The check scan of push-run 39864490318 printed
+#   'loadNamespace' or 'requireNamespace' call not declared from: 'digest'
+#   Missing or unexported object: 'tools::R_user_cache_dir'
+# The remedy was declaration (Suggests: digest, R6) and the exported
+# tools::R_user_dir(which = "cache") route. These units pin what the scan
+# cannot: that both gate paths compute the SAME bytes and that the cache-dir
+# precedence actually resolves -- a declaration-only fix without functional
+# proof would leave the optional-accelerator family untested.
+
+test_that("the digest accelerator gate is byte-identical to the pure-R kernel (F1)", {
+  payloads <- list(ascii = charToRaw("catalog-currency"),
+                   empty = charToRaw(""),
+                   span  = as.raw(0L:255L))
+  pure  <- sapply(payloads, function(p) msuiter:::.ms_fit_sha256(p))
+  gated <- sapply(payloads, function(p) msuiter:::.ms_cc_sha256_raw(p))
+  expect_identical(pure, gated)
+  if (requireNamespace("digest", quietly = TRUE)) {
+    direct <- sapply(payloads, function(p) {
+      asNamespace("digest")$digest(p, algo = "sha256", serialize = FALSE)
+    })
+    expect_identical(direct, gated)
+  }
+})
+
+test_that("with digest unloadable the gate falls back byte-identically (F2)", {
+  # The gate's absent leg MEASURED, not simulated: a fresh Rscript process
+  # runs with R_LIBS_USER pointed at a symlink farm of every package this
+  # process can see EXCEPT digest, so the very predicate the gate consults
+  # -- requireNamespace("digest"), a base-internal hidden through
+  # msuiter's own namespace chain -- answers FALSE on its own merits
+  # (patching an imports-env binding was measured impossible: the binding
+  # lives in the base namespace, which tests must not touch). The child
+  # attests that probe -- a control that cannot say "digest was absent"
+  # could ride the accelerator leg vacuously -- and must emit the digest
+  # the in-process pure-R kernel computes. Both directions fire: digest
+  # sneaking into the farm reddens the probe match; a broken fallback
+  # reddens the bytes.
+  ex <- file.path(R.home("bin"), "Rscript")
+  if (!file.exists(ex)) ex <- paste0(ex, ".exe")
+  if (!file.exists(ex))
+    stop("F2: Rscript not found -- the control cannot run", call. = FALSE)
+  farm <- tempfile("cc-farm-")
+  if (!dir.create(farm))
+    stop("F2: the farm cannot be built", call. = FALSE)
+  for (lib in unique(c(.libPaths(), .Library.site))) if (dir.exists(lib)) {
+    for (pkg in list.files(lib, full.names = TRUE)) {
+      nm <- basename(pkg)
+      if (nm == "digest" || grepl("^[.]", nm)) next
+      if (!file.exists(file.path(farm, nm)))
+        suppressWarnings(file.symlink(pkg, file.path(farm, nm)))
+    }
+  }
+  if (dir.exists(file.path(farm, "digest")))
+    stop("F2: digest leaked into the farm -- the control cannot run",
+         call. = FALSE)
+  script <- tempfile("cc-absent-leg-.R")
+  writeLines(c(
+    "raw <- as.raw(0L:255L)",
+    "suppressMessages(library(msuiter))",
+    "# the probe runs INSIDE the msuiter namespace -- the gate's own",
+    "# resolution chain, not the child's globalenv",
+    "probe <- eval(substitute(requireNamespace(pkg, quietly = TRUE),",
+    "                 list(pkg = 'digest')), envir = asNamespace('msuiter'))",
+    "cat('probe=', isTRUE(probe), ' sha=', msuiter:::.ms_cc_sha256_raw(raw),",
+    "    '\\n', sep = '')"), script)
+  wrap <- tempfile("cc-absent-leg-wrap-.sh")
+  writeLines(c("#!/bin/sh",
+               paste0("export R_LIBS_USER='", farm, "'"),
+               "export R_LIBS_SITE='' R_PROFILE=no R_ENIRON=no",
+               paste0("exec '", ex, "' '", script, "'")), wrap)
+  of <- tempfile("cc-absent-out-"); ef <- paste0(of, ".err")
+  st <- suppressWarnings(system2("/bin/sh", wrap, stdout = of, stderr = ef))
+  expect_identical(as.integer(st), 0L,
+                   info = paste0(readLines(ef, warn = FALSE), collapse = " | "))
+  line <- paste0(readLines(of, warn = FALSE), collapse = "")
+  expect_match(line, "^probe=FALSE sha=[0-9a-f]+$")
+  expect_identical(sub("^probe=FALSE sha=", "", line),
+                   msuiter:::.ms_fit_sha256(as.raw(0L:255L)))
+})
+
+test_that("the cache dir resolves option > env > user cache dir (F3)", {
+  # Option wins over env; env wins over the default; the default is the
+  # R-exported tools::R_user_dir(which = "cache") tree under the
+  # catalog-currency leaf. Pre-landmine this last line called
+  # tools::R_user_cache_dir -- an object the tools namespace does not
+  # contain at all -- so the default leg reddened the pre-fix tree.
+  withr::with_options(list(msuiter.catalog_currency.cache_dir = NULL), {
+    withr::with_envvar(c(MSUITER_CATALOG_CURRENCY_CACHE_DIR = ""), {
+      dflt <- msuiter:::.ms_cc_default_cache_dir()
+      expect_identical(dflt,
+                       file.path(tools::R_user_dir("msuiter", which = "cache"),
+                                 "catalog-currency"))
+      # Measured (2026-10-23): tools::R_user_dir computes the canonical
+      # user-cache path but does not create it, and the accessor is a pure
+      # precedence resolution by design -- directory creation is the
+      # writer-side contract (.ms_cc_write_verbatim) -- asserted
+      # right below so the two halves of the law both speak.
+      created <- tempfile("cc-write-side-")
+      wrote <- msuiter:::.ms_cc_write_verbatim(file.path(created, "frag"), "x")
+      expect_true(dir.exists(dirname(wrote)))
+    })
+    withr::with_envvar(c(MSUITER_CATALOG_CURRENCY_CACHE_DIR = "/env-seed/cc"), {
+      expect_identical(msuiter:::.ms_cc_default_cache_dir(), "/env-seed/cc")
+    })
+    withr::with_options(
+      list(msuiter.catalog_currency.cache_dir = "/opt-seed/cc"),
+      withr::with_envvar(c(MSUITER_CATALOG_CURRENCY_CACHE_DIR = "/env-seed/cc"), {
+        expect_identical(msuiter:::.ms_cc_default_cache_dir(), "/opt-seed/cc")
+      }))
+  })
+})
