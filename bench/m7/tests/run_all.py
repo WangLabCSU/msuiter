@@ -130,6 +130,11 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       the drainer never touches its own pid, an unreadable cgroup speaks
       absent/None rather than a fabricated zero, and every v2 key is
       additive under the frozen probe validator
+  (AJ) test_p6_source_pin_override the certified-kernel pin overlay: the
+      committed default byte-preserves the P6 replay witness, an explicit
+      M7_MSUITER_SOURCE_SHA overlay routes the export to the new sha (R-face
+      arms carry none), malformed overlays die pre-flight, and the witnessed-
+      object cat-file gate is inherited verbatim by the overlaid route
 """
 
 from __future__ import annotations
@@ -184,7 +189,11 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_anchor_registration",
            # PERF P2 pair S: sidecar accounting v2 (cgroup delta, drain-and-
            # reap under the no-undercount law, MSUITER_M7_CG_ROOT injection):
-           "test_p2_pipeline"]
+           "test_p2_pipeline",
+           # PERF P4: certified-kernel pin overlay (re-adjudication builds
+           # ride an env-overridden source sha; the committed default stays
+           # the P6 replay witness):
+           "test_p6_source_pin_override"]
 
 
 def _collect(mod_name):
