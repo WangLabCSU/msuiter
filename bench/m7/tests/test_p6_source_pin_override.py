@@ -164,7 +164,7 @@ def test_assemble_dies_before_msuiter_export_on_malformed_override():
     """The refusal is a pre-flight death: the recorder must never see a
     kernel export at a malformed sha -- the overlay cannot smuggle a
     shaped-non-object past the resolver into the cat-file leg."""
-    with _env_overlay("dead" + "be" * 18), _spied_exports() as calls:
+    with _env_overlay("dead" + "gg" * 18), _spied_exports() as calls:
         died = False
         try:
             with tempfile.TemporaryDirectory() as td:
