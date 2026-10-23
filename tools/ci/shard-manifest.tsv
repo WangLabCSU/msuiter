@@ -19,6 +19,7 @@ shard	file	seconds
 6	test-calibrate-plot.R	1
 6	test-calibrate-real.R	1
 6	test-calibrate.R	0
+6	test-capability-matrix-truth.R	0
 6	test-catalog-tally.R	0
 6	test-channels-reference.R	0
 6	test-channels-structure.R	0
