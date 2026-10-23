@@ -154,6 +154,15 @@ jobs:
       - name: docs-sync guard (API surface drift)
         run: Rscript tools/docs-sync.R
 
+      # CAPABILITY-MATRIX.md legend law: checkmark = delivered. The CLI face
+      # of the gate runs here over the source tree (tarball checks have no
+      # docs/, so the testthat face skips there); --self-test first proves
+      # the planted-phantom controls fire before the real audit is trusted.
+      - name: capability-matrix truth validator (checkmark honesty)
+        run: |
+          Rscript tools/check-capability-matrix.R --self-test
+          Rscript tools/check-capability-matrix.R
+
       # vendor.sh regenerates the tarball into /tmp and asserts the exact
       # byte budget frozen in ADR 0002 §2 (needs cargo + xz; both on runner).
       # Single generation point: every consumer downloads this artifact.

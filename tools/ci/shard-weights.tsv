@@ -7,6 +7,7 @@ file	seconds	expects
 test-calibrate-plot.R	1	53
 test-calibrate-real.R	1	133
 test-calibrate.R	0	174
+test-capability-matrix-truth.R	0	9
 test-catalog-currency.R	1	0
 test-catalog-tally.R	0	125
 test-channels-reference.R	0	4
