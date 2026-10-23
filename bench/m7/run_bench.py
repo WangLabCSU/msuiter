@@ -343,6 +343,17 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     trusted = (not args.force_rerun
                and all((outd / name).exists() for name in GUARD_FILES))
     if trusted:
+        # RB-11(1): a cell defect-flagged while the SAME floor-table law is in
+        # force may not re-enter the authoritative table as a silent cache
+        # hit -- the cached bytes are the contested measurement. Only a fresh
+        # pass under the floor gate adjudicates it (RB-09 fresh-measurement
+        # law). A foreign-epoch flag is a superseded law and still caches.
+        prior = gov.latest_defect_records(cachedir).get(stamp)
+        if (prior is not None
+                and str(prior.get("status", "")).startswith("defect-")
+                and prior.get("epoch") == gov.floor_table_epoch()):
+            trusted = False
+    if trusted:
         return row("cached", 0.0, 0.0)
 
     if args.adapter == "docker":
