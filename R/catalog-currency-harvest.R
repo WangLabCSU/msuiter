@@ -269,7 +269,12 @@
   if (nzchar(env)) {
     return(env)
   }
-  tools::R_user_cache_dir("msuiter", "catalog-currency", expand = TRUE, ragged = FALSE)
+  # R_user_cache_dir is not a tools export (not even internal -- the check
+  # scan calls it "Missing or unexported object", push-run 39864490318).
+  # The exported route is tools::R_user_dir(which = "cache"): it computes
+  # the canonical user-cache path but, measured 2026-10-23, does not create
+  # it; leaf creation is the writer-side contract (.ms_cc_write_verbatim).
+  file.path(tools::R_user_dir("msuiter", which = "cache"), "catalog-currency")
 }
 
 .ms_cc_write_verbatim <- function(path, text) {

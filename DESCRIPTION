@@ -15,9 +15,11 @@ Depends: R (>= 4.3)
 Imports: S7,
     rlang
 Suggests: BSgenome.Hsapiens.UCSC.hg19,
+    digest,
     ggplot2,
     ggalluvial,
     jsonlite,
+    R6,
     uwot,
     knitr,
     rmarkdown,

@@ -117,6 +117,20 @@ jobs:
         shell: bash
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
+      # Fail-closed firing controls for the CI warning-zero tool family
+      # (push-run 39864490318 adjudication). Every scanner ships controls that
+      # must fire; a scanner without a firing control is refused -- so the
+      # proof runs pre-flight here, where a silent vacuity reddens cheaply.
+      - name: CI tool self-tests (covr extras, dep-declaration, R-version attest)
+        shell: bash
+        run: |
+          Rscript tools/ci/run-covr-extras.R --selftest
+          Rscript tools/ci/check-dep-declaration.R --selftest
+          Rscript tools/ci/attest-r-version.R --selftest
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label=release
+
       # The shard manifest is generated, never hand-edited: regenerate at
       # the committed weights and demand byte equality with the committed
       # witness. The same census runs as in-suite units (test-ci-shard-map.R);
@@ -226,6 +240,10 @@ jobs:
         shell: bash
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label=release
+
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr) for the repo-layout suite
@@ -239,7 +257,18 @@ jobs:
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
         shell: bash
         run: |
-          R CMD INSTALL --no-docs --no-build-vignettes .
+          # INSTALL's option parser does not know vignette options: this
+          # flag only ever emitted "Warning: unknown option
+          # '--no-build-vignettes'" (push-run 39864490318, every fan-out arm).
+          R CMD INSTALL --no-docs .
+
+      # Namespace-declaration gate (push-run 39864490318): the R6/digest
+      # "not declared from" NOTEs are now caught here before they can ride a
+      # check log unnoticed. Runs post-INSTALL: Suggests are resolved, so a
+      # flag means a declaration lie, not a missing library.
+      - name: Package/namespace declaration census (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/check-dep-declaration.R
 
       - name: Repo-layout testthat shards (parallel, attested)
         shell: bash
@@ -357,6 +386,15 @@ jobs:
           use-public-rspm: true
           http-user-agent: 'R/4.3.0 (github-actions)'
 
+      # Fail-closed R-version attestation (CI warning-zero lane, 2026-10-23):
+      # the 4.3 arm's banner was certified this week by five manual greps over
+      # an archived log; the arm now speaks the fact itself -- resolved version,
+      # DESCRIPTION floor, and a numeric matrix label must match what the
+      # resolver actually delivered (a silent fallback reddens the step).
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label='${{ matrix.config.r }}'
+
       # Never pass an empty `dependencies` input: the action interpolates it
       # into pak's R call and the empty string yields the broken expression
       # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
@@ -443,7 +481,10 @@ jobs:
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
         shell: bash
         run: |
-          R CMD INSTALL --no-docs --no-build-vignettes .
+          # INSTALL's option parser does not know vignette options: this
+          # flag only ever emitted "Warning: unknown option
+          # '--no-build-vignettes'" (push-run 39864490318, every fan-out arm).
+          R CMD INSTALL --no-docs .
 
       - name: Repo-layout testthat fan-out (K shards, attested)
         shell: bash
@@ -558,7 +599,18 @@ jobs:
 
       - name: cargo audit (RustSec advisories, hard-fail on findings)
         working-directory: src/rust
-        run: cargo audit
+        run: |
+          # Single source of truth: the [advisories] ignore ledger in
+          # audit.toml (adjudication text lives with each ID there). The
+          # 0.22.x `audit` subcommand was measured NOT to load audit.toml
+          # (host cargo-audit 0.22.1: byte-identical report with and
+          # without the file; --ignore is honored -- warning-zero sweep
+          # 2026-10-23), so the roster rides the CLI as flags derived from
+          # the ledger: the file is never decorative, and a version that
+          # loads it natively stays consistent (double-ignore is idempotent).
+          ignores=$(sed -n 's/^ *"\(RUSTSEC-[0-9-]*\)".*/--ignore=\1/p' audit.toml | tr '\n' ' ')
+          # shellcheck-disable-next-line SC2086: word splitting is intended
+          cargo audit $ignores
 
   msrv:
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
@@ -684,27 +736,12 @@ jobs:
           # The examples/vignettes legs ride the SAME parallel wave as the
           # test shards (the historical type="all" was tests+examples+
           # vignettes in one process; here the shards carry the tests leg
-          # and these two instrumented passes carry the rest). Their
-          # covr pre-clean is off for the same shared-cargo-target law the
-          # shard runner documents (run-covr-shard.R).
-          cat > extras-coverage.R <<'RS'
-          for (ty in c("examples", "vignettes")) {
-            cov <- tryCatch(
-              covr::package_coverage(type = ty, quiet = TRUE,
-                                     pre_clean = FALSE,
-                                     install_path = tempfile("covr-lib-")),
-              error = function(e) {
-                cat("covr coverage failed under instrumentation (", ty, "): ",
-                    conditionMessage(e), "\n", sep = "")
-                NULL
-              }
-            )
-            if (!is.null(cov)) {
-              writeLines(covr::to_srt(cov),
-                         paste0("/tmp/msuiter-extras-", ty, ".srt"))
-            }
-          }
-          RS
+          # and these two instrumented passes carry the rest). They once ran
+          # as an inline heredoc whose covr::to_srt call -- an object covr
+          # does not export -- killed the child unattested behind
+          # continue-on-error (push-run 39864490318: fragments=3 not 5). The
+          # committed runner attests every outcome; pre-clean stays off for
+          # the shared-cargo-target law run-covr-shard.R documents.
           pids=""
           for s in $(seq 1 "$k"); do
             Rscript tools/ci/run-covr-shard.R \
@@ -714,7 +751,8 @@ jobs:
               > "covr-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
           done
-          Rscript extras-coverage.R > covr-logs/extras.log 2>&1 &
+          Rscript tools/ci/run-covr-extras.R --out-srt-prefix=/tmp \
+            > covr-logs/extras.log 2>&1 &
           pids="$pids $!"
           rc=0
           for p in $pids; do wait "$p" || rc=1; done

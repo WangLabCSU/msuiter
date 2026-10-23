@@ -1,0 +1,22 @@
+# cargo-audit configuration for the msuiter Rust workspace.
+# Run from src/rust/ with: cargo audit   (ci.yml rust arm; hard-fail on
+# findings, posture per controller ruling U-M7-04 slice-A 2026-10-10).
+#
+# The ignore ledger is the ONLY sanctioned place an advisory may be
+# silenced, and an ignore is inert without a reason: entries are RustSec
+# IDs (immutable identities -- never version-pinned, so a future CVE in the
+# same crate still fires). cargo-ci-selfcheck tripwire asserts this roster
+# is exactly the set adjudicated here; adding an ID without adjudication
+# text reddens guard-prep.
+[advisories]
+ignore = [
+  # RUSTSEC-2024-0436 "paste - no longer maintained": the paste 1.0.15
+  # macro crate is a compile-time-only transitive dependency (extendr-api
+  # 0.9.0 macro machinery, src/rust/Cargo.lock). "unmaintained" is a
+  # maintenance-status notice, not an exploitable defect: the crate is
+  # feature-complete and the advisory claims no unsoundness. The dependency
+  # is inside the frozen budget (ARCHITECTURE §2) and paste carries no
+  # runtime surface. Adjudicated 2026-10-23 (push-run 39864490318 warning
+  # "unmaintained", rust arm).
+  "RUSTSEC-2024-0436",
+]

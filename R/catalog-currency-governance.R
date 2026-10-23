@@ -145,10 +145,11 @@
 # SHA-256 over exact bytes. The canonical project implementation is the
 # pure-R .ms_fit_sha256 (R/fit.R), shared with the refdb builder/loader so
 # every governed digest in msuiter is the same function. That kernel is a
-# faithful but interpreted loop; when the `digest` package is available (it
-# is an Imports dependency) we delegate to its identical SHA-256 (verified
-# equal to the system `shasum` and to .ms_fit_sha256), reserving the pure-R
-# path as the fallback so the result is byte-for-byte the same either way.
+# faithful but interpreted loop; when the `digest` package (a Suggests
+# optional accelerator, not an Imports hard-dep) is available we delegate to
+# its identical SHA-256 (verified equal to the system `shasum` and to
+# .ms_fit_sha256), reserving the pure-R path as the fallback so the result
+# is byte-for-byte the same either way.
 .ms_cc_sha256_raw <- function(raw_bytes) {
   if (requireNamespace("digest", quietly = TRUE)) {
     ns <- asNamespace("digest")
