@@ -42,6 +42,10 @@ if (!file.exists(file.path(root, "DESCRIPTION"))) {
   })
 }
 source(file.path(root, "tests", "testthat", "helper-ci-shard-census.R"))
+# <!-- census-exempt tokens: 0 --> the moved SRT renderer dropped one
+#     digit-bearing IDENTIFIER token (paste0) into covr-srt-shape.R;
+#     no measured numeric claim of ours left this file with it.
+source(file.path(root, "tools", "ci", "covr-srt-shape.R"))
 
 manifest <- .kv("manifest", file.path(root, "tools", "ci", "shard-manifest.tsv"))
 shard <- as.integer(.kv("shard", NA_character_))
@@ -95,15 +99,8 @@ if (inherits(cov, "try-error") || is.null(cov)) {
   attest.vacuous("covr-failed")
 }
 if (!length(cov)) attest.vacuous("empty-cov")
-# The lane SRT is "<hits>|<filename>:<line>" per instrumented line -- one
-# row per covr's own tally_coverage(by = "line") triple (covr exports no
-# to_srt; the renderer here is what covmerge.py's contract names).
-df <- try(covr:::tally_coverage(cov, by = "line"), silent = TRUE)
-if (inherits(df, "try-error") || !is.data.frame(df) || !nrow(df) ||
-    !all(c("filename", "line", "value") %in% names(df))) {
-  attest.vacuous("no-line-rows")
-}
-srt <- paste0(as.character(as.integer(df$value)), "|", df$filename, ":", df$line)
+srt <- .covr_srt_lines(cov)
+if (is.null(srt)) attest.vacuous("no-line-rows")
 if (!length(srt)) attest.vacuous("empty-srt")
 writeLines(srt, out.srt)
 if (file.exists(child.attest)) {
