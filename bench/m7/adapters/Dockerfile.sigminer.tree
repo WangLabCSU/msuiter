@@ -138,7 +138,7 @@ RUN test "$(sha256sum /work/m7_entry.py | cut -d' ' -f1)" = \
     || (echo "[FATAL] m7_entry.py bytes diverge from the frozen launcher" >&2; exit 1)
 COPY run_sigminer_arm.R /work/
 RUN test "$(sha256sum /work/run_sigminer_arm.R | cut -d' ' -f1)" = \
-      "337b13ec36fd4ea27d5276df055f7a78604014b5074b3b6b9d5f7f6062c5b482" \
+      "018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208" \
     || (echo "[FATAL] run_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
 
 # The committed arm pin (tools/p6_emit_arm_pins.py output over the roster --

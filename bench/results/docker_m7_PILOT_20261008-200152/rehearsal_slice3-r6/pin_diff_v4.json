@@ -1,0 +1,27 @@
+{
+ "committed_digests": {
+  "run_sigminer.R": "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084",
+  "run_sigminer_arm.R": "337b13ec36fd4ea27d5276df055f7a78604014b5074b3b6b9d5f7f6062c5b482"
+ },
+ "dockerfile_pins_v4": {
+  "Dockerfile.sigminer": {
+   "asserts": "da2450042fd3e0829de86939157656b651a0978e004eb5e86bf2bab480669659"
+  },
+  "Dockerfile.sigminer.tree": {
+   "asserts": "018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208"
+  }
+ },
+ "gateless_build_dockerfile": "569fc21504efe443ad27adc4ae1e4a2e2e9564d6f150c5709f8cf28ed9b5e01e",
+ "generated_utc": "2026-10-24T22:05:00Z",
+ "note": "v4 = controller-leg re-witness of the v3 adoption: comment-only flip of the \"(PROPOSED, PERF P4 remediation)\" phrase in both faces (diff-verified single-line change each) plus pin-token re-injection in both Dockerfiles. All digests measured disk->disk from the lane; staged ctxB hash-equals lane at both hops (transcription gate). Invariance predictions to the v3 measured outputs: intervals 871eac0f\u2026, witness 3cc0a0f9\u2026, errors 01ba4719\u2026 \u2014 comment-only, ANY drift is a defect.",
+ "proposal_v3_digests": {
+  "run_sigminer.R": "7c23bd8ff9dce74e23ad65bd7038da79cbc03ec87bc40e5911a55f1f185bcb58",
+  "run_sigminer_arm.R": "0b0a56be13414f56a8f31798abd96dc1e53d816c749799b388033ba855b657a1"
+ },
+ "proposal_v4_digests": {
+  "Dockerfile.sigminer": "b1082c414df17dc119e7f977da3220c83b629e3c757fdc92ebe6ebd872cc5f4a",
+  "Dockerfile.sigminer.tree": "0b609fd91cdc0decc902350bec7beb0faa4832b29ec71b928b79361eb9f72edb",
+  "run_sigminer.R": "da2450042fd3e0829de86939157656b651a0978e004eb5e86bf2bab480669659",
+  "run_sigminer_arm.R": "018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208"
+ }
+}

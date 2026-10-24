@@ -124,7 +124,7 @@ def test_verdict_json_round_trips_machine_readable():
 
 PILOT = (Path(__file__).resolve().parents[1].parent / "results"
          / "docker_m7_PILOT_20261008-200152")
-REHEARSAL = PILOT / "rehearsal_slice3-r4"
+REHEARSAL = PILOT / audit.REHEARSAL_SLICE
 ALLOWLIST_PATH = REHEARSAL / "formals_allowlist_slice3-r4.json"
 FIXED_RUNNER = REHEARSAL / "run_sigminer_fixed.R"
 

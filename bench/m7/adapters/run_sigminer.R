@@ -109,6 +109,40 @@ if (is.null(exposure) || !is.matrix(exposure) ||
 labels <- rownames(exposure)
 if (is.null(labels)) labels <- paste0("S", seq_len(nrow(exposure)))
 
+# ---- witness sidecar (PERF P4 remediation): commit the
+# extracted spectrum so the scoring side can OBSERVE the de novo calls.
+# Signature-object contract (sigminer 2.3.1): obj$Signature is the
+# channels x signatures extraction matrix, columns aligned with labels;
+# its channel row-names must equal the counts header (the sim's frozen
+# channel set), which is exactly what the scoring side's strict-coverage
+# law validates. An empty/non-conforming matrix commits NO witness — the
+# cell then honestly declares de-novo-unresolved instead of fabricating
+# one. %.17g is the exact round-trip rendering for the doubles.
+spectra <- obj$Signature
+witness_channels <- NULL
+if (!is.null(spectra) && is.matrix(spectra) &&
+    ncol(spectra) == length(labels) && nrow(spectra) == ncol(catalog) &&
+    identical(rownames(spectra), colnames(catalog))) {
+  # channel keys ride the on-disk header bytes: read.csv(check.names = TRUE)
+  # syntactically mangles non-NAME columns (A[C>A]A -> A.C.A.A) and the
+  # scoring-side witness contract is keyed on the file's own labels.
+  header_line <- scan(counts_path, what = "", nmax = 1L, sep = "\n",
+                      quiet = TRUE)[[1L]]
+  header_tokens <- trimws(strsplit(header_line, ",", fixed = TRUE)[[1L]])[-1L]
+  if (length(header_tokens) == ncol(catalog)) witness_channels <- header_tokens
+}
+if (!is.null(witness_channels)) {
+  con <- file(file.path(outdir, "spectra.csv"), open = "wt")
+  on.exit(close(con))
+  writeLines("signature,channel,value", con)
+  for (k in seq_len(ncol(spectra))) {
+    for (ch in seq_len(nrow(spectra))) {
+      writeLines(paste0(labels[[k]], ",", witness_channels[[ch]], ",",
+                        sprintf("%.17g", spectra[ch, k])), con)
+    }
+  }
+}
+
 # ---- adapter-protocol long table ------------------------------------------
 rows <- list()
 for (j in seq_len(ncol(exposure))) {

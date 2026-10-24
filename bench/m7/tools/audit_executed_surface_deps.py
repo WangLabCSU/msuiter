@@ -377,9 +377,12 @@ _HEX64 = _hex64_pattern()
 REPO_ROOT = HERE.parents[1]
 
 
+REHEARSAL_SLICE = "rehearsal_slice3-r6"   # single authority; law-assert tests derive
+
+
 def _rehearsal_dir(repo_root: Path) -> Path:
     return (repo_root / "bench" / "results"
-            / "docker_m7_PILOT_20261008-200152" / "rehearsal_slice3-r4")
+            / "docker_m7_PILOT_20261008-200152" / REHEARSAL_SLICE)
 
 
 def _entry_path(file_field: str, repo_root: Path) -> "Path | None":

@@ -1,0 +1,245 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile.gateless
+#1 transferring dockerfile: 11.83kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 7.96kB done
+#4 DONE 0.0s
+
+#5 [ 1/15] FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3@sha256:732d15020af326da9e919c07f70ca32bf5d3e409220af32e0a4b6d0a89437309
+#5 resolve 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3@sha256:732d15020af326da9e919c07f70ca32bf5d3e409220af32e0a4b6d0a89437309 done
+#5 DONE 0.0s
+
+#6 [ 2/15] RUN apt-get update     && apt-get install -y --no-install-recommends ca-certificates cmake     && rm -rf /var/lib/apt/lists/*
+#6 CACHED
+
+#7 [ 6/15] WORKDIR /work
+#7 CACHED
+
+#8 [ 5/15] RUN Rscript /tmp/install_sigminer.R
+#8 CACHED
+
+#9 [ 3/15] RUN apt-get update     && apt-get install -y --no-install-recommends zlib1g-dev libbz2-dev liblzma-dev libcurl4-openssl-dev     && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [ 4/15] COPY install_sigminer.R /tmp/install_sigminer.R
+#10 CACHED
+
+#11 [ 7/15] COPY m7_entry.py /work/
+#11 CACHED
+
+#12 [ 8/15] COPY run_sigminer.R /work/
+#12 DONE 0.0s
+
+#13 [ 9/15] RUN apt-get update     && apt-get install -y --no-install-recommends python3     && rm -rf /var/lib/apt/lists/*
+#13 2.248 Get:1 http://ports.ubuntu.com/ubuntu-ports jammy InRelease [270 kB]
+#13 3.920 Get:2 http://ports.ubuntu.com/ubuntu-ports jammy-updates InRelease [128 kB]
+#13 5.581 Get:3 http://ports.ubuntu.com/ubuntu-ports jammy-backports InRelease [127 kB]
+#13 7.260 Get:4 http://ports.ubuntu.com/ubuntu-ports jammy-security InRelease [129 kB]
+#13 9.204 Get:5 http://ports.ubuntu.com/ubuntu-ports jammy/multiverse arm64 Packages [224 kB]
+#13 13.04 Get:6 http://ports.ubuntu.com/ubuntu-ports jammy/universe arm64 Packages [17.2 MB]
+#13 14.13 Get:7 http://ports.ubuntu.com/ubuntu-ports jammy/restricted arm64 Packages [24.2 kB]
+#13 16.94 Get:8 http://ports.ubuntu.com/ubuntu-ports jammy/main arm64 Packages [1,758 kB]
+#13 19.76 Get:9 http://ports.ubuntu.com/ubuntu-ports jammy-updates/universe arm64 Packages [1,717 kB]
+#13 21.26 Get:10 http://ports.ubuntu.com/ubuntu-ports jammy-updates/multiverse arm64 Packages [81.6 kB]
+#13 24.44 Get:11 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 Packages [4,567 kB]
+#13 28.32 Get:12 http://ports.ubuntu.com/ubuntu-ports jammy-updates/restricted arm64 Packages [8,359 kB]
+#13 29.51 Get:13 http://ports.ubuntu.com/ubuntu-ports jammy-backports/universe arm64 Packages [33.7 kB]
+#13 30.98 Get:14 http://ports.ubuntu.com/ubuntu-ports jammy-backports/main arm64 Packages [82.5 kB]
+#13 34.58 Get:15 http://ports.ubuntu.com/ubuntu-ports jammy-security/restricted arm64 Packages [8,061 kB]
+#13 37.37 Get:16 http://ports.ubuntu.com/ubuntu-ports jammy-security/universe arm64 Packages [1,421 kB]
+#13 40.59 Get:17 http://ports.ubuntu.com/ubuntu-ports jammy-security/main arm64 Packages [4,253 kB]
+#13 42.09 Get:18 http://ports.ubuntu.com/ubuntu-ports jammy-security/multiverse arm64 Packages [75.6 kB]
+#13 42.11 Fetched 48.5 MB in 42s (1,157 kB/s)
+#13 42.11 Reading package lists...
+#13 42.69 Reading package lists...
+#13 43.15 Building dependency tree...
+#13 43.25 Reading state information...
+#13 43.35 The following additional packages will be installed:
+#13 43.35   libmpdec3 libpython3-stdlib libpython3.10-minimal libpython3.10-stdlib
+#13 43.35   libsqlite3-0 media-types python3-minimal python3.10 python3.10-minimal
+#13 43.35 Suggested packages:
+#13 43.35   python3-doc python3-tk python3-venv python3.10-venv python3.10-doc
+#13 43.35   binfmt-support
+#13 43.39 The following NEW packages will be installed:
+#13 43.39   libmpdec3 libpython3-stdlib libpython3.10-minimal libpython3.10-stdlib
+#13 43.39   libsqlite3-0 media-types python3 python3-minimal python3.10
+#13 43.39   python3.10-minimal
+#13 45.87 0 upgraded, 10 newly installed, 0 to remove and 107 not upgraded.
+#13 45.87 Need to get 6,220 kB of archives.
+#13 45.87 After this operation, 22.0 MB of additional disk space will be used.
+#13 45.87 Get:1 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 libpython3.10-minimal arm64 3.10.12-1~22.04.18 [814 kB]
+#13 48.91 Get:2 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 python3.10-minimal arm64 3.10.12-1~22.04.18 [2,245 kB]
+#13 49.96 Get:3 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 python3-minimal arm64 3.10.6-1~22.04.1 [24.3 kB]
+#13 51.01 Get:4 http://ports.ubuntu.com/ubuntu-ports jammy/main arm64 media-types all 7.0.0 [25.5 kB]
+#13 52.57 Get:5 http://ports.ubuntu.com/ubuntu-ports jammy/main arm64 libmpdec3 arm64 2.5.1-2build2 [89.0 kB]
+#13 54.95 Get:6 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 libsqlite3-0 arm64 3.37.2-2ubuntu0.8 [636 kB]
+#13 57.89 Get:7 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 libpython3.10-stdlib arm64 3.10.12-1~22.04.18 [1,848 kB]
+#13 60.17 Get:8 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 python3.10 arm64 3.10.12-1~22.04.18 [508 kB]
+#13 60.83 Get:9 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 libpython3-stdlib arm64 3.10.6-1~22.04.1 [6,812 B]
+#13 61.80 Get:10 http://ports.ubuntu.com/ubuntu-ports jammy-updates/main arm64 python3 arm64 3.10.6-1~22.04.1 [22.8 kB]
+#13 61.93 debconf: delaying package configuration, since apt-utils is not installed
+#13 61.95 Fetched 6,220 kB in 18s (338 kB/s)
+#13 61.96 Selecting previously unselected package libpython3.10-minimal:arm64.
+#13 61.96 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 16704 files and directories currently installed.)
+#13 62.00 Preparing to unpack .../libpython3.10-minimal_3.10.12-1~22.04.18_arm64.deb ...
+#13 62.00 Unpacking libpython3.10-minimal:arm64 (3.10.12-1~22.04.18) ...
+#13 62.05 Selecting previously unselected package python3.10-minimal.
+#13 62.05 Preparing to unpack .../python3.10-minimal_3.10.12-1~22.04.18_arm64.deb ...
+#13 62.05 Unpacking python3.10-minimal (3.10.12-1~22.04.18) ...
+#13 62.08 Setting up libpython3.10-minimal:arm64 (3.10.12-1~22.04.18) ...
+#13 62.09 Setting up python3.10-minimal (3.10.12-1~22.04.18) ...
+#13 62.33 Selecting previously unselected package python3-minimal.
+#13 62.33 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 16998 files and directories currently installed.)
+#13 62.33 Preparing to unpack .../0-python3-minimal_3.10.6-1~22.04.1_arm64.deb ...
+#13 62.34 Unpacking python3-minimal (3.10.6-1~22.04.1) ...
+#13 62.35 Selecting previously unselected package media-types.
+#13 62.35 Preparing to unpack .../1-media-types_7.0.0_all.deb ...
+#13 62.35 Unpacking media-types (7.0.0) ...
+#13 62.36 Selecting previously unselected package libmpdec3:arm64.
+#13 62.36 Preparing to unpack .../2-libmpdec3_2.5.1-2build2_arm64.deb ...
+#13 62.36 Unpacking libmpdec3:arm64 (2.5.1-2build2) ...
+#13 62.37 Selecting previously unselected package libsqlite3-0:arm64.
+#13 62.37 Preparing to unpack .../3-libsqlite3-0_3.37.2-2ubuntu0.8_arm64.deb ...
+#13 62.38 Unpacking libsqlite3-0:arm64 (3.37.2-2ubuntu0.8) ...
+#13 62.39 Selecting previously unselected package libpython3.10-stdlib:arm64.
+#13 62.39 Preparing to unpack .../4-libpython3.10-stdlib_3.10.12-1~22.04.18_arm64.deb ...
+#13 62.39 Unpacking libpython3.10-stdlib:arm64 (3.10.12-1~22.04.18) ...
+#13 62.45 Selecting previously unselected package python3.10.
+#13 62.45 Preparing to unpack .../5-python3.10_3.10.12-1~22.04.18_arm64.deb ...
+#13 62.45 Unpacking python3.10 (3.10.12-1~22.04.18) ...
+#13 62.46 Selecting previously unselected package libpython3-stdlib:arm64.
+#13 62.46 Preparing to unpack .../6-libpython3-stdlib_3.10.6-1~22.04.1_arm64.deb ...
+#13 62.46 Unpacking libpython3-stdlib:arm64 (3.10.6-1~22.04.1) ...
+#13 62.47 Setting up python3-minimal (3.10.6-1~22.04.1) ...
+#13 62.55 Selecting previously unselected package python3.
+#13 62.55 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 17405 files and directories currently installed.)
+#13 62.55 Preparing to unpack .../python3_3.10.6-1~22.04.1_arm64.deb ...
+#13 62.55 Unpacking python3 (3.10.6-1~22.04.1) ...
+#13 62.56 Setting up media-types (7.0.0) ...
+#13 62.57 Setting up libsqlite3-0:arm64 (3.37.2-2ubuntu0.8) ...
+#13 62.57 Setting up libmpdec3:arm64 (2.5.1-2build2) ...
+#13 62.58 Setting up libpython3.10-stdlib:arm64 (3.10.12-1~22.04.18) ...
+#13 62.58 Setting up libpython3-stdlib:arm64 (3.10.6-1~22.04.1) ...
+#13 62.58 Setting up python3.10 (3.10.12-1~22.04.18) ...
+#13 62.84 Setting up python3 (3.10.6-1~22.04.1) ...
+#13 62.85 running python rtupdate hooks for python3.10...
+#13 62.85 running python post-rtupdate hooks for python3.10...
+#13 62.89 Processing triggers for libc-bin (2.35-0ubuntu3.8) ...
+#13 DONE 63.0s
+
+#14 [10/15] RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install.packages("jsonlite"); v <- packageVersion("jsonlite"); if (is.null(v)) quit(status = 1L); cat("[image] jsonlite ", as.character(v), "provisioned\\n")'
+#14 0.262 Installing package into ‘/usr/local/lib/R/site-library’
+#14 0.262 (as ‘lib’ is unspecified)
+#14 3.189 trying URL 'https://cran.r-project.org/src/contrib/jsonlite_2.0.0.tar.gz'
+#14 4.344 Content type 'application/x-gzip' length 1055849 bytes (1.0 MB)
+#14 4.344 ==================================================
+#14 5.471 downloaded 1.0 MB
+#14 5.471 
+#14 5.755 * installing *source* package ‘jsonlite’ ...
+#14 5.762 ** package ‘jsonlite’ successfully unpacked and MD5 sums checked
+#14 5.762 ** using staged installation
+#14 5.770 ** libs
+#14 5.777 using C compiler: ‘gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0’
+#14 5.778 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c base64.c -o base64.o
+#14 5.835 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c collapse_array.c -o collapse_array.o
+#14 5.865 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c collapse_object.c -o collapse_object.o
+#14 5.889 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c collapse_pretty.c -o collapse_pretty.o
+#14 5.928 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c escape_chars.c -o escape_chars.o
+#14 5.952 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c integer64_to_na.c -o integer64_to_na.o
+#14 5.972 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c is_datelist.c -o is_datelist.o
+#14 5.987 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c is_recordlist.c -o is_recordlist.o
+#14 6.004 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c is_scalarlist.c -o is_scalarlist.o
+#14 6.021 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c modp_numtoa.c -o modp_numtoa.o
+#14 6.061 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c null_to_na.c -o null_to_na.o
+#14 6.082 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c num_to_char.c -o num_to_char.o
+#14 6.107 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c parse.c -o parse.o
+#14 6.132 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c prettify.c -o prettify.o
+#14 6.155 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c push_parser.c -o push_parser.o
+#14 6.175 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c r-base64.c -o r-base64.o
+#14 6.197 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c register.c -o register.o
+#14 6.214 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c row_collapse.c -o row_collapse.o
+#14 6.236 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c transpose_list.c -o transpose_list.o
+#14 6.253 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c validate.c -o validate.o
+#14 6.270 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl.c -o yajl/yajl.o
+#14 6.291 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_alloc.c -o yajl/yajl_alloc.o
+#14 6.302 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_buf.c -o yajl/yajl_buf.o
+#14 6.319 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_encode.c -o yajl/yajl_encode.o
+#14 6.351 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_gen.c -o yajl/yajl_gen.o
+#14 6.429 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_lex.c -o yajl/yajl_lex.o
+#14 6.514 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_parser.c -o yajl/yajl_parser.o
+#14 6.571 gcc -I"/usr/local/lib/R/include" -DNDEBUG -Iyajl/api  -I/usr/local/include   -fvisibility=hidden  -fPIC  -g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g  -c yajl/yajl_tree.c -o yajl/yajl_tree.o
+#14 6.617 ar rcs yajl/libstatyajl.a yajl/yajl.o yajl/yajl_alloc.o yajl/yajl_buf.o yajl/yajl_encode.o yajl/yajl_gen.o yajl/yajl_lex.o yajl/yajl_parser.o yajl/yajl_tree.o
+#14 6.621 gcc -shared -L/usr/local/lib/R/lib -L/usr/local/lib -o jsonlite.so base64.o collapse_array.o collapse_object.o collapse_pretty.o escape_chars.o integer64_to_na.o is_datelist.o is_recordlist.o is_scalarlist.o modp_numtoa.o null_to_na.o num_to_char.o parse.o prettify.o push_parser.o r-base64.o register.o row_collapse.o transpose_list.o validate.o -Lyajl -lstatyajl -L/usr/local/lib/R/lib -lR
+#14 6.637 installing to /usr/local/lib/R/site-library/00LOCK-jsonlite/00new/jsonlite/libs
+#14 6.638 ** R
+#14 6.642 ** inst
+#14 6.644 ** byte-compile and prepare package for lazy loading
+#14 6.923 in method for ‘asJSON’ with signature ‘"AsIs"’: no definition for class “AsIs”
+#14 6.923 in method for ‘asJSON’ with signature ‘"ITime"’: no definition for class “ITime”
+#14 6.923 in method for ‘asJSON’ with signature ‘"hms"’: no definition for class “hms”
+#14 6.923 in method for ‘asJSON’ with signature ‘"json"’: no definition for class “json”
+#14 6.923 in method for ‘asJSON’ with signature ‘"integer64"’: no definition for class “integer64”
+#14 6.923 in method for ‘asJSON’ with signature ‘"pairlist"’: no definition for class “pairlist”
+#14 6.923 in method for ‘asJSON’ with signature ‘"blob"’: no definition for class “blob”
+#14 6.923 in method for ‘asJSON’ with signature ‘"scalar"’: no definition for class “scalar”
+#14 6.923 in method for ‘asJSON’ with signature ‘"sf"’: no definition for class “sf”
+#14 6.923 in method for ‘asJSON’ with signature ‘"sfc"’: no definition for class “sfc”
+#14 6.923 in method for ‘asJSON’ with signature ‘"vctrs_vctr"’: no definition for class “vctrs_vctr”
+#14 6.923 ** help
+#14 6.938 *** installing help indices
+#14 6.947 ** building package indices
+#14 7.075 ** installing vignettes
+#14 7.078 ** testing if installed package can be loaded from temporary location
+#14 7.210 ** checking absolute paths in shared objects and dynamic libraries
+#14 7.217 ** testing if installed package can be loaded from final location
+#14 7.340 ** testing if installed package keeps a record of temporary installation path
+#14 7.342 * DONE (jsonlite)
+#14 7.349 
+#14 7.349 The downloaded source packages are in
+#14 7.349 	‘/tmp/RtmpnmrYvZ/downloaded_packages’
+#14 7.350 [image] jsonlite  2.0.0 provisioned\n
+#14 DONE 7.4s
+
+#15 [11/15] RUN test "$(sha256sum /work/run_sigminer.R | cut -d' ' -f1)" = "da2450042fd3e0829de86939157656b651a0978e004eb5e86bf2bab480669659" || (echo "[FATAL] run_sigminer.R bytes diverge from the stage2-proven rehearsal witness" >&2; exit 1)
+#15 DONE 0.1s
+
+#16 [12/15] RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23")); install.packages(c("lpSolve", "synchronicity"), dependencies = NA, quiet = TRUE); v1 <- packageVersion("lpSolve"); v2 <- packageVersion("synchronicity"); if (is.null(v1) || as.character(v1) != "5.6.20") quit(status = 1L); if (is.null(v2) || as.character(v2) != "1.3.10") quit(status = 1L); cat("[image] lpSolve ", as.character(v1), ", synchronicity ", as.character(v2), " provisioned\\n")'
+#16 2.873 also installing the dependencies ‘bigmemory.sri’, ‘uuid’, ‘BH’
+#16 2.873 
+#16 29.33 [image] lpSolve  5.6.20 , synchronicity  1.3.10  provisioned\n
+#16 DONE 29.5s
+
+#17 [13/15] RUN Rscript -e 'options(repos = c(P3M = "https://p3m.dev/cran/2024-04-23")); install.packages("matrixStats", dependencies = NA, quiet = TRUE); v3 <- packageVersion("matrixStats"); if (is.null(v3) || as.character(v3) != "1.3.0") quit(status = 1L); cat("[image] matrixStats ", as.character(v3), " provisioned\\n")'
+#17 8.949 [image] matrixStats  1.3.0  provisioned\n
+#17 DONE 9.0s
+
+#18 [14/15] COPY mini_cell/ /work/mini/in/
+#18 DONE 0.0s
+
+#19 [15/15] COPY self_witness.sh /tmp/self_witness.sh
+#19 DONE 0.0s
+
+#20 exporting to image
+#20 exporting layers
+#20 exporting layers 1.6s done
+#20 exporting manifest sha256:9c9a0a0d1a2e446a55485843293572ddcf7fa49311a558e2f4e966c4324365d7 done
+#20 exporting config sha256:4a1f6cd34ade06d08b00fbec1c84095ae7ec610598b8a85fe73363fe632a69c0 done
+#20 exporting attestation manifest sha256:3c0e237152a3f838a902e34afabd78fe76bb24d9be8c094bb35d946b0d08f3ad done
+#20 exporting manifest list sha256:1046afea00109fe19c03d6e8ec93808864307a179ce69fd87ed1bc83181f9f6c done
+#20 naming to docker.io/library/msuiter-sigminer:p4witness-ctxBv4-gateless done
+#20 unpacking to docker.io/library/msuiter-sigminer:p4witness-ctxBv4-gateless
+#20 unpacking to docker.io/library/msuiter-sigminer:p4witness-ctxBv4-gateless 1.2s done
+#20 DONE 2.8s
+
+View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/kg7lqv9vbzp9hjsv49ui8lu0t
+build-exit=0

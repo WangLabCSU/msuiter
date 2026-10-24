@@ -1,0 +1,47 @@
+{
+ "all_pass": true,
+ "rows": [
+  {
+   "equal": true,
+   "expected": "871eac0f5c5e0412cfb56803bd472958ec99b829c7924653e52f8e3c8a05e72a",
+   "file": "intervals.csv",
+   "measured": "871eac0f5c5e0412cfb56803bd472958ec99b829c7924653e52f8e3c8a05e72a",
+   "rep": "ctxBv4_r1"
+  },
+  {
+   "equal": true,
+   "expected": "3cc0a0f9d5c57b02a3374180f8f957e895264cd874c6b92b134ccb374fd1280f",
+   "file": "spectra.csv",
+   "measured": "3cc0a0f9d5c57b02a3374180f8f957e895264cd874c6b92b134ccb374fd1280f",
+   "rep": "ctxBv4_r1"
+  },
+  {
+   "equal": true,
+   "expected": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "file": "errors.log",
+   "measured": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "rep": "ctxBv4_r1"
+  },
+  {
+   "equal": true,
+   "expected": "871eac0f5c5e0412cfb56803bd472958ec99b829c7924653e52f8e3c8a05e72a",
+   "file": "intervals.csv",
+   "measured": "871eac0f5c5e0412cfb56803bd472958ec99b829c7924653e52f8e3c8a05e72a",
+   "rep": "ctxBv4_r2"
+  },
+  {
+   "equal": true,
+   "expected": "3cc0a0f9d5c57b02a3374180f8f957e895264cd874c6b92b134ccb374fd1280f",
+   "file": "spectra.csv",
+   "measured": "3cc0a0f9d5c57b02a3374180f8f957e895264cd874c6b92b134ccb374fd1280f",
+   "rep": "ctxBv4_r2"
+  },
+  {
+   "equal": true,
+   "expected": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "file": "errors.log",
+   "measured": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+   "rep": "ctxBv4_r2"
+  }
+ ]
+}

@@ -1,0 +1,87 @@
+[
+    {
+        "Id": "sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9",
+        "RepoTags": [
+            "msuiter-sigminer:slice3-r5"
+        ],
+        "RepoDigests": [
+            "msuiter-sigminer@sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-09T00:16:11.442885095Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "R_VERSION=4.3.3",
+                "R_HOME=/usr/local/lib/R",
+                "TZ=Etc/UTC",
+                "CRAN=https://p3m.dev/cran/__linux__/jammy/2024-04-23",
+                "LANG=en_US.UTF-8"
+            ],
+            "Cmd": [
+                "python3",
+                "/work/m7_entry.py"
+            ],
+            "WorkingDir": "/work",
+            "Labels": {
+                "org.opencontainers.image.authors": "Carl Boettiger <cboettig@ropensci.org>",
+                "org.opencontainers.image.base.name": "docker.io/library/ubuntu:jammy",
+                "org.opencontainers.image.description": "Reproducible builds to fixed version of R",
+                "org.opencontainers.image.licenses": "GPL-2.0-or-later",
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.revision": "26ca778d654c29084430c17996f177694e5ff50d",
+                "org.opencontainers.image.source": "https://github.com/rocker-org/rocker-versioned2",
+                "org.opencontainers.image.title": "rocker/r-ver",
+                "org.opencontainers.image.vendor": "Rocker Project",
+                "org.opencontainers.image.version": "R-4.3.3"
+            },
+            "ArgsEscaped": true
+        },
+        "Architecture": "arm64",
+        "Os": "linux",
+        "Size": 1936876727,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:59b223680ef978509f20faf6bf069866dfc02c422159347face0a7565d698526",
+                "sha256:1385cbcf490753a8c1e318aa8bcf412a0ab5ca7e0783581037ee1dde0e5af998",
+                "sha256:6017c9b8f0c10acadf045ab91c618db35aa7b74e9dcd072d7cb2990a38051f27",
+                "sha256:fbf85f2cc8c6b59e8b15f6201a857b751424bbc527f004948ff053ddec38a9a6",
+                "sha256:d4df8c64cc966dfb2786d690f10458fda17b6ff04fa9d5be8a17aab3b828580b",
+                "sha256:6dd647485dfe14a7a493d21844b113ad353c854e60763b4a4dfd9f3d9856eb4c",
+                "sha256:515d1d84559c9fd54ca6d2f2a688f9c98cc96434158fe8c4c87e64a675fa47de",
+                "sha256:154207f0e6b292c6773152c4ef5834a5821b3698d442a2066d5fbb262a64b1db",
+                "sha256:7abb67945d15237f4b3442ed91af0b798c38910cf85f78032be68041fa5ada55",
+                "sha256:bd5e58f995a424497d934fdbb097be6655c7a098d2e1539086f5849e18cc0e9e",
+                "sha256:dd0ee2f6b390ba167da5fc3000687fb56b4e64e0fbc60d2bb15eb315491d24da",
+                "sha256:8ba5eb1d2bb82a2f40ff6909d1f8c0a28aed3e026293549869134b0188cedfef",
+                "sha256:1f512a8cde416eb4a0ac2c3dd50948ab73b3c7c018326682b202b4b788bea129",
+                "sha256:c1495c5f985de73a2230f93806f23adccd2c37bc4c5feb0bf262fb47b28af2a7",
+                "sha256:674b35499d78bad81288b79a62a2633338ed6f9e34d814b15a35c8c8f54f4443",
+                "sha256:6d23303f3c3f3258ee25aa6ca9fc3ad1216bac35b759050b4911d9acca464ca2",
+                "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+                "sha256:d5b4216fb7dd1ec2ca9b69e9da7755516d5b2c0a45f2358a4a6ace3398b5e668",
+                "sha256:4ece3f500eea1c987169635558eec9b8fe3f0ef30f437c2b3bb64ba20545c589",
+                "sha256:2f4398768aa9e73dbc8c991825a595540944c9ad47d89c5fbc433b0e593369ef",
+                "sha256:0a237784be046f3d48bb6ec51cf7d2045cd443f1393582abb53ec319c37bef43",
+                "sha256:11c8d43a9125a922bad07f792f2e7f1c1ec29e98be3c529eee64d8912386bd21"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-10-09T00:16:13.199796054Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "4znmvlpyjnhjrgoznl1ecrnwm",
+                    "CreatedAt": "2026-10-09T00:16:14.246964679Z"
+                }
+            ]
+        }
+    }
+]

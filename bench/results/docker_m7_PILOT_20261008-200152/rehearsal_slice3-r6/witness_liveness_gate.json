@@ -1,0 +1,91 @@
+{
+ "ACCEPT_side_adopted_v3": {
+  "all_keys_bracket_form": true,
+  "attestation": "logs/attest_attest_patched_v3.json",
+  "cell_out": "runs/fx/ctxBv3_r1/out",
+  "hungarian": {
+   "cell_fp": 0,
+   "cell_tp": 6,
+   "de_novo_unresolved_token_present": false,
+   "dead_strata": [],
+   "fired": true,
+   "mean_match_cosine": 0.99138,
+   "prediction_rows_notes": [
+    "denovo-spectra",
+    "denovo-spectra"
+   ],
+   "signature_row_mean_cosines_matched": {
+    "SBS40": 0.99076,
+    "SBS5": 0.992,
+    "cell_mean_match_cosine": 0.99138
+   },
+   "threshold": "MATCH_MIN_COSINE=0.85 (Hungarian one-to-one); every matched row mean >= 0.99 >> 0.85"
+  },
+  "strict_load_accepted_channel_keys": 96,
+  "strict_load_accepted_signatures": 2,
+  "verbatim_key_samples": [
+   "A[C>A]A",
+   "A[C>A]C",
+   "T[T>G]G",
+   "T[T>G]T"
+  ]
+ },
+ "ACCEPT_side_adopted_v4": {
+  "all_keys_bracket_form": true,
+  "attestation": "logs/attest_attest_patched_v4.json",
+  "cell_out": "runs/fx/ctxBv4_r1/out",
+  "hungarian": {
+   "cell_fp": 0,
+   "cell_mean_match_cosine": 0.9913810407039478,
+   "cell_tp": 6,
+   "de_novo_unresolved_token_present": false,
+   "dead_strata": [],
+   "fired": true,
+   "prediction_rows_notes": [
+    "denovo-spectra"
+   ]
+  },
+  "note": "measured equal to the v3 ACCEPT row on every field \u2014 as a comment-only flip must be",
+  "strict_load_accepted_channel_keys": 96,
+  "strict_load_accepted_signatures": 2,
+  "witness_bytes": "byte-equal v3 (identity_check_v4.json)"
+ },
+ "DECLARED_side_same_fixture": {
+  "ctxA_unpatched": {
+   "attestation": "logs/attest_attest_unpatched.json",
+   "cell_fp": 6,
+   "cell_out": "runs/fx/ctxA_r1/out",
+   "cell_tp": 0,
+   "dead_strata": [
+    [
+     "sigminer__main__N100",
+     6
+    ]
+   ],
+   "notes": "de-novo-unresolved=6",
+   "witness_present": false
+  },
+  "slice3_r1_committed_image": {
+   "attestation": "logs/attest_attest_slice3_r1.json",
+   "cell_fp": 6,
+   "cell_out": "runs/fx/slice3_r1/out",
+   "cell_tp": 0,
+   "dead_strata": [
+    [
+     "sigminer__main__N100",
+     6
+    ]
+   ],
+   "image": "msuiter-sigminer:slice3-r5 (frozen campaign bytes, registry-READY)",
+   "notes": "de-novo-unresolved=6",
+   "witness_present": false
+  }
+ },
+ "as_written_v1": {
+  "attestation": "logs/attest_attest_patched.json",
+  "note": "the gate as a decision device: v1 witness is byte-present, 96/96 finite, schema-valid -- yet de-novo-unresolved=6 STANDS (tp=0 fp=6, dead_strata 6) => DEAD metric => proposal REJECTED verbatim as-written; adoption proceeds only on the measured v3 uplift"
+ },
+ "fixture": "runs/fx/in (zero-RNG, seed 20261025, planted SBS5; same bytes on every side)",
+ "gate": "witness-liveness (dead-metric law applied to the witness itself)",
+ "law": "a schema-valid witness that leaves de-novo-unresolved standing is DEAD; the proposal must be REJECTED verbatim unless the strict load_cell_spectra ACCEPTS the verbatim bracket labels AND the best-cosine >= 0.85 Hungarian match FIRES"
+}
