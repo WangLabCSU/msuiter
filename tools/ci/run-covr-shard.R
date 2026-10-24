@@ -8,10 +8,12 @@
 # writes the MSUITER-ATTEST line. covr dies mid-shard or writes nothing --
 # this runner then attests the absence honestly as status=vacuous.
 #
-# The lane keeps its historical non-gating posture end to end: this script
-# never exits red for coverage content, the aggregator runs it with
-# --advisory, and the workflow step is continue-on-error. Defects are
-# printed by the aggregator either way; nothing here hides them.
+# The census gates (2026-10-24): the aggregator's retired --advisory let a
+# year of broken coverage exit green. This runner still never exits red for
+# coverage CONTENT -- it attests every outcome honestly and the census
+# decides; structural installed-copy absences are sanctioned byte-exactly by
+# tools/ci/covr-divergences.tsv. Defects are printed either way; nothing
+# here hides them.
 #
 # usage: run-covr-shard.R --manifest=<tsv> --shard=<n> --out-srt=<file>
 #                         [--attest=<file>] [--root=<dir>]
@@ -62,7 +64,7 @@ attest.vacuous <- function(why) {
   writeLines(paste0("MSUITER-ATTEST kind=coverage shard=", shard,
                     " files=0 tests=0 executed=0 pass=0 fail=0 error=0 skip=0",
                     " warn=0 status=vacuous why=", why), attest)
-  cat("run-covr-shard: shard ", shard, " attests vacuous (", why, ") -- advisory\n",
+  cat("run-covr-shard: shard ", shard, " attests vacuous (", why, ") -- for the census\n",
       sep = "", file = stderr())
   quit(status = 0L)
 }

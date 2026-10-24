@@ -212,3 +212,79 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   # every fan-out arm rides the uniform hang-detector ceiling.
   expect_identical(budget_line("R-CMD-check-fanout"), "120")
 })
+
+test_that("the covr coverage aggregate is ledger-gated, never advisory", {
+  .ci_require_checkout()
+  ci <- readLines(.ci_ci_locate(file.path("..", "..", ".github", "workflows", "ci.yml")),
+                  warn = FALSE)
+  # Shell line continuations belong to their command: fold them before the
+  # scan, or a --ledger riding the next physical line hides from a --kind scan.
+  ci <- gsub("[[:space:]]*\\\\[[:space:]]*\n", " ", paste0(ci, collapse = "\n"))
+  ci <- strsplit(ci, "\n", fixed = TRUE)[[1L]]
+  line <- grep("--kind coverage", ci, fixed = TRUE, value = TRUE)
+  expect_true(any(grepl("--ledger", paste(line, collapse = "\n"), fixed = TRUE)),
+               info = "coverage aggregate must consult the divergences ledger")
+  expect_false(any(grepl("--advisory", paste(line, collapse = "\n"), fixed = TRUE)),
+               label = "coverage aggregate still runs --advisory (vacuous green)")
+  expect_false(any(grepl("|| true", paste(line, collapse = "\n"), fixed = TRUE)),
+               label = "coverage aggregate still swallows its exit code")
+  ledger <- .ci_ci_locate("covr-divergences.tsv")
+  expect_true(file.exists(ledger))
+  rows <- readLines(ledger, warn = FALSE)
+  rows <- rows[!grepl("^#", rows) & nzchar(rows)]
+  fields <- strsplit(rows, "\t", fixed = TRUE)
+  lens <- vapply(fields, length, integer(1L))
+  expect_identical(unique(lens), 4L,
+                   info = "ledger rows are shard\tfiles\twhy\twitness")
+  shards <- vapply(fields, `[[`, character(1L), 1L)
+  expect_identical(shards, unique(shards), info = "ledger shards must be unique")
+  expect_true(all(grepl("^[0-9]+$", shards)), info = "ledger shards are integers")
+  witnesses <- vapply(fields, `[[`, character(1L), 4L)
+  expect_true(all(nzchar(witnesses)), info = "every sanction carries a witness")
+})
+
+test_that("the coverage ledger is reverse-audited and its controls FIRE", {
+  .ci_require_checkout()
+  agg <- .ci_ci_locate("ci-shard-aggregate.py")
+  dir <- tempfile("covr-ledger-"); dir.create(dir, recursive = TRUE)
+  mani <- tempfile("covr-mini-manifest-")
+  writeLines(c("# k=2", "shard\tfile\tseconds",
+               "1\ttest-a.R\t5", "2\ttest-b.R\t5"), mani)
+  writeLines("MSUITER-ATTEST kind=coverage shard=1 files=0 tests=1 executed=0 pass=0 fail=0 error=0 skip=1 warn=0 status=vacuous",
+             file.path(dir, "shard-1.attest"))
+  writeLines("MSUITER-ATTEST kind=coverage shard=2 files=1 tests=4 executed=4 pass=9 fail=0 error=0 skip=0 warn=0 status=ok",
+             file.path(dir, "shard-2.attest"))
+  run_agg <- function(ledger) {
+    args <- c(agg, paste0("--manifest=", mani), paste0("--attest-dir=", dir),
+              "--kind", "coverage")
+    if (!is.null(ledger)) args <- c(args, paste0("--ledger=", ledger))
+    .ci_spawn("python3", args)
+  }
+  # Without the ledger the vacuous shard is a plain defect (no silent pass).
+  r <- run_agg(NULL)
+  expect_identical(r$status, 1L, info = paste0(r$out, "\n", r$err))
+  expect_match(r$out, "zero executed")
+  # The true sanction turns it green -- and says so.
+  led <- tempfile("covr-div-"); writeLines(c(
+    "# comment row ignored",
+    "1\ttest-a.R\t-\twitnessed by the self-test fixture"), led)
+  r <- run_agg(led)
+  expect_identical(r$status, 0L, info = paste0(r$out, "\n", r$err))
+  expect_match(r$out, "SANCTIONED")
+  expect_match(r$out, "sanctioned=1")
+  # A forged why does not match the attestation's absent why: red stays red.
+  led2 <- tempfile("covr-div2-"); writeLines("1\ttest-a.R\tbogus-why\twitness", led2)
+  r <- run_agg(led2)
+  expect_identical(r$status, 1L)
+  expect_match(r$out, "does not match")
+  # A covr-failed masquerade is never sanctionable by the census-class row.
+  writeLines("MSUITER-ATTEST kind=coverage shard=1 files=0 tests=0 executed=0 pass=0 fail=0 error=0 skip=0 warn=0 status=vacuous why=covr-failed", file.path(dir, "shard-1.attest"))
+  r <- run_agg(led)
+  expect_identical(r$status, 1L)
+  expect_match(r$out, "covr-failed")
+  # Stale rows are themselves defects: the ledger may never bank silence.
+  writeLines("MSUITER-ATTEST kind=coverage shard=1 files=1 tests=4 executed=4 pass=9 fail=0 error=0 skip=0 warn=0 status=ok", file.path(dir, "shard-1.attest"))
+  r <- run_agg(led)
+  expect_identical(r$status, 1L)
+  expect_match(r$out, "stale divergences row")
+})
