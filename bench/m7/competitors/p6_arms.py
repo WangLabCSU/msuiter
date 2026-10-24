@@ -40,7 +40,8 @@ P6_ARM_SPECS: dict[str, dict[str, str]] = {
         "tree_sha": "1e174a044e1eb4288b73a664b1179c98b104d28c",
         "ns_sha256": "37744aee7eb63c89501109f50da4b5a7155d4912bc5540cda8764062866a90df",
         "version": "2.3.3", "face": "rust",
-        "image_digest": "sha256:44a7f8566963009ed3ace92900b49c63838d6300cfdd2e2538edd1adcbec3660",
+        "image_digest": "sha256:0959ace3f85a23dcd874e33dd76c3267ec1eb5cf9801dc952c9dcb33b4afefee",
+        "revision": 2,
         "role": "certified-kernel share of the kernel boundary",
     },
     "sigminer_post_p2": {
@@ -61,7 +62,8 @@ P6_ARM_SPECS: dict[str, dict[str, str]] = {
         "tree_sha": "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
         "ns_sha256": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
         "version": "2.3.3", "face": "rust",
-        "image_digest": "sha256:52e905c55be5b0330596a11b08a8bb4309c38ff2062026c7ebcb61374a972860",
+        "image_digest": "sha256:4afb3d8ae7e20bb8e1e45582fbb2503726b880466e22c3aedb7b10d81f187e0e",
+        "revision": 2,
         "role": "P0-P3 tip, certified-kernel face (parity-gate face)",
     },
 }

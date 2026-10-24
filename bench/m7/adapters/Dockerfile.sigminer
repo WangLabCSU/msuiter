@@ -136,7 +136,7 @@ RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install
 # drift is a build death, never a silent float), and a network-none
 # self-witness replaying the zero-touch composed argv over the stage2-run
 # fixture bytes.
-RUN test "$(sha256sum /work/run_sigminer.R | cut -d' ' -f1)" = "7f30673847d96cd0e0fbfd1763e89ad12b1e5212c0152db4dd20741a2a750084" || (echo "[FATAL] run_sigminer.R bytes diverge from the stage2-proven rehearsal witness" >&2; exit 1)
+RUN test "$(sha256sum /work/run_sigminer.R | cut -d' ' -f1)" = "da2450042fd3e0829de86939157656b651a0978e004eb5e86bf2bab480669659" || (echo "[FATAL] run_sigminer.R bytes diverge from the stage2-proven rehearsal witness" >&2; exit 1)
 # Sixth recorded build defect (verbatim, r5 closure attempt 1, 2026-10-09):
 # with BOTH repos configured the era snapshot's PACKAGES index went unreadable
 # once (the recorded proxy flakiness, memo §9b item 1) and install.packages

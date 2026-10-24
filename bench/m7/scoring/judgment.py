@@ -36,16 +36,18 @@ def _n(v) -> str:
 
 
 def _prf_table(rows: list) -> list:
-    lines = ["| tool | version | arm | N | n_samples | tp | fp | fn |",
-             "|---|---|---|---|---|---|---|---|",
-             "| precision | recall | f1 | | | | | |",
-             "|---|---|---|---|---|---|---|---|"]
+    """One record per data row (PERF P4 remediation ruling 3a): the retired
+    two-line splicing split P/R/F1 onto a padded continuation line that no
+    markdown renderer aligns and hid the numbers from the reader."""
+    lines = ["| tool | version | arm | N | n_samples | tp | fp | fn | "
+             "precision | recall | f1 |",
+             "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rows:
         lines.append(f"| {r['tool']} | {r['version']} | {_n(r['arm'])} | "
                      f"{_n(r['N'])} | {r['n_samples']} | "
-                     f"{r['tp']} | {r['fp']} | {r['fn']} |")
-        lines.append(f"| {_fmt6(r['precision'])} | {_fmt6(r['recall'])} | "
-                     f"{_fmt6(r['f1'])} | | | | | |")
+                     f"{r['tp']} | {r['fp']} | {r['fn']} | "
+                     f"{_fmt6(r['precision'])} | {_fmt6(r['recall'])} | "
+                     f"{_fmt6(r['f1'])} |")
     return lines
 
 
@@ -55,16 +57,15 @@ def _exposure_table(report) -> list:
     if not sig:
         return ["No matched bounds in this pass — the signature rows of the",
                 "CSV carry ``na`` exposure columns (absent bounds stay absent)."]
-    lines = ["| tool | arm | N | signature | layer | status |",
-             "|---|---|---|---|---|---|",
-             "| mean cosine | mean abs err | mean rel err | | | |",
-             "|---|---|---|---|---|---|"]
+    lines = ["| tool | arm | N | signature | layer | status | "
+             "mean cosine | mean abs err | mean rel err |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for r in sig:
-        lines.append(f"| {r['tool']} | {r['arm']} | {r['N']} | {r['signature']} | "
-                     f"{r['layer'] or '—'} | {r['status']} |")
-        lines.append(f"| {_fmt6(r['mean_match_cosine'])} | "
+        lines.append(f"| {r['tool']} | {r['arm']} | {_n(r['N'])} | {r['signature']} | "
+                     f"{r['layer'] or '—'} | {r['status']} | "
+                     f"{_fmt6(r['mean_match_cosine'])} | "
                      f"{_fmt6(r['mean_abs_exposure_error'])} | "
-                     f"{_fmt6(r['mean_rel_exposure_error'])} | | | |")
+                     f"{_fmt6(r['mean_rel_exposure_error'])} |")
     return lines
 
 
@@ -119,6 +120,14 @@ def build_verdict_text(report, meta: dict) -> str:
               else ["No sensitivity-arm cells scored in this pass."])
     lines += ["", "### Exposure errors on matched bounds only", ""]
     lines += _exposure_table(report)
+    if report.dead_strata:
+        lines += ["", "### De-novo strata — declared, not measured", "",
+                  "The cosine gate could not observe these calls (no spectrum",
+                  "witness, or one the strict-coverage law cannot trust), so the",
+                  "zeros below are DECLARED — they are not adjudication output:", ""]
+        lines += [f"- `{name}` — {n} unobservable prediction calls "
+                  f"(``de-novo-unresolved={n}``)" for name, n in report.dead_strata]
+        lines += [""]
     lines += ["",
               "Honest footer: the authoritative measurement class is the docker-adapter",
               "run at the frozen protocol — degraded profile at 100 reps. smoke/mock",

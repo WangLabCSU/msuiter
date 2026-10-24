@@ -39,12 +39,11 @@ M7 = Path(__file__).resolve().parents[1]
 REPO = M7.parents[1]
 ADAPTERS = M7 / "adapters"
 PILOT = M7.parents[1] / "bench" / "results" / "docker_m7_PILOT_20261008-200152"
-REHEARSAL = PILOT / "rehearsal_slice3-r4"
+REHEARSAL = PILOT / audit.REHEARSAL_SLICE
 MANIFEST_PATH = REHEARSAL / "rehearsal_manifest.json"
 RUNNER = ADAPTERS / "run_sigminer.R"
 WITNESS = REHEARSAL / "run_sigminer_fixed.R"
 DOCKERFILE = ADAPTERS / "Dockerfile.sigminer"
-TARBALL = REHEARSAL / "sigminer_2.3.1.tar.gz"
 
 
 def _sha(data: bytes) -> str:

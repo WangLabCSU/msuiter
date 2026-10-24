@@ -14,11 +14,15 @@ the GT). The object is probed (cat-file -e) before extraction: a shaped
 non-object is an immediate loud death -- the 2026-10-15 A2 failure mode.
 The msuiter kernel source rides the same discipline from this repo at
 MSUITER_SOURCE_SHA (the certified-kernel lineage head, attested in the build
-log).
+log). The committed constant is the P6 reproducibility witness and never
+moves; a re-adjudication build may only OVERLAY it with an explicit
+M7_MSUITER_SOURCE_SHA (40-hex validated at the resolver, then subject to the
+very same witnessed-object cat-file gate).
 
 Usage:
   python3 tools/p6_build_arms.py                     # all six
   python3 tools/p6_build_arms.py --only sigminer_post_v3_rust
+  M7_MSUITER_SOURCE_SHA=<40-hex> python3 tools/p6_build_arms.py --only ...
   python3 tools/p6_build_arms.py --scratch /tmp/p6build
 """
 
@@ -26,6 +30,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -45,6 +51,26 @@ GIT_EXE = "git"
 SIGMINER_GT = Path("/Users/wsx/Documents/GitHub/sigminer")
 MSUITER_SRC = HERE.parent.parent                      # the msuiter repo root
 MSUITER_SOURCE_SHA = "dbef3a77dce3f7b2bb9405895c426dd6342167c6"
+FULL_SHA40 = re.compile(r"^[0-9a-f]{40}$")
+
+
+def resolve_msuiter_source_sha() -> str:
+    """The certified-kernel pin THIS build rides. The committed default is
+    the P6 reproducibility witness (sealed by value in
+    tests/test_p6_source_pin_override.py) and may never be replaced; a
+    re-adjudication build rides an EXPLICIT M7_MSUITER_SOURCE_SHA overlay.
+    Format-fail is a pre-flight death; a shaped non-object then dies at the
+    same witnessed-object cat-file gate the default rides -- the overlay
+    adds no trust gap."""
+    override = os.environ.get("M7_MSUITER_SOURCE_SHA")
+    if override is None:
+        return MSUITER_SOURCE_SHA
+    if not FULL_SHA40.match(override):
+        sys.stderr.write(f"[FATAL] M7_MSUITER_SOURCE_SHA={override!r} is not a "
+                         "full lower-case 40-hex commit id -- refused "
+                         "pre-flight (A2-class shaped-mistranscription law)\n")
+        raise SystemExit(2)
+    return override
 
 # The build-input files every context carries, in COPY-name order. The
 # mini_cell_p6/ fixture dir is a COPY source too -- the self-witness's cell
@@ -137,10 +163,24 @@ def assemble(tool: str, scratch: Path) -> tuple[Path, Path]:
 
     _export_tree(SIGMINER_GT, spec["tree_sha"], ctx / "sigminer", log)
     if spec["face"] == "rust":
-        _export_tree(MSUITER_SRC, MSUITER_SOURCE_SHA, ctx / "msuiter", log)
+        _export_tree(MSUITER_SRC, resolve_msuiter_source_sha(),
+                     ctx / "msuiter", log)
     else:
         (ctx / "msuiter").mkdir()   # inert: the FACE-gated layers never read it
     return ctx, log
+
+
+def attested_identity(tool: str, image_digest: str) -> dict:
+    """The [ATTESTED] block: pure identity data -- roster columns plus the
+    resolved source pin. Only build() reaches it, with the inspect-captured
+    digest; nothing hand-typed can join an attestation (SS3 law)."""
+    spec = p6_arms.P6_ARM_SPECS[tool]
+    return {"tool": tool,
+            "image_ref": p6_arms.image_tag(tool, spec.get("revision", 1)),
+            "image_digest": image_digest,
+            "tree_sha": spec["tree_sha"], "face": spec["face"],
+            "msuiter_source_sha": (resolve_msuiter_source_sha()
+                                   if spec["face"] == "rust" else None)}
 
 
 def build(tool: str, scratch: Path) -> dict:
@@ -168,9 +208,7 @@ def build(tool: str, scratch: Path) -> dict:
         sys.stderr.write(f"[FATAL] {tag}: inspect .Id is not sha256+64hex: "
                          f"{digest!r}\n")
         raise SystemExit(2)
-    block = {"tool": tool, "image_ref": tag, "image_digest": digest,
-             "tree_sha": spec["tree_sha"], "face": spec["face"],
-             "msuiter_source_sha": MSUITER_SOURCE_SHA if spec["face"] == "rust" else None}
+    block = attested_identity(tool, digest)
     with log.open("a", encoding="utf-8") as fh:
         fh.write(f"\n[ATTESTED] {json.dumps(block, sort_keys=True)}\n")
     return block

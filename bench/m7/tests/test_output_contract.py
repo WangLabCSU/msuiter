@@ -148,3 +148,84 @@ def test_missing_sidecar_guard_forces_rerun_not_trust():
             "untouched cells must stay cache-hit while the victim re-runs"
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _ledger_lines(cachedir: Path) -> list:
+    p = cachedir / "governance" / "defect_ledger.jsonl"
+    if not p.exists():
+        return []
+    return [ln for ln in p.read_text(encoding="utf-8").splitlines() if ln.strip()]
+
+
+def test_same_epoch_defect_never_restatuses_from_cache():
+    """RB-11(1): a cell defect-flagged while the SAME floor-table law is in
+    force may not re-enter the authoritative table as a silent cache hit.
+    The only legal route past a live defect is a fresh measured pass under
+    the floor gate (the RB-09 fresh-measurement law); the cached bytes are
+    the contested artifact and must not resurrect it."""
+    import json
+    from tools import matrix_governance as gov
+    tmp = _tmp()
+    try:
+        assert run_bench.main(_smoke_argv(tmp)) == 0
+        assert run_bench.main(_smoke_argv(tmp)) == 0        # all cached baseline
+        cachedir = tmp / "cache"
+        victim = sorted(p.name for p in (cachedir / "cells").iterdir()
+                        if p.is_dir())[0]
+        gov.append_defect_record(cachedir,
+                                 {"cell": victim,
+                                  "status": "defect-floor: test witness"})
+        assert run_bench.main(_smoke_argv(tmp)) == 0
+        results = tmp / "results"
+        files = sorted(p for p in results.iterdir()
+                       if p.name.startswith("timings_m7_") and p.name.endswith(".csv"))
+        with files[-1].open(newline="", encoding="utf-8") as fh:
+            rows = {r["cell"]: r for r in csv.DictReader(fh)}
+        assert rows[victim]["status"] == "ok", \
+            f"same-epoch defect re-statused from cache: {rows[victim]!r}"
+        assert float(rows[victim]["seconds"]) > 0.0, \
+            "the fresh pass must carry measured seconds, not the cached 0.0"
+        untouched = [n for n, r in rows.items() if n != victim]
+        assert all(rows[n]["status"] == "cached" for n in untouched), \
+            "the veto must be cell-scoped, not shard-wide"
+        last = _ledger_lines(cachedir)[-1]
+        assert json.loads(last)["cell"] == victim \
+            and json.loads(last)["status"].startswith("defect-"), \
+            "a clean fresh pass may not silently kill the ledger lineage"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_foreign_epoch_defect_keeps_cited_cache_hit():
+    """Counterweight unit: the veto is bound to the CURRENT law. A defect
+    flagged under a different (foreign) floor-table epoch keeps today's
+    semantics -- cache-hit with the re-adjudication citation -- so this fix
+    may not broaden into refusing superseded flags."""
+    import json
+    from tools import matrix_governance as gov
+    tmp = _tmp()
+    try:
+        assert run_bench.main(_smoke_argv(tmp)) == 0
+        assert run_bench.main(_smoke_argv(tmp)) == 0
+        cachedir = tmp / "cache"
+        victim = sorted(p.name for p in (cachedir / "cells").iterdir()
+                        if p.is_dir())[0]
+        assert gov.floor_table_epoch() != "0" * 16
+        p = cachedir / "governance" / "defect_ledger.jsonl"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps({"ts": "2026-01-01T00:00:00Z",
+                                 "epoch": "0" * 16,
+                                 "cell": victim,
+                                 "status": "defect-floor: foreign-era witness"},
+                                sort_keys=True) + "\n")
+        assert run_bench.main(_smoke_argv(tmp)) == 0
+        results = tmp / "results"
+        files = sorted(p for p in results.iterdir()
+                       if p.name.startswith("timings_m7_") and p.name.endswith(".csv"))
+        with files[-1].open(newline="", encoding="utf-8") as fh:
+            rows = {r["cell"]: r for r in csv.DictReader(fh)}
+        assert rows[victim]["status"] == "cached", \
+            f"foreign-epoch flag must not force re-measure: {rows[victim]!r}"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

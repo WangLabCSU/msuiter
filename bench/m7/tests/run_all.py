@@ -21,6 +21,9 @@ Scoring slice (benchmark table + scoring verdicts, U-M7-02 follow-on):
   ⑧ test_scoring_pipeline    closed-form fixture cells -> rows/skips/CSV
   ⑨ test_scoring_judgment    preserved fairness half + appended verdict half
   ⑩ test_scoring_determinism byte-reproducible benchmark CSV over one cachedir
+  (AK) test_scoring_denovo_identity de-novo spectrum resolution + declared-flag
+     (PERF P4 adjudication: catalog-name path byte-preserved, verdict tables
+     well-formed, unobserved zeros declared not measured)
 SigMiner API-contract pin (slice-3 realignment to the witnessed sig_* family):
   ⑪ test_sigminer_api_contract  verbatim NAMESPACE fixture + eradication gates
 Matrix-runner extensions (U-M7-03, arms×N×reps @ pinned seeds):
@@ -130,6 +133,11 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       the drainer never touches its own pid, an unreadable cgroup speaks
       absent/None rather than a fabricated zero, and every v2 key is
       additive under the frozen probe validator
+  (AJ) test_p6_source_pin_override the certified-kernel pin overlay: the
+      committed default byte-preserves the P6 replay witness, an explicit
+      M7_MSUITER_SOURCE_SHA overlay routes the export to the new sha (R-face
+      arms carry none), malformed overlays die pre-flight, and the witnessed-
+      object cat-file gate is inherited verbatim by the overlaid route
 """
 
 from __future__ import annotations
@@ -145,6 +153,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_scoring_match", "test_scoring_metrics", "test_scoring_truth",
            "test_scoring_pipeline", "test_scoring_judgment",
            "test_scoring_determinism",
+           # PERF P4 adjudication (verdict B): de-novo identity seam — spectrum
+           # resolution, strict witness coverage, declared-not-measured flags:
+           "test_scoring_denovo_identity",
            # slice-3: adapter API realignment contract (memo §9c.2/§9d):
            "test_sigminer_api_contract",
            # U-M7-03: matrix-runner extensions (N-selection, dry-run plan,
@@ -184,7 +195,11 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_anchor_registration",
            # PERF P2 pair S: sidecar accounting v2 (cgroup delta, drain-and-
            # reap under the no-undercount law, MSUITER_M7_CG_ROOT injection):
-           "test_p2_pipeline"]
+           "test_p2_pipeline",
+           # PERF P4: certified-kernel pin overlay (re-adjudication builds
+           # ride an env-overridden source sha; the committed default stays
+           # the P6 replay witness):
+           "test_p6_source_pin_override"]
 
 
 def _collect(mod_name):

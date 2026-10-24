@@ -1,0 +1,221 @@
+{
+  "schema": "m7-formals-allowlist-1",
+  "image": "msuiter-sigminer:slice3-r4",
+  "r_version": "4.3.3",
+  "harvested_at": "2026-10-08 23:17:17",
+  "names_source": "called_names.txt (host-minted, 45 tokens)",
+  "entries": {
+    "Sys.time": {
+      "state": "primitive",
+      "env": "base"
+    },
+    "as.character": {
+      "state": "primitive",
+      "env": null
+    },
+    "as.integer": {
+      "state": "primitive",
+      "env": null
+    },
+    "as.matrix": {
+      "state": "ok",
+      "formals": ["x", "..."],
+      "env": "base"
+    },
+    "as.numeric": {
+      "state": "primitive",
+      "env": null
+    },
+    "asNamespace": {
+      "state": "ok",
+      "formals": ["ns", "base.OK"],
+      "env": "base"
+    },
+    "bp_extract_signatures": {
+      "state": "ok",
+      "formals": ["nmf_matrix", "range", "n_bootstrap", "n_nmf_run", "RTOL", "min_contribution", "cores", "cores_solution", "seed", "handle_hyper_mutation", "report_integer_exposure", "only_core_stats", "cache_dir", "keep_cache", "pynmf", "use_conda", "py_path"],
+      "env": "sigminer"
+    },
+    "bp_get_sig_obj": {
+      "state": "ok",
+      "formals": ["obj", "signum"],
+      "env": "sigminer"
+    },
+    "c": {
+      "state": "primitive",
+      "env": null
+    },
+    "cat": {
+      "state": "ok",
+      "formals": ["...", "file", "sep", "fill", "labels", "append"],
+      "env": "base"
+    },
+    "close": {
+      "state": "ok",
+      "formals": ["con", "..."],
+      "env": "base"
+    },
+    "colnames": {
+      "state": "ok",
+      "formals": ["x", "do.NULL", "prefix"],
+      "env": null
+    },
+    "commandArgs": {
+      "state": "ok",
+      "formals": "trailingOnly",
+      "env": "base"
+    },
+    "dir.create": {
+      "state": "ok",
+      "formals": ["path", "showWarnings", "recursive", "mode"],
+      "env": "base"
+    },
+    "exists": {
+      "state": "ok",
+      "formals": ["x", "where", "envir", "frame", "mode", "inherits"],
+      "env": "base"
+    },
+    "fail": {
+      "state": "unresolved",
+      "env": null
+    },
+    "file": {
+      "state": "ok",
+      "formals": ["description", "open", "blocking", "encoding", "raw", "method"],
+      "env": "base"
+    },
+    "file.path": {
+      "state": "ok",
+      "formals": ["...", "fsep"],
+      "env": "base"
+    },
+    "format": {
+      "state": "ok",
+      "formals": ["x", "..."],
+      "env": null
+    },
+    "fromJSON": {
+      "state": "ok",
+      "formals": ["txt", "simplifyVector", "simplifyDataFrame", "simplifyMatrix", "flatten", "..."],
+      "env": "jsonlite"
+    },
+    "getArg": {
+      "state": "unresolved",
+      "env": null
+    },
+    "identical": {
+      "state": "ok",
+      "formals": ["x", "y", "num.eq", "single.NA", "attrib.as.set", "ignore.bytecode", "ignore.environment", "ignore.srcref", "extptr.as.ref"],
+      "env": "base"
+    },
+    "is.matrix": {
+      "state": "primitive",
+      "env": null
+    },
+    "is.na": {
+      "state": "primitive",
+      "env": null
+    },
+    "is.null": {
+      "state": "primitive",
+      "env": null
+    },
+    "length": {
+      "state": "primitive",
+      "env": null
+    },
+    "list": {
+      "state": "primitive",
+      "env": null
+    },
+    "ncol": {
+      "state": "ok",
+      "formals": "x",
+      "env": null
+    },
+    "nrow": {
+      "state": "ok",
+      "formals": "x",
+      "env": null
+    },
+    "options": {
+      "state": "ok",
+      "formals": "...",
+      "env": "base"
+    },
+    "packageVersion": {
+      "state": "ok",
+      "formals": ["pkg", "lib.loc"],
+      "env": "utils"
+    },
+    "paste": {
+      "state": "ok",
+      "formals": ["...", "sep", "collapse", "recycle0"],
+      "env": null
+    },
+    "paste0": {
+      "state": "ok",
+      "formals": ["...", "collapse", "recycle0"],
+      "env": "base"
+    },
+    "read.csv": {
+      "state": "ok",
+      "formals": ["file", "header", "sep", "quote", "dec", "fill", "comment.char", "..."],
+      "env": "utils"
+    },
+    "readLines": {
+      "state": "ok",
+      "formals": ["con", "n", "ok", "warn", "encoding", "skipNul"],
+      "env": "base"
+    },
+    "rownames": {
+      "state": "ok",
+      "formals": ["x", "do.NULL", "prefix"],
+      "env": null
+    },
+    "seq_len": {
+      "state": "primitive",
+      "env": null
+    },
+    "sig_exposure": {
+      "state": "ok",
+      "formals": ["sig", "type"],
+      "env": "sigminer"
+    },
+    "sprintf": {
+      "state": "ok",
+      "formals": ["fmt", "..."],
+      "env": "base"
+    },
+    "stop": {
+      "state": "ok",
+      "formals": ["...", "call.", "domain"],
+      "env": "base"
+    },
+    "storage.mode": {
+      "state": "ok",
+      "formals": "x",
+      "env": "base"
+    },
+    "suppressMessages": {
+      "state": "ok",
+      "formals": ["expr", "classes"],
+      "env": "base"
+    },
+    "suppressWarnings": {
+      "state": "ok",
+      "formals": ["expr", "classes"],
+      "env": "base"
+    },
+    "which": {
+      "state": "ok",
+      "formals": ["x", "arr.ind", "useNames"],
+      "env": null
+    },
+    "writeLines": {
+      "state": "ok",
+      "formals": ["text", "con", "sep", "useBytes"],
+      "env": "base"
+    }
+  }
+}

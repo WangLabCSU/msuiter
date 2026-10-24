@@ -18,10 +18,16 @@ Two artifacts corruptions are contract violations and must fail loudly
 The estimand filter is applied before the duplicate check and keeps the
 ``absolute`` main estimand only (G0 judgment precedent); dropped rows are
 counted into the cell's ``notes`` so the filter is auditable, not invisible.
+
+One *optional* sidecar is additionally consumed: ``out/spectra.csv`` (long
+form ``signature,channel,value``) — the witness by which a de novo
+prediction's committed spectrum can be observed by the scoring side. Its
+absence is legal (catalog-name regimes commit none); its corruption is not.
 """
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 from pathlib import Path
@@ -33,6 +39,8 @@ CELL_KEY_SEPARATOR = "__"
 CELL_N_PREFIX = "N"
 SAMPLE_ID_RE = re.compile(r"^(?P<arm>.+)__N(?P<n>\d+)__r(?P<rep>\d+)$")
 MAIN_ESTIMAND = "absolute"
+SPECTRA_FILE = "spectra.csv"
+_SPECTRA_KEYS = frozenset({"signature", "channel", "value"})
 
 
 class CellContractError(RuntimeError):
@@ -107,3 +115,43 @@ def load_cell_predictions(out_dir: Path | str, arm: str, n: int):
         seen.add(key)
         per_sample.setdefault(sid, {})[rec["signature"]] = rec
     return per_sample, dropped
+
+
+def load_cell_spectra(out_dir: Path | str) -> dict:
+    """Optional witness sidecar ``out/spectra.csv`` -> ``{signature: {channel:
+    value}}``; ``{}`` when the cell committed no witness (the legal catalog-
+    name regime). The witness is long form ``signature,channel,value`` and is
+    read under the same fail-loud contract as the prediction table: a missing
+    column, a duplicated ``(signature, channel)`` claim, or a non-numeric
+    value is a ``CellContractError`` — a half-believed witness is worse than
+    none, it manufactures a cosine out of partial evidence."""
+    path = Path(out_dir) / SPECTRA_FILE
+    if not path.exists():
+        return {}
+    spectra: dict = {}
+    seen: set = set()
+    with path.open(newline="", encoding="utf-8") as fh:
+        reader = csv.DictReader(fh)
+        if reader.fieldnames is None or not _SPECTRA_KEYS <= set(reader.fieldnames):
+            raise CellContractError(
+                f"{path}: spectra witness must be long form "
+                f"signature,channel,value (got {reader.fieldnames!r})")
+        for row in reader:
+            sig, ch = row["signature"], row["channel"]
+            if not sig or not ch:
+                raise CellContractError(
+                    f"{path}: spectra witness row with empty "
+                    f"signature/channel: {row!r}")
+            if (sig, ch) in seen:
+                raise CellContractError(
+                    f"{path}: duplicated witness claim for {(sig, ch)!r} — "
+                    f"refusing to arbitrate two values of one channel")
+            seen.add((sig, ch))
+            try:
+                val = float(row["value"])
+            except (TypeError, ValueError) as e:
+                raise CellContractError(
+                    f"{path}: non-numeric witness value {row['value']!r} "
+                    f"for {(sig, ch)!r}") from None
+            spectra.setdefault(sig, {})[ch] = val
+    return spectra

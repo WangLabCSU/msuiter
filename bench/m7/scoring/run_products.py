@@ -61,6 +61,7 @@ class BenchmarkReport:
     cells_scored: int = 0
     samples_scored: int = 0
     matches: int = 0
+    dead_strata: list = field(default_factory=list)  # [(cell_key, unobserved_calls)]
 
     def row(self, row_type: str, *, tool=None, arm=None, N=None,
             signature=None, judge_class=None) -> dict:
@@ -93,6 +94,18 @@ def _sample_prf(tp: int, fp: int, fn: int) -> tuple:
     return metrics.precision_recall_f1(tp, fp, fn)
 
 
+def _resolve_pred(provider, spectra: dict, channel_labels, sig: str):
+    """Prediction identity resolution (PERF P4 adjudication, verdict B): the
+    catalog column first — a name the catalog knows keeps today's bit-for-bit
+    cosine path — then the committed spectrum witness for de novo names.
+    ``None`` means neither source can observe the call; such a prediction is
+    declared (never vacuously scored) by the caller."""
+    vec = truth.catalog_vector(provider, sig)
+    if vec is not None:
+        return vec
+    return truth.spectra_vector(spectra, sig, channel_labels)
+
+
 def _score_cell(cell_dir: Path, profile: str, provider) -> dict:
     """Score one cell into ``{"cell_row": ..., "sig_rows": ..., ...}``. An
     unscorable cell yields a ``cell_row`` with a ``skipped:*`` status (never
@@ -118,21 +131,26 @@ def _score_cell(cell_dir: Path, profile: str, provider) -> dict:
     version = cells.read_cell_version(cell_dir)
     per_sample, dropped = cells.load_cell_predictions(cell_dir / "out",
                                                      arm=arm, n=n)
+    spectra = cells.load_cell_spectra(cell_dir / "out")
     t_sigs = sorted(truth_map)
+    t_vecs = [truth.truth_vector(provider, t) for t in t_sigs]
     called_union = sorted({rec_sig for calls in per_sample.values()
                            for rec_sig in calls})
-    cos_rows = {sig: [0.0 if truth.catalog_vector(provider, sig) is None else
-                      match.cosine(truth.catalog_vector(provider, sig),
-                                   truth.truth_vector(provider, t))
-                      for t in t_sigs] for sig in called_union}
+    resolved = {sig: _resolve_pred(provider, spectra, provider.channel_labels,
+                                    sig) for sig in called_union}
+    unresolved = frozenset(sig for sig, vec in resolved.items() if vec is None)
+    cos_rows = {sig: ([0.0] * len(t_sigs) if resolved[sig] is None else
+                      [match.cosine(resolved[sig], tv) for tv in t_vecs])
+                for sig in called_union}
 
     acc: dict = {}
     cell_prf, cell_cos = [], []
-    tp = fp = fn = truth_calls = pred_calls = 0
+    tp = fp = fn = truth_calls = pred_calls = unresolved_calls = 0
     for sid in sorted(per_sample):
         calls = {sig: rec for sig, rec in per_sample[sid].items()
                  if metrics.is_countable_call(rec["estimate"], rec["zeroed"])}
         called = sorted(calls)
+        unresolved_calls += sum(1 for sig in called if sig in unresolved)
         s_tp, s_fp, s_fn = 0, len(called), len(t_sigs)
         for t in t_sigs:
             acc.setdefault(t, _new_sig_acc())["truth_n"] += 1
@@ -169,11 +187,20 @@ def _score_cell(cell_dir: Path, profile: str, provider) -> dict:
         truth_calls += len(t_sigs)
         pred_calls += len(called)
 
-    uncatalogued = {sig for sig in acc
-                    if truth.catalog_vector(provider, sig) is None}
+    denovo_observed = {sig for sig in acc
+                       if sig not in unresolved
+                       and truth.catalog_vector(provider, sig) is None}
     notes = []
     if dropped:
         notes.append(f"estimand-rows-dropped={dropped}")
+    dead = None
+    if pred_calls > 0 and tp == 0 and unresolved_calls > 0:
+        # A stratum whose whole story is de novo calls the cosine gate could
+        # not observe is structurally dead: its zeros are DECLARED here (cell
+        # note + report.dead_strata + verdict half), never carried out as a
+        # measured adjudication (vacuous-green doctrine).
+        notes.append(f"de-novo-unresolved={unresolved_calls}")
+        dead = (name, unresolved_calls)
     cell_row = _empty_row("cell") | {
         "tool": tool, "version": version, "arm": arm, "judge_class": jclass,
         "N": n, "n_samples": len(per_sample), "truth_calls": truth_calls,
@@ -200,10 +227,12 @@ def _score_cell(cell_dir: Path, profile: str, provider) -> dict:
             "mean_abs_exposure_error": metrics.mean_or_none(a["abs_err"]),
             "mean_rel_exposure_error": metrics.mean_or_none(a["rel_err"]),
             "match_tolerance": match.MATCH_MIN_COSINE, "status": status,
-            "notes": "uncatalogued" if sig in uncatalogued else ""})
+            "notes": ("uncatalogued" if sig in unresolved else
+                      "denovo-spectra" if sig in denovo_observed else "")})
     return {"cell_row": cell_row, "sig_rows": sig_rows, "version": version,
             "sample_count": len(per_sample), "counts": (tp, fp, fn, truth_calls,
-                                                       pred_calls), "jclass": jclass}
+                                                       pred_calls), "jclass": jclass,
+            "dead": dead}
 
 
 def _skip_row(name: str, tool, reason: str, *, arm=None, N=None) -> dict:
@@ -237,6 +266,8 @@ def score_cachedir(cachedir: Path | str, *, profile: str,
         report.cells_scored += 1
         report.samples_scored += outcome["sample_count"]
         report.matches += outcome["counts"][0]
+        if outcome["dead"] is not None:
+            report.dead_strata.append(outcome["dead"])
         tool_versions.setdefault(outcome["cell_row"]["tool"], outcome["version"])
         _pool(pools, ("arm", outcome["cell_row"]["tool"],
                       outcome["cell_row"]["arm"], outcome["cell_row"]["judge_class"]),

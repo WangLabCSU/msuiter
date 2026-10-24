@@ -1,0 +1,81 @@
+[
+    {
+        "Id": "sha256:090396b1a70ef15c4edc39f10dd297f706bbb6f1923e5b5a6cc694a9bcec6bfb",
+        "RepoTags": [
+            "msuiter-sigminer:slice3-r4"
+        ],
+        "RepoDigests": [
+            "msuiter-sigminer@sha256:090396b1a70ef15c4edc39f10dd297f706bbb6f1923e5b5a6cc694a9bcec6bfb"
+        ],
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-10-08T21:47:16.032090209Z",
+        "Config": {
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "R_VERSION=4.3.3",
+                "R_HOME=/usr/local/lib/R",
+                "TZ=Etc/UTC",
+                "CRAN=https://p3m.dev/cran/__linux__/jammy/2024-04-23",
+                "LANG=en_US.UTF-8"
+            ],
+            "Cmd": [
+                "python3",
+                "/work/m7_entry.py"
+            ],
+            "WorkingDir": "/work",
+            "Labels": {
+                "org.opencontainers.image.authors": "Carl Boettiger <cboettig@ropensci.org>",
+                "org.opencontainers.image.base.name": "docker.io/library/ubuntu:jammy",
+                "org.opencontainers.image.description": "Reproducible builds to fixed version of R",
+                "org.opencontainers.image.licenses": "GPL-2.0-or-later",
+                "org.opencontainers.image.ref.name": "ubuntu",
+                "org.opencontainers.image.revision": "26ca778d654c29084430c17996f177694e5ff50d",
+                "org.opencontainers.image.source": "https://github.com/rocker-org/rocker-versioned2",
+                "org.opencontainers.image.title": "rocker/r-ver",
+                "org.opencontainers.image.vendor": "Rocker Project",
+                "org.opencontainers.image.version": "R-4.3.3"
+            },
+            "ArgsEscaped": true
+        },
+        "Architecture": "arm64",
+        "Os": "linux",
+        "Size": 1753820095,
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:59b223680ef978509f20faf6bf069866dfc02c422159347face0a7565d698526",
+                "sha256:1385cbcf490753a8c1e318aa8bcf412a0ab5ca7e0783581037ee1dde0e5af998",
+                "sha256:6017c9b8f0c10acadf045ab91c618db35aa7b74e9dcd072d7cb2990a38051f27",
+                "sha256:fbf85f2cc8c6b59e8b15f6201a857b751424bbc527f004948ff053ddec38a9a6",
+                "sha256:d4df8c64cc966dfb2786d690f10458fda17b6ff04fa9d5be8a17aab3b828580b",
+                "sha256:6dd647485dfe14a7a493d21844b113ad353c854e60763b4a4dfd9f3d9856eb4c",
+                "sha256:515d1d84559c9fd54ca6d2f2a688f9c98cc96434158fe8c4c87e64a675fa47de",
+                "sha256:154207f0e6b292c6773152c4ef5834a5821b3698d442a2066d5fbb262a64b1db",
+                "sha256:7abb67945d15237f4b3442ed91af0b798c38910cf85f78032be68041fa5ada55",
+                "sha256:bd5e58f995a424497d934fdbb097be6655c7a098d2e1539086f5849e18cc0e9e",
+                "sha256:dd0ee2f6b390ba167da5fc3000687fb56b4e64e0fbc60d2bb15eb315491d24da",
+                "sha256:8ba5eb1d2bb82a2f40ff6909d1f8c0a28aed3e026293549869134b0188cedfef",
+                "sha256:1f512a8cde416eb4a0ac2c3dd50948ab73b3c7c018326682b202b4b788bea129",
+                "sha256:1a53b407888e5b947c989b966a2ac06418f6e92fcf2ad6cf2576b63289c4c635",
+                "sha256:5066fb4ddd52114d274c51115a0c53a82169ab41954dd64ff8f0a8440101c2dc",
+                "sha256:deb512c4612dae2a502dc689bb9401b389a558bf993af1fc76a6e05aaa4ba51b"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-10-08T21:47:16.115001084Z"
+        },
+        "Descriptor": {
+            "mediaType": "application/vnd.oci.image.index.v1+json",
+            "digest": "sha256:090396b1a70ef15c4edc39f10dd297f706bbb6f1923e5b5a6cc694a9bcec6bfb",
+            "size": 856
+        },
+        "Identity": {
+            "Build": [
+                {
+                    "Ref": "sqgdamgxlgxw4udhfe4p6aryf",
+                    "CreatedAt": "2026-10-08T21:47:16.134190709Z"
+                }
+            ]
+        }
+    }
+]

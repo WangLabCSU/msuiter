@@ -129,12 +129,56 @@ def test_prf_table_labels_n_bearing_rollup_rows_without_str_none():
         for cells in data:
             assert "None" not in cells, \
                 f"a rendered table cell leaked str(None): {cells}"
-        n_rows = [c for c in data if len(c) == 8 and c[3] in ("100", "1000")]
+        n_rows = [c for c in data if len(c) == 11 and c[3] in ("100", "1000")]
         assert n_rows, "the smoke grid must produce N-bearing rollup rows"
         for c in n_rows:
             assert c[2] == "—", \
                 f"N-bearing rows must print the absent-label placeholder " \
                 f"in the stratum column, got: {c}"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_verdict_tables_are_wellformed_single_row_markdown():
+    """PERF P4 remediation ruling 3a: every verdict-half table is a valid
+    single-row-per-record markdown table — one header, a separator at
+    position 1 only, uniform column counts, and no continuation rows whose
+    cells are mostly empty (the broken two-row segment rendering this gate
+    retires: a record split across a data line plus a padded header line
+    renders as misaligned garbage and hides numbers from the reader)."""
+    tmp = Path(tempfile.mkdtemp(prefix="m7jdw_"))
+    try:
+        assert _smoke(tmp) == 0
+        text = _judgment_text(tmp / "results")
+        verdict = text[text.find("Scoring verdict"):]
+        run: list = []
+
+        def check(block: list) -> None:
+            if not block:
+                return
+            rows = [[c.strip() for c in ln.strip().strip("|").split("|")]
+                    for ln in block]
+            widths = {len(r) for r in rows}
+            assert len(widths) == 1, (
+                f"table columns not uniform (two-row segments?): {sorted(widths)}")
+            n = len(rows[0])
+            is_sep = [bool(r) and all(c and set(c) <= set("-:") for c in r)
+                     for r in rows]
+            assert is_sep[1] and not any(is_sep[:1] + is_sep[2:]), (
+                f"a markdown table may carry one separator row only, at "
+                f"position 1 (mid-table separators = spliced tables): {block}")
+            for r in rows[2:]:
+                filled = sum(1 for c in r if c)
+                assert filled > n // 2, (
+                    f"continuation-style row with mostly-empty cells: {r!r}")
+
+        for line in verdict.splitlines():
+            if line.strip().startswith("|"):
+                run.append(line)
+            else:
+                check(run)
+                run = []
+        check(run)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
