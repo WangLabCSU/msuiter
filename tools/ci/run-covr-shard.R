@@ -97,7 +97,33 @@ on.exit({
   unlink(c(covr.cargo, covr.target), recursive = TRUE)
 }, add = TRUE)
 
-cov <- try(covr::package_coverage(path = root, type = "tests", quiet = TRUE,
+# Per-shard snapshot of the package tree. covr's instrumented install writes
+# MUTABLE state into the checkout itself -- src/*.o, src/*.gcno, the
+# generated src/Makevars -- so K concurrent package_coverage() calls from one
+# tree trample each other's object files (witnessed: local 6-way wave,
+# five shards covr-failed while every solo probe passed). The snapshot is
+# ~20 MB (the 420 MB src/rust/target build cache rides the private
+# MSUITER_TARGET_DIR, and .git is not needed to install); clonefile cp makes
+# it nearly free on APFS and a plain copy on Linux runners.
+snap <- file.path(tempdir(), paste0("covr-tree-", shard, "-", stamp))
+dir.create(snap, recursive = TRUE)
+entries <- list.files(root, all.files = TRUE, include.dirs = FALSE)
+entries <- setdiff(entries, c(".git", ".Rproj"))
+for (e in entries) {
+  ok <- suppressWarnings(system2("cp", c("-Rc", file.path(root, e), snap),
+                                 stdout = NULL, stderr = NULL))
+  if (!identical(as.integer(ok), 0L))
+    suppressWarnings(system2("cp", c("-R", file.path(root, e), snap),
+                             stdout = NULL, stderr = NULL))
+}
+unlink(file.path(snap, "src/rust/target"), recursive = TRUE)
+unlink(file.path(snap, "src/rust/.cargo"), recursive = TRUE)
+unlink(list.files(file.path(snap, "src"), pattern = "[.](gcda|gcno|o|so|dll)$",
+                   full.names = TRUE))
+unlink(file.path(snap, "src/Makevars"))
+on.exit(unlink(snap, recursive = TRUE), add = TRUE)
+
+cov <- try(covr::package_coverage(path = snap, type = "tests", quiet = TRUE,
                                   install_path = tempfile("covr-lib-"),
                                   pre_clean = FALSE), silent = TRUE)
 # pre_clean = FALSE is load-bearing for the parallel lane: covr's pre-clean
