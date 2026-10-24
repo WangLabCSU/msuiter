@@ -227,7 +227,7 @@ plot_pseudosig_contribution <- function(qc_roster, top = 3L) {
 #' @export
 plot_hypermutator_burden <- function(strat, show_gmm = TRUE) {
   .ms_viz_require_ggplot()
-  if (!S7::S7_inherits(strat, msuiter:::MsStratification)) {
+  if (!S7::S7_inherits(strat, MsStratification)) {
     msuiter_abort(
       "input",
       "strat must be an MsStratification from ms_stratify_hypermutants()",
@@ -313,7 +313,7 @@ plot_opportunity_distribution <- function(opps = NULL,
   .ms_viz_require_ggplot()
   if (is.null(opps)) {
     from <- if (is.character(from) && length(from) >= 1L) from[[1L]] else ""
-    table <- msuiter:::.ms_convert_opps
+    table <- .ms_convert_opps
     if (!from %in% names(table)) {
       msuiter_abort(
         "input",

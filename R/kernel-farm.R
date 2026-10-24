@@ -184,7 +184,7 @@ kp_farm <- function(units, workers = 4L, serve = NULL, mem.probe = NULL,
   # The RSS guard guards the FAN-OUT, before any contact; the serial route
   # brings no new processes, so it is not asked.
   if (workers > 1L && !is.null(mem.probe)) {
-    avail <- tryCatch(mem.probe(), error = function(e) NA_real)
+    avail <- tryCatch(mem.probe(), error = function(e) base::NA_real)
     if (!is.numeric(avail) || length(avail) != 1L || is.na(avail) ||
         avail < .KP_FARM_RSS_FLOOR) {
       stop("farm refuses to fan out: RSS guard -- available headroom ",
