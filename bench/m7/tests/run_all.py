@@ -21,6 +21,9 @@ Scoring slice (benchmark table + scoring verdicts, U-M7-02 follow-on):
   ⑧ test_scoring_pipeline    closed-form fixture cells -> rows/skips/CSV
   ⑨ test_scoring_judgment    preserved fairness half + appended verdict half
   ⑩ test_scoring_determinism byte-reproducible benchmark CSV over one cachedir
+  (AK) test_scoring_denovo_identity de-novo spectrum resolution + declared-flag
+     (PERF P4 adjudication: catalog-name path byte-preserved, verdict tables
+     well-formed, unobserved zeros declared not measured)
 SigMiner API-contract pin (slice-3 realignment to the witnessed sig_* family):
   ⑪ test_sigminer_api_contract  verbatim NAMESPACE fixture + eradication gates
 Matrix-runner extensions (U-M7-03, arms×N×reps @ pinned seeds):
@@ -150,6 +153,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_scoring_match", "test_scoring_metrics", "test_scoring_truth",
            "test_scoring_pipeline", "test_scoring_judgment",
            "test_scoring_determinism",
+           # PERF P4 adjudication (verdict B): de-novo identity seam — spectrum
+           # resolution, strict witness coverage, declared-not-measured flags:
+           "test_scoring_denovo_identity",
            # slice-3: adapter API realignment contract (memo §9c.2/§9d):
            "test_sigminer_api_contract",
            # U-M7-03: matrix-runner extensions (N-selection, dry-run plan,
