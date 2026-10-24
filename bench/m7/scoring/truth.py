@@ -120,3 +120,19 @@ def catalog_vector(provider, signature: str):
     never match and is a false positive by construction."""
     vec = provider.catalog.get(signature)
     return None if vec is None else np.asarray(vec, dtype=float)
+
+
+def spectra_vector(spectra: dict, signature: str, channel_labels):
+    """Full-coverage spectrum vector for one de novo prediction, or ``None``
+    when its witness cannot vouch for it. Strict coverage is the law: a
+    column missing any channel or carrying any non-finite value is NOT
+    partially trusted — the cosine gate could not observe that prediction,
+    and the caller must declare it, never score it (vacuous-green doctrine)."""
+    col = spectra.get(signature)
+    if not col:
+        return None
+    try:
+        vec = [float(col[ch]) for ch in channel_labels]
+    except (KeyError, TypeError, ValueError):
+        return None
+    return np.asarray(vec) if np.all(np.isfinite(vec)) else None
