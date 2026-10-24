@@ -1,0 +1,411 @@
+# U-M7-02 fairness attestation — profile=degraded, adapter=docker, provider=synthetic
+
+This is the **FAIRNESS ATTESTATION** half of the authoritative run: it
+certifies *how* the cells ran, not *who won*.
+
+- single ground truth: all competitors saw msuiter-generated simulated
+  counts from the frozen G0 simulator (master seed 20260928, data streams bit-identical to G0)
+- documented defaults only: zero threshold/parameter overrides (memo §3)
+- frozen thread caps on every container cell: OMP_NUM_THREADS=1, OMP_THREAD_LIMIT=1, R_LIMIT_THREADS=1, GOMAXPROCS=1, MSUITER_THREADS=1, STAN_OMP_NUM_THREADS=1, OPENBLAS_NUM_THREADS=1
+- one Docker VM for every cell (10 vCPU / 8 GB class), no host-side
+  execution of container competitors (§4.1/§4.2)
+- seeds: m7-tool-namespaced derivation, all on disk (Seeds.txt); commit db18eba1d610acfd1dc1e043b15a6e0d50e970dc
+
+| competitor | version | image ref | image digest | status |
+|---|---|---|---|---|
+| sigminer | 2.3.1 | msuiter-sigminer:slice3-r5 | sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9 | ready |
+| sigminer_post_p1 | 2.3.3 | msuiter-sigminer:p6-sigminer_post_p1-r1 | sha256:2e0ef8f6b74a14d8783a9fd03ac2878033cc93c2abb36f1ace927c76e49ef51c | ready |
+| sigminer_post_p1_rust | 2.3.3 | msuiter-sigminer:p6-sigminer_post_p1_rust-r2 | sha256:0959ace3f85a23dcd874e33dd76c3267ec1eb5cf9801dc952c9dcb33b4afefee | ready |
+| sigminer_post_p2 | 2.3.3 | msuiter-sigminer:p6-sigminer_post_p2-r1 | sha256:b85670ebf3ae8b969e3ab17d2f00f117b6adb0d8e0208ae0060df7ec92a5c0a9 | ready |
+| sigminer_post_v3 | 2.3.3 | msuiter-sigminer:p6-sigminer_post_v3-r1 | sha256:d810e886d04ed18519840c734c721a20a7e40ca3fc9fa89fe30d12b2e284c8f7 | ready |
+| sigminer_post_v3_rust | 2.3.3 | msuiter-sigminer:p6-sigminer_post_v3_rust-r2 | sha256:4afb3d8ae7e20bb8e1e45582fbb2503726b880466e22c3aedb7b10d81f187e0e | ready |
+| sigminer_pre_v3 | 2.3.3 | msuiter-sigminer:p6-sigminer_pre_v3-r1 | sha256:57d7381cee1e243959a070b42cccd045fba5152715adce7d13afd1dff20a1d3f | ready |
+| sigprofiler | v1.1.5 | m7-sigprofiler:spa-1.1.5 | sha256:7dba2f43ad3a3858ed1cfdedd278c9c2f52a665fd4c18ac91a482b74258bfbed | ready |
+
+- cells: 168 total — cached: 167, ok: 1
+- timings table: timings_m7_degraded_20261024-200944.csv (G0 six-column prefix + cpu_seconds + hardware pins host/hw_profile; every measured second attributable, every row attests its machine)
+
+Honest footer: this is harness output serving as the adjudication gate.
+Authoritative competitor measurement is the docker-adapter run at the
+frozen protocol; smoke/mock passes prove pipeline plumbing only. This
+half attests fairness, not outcomes; the Hungarian P/R/F1 scoring
+verdict (U-M7-02 scoring slice, ARCHITECTURE §8) is appended below on
+the final pass, produced by the scoring engine over the cachedir.
+
+---
+
+## Scoring verdict — Hungarian-matched P/R/F1 (ARCHITECTURE §8)
+
+Harness output; formal adjudication only via the frozen protocol. Profile `degraded`, adapter `docker`.
+This half is a pure function of the committed cell artifacts plus the
+seed-derived ground truth: no RNG at score time, same cachedir =>
+byte-identical table.
+
+- primary metric: Hungarian one-to-one assignment under catalog
+  cosine, match tolerance **0.85** — the frozen
+  midpoint of the 0.80–0.90 robustness band (benchmark memo
+  2026-10-05 §3; the band is protocol, the midpoint is the
+  least-chosen choice). TODO(paper): pin the citation for the band.
+- below-tolerance pairs are rejected by the matcher and fall out as
+  FP/FN — never as weak matches.
+- full long table (cell | signature | arm_rollup | n_rollup rows,
+  count-pooled rollups): the benchmark_m7_<ts>.csv beside this document.
+
+### Adjudication table — primary (judge) arms
+
+168 cells, 16800 samples, 2844 matched pairs pooled below.
+
+| tool | version | arm | N | n_samples | tp | fp | fn | precision | recall | f1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| sigminer | 2.3.1 | comp_clock_only | — | 300 | 0 | 700 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | comp_flat_triple | — | 300 | 0 | 1200 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | comp_mmr | — | 300 | 0 | 900 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | comp_pole | — | 300 | 0 | 700 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | comp_strong_flat | — | 300 | 0 | 700 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | main | — | 300 | 0 | 600 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | comp_clock_only | — | 300 | 0 | 900 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | comp_flat_triple | — | 300 | 0 | 1300 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | comp_mmr | — | 300 | 0 | 700 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | comp_pole | — | 300 | 0 | 1000 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | comp_strong_flat | — | 300 | 0 | 900 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | main | — | 300 | 0 | 800 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | comp_clock_only | — | 300 | 0 | 600 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | comp_flat_triple | — | 300 | 0 | 580 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | comp_mmr | — | 300 | 0 | 797 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | comp_pole | — | 300 | 0 | 700 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | comp_strong_flat | — | 300 | 0 | 886 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | main | — | 300 | 0 | 699 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | comp_clock_only | — | 300 | 0 | 900 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | comp_flat_triple | — | 300 | 0 | 1200 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | comp_mmr | — | 300 | 0 | 800 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | comp_pole | — | 300 | 0 | 900 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | comp_strong_flat | — | 300 | 0 | 800 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | main | — | 300 | 0 | 800 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | comp_clock_only | — | 300 | 0 | 800 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | comp_flat_triple | — | 300 | 0 | 1200 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | comp_mmr | — | 300 | 0 | 600 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | comp_pole | — | 300 | 0 | 600 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | comp_strong_flat | — | 300 | 0 | 1100 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | main | — | 300 | 0 | 700 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | comp_clock_only | — | 300 | 0 | 600 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | comp_flat_triple | — | 300 | 0 | 775 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | comp_mmr | — | 300 | 0 | 600 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | comp_pole | — | 300 | 0 | 897 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | comp_strong_flat | — | 300 | 0 | 885 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | main | — | 300 | 0 | 800 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | comp_clock_only | — | 300 | 0 | 600 | 600 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | comp_flat_triple | — | 300 | 0 | 1300 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | comp_mmr | — | 300 | 0 | 1100 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | comp_pole | — | 300 | 0 | 600 | 2100 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | comp_strong_flat | — | 300 | 0 | 800 | 1200 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | main | — | 300 | 0 | 800 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigprofiler | v1.1.5 | comp_clock_only | — | 300 | 339 | 559 | 261 | 0.377506 | 0.565000 | 0.452603 |
+| sigprofiler | v1.1.5 | comp_flat_triple | — | 300 | 576 | 534 | 924 | 0.518919 | 0.384000 | 0.441379 |
+| sigprofiler | v1.1.5 | comp_mmr | — | 300 | 273 | 807 | 2127 | 0.252778 | 0.113750 | 0.156897 |
+| sigprofiler | v1.1.5 | comp_pole | — | 300 | 600 | 300 | 1500 | 0.666667 | 0.285714 | 0.400000 |
+| sigprofiler | v1.1.5 | comp_strong_flat | — | 300 | 108 | 837 | 1092 | 0.114286 | 0.090000 | 0.100699 |
+| sigprofiler | v1.1.5 | main | — | 300 | 527 | 775 | 973 | 0.404762 | 0.351333 | 0.376160 |
+| sigminer | 2.3.1 | — | 100 | 500 | 0 | 1200 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | — | 1000 | 500 | 0 | 1300 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | — | 10000 | 500 | 0 | 1600 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | — | 100000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | — | 300000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 100 | 500 | 0 | 1400 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 1000 | 500 | 0 | 1700 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 10000 | 500 | 0 | 1500 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 100000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 300000 | 100 | 0 | 500 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 100 | 500 | 0 | 1183 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 1000 | 500 | 0 | 1089 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 10000 | 500 | 0 | 1290 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 100000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 300000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 100 | 500 | 0 | 1200 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 1000 | 500 | 0 | 1700 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 10000 | 500 | 0 | 1600 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 100000 | 100 | 0 | 400 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 300000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 100 | 500 | 0 | 1400 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 1000 | 500 | 0 | 1600 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 10000 | 500 | 0 | 1400 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 100000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 300000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 100 | 500 | 0 | 1081 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 1000 | 500 | 0 | 1285 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 10000 | 500 | 0 | 1294 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 100000 | 100 | 0 | 297 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 300000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 1000000 | 100 | 0 | 300 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 100 | 500 | 0 | 1200 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 1000 | 500 | 0 | 1700 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 10000 | 500 | 0 | 1700 | 2400 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 100000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 300000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 1000000 | 100 | 0 | 200 | 700 | 0.000000 | 0.000000 | 0.000000 |
+| sigprofiler | v1.1.5 | — | 100 | 500 | 635 | 1033 | 1765 | 0.380695 | 0.264583 | 0.312193 |
+| sigprofiler | v1.1.5 | — | 1000 | 500 | 601 | 1204 | 1799 | 0.332964 | 0.250417 | 0.285850 |
+| sigprofiler | v1.1.5 | — | 10000 | 500 | 587 | 1275 | 1813 | 0.315252 | 0.244583 | 0.275458 |
+| sigprofiler | v1.1.5 | — | 100000 | 100 | 200 | 100 | 500 | 0.666667 | 0.285714 | 0.400000 |
+| sigprofiler | v1.1.5 | — | 300000 | 100 | 200 | 100 | 500 | 0.666667 | 0.285714 | 0.400000 |
+| sigprofiler | v1.1.5 | — | 1000000 | 100 | 200 | 100 | 500 | 0.666667 | 0.285714 | 0.400000 |
+
+### Sensitivity report columns (judge=False)
+
+Report-only: the frozen grid flags these arms ``judge=False``;
+they are reported, never mixed into adjudication (clause b).
+
+| tool | version | arm | N | n_samples | tp | fp | fn | precision | recall | f1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| sigminer | 2.3.1 | clock | — | 100 | 0 | 500 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | nb | — | 100 | 0 | 500 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer | 2.3.1 | sparse | — | 100 | 0 | 300 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | clock | — | 100 | 0 | 300 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | nb | — | 100 | 0 | 500 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | sparse | — | 100 | 0 | 400 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | clock | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | nb | — | 100 | 0 | 368 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | sparse | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | clock | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | nb | — | 100 | 0 | 500 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | sparse | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | clock | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | nb | — | 100 | 0 | 500 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | sparse | — | 100 | 0 | 300 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | clock | — | 100 | 0 | 196 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | nb | — | 100 | 0 | 375 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | sparse | — | 100 | 0 | 300 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | clock | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | nb | — | 100 | 0 | 400 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | sparse | — | 100 | 0 | 200 | 500 | 0.000000 | 0.000000 | 0.000000 |
+| sigprofiler | v1.1.5 | clock | — | 100 | 113 | 220 | 387 | 0.339339 | 0.226000 | 0.271309 |
+| sigprofiler | v1.1.5 | nb | — | 100 | 152 | 246 | 348 | 0.381910 | 0.304000 | 0.338530 |
+| sigprofiler | v1.1.5 | sparse | — | 100 | 156 | 251 | 344 | 0.383292 | 0.312000 | 0.343991 |
+| sigminer | 2.3.1 | — | 1000 | 300 | 0 | 1300 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1 | 2.3.3 | — | 1000 | 300 | 0 | 1200 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p1_rust | 2.3.3 | — | 1000 | 300 | 0 | 768 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_p2 | 2.3.3 | — | 1000 | 300 | 0 | 900 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3 | 2.3.3 | — | 1000 | 300 | 0 | 1000 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_post_v3_rust | 2.3.3 | — | 1000 | 300 | 0 | 871 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigminer_pre_v3 | 2.3.3 | — | 1000 | 300 | 0 | 800 | 1500 | 0.000000 | 0.000000 | 0.000000 |
+| sigprofiler | v1.1.5 | — | 1000 | 300 | 421 | 717 | 1079 | 0.369947 | 0.280667 | 0.319181 |
+
+### Exposure errors on matched bounds only
+
+| tool | arm | N | signature | layer | status | mean cosine | mean abs err | mean rel err |
+|---|---|---|---|---|---|---|---|---|
+| sigprofiler | clock | 1000 | SBS1 | easy | matched | 1.000000 | 144.076923 | 0.960513 |
+| sigprofiler | clock | 1000 | SBS5 | flat | matched | 1.000000 | 72.270000 | 0.240900 |
+| sigprofiler | comp_clock_only | 100 | SBS1 | easy | matched | 1.000000 | 26.857143 | 0.895238 |
+| sigprofiler | comp_clock_only | 100 | SBS5 | flat | matched | 1.000000 | 35.600000 | 0.508571 |
+| sigprofiler | comp_clock_only | 1000 | SBS1 | easy | matched | 1.000000 | 294.250000 | 0.980833 |
+| sigprofiler | comp_clock_only | 1000 | SBS5 | flat | matched | 1.000000 | 419.630000 | 0.599471 |
+| sigprofiler | comp_clock_only | 10000 | SBS1 | easy | matched | 1.000000 | 2951.000000 | 0.983667 |
+| sigprofiler | comp_clock_only | 10000 | SBS5 | flat | matched | 1.000000 | 4322.240000 | 0.617463 |
+| sigprofiler | comp_flat_triple | 100 | SBS1 | easy | matched | 1.000000 | 7.000000 | 0.875000 |
+| sigprofiler | comp_flat_triple | 100 | SBS13 | easy | matched | 1.000000 | 32.000000 | 0.842105 |
+| sigprofiler | comp_flat_triple | 100 | SBS2 | easy | matched | 1.000000 | 17.543210 | 0.461663 |
+| sigprofiler | comp_flat_triple | 100 | SBS5 | flat | matched | 1.000000 | 35.258427 | 4.407303 |
+| sigprofiler | comp_flat_triple | 1000 | SBS2 | easy | matched | 1.000000 | 200.160000 | 0.526737 |
+| sigprofiler | comp_flat_triple | 1000 | SBS5 | flat | matched | 1.000000 | 221.850000 | 2.773125 |
+| sigprofiler | comp_flat_triple | 10000 | SBS2 | easy | matched | 1.000000 | 2025.230000 | 0.532955 |
+| sigprofiler | comp_flat_triple | 10000 | SBS5 | flat | matched | 1.000000 | 1995.630000 | 2.494537 |
+| sigprofiler | comp_mmr | 100 | SBS1 | easy | matched | 1.000000 | 15.826087 | 0.791304 |
+| sigprofiler | comp_mmr | 100 | SBS15 | mmr | matched | 0.997432 | 18.400000 | 2.300000 |
+| sigprofiler | comp_mmr | 100 | SBS44 | mmr | matched | 1.000000 | 27.545455 | 9.181818 |
+| sigprofiler | comp_mmr | 100 | SBS5 | flat | matched | 1.000000 | 20.479452 | 0.511986 |
+| sigprofiler | comp_mmr | 100 | SBS6 | mmr | matched | 1.000000 | 20.750000 | 2.075000 |
+| sigprofiler | comp_mmr | 1000 | SBS1 | easy | matched | 1.000000 | 194.750000 | 0.973750 |
+| sigprofiler | comp_mmr | 1000 | SBS44 | mmr | matched | 1.000000 | 215.666667 | 7.188889 |
+| sigprofiler | comp_mmr | 1000 | SBS5 | flat | matched | 1.000000 | 334.266667 | 0.835667 |
+| sigprofiler | comp_mmr | 10000 | SBS5 | flat | matched | 1.000000 | 3801.695652 | 0.950424 |
+| sigprofiler | comp_pole | 100000 | SBS1 | easy | matched | 1.000000 | 8836.770000 | 0.883677 |
+| sigprofiler | comp_pole | 100000 | SBS5 | flat | matched | 1.000000 | 22635.010000 | 0.646715 |
+| sigprofiler | comp_pole | 300000 | SBS1 | easy | matched | 1.000000 | 26471.350000 | 0.882378 |
+| sigprofiler | comp_pole | 300000 | SBS5 | flat | matched | 1.000000 | 68116.110000 | 0.648725 |
+| sigprofiler | comp_pole | 1000000 | SBS1 | easy | matched | 1.000000 | 88294.360000 | 0.882944 |
+| sigprofiler | comp_pole | 1000000 | SBS5 | flat | matched | 1.000000 | 226988.930000 | 0.648540 |
+| sigprofiler | comp_strong_flat | 100 | SBS5 | flat | matched | 1.000000 | 8.460000 | 0.564000 |
+| sigprofiler | comp_strong_flat | 1000 | SBS5 | flat | matched | 1.000000 | 40.360000 | 0.269067 |
+| sigprofiler | comp_strong_flat | 10000 | SBS5 | flat | matched | 1.000000 | 69.000000 | 0.046000 |
+| sigprofiler | main | 100 | SBS1 | easy | matched | 1.000000 | 12.904762 | 0.860317 |
+| sigprofiler | main | 100 | SBS13 | easy | matched | 1.000000 | 9.250000 | 0.616667 |
+| sigprofiler | main | 100 | SBS2 | easy | matched | 1.000000 | 3.200000 | 0.213333 |
+| sigprofiler | main | 100 | SBS5 | flat | matched | 1.000000 | 14.187500 | 0.472917 |
+| sigprofiler | main | 1000 | SBS1 | easy | matched | 1.000000 | 143.600000 | 0.957333 |
+| sigprofiler | main | 1000 | SBS2 | easy | matched | 1.000000 | 69.107143 | 0.460714 |
+| sigprofiler | main | 1000 | SBS5 | flat | matched | 1.000000 | 83.510417 | 0.278368 |
+| sigprofiler | main | 10000 | SBS1 | easy | matched | 1.000000 | 1480.500000 | 0.987000 |
+| sigprofiler | main | 10000 | SBS2 | easy | matched | 1.000000 | 714.989474 | 0.476660 |
+| sigprofiler | main | 10000 | SBS5 | flat | matched | 1.000000 | 948.478723 | 0.316160 |
+| sigprofiler | nb | 1000 | SBS1 | easy | matched | 1.000000 | 145.250000 | 0.968333 |
+| sigprofiler | nb | 1000 | SBS2 | easy | matched | 1.000000 | 42.487805 | 0.283252 |
+| sigprofiler | nb | 1000 | SBS5 | flat | matched | 1.000000 | 95.368421 | 0.317895 |
+| sigprofiler | sparse | 1000 | SBS1 | easy | matched | 1.000000 | 165.256966 | 0.955567 |
+| sigprofiler | sparse | 1000 | SBS2 | easy | matched | 1.000000 | 74.896732 | 0.433076 |
+| sigprofiler | sparse | 1000 | SBS5 | flat | matched | 1.000000 | 91.707801 | 0.265142 |
+
+### De-novo strata — declared, not measured
+
+The cosine gate could not observe these calls (no spectrum
+witness, or one the strict-coverage law cannot trust), so the
+zeros below are DECLARED — they are not adjudication output:
+
+- `sigminer__clock__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer__comp_clock_only__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer__comp_clock_only__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_flat_triple__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_flat_triple__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer__comp_flat_triple__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer__comp_mmr__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_mmr__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer__comp_pole__N100000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_pole__N300000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_strong_flat__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer__comp_strong_flat__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__comp_strong_flat__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__main__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer__nb__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer__sparse__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__clock__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__comp_clock_only__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__comp_clock_only__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p1__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__comp_flat_triple__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__comp_flat_triple__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p1__comp_flat_triple__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p1__comp_mmr__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__comp_mmr__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__comp_pole__N100000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__comp_pole__N300000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p1__comp_strong_flat__N100` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_p1__comp_strong_flat__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1__comp_strong_flat__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1__main__N10000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_p1__nb__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p1__sparse__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_p1_rust__clock__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_clock_only__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_clock_only__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_flat_triple__N100` — 191 unobservable prediction calls (``de-novo-unresolved=191``)
+- `sigminer_post_p1_rust__comp_flat_triple__N1000` — 193 unobservable prediction calls (``de-novo-unresolved=193``)
+- `sigminer_post_p1_rust__comp_flat_triple__N10000` — 196 unobservable prediction calls (``de-novo-unresolved=196``)
+- `sigminer_post_p1_rust__comp_mmr__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1_rust__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_mmr__N10000` — 297 unobservable prediction calls (``de-novo-unresolved=297``)
+- `sigminer_post_p1_rust__comp_pole__N100000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__comp_pole__N300000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p1_rust__comp_strong_flat__N100` — 292 unobservable prediction calls (``de-novo-unresolved=292``)
+- `sigminer_post_p1_rust__comp_strong_flat__N1000` — 296 unobservable prediction calls (``de-novo-unresolved=296``)
+- `sigminer_post_p1_rust__comp_strong_flat__N10000` — 298 unobservable prediction calls (``de-novo-unresolved=298``)
+- `sigminer_post_p1_rust__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p1_rust__main__N10000` — 299 unobservable prediction calls (``de-novo-unresolved=299``)
+- `sigminer_post_p1_rust__nb__N1000` — 368 unobservable prediction calls (``de-novo-unresolved=368``)
+- `sigminer_post_p1_rust__sparse__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__clock__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__comp_clock_only__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_clock_only__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_clock_only__N10000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_flat_triple__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__comp_flat_triple__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p2__comp_flat_triple__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p2__comp_mmr__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__comp_mmr__N10000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_pole__N100000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_p2__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__comp_pole__N300000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__comp_strong_flat__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__comp_strong_flat__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_p2__comp_strong_flat__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_p2__main__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__main__N10000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_p2__nb__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_p2__sparse__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__clock__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_clock_only__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_clock_only__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_v3__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_flat_triple__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_v3__comp_flat_triple__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_v3__comp_flat_triple__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_v3__comp_mmr__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_mmr__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_pole__N100000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_pole__N300000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__comp_strong_flat__N100` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_v3__comp_strong_flat__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_v3__comp_strong_flat__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3__main__N10000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_v3__nb__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_post_v3__sparse__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_v3_rust__clock__N1000` — 196 unobservable prediction calls (``de-novo-unresolved=196``)
+- `sigminer_post_v3_rust__comp_clock_only__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_clock_only__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_flat_triple__N100` — 188 unobservable prediction calls (``de-novo-unresolved=188``)
+- `sigminer_post_v3_rust__comp_flat_triple__N1000` — 390 unobservable prediction calls (``de-novo-unresolved=390``)
+- `sigminer_post_v3_rust__comp_flat_triple__N10000` — 197 unobservable prediction calls (``de-novo-unresolved=197``)
+- `sigminer_post_v3_rust__comp_mmr__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_mmr__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_mmr__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__comp_pole__N100000` — 297 unobservable prediction calls (``de-novo-unresolved=297``)
+- `sigminer_post_v3_rust__comp_pole__N1000000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_v3_rust__comp_pole__N300000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_post_v3_rust__comp_strong_flat__N100` — 293 unobservable prediction calls (``de-novo-unresolved=293``)
+- `sigminer_post_v3_rust__comp_strong_flat__N1000` — 295 unobservable prediction calls (``de-novo-unresolved=295``)
+- `sigminer_post_v3_rust__comp_strong_flat__N10000` — 297 unobservable prediction calls (``de-novo-unresolved=297``)
+- `sigminer_post_v3_rust__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_post_v3_rust__main__N10000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_post_v3_rust__nb__N1000` — 375 unobservable prediction calls (``de-novo-unresolved=375``)
+- `sigminer_post_v3_rust__sparse__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_pre_v3__clock__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_clock_only__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_clock_only__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_clock_only__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_flat_triple__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_pre_v3__comp_flat_triple__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_pre_v3__comp_flat_triple__N10000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_pre_v3__comp_mmr__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_mmr__N1000` — 500 unobservable prediction calls (``de-novo-unresolved=500``)
+- `sigminer_pre_v3__comp_mmr__N10000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_pre_v3__comp_pole__N100000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_pole__N1000000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_pole__N300000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__comp_strong_flat__N100` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_pre_v3__comp_strong_flat__N1000` — 300 unobservable prediction calls (``de-novo-unresolved=300``)
+- `sigminer_pre_v3__comp_strong_flat__N10000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__main__N100` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__main__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+- `sigminer_pre_v3__main__N10000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_pre_v3__nb__N1000` — 400 unobservable prediction calls (``de-novo-unresolved=400``)
+- `sigminer_pre_v3__sparse__N1000` — 200 unobservable prediction calls (``de-novo-unresolved=200``)
+
+
+Honest footer: the authoritative measurement class is the docker-adapter
+run at the frozen protocol — degraded profile at 100 reps. smoke/mock
+passes prove pipeline plumbing only and are never quoted as results.
+Clock-arm exposure columns are report-only sensitivity rows (undiluted
+tumour-basis truth is an open adjudication item, G0 P2g).
