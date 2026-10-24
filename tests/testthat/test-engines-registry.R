@@ -329,7 +329,7 @@ test_that("derivation accepts a shape-true re-materialization and rejects clones
       deterministic = S7::new_property(default = TRUE)
     ))
   expect_false(identical(attr(twin_child, "parent"), MsEngine))  # the split is real
-  expect_true(.ms_registry_derives(twin_child, MsEngine))         # RED until shape binds
+  expect_true(.ms_registry_derives(twin_child, MsEngine))        # shape+lineage binds
   expect_true(.ms_registry_derives(MsSparse, MsEngine))           # identity path intact
 
   msuiter_registry_reset()
