@@ -288,3 +288,26 @@ test_that("the coverage ledger is reverse-audited and its controls FIRE", {
   expect_identical(r$status, 1L)
   expect_match(r$out, "stale divergences row")
 })
+
+test_that("the covr merge gate reddens zero fragments and the extras prefix cannot drift", {
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  rd <- function(f) paste0(readLines(file.path(root, f), warn = FALSE), collapse = "\n")
+  ci <- rd(".github/workflows/ci.yml")
+  # The birth defect (attested 2026-10-24): zero fragments echoed and exited
+  # 0 -- a vacuous green under the census law of the same day.
+  expect_true(any(grepl("no coverage fragments produced.*exit 1", ci)),
+              info = "the covr merge step exits green on zero fragments again")
+  expect_false(any(grepl("no coverage fragments produced.*exit 0", ci)),
+              info = "the zero-fragment path regressed to the vacuous exit 0")
+  # The second birth defect: the call-site passed --out-srt-prefix=/tmp while
+  # the writer paste0-joined prefix+name -- every extras fragment ever written
+  # landed at "/tmpmsuiter-extras-*" (read-only root on runners), so
+  # examples/vignettes coverage silently never merged. The normalizer lives in
+  # the runner so no call site can re-miss the slash.
+  ex <- rd("tools/ci/run-covr-extras.R")
+  expect_true(any(grepl(".dir.prefix(", ex, fixed = TRUE)),
+              info = "run-covr-extras lost the prefix normalizer")
+  expect_true(any(grepl("prefix <- .dir.prefix(", ex, fixed = TRUE)),
+              info = "production no longer routes out-srt-prefix through the normalizer")
+})

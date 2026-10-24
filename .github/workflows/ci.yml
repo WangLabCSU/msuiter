@@ -821,7 +821,7 @@ jobs:
           for f in covr-srt/*.srt /tmp/msuiter-extras-*.srt; do
             [ -f "$f" ] && fragments="$fragments $f"
           done
-          test -n "$fragments" || { echo "no coverage fragments produced"; exit 0; }
+          test -n "$fragments" || { echo "::error::no coverage fragments produced -- coverage lane vacuous"; exit 1; }
           # shellcheck-disable-next-line SC2086: fragment paths are CI-owned
           python3 tools/ci/covmerge.py --fragments $fragments \
             --out-srt /tmp/msuiter-merged.srt --cobertura cobertura.xml
