@@ -76,6 +76,25 @@ Sys.setenv(MSUITER_TESTTHAT_FILTER = .ci_shard_filter(m$rows, shard),
 on.exit(Sys.unsetenv(c("MSUITER_TESTTHAT_FILTER", "MSUITER_CENSUS_ATTEST",
                       "MSUITER_CENSUS_SHARD")), add = TRUE)
 
+# Per-shard private cargo home + target dir (src/Makevars.in reads these
+# through MSUITER_CARGO_HOME/MSUITER_TARGET_DIR ?= hooks). The in-tree
+# defaults carry an unconditional rm -Rf at the recipe tail and cargo's file
+# lock serializes simultaneous builds on it: under the parallel wave, shards
+# destroyed each other's incremental state and queued behind one cargo lock
+# for the better part of an hour (118-min straggler class, PR #52 coverage
+# run 40044943832 -- attest stayed live=1/7 for ~100 min). Private paths
+# forfeit cross-shard incremental reuse -- correctness over cache warmth.
+stamp <- as.integer(Sys.time())
+covr.cargo <- file.path(tempdir(), paste0("covr-cargo-", shard, "-", stamp))
+covr.target <- file.path(tempdir(), paste0("covr-target-", shard, "-", stamp))
+dir.create(covr.cargo, recursive = TRUE)
+dir.create(covr.target, recursive = TRUE)
+Sys.setenv(MSUITER_CARGO_HOME = covr.cargo, MSUITER_TARGET_DIR = covr.target)
+on.exit({
+  Sys.unsetenv(c("MSUITER_CARGO_HOME", "MSUITER_TARGET_DIR"))
+  unlink(c(covr.cargo, covr.target), recursive = TRUE)
+}, add = TRUE)
+
 cov <- try(covr::package_coverage(path = root, type = "tests", quiet = TRUE,
                                   install_path = tempfile("covr-lib-"),
                                   pre_clean = FALSE), silent = TRUE)
