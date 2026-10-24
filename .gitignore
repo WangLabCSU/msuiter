@@ -62,3 +62,8 @@ docs/site/
 
 # G0 results are regenerated artifacts
 /bench/g0/results/
+
+# instrumented covr-lane byproducts: gcov counters and in-place vignette renders
+/src/*.gcno
+/src/*.gcda
+/vignettes/*.html
