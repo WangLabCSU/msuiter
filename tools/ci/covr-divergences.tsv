@@ -1,0 +1,7 @@
+# covr sanctioned-divergences ledger -- byte-checked by ci-shard-aggregate.py
+# (--ledger), reverse-audited: a row that sanctions nothing is itself a defect.
+# Row: shard<TAB>files-csv<TAB>why-or-dash<TAB>witness
+# The covr lane tests the INSTALLED copy; files that locate the checkout
+# observe structural skips there (the repo-mode arms run them in full).
+1	test-check-layout-sim-sentry.R	-	witnessed PR #52 coverage run 40044943832 + local covr probe 2026-10-24: sentry attests status=vacuous executed=0 skip=1 -- tools/ is not shipped in the installed package; the file runs its full battery in the repo-mode testthat arms
+2	test-check-layout-sim-stale.R	-	witnessed local covr probe 2026-10-24: stale-catalog fixture attests status=vacuous executed=0 skip=1 -- provisioning a fresh INSTALL requires the source checkout, absent from the installed copy; the file runs its full battery in the repo-mode testthat arms

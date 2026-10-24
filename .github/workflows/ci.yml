@@ -41,8 +41,9 @@
 #                 locally in ADR 0002 §4).
 #   coverage    : R coverage via covr -> codecov upload. Sharded for the
 #                 test legs, examples/vignettes as before. Wiring only,
-#                 no gate (R >= 85% is a later milestone target,
-#                 ARCHITECTURE §9); the aggregator runs --advisory and says so.
+#                 no percentage gate (R >= 85% is a later milestone target,
+#                 ARCHITECTURE §9); the attestation census gates -- the
+#                 --advisory non-gate was retired 2026-10-24.
 #
 # The shard partition lives once, in tools/ci/shard-manifest.tsv, and is
 # consumed by guards-shards, the check fan-out arms, and coverage; it is
@@ -117,6 +118,20 @@ jobs:
         shell: bash
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
+      # Fail-closed firing controls for the CI warning-zero tool family
+      # (push-run 39864490318 adjudication). Every scanner ships controls that
+      # must fire; a scanner without a firing control is refused -- so the
+      # proof runs pre-flight here, where a silent vacuity reddens cheaply.
+      - name: CI tool self-tests (covr extras, dep-declaration, R-version attest)
+        shell: bash
+        run: |
+          Rscript tools/ci/run-covr-extras.R --selftest
+          Rscript tools/ci/check-dep-declaration.R --selftest
+          Rscript tools/ci/attest-r-version.R --selftest
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label=release
+
       # The shard manifest is generated, never hand-edited: regenerate at
       # the committed weights and demand byte equality with the committed
       # witness. The same census runs as in-suite units (test-ci-shard-map.R);
@@ -139,6 +154,15 @@ jobs:
 
       - name: docs-sync guard (API surface drift)
         run: Rscript tools/docs-sync.R
+
+      # CAPABILITY-MATRIX.md legend law: checkmark = delivered. The CLI face
+      # of the gate runs here over the source tree (tarball checks have no
+      # docs/, so the testthat face skips there); --self-test first proves
+      # the planted-phantom controls fire before the real audit is trusted.
+      - name: capability-matrix truth validator (checkmark honesty)
+        run: |
+          Rscript tools/check-capability-matrix.R --self-test
+          Rscript tools/check-capability-matrix.R
 
       # vendor.sh regenerates the tarball into /tmp and asserts the exact
       # byte budget frozen in ADR 0002 §2 (needs cargo + xz; both on runner).
@@ -226,6 +250,10 @@ jobs:
         shell: bash
         run: echo "R_HOME=$(R RHOME)" >> "$GITHUB_ENV"
 
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label=release
+
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr) for the repo-layout suite
@@ -239,7 +267,18 @@ jobs:
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
         shell: bash
         run: |
-          R CMD INSTALL --no-docs --no-build-vignettes .
+          # INSTALL's option parser does not know vignette options: this
+          # flag only ever emitted "Warning: unknown option
+          # '--no-build-vignettes'" (push-run 39864490318, every fan-out arm).
+          R CMD INSTALL --no-docs .
+
+      # Namespace-declaration gate (push-run 39864490318): the R6/digest
+      # "not declared from" NOTEs are now caught here before they can ride a
+      # check log unnoticed. Runs post-INSTALL: Suggests are resolved, so a
+      # flag means a declaration lie, not a missing library.
+      - name: Package/namespace declaration census (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/check-dep-declaration.R
 
       - name: Repo-layout testthat shards (parallel, attested)
         shell: bash
@@ -357,6 +396,15 @@ jobs:
           use-public-rspm: true
           http-user-agent: 'R/4.3.0 (github-actions)'
 
+      # Fail-closed R-version attestation (CI warning-zero lane, 2026-10-23):
+      # the 4.3 arm's banner was certified this week by five manual greps over
+      # an archived log; the arm now speaks the fact itself -- resolved version,
+      # DESCRIPTION floor, and a numeric matrix label must match what the
+      # resolver actually delivered (a silent fallback reddens the step).
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label='${{ matrix.config.r }}'
+
       # Never pass an empty `dependencies` input: the action interpolates it
       # into pak's R call and the empty string yields the broken expression
       # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
@@ -443,7 +491,10 @@ jobs:
       - name: R CMD INSTALL (one build of the tree, shared by all shards)
         shell: bash
         run: |
-          R CMD INSTALL --no-docs --no-build-vignettes .
+          # INSTALL's option parser does not know vignette options: this
+          # flag only ever emitted "Warning: unknown option
+          # '--no-build-vignettes'" (push-run 39864490318, every fan-out arm).
+          R CMD INSTALL --no-docs .
 
       - name: Repo-layout testthat fan-out (K shards, attested)
         shell: bash
@@ -558,7 +609,18 @@ jobs:
 
       - name: cargo audit (RustSec advisories, hard-fail on findings)
         working-directory: src/rust
-        run: cargo audit
+        run: |
+          # Single source of truth: the [advisories] ignore ledger in
+          # audit.toml (adjudication text lives with each ID there). The
+          # 0.22.x `audit` subcommand was measured NOT to load audit.toml
+          # (host cargo-audit 0.22.1: byte-identical report with and
+          # without the file; --ignore is honored -- warning-zero sweep
+          # 2026-10-23), so the roster rides the CLI as flags derived from
+          # the ledger: the file is never decorative, and a version that
+          # loads it natively stays consistent (double-ignore is idempotent).
+          ignores=$(sed -n 's/^ *"\(RUSTSEC-[0-9-]*\)".*/--ignore=\1/p' audit.toml | tr '\n' ' ')
+          # shellcheck-disable-next-line SC2086: word splitting is intended
+          cargo audit $ignores
 
   msrv:
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
@@ -637,17 +699,27 @@ jobs:
         run: cargo +1.71.0 test --workspace
 
   coverage:
-    # R-side coverage upload only; no gate here (R >= 85% is a later target,
-    # ARCHITECTURE §9). Rust coverage is not gated (also ARCHITECTURE §9).
-    # The lane's non-gating posture is structural, not a continue-on-error
-    # mask: the shard covr runs attest their own executed work and the
-    # aggregator prints the census -- with --advisory, defects are LOUD but
-    # not fatal, exactly the semantics this arm has always had.
+    # R-side coverage upload only; no percentage gate here (R >= 85% is a
+    # later target, ARCHITECTURE §9). Rust coverage is not gated (also
+    # ARCHITECTURE §9). The attestation census, however, gates (law of
+    # 2026-10-24): the aggregator's --advisory printed defects and exited
+    # green for a year -- a vacuous green in the gate itself. Shards must
+    # attest executed work; the installed-copy context's structural absences
+    # (checkout-locating files skip there) are sanctioned byte-exactly by
+    # tools/ci/covr-divergences.tsv, reverse-audited -- a ledger row that
+    # sanctions nothing is itself a defect.
     # Hot path measures 18 min (run 39815352743); witness run 39839340513
     # ate 40 min of runner-slowness setup before covr even started, and the
-    # 60-minute timer beheaded a healthy shard mid-flight -- 90 carries the
-    # stall class with headroom.
-    timeout-minutes: 90
+    # 60-minute timer beheaded a healthy shard mid-flight -- 90 carried the
+    # stall class with headroom. The headroom ran out: PR #52 consumed the
+    # full 90 twice (runs 40013789288/40028404425) while main's measured
+    # tail already reached 68m53s (push-run 39965044133); the weights table
+    # prices files in testthat seconds, blind to the covr-instrumented cost
+    # of new files. 120 carries the measured tail plus the witness excess;
+    # the in-wave heartbeat below turns any future timer kill into a
+    # measurement (attest rising = slow-but-live, attest flat + live pinned
+    # = hang).
+    timeout-minutes: 120
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -684,27 +756,12 @@ jobs:
           # The examples/vignettes legs ride the SAME parallel wave as the
           # test shards (the historical type="all" was tests+examples+
           # vignettes in one process; here the shards carry the tests leg
-          # and these two instrumented passes carry the rest). Their
-          # covr pre-clean is off for the same shared-cargo-target law the
-          # shard runner documents (run-covr-shard.R).
-          cat > extras-coverage.R <<'RS'
-          for (ty in c("examples", "vignettes")) {
-            cov <- tryCatch(
-              covr::package_coverage(type = ty, quiet = TRUE,
-                                     pre_clean = FALSE,
-                                     install_path = tempfile("covr-lib-")),
-              error = function(e) {
-                cat("covr coverage failed under instrumentation (", ty, "): ",
-                    conditionMessage(e), "\n", sep = "")
-                NULL
-              }
-            )
-            if (!is.null(cov)) {
-              writeLines(covr::to_srt(cov),
-                         paste0("/tmp/msuiter-extras-", ty, ".srt"))
-            }
-          }
-          RS
+          # and these two instrumented passes carry the rest). They once ran
+          # as an inline heredoc whose covr::to_srt call -- an object covr
+          # does not export -- killed the child unattested behind
+          # continue-on-error (push-run 39864490318: fragments=3 not 5). The
+          # committed runner attests every outcome; pre-clean stays off for
+          # the shared-cargo-target law run-covr-shard.R documents.
           pids=""
           for s in $(seq 1 "$k"); do
             Rscript tools/ci/run-covr-shard.R \
@@ -714,17 +771,38 @@ jobs:
               > "covr-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
           done
-          Rscript extras-coverage.R > covr-logs/extras.log 2>&1 &
+          Rscript tools/ci/run-covr-extras.R --out-srt-prefix=/tmp \
+            > covr-logs/extras.log 2>&1 &
           pids="$pids $!"
           rc=0
+          # Heartbeat: attest/live census on the step stream every 120s. The
+          # post-wait transcript echo below never runs when the job timer
+          # fires, so without this a killed wave leaves no progress curve
+          # (PR #52 double-90-min audit: two full-budget deaths, silence as
+          # the only evidence). attest is over the k test shards (extras
+          # attests to its own /tmp prefix); live over the whole wave.
+          total=$((k + 1))
+          t=0
+          while [ "$(jobs -r | wc -l | tr -d ' ')" != "0" ]; do
+            echo "covr-heartbeat t=${t}s attest=$(ls covr-out 2>/dev/null | wc -l | tr -d ' ')/$k live=$(jobs -r | wc -l | tr -d ' ')/$total"
+            t=$((t + 120)); sleep 120
+          done
           for p in $pids; do wait "$p" || rc=1; done
           echo "::group::covr transcripts (tail)"
           for f in covr-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
           echo "::endgroup::"
+
+      # The census gates (law of 2026-10-24 -- the --advisory non-gate let
+      # a year of broken coverage exit green). It rides its own step, outside
+      # the wave's continue-on-error umbrella, so a missing, vacuous or
+      # off-ledger attestation reddens the job; the diagnosability step below
+      # still fires on the failure.
+      - name: Census the covr attestations (gates)
+        run: |
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
-            --attest-dir covr-out --kind coverage --advisory || true
-          exit "$rc"
+            --attest-dir covr-out --kind coverage \
+            --ledger tools/ci/covr-divergences.tsv
 
       - name: Echo failed testthat output (diagnosability)
         if: failure()
@@ -743,7 +821,7 @@ jobs:
           for f in covr-srt/*.srt /tmp/msuiter-extras-*.srt; do
             [ -f "$f" ] && fragments="$fragments $f"
           done
-          test -n "$fragments" || { echo "no coverage fragments produced"; exit 0; }
+          test -n "$fragments" || { echo "::error::no coverage fragments produced -- coverage lane vacuous"; exit 1; }
           # shellcheck-disable-next-line SC2086: fragment paths are CI-owned
           python3 tools/ci/covmerge.py --fragments $fragments \
             --out-srt /tmp/msuiter-merged.srt --cobertura cobertura.xml

@@ -8,10 +8,12 @@
 # writes the MSUITER-ATTEST line. covr dies mid-shard or writes nothing --
 # this runner then attests the absence honestly as status=vacuous.
 #
-# The lane keeps its historical non-gating posture end to end: this script
-# never exits red for coverage content, the aggregator runs it with
-# --advisory, and the workflow step is continue-on-error. Defects are
-# printed by the aggregator either way; nothing here hides them.
+# The census gates (2026-10-24): the aggregator's retired --advisory let a
+# year of broken coverage exit green. This runner still never exits red for
+# coverage CONTENT -- it attests every outcome honestly and the census
+# decides; structural installed-copy absences are sanctioned byte-exactly by
+# tools/ci/covr-divergences.tsv. Defects are printed either way; nothing
+# here hides them.
 #
 # usage: run-covr-shard.R --manifest=<tsv> --shard=<n> --out-srt=<file>
 #                         [--attest=<file>] [--root=<dir>]
@@ -42,6 +44,10 @@ if (!file.exists(file.path(root, "DESCRIPTION"))) {
   })
 }
 source(file.path(root, "tests", "testthat", "helper-ci-shard-census.R"))
+# <!-- census-exempt tokens: 0 --> the moved SRT renderer dropped one
+#     digit-bearing IDENTIFIER token (paste0) into covr-srt-shape.R;
+#     no measured numeric claim of ours left this file with it.
+source(file.path(root, "tools", "ci", "covr-srt-shape.R"))
 
 manifest <- .kv("manifest", file.path(root, "tools", "ci", "shard-manifest.tsv"))
 shard <- as.integer(.kv("shard", NA_character_))
@@ -58,7 +64,7 @@ attest.vacuous <- function(why) {
   writeLines(paste0("MSUITER-ATTEST kind=coverage shard=", shard,
                     " files=0 tests=0 executed=0 pass=0 fail=0 error=0 skip=0",
                     " warn=0 status=vacuous why=", why), attest)
-  cat("run-covr-shard: shard ", shard, " attests vacuous (", why, ") -- advisory\n",
+  cat("run-covr-shard: shard ", shard, " attests vacuous (", why, ") -- for the census\n",
       sep = "", file = stderr())
   quit(status = 0L)
 }
@@ -72,7 +78,52 @@ Sys.setenv(MSUITER_TESTTHAT_FILTER = .ci_shard_filter(m$rows, shard),
 on.exit(Sys.unsetenv(c("MSUITER_TESTTHAT_FILTER", "MSUITER_CENSUS_ATTEST",
                       "MSUITER_CENSUS_SHARD")), add = TRUE)
 
-cov <- try(covr::package_coverage(path = root, type = "tests", quiet = TRUE,
+# Per-shard private cargo home + target dir (src/Makevars.in reads these
+# through MSUITER_CARGO_HOME/MSUITER_TARGET_DIR ?= hooks). The in-tree
+# defaults carry an unconditional rm -Rf at the recipe tail and cargo's file
+# lock serializes simultaneous builds on it: under the parallel wave, shards
+# destroyed each other's incremental state and queued behind one cargo lock
+# for the better part of an hour (118-min straggler class, PR #52 coverage
+# run 40044943832 -- attest stayed live=1/7 for ~100 min). Private paths
+# forfeit cross-shard incremental reuse -- correctness over cache warmth.
+stamp <- as.integer(Sys.time())
+covr.cargo <- file.path(tempdir(), paste0("covr-cargo-", shard, "-", stamp))
+covr.target <- file.path(tempdir(), paste0("covr-target-", shard, "-", stamp))
+dir.create(covr.cargo, recursive = TRUE)
+dir.create(covr.target, recursive = TRUE)
+Sys.setenv(MSUITER_CARGO_HOME = covr.cargo, MSUITER_TARGET_DIR = covr.target)
+on.exit({
+  Sys.unsetenv(c("MSUITER_CARGO_HOME", "MSUITER_TARGET_DIR"))
+  unlink(c(covr.cargo, covr.target), recursive = TRUE)
+}, add = TRUE)
+
+# Per-shard snapshot of the package tree. covr's instrumented install writes
+# MUTABLE state into the checkout itself -- src/*.o, src/*.gcno, the
+# generated src/Makevars -- so K concurrent package_coverage() calls from one
+# tree trample each other's object files (witnessed: local 6-way wave,
+# five shards covr-failed while every solo probe passed). The snapshot is
+# ~20 MB (the 420 MB src/rust/target build cache rides the private
+# MSUITER_TARGET_DIR, and .git is not needed to install); clonefile cp makes
+# it nearly free on APFS and a plain copy on Linux runners.
+snap <- file.path(tempdir(), paste0("covr-tree-", shard, "-", stamp))
+dir.create(snap, recursive = TRUE)
+entries <- list.files(root, all.files = TRUE, include.dirs = FALSE)
+entries <- setdiff(entries, c(".git", ".Rproj"))
+for (e in entries) {
+  ok <- suppressWarnings(system2("cp", c("-Rc", file.path(root, e), snap),
+                                 stdout = NULL, stderr = NULL))
+  if (!identical(as.integer(ok), 0L))
+    suppressWarnings(system2("cp", c("-R", file.path(root, e), snap),
+                             stdout = NULL, stderr = NULL))
+}
+unlink(file.path(snap, "src/rust/target"), recursive = TRUE)
+unlink(file.path(snap, "src/rust/.cargo"), recursive = TRUE)
+unlink(list.files(file.path(snap, "src"), pattern = "[.](gcda|gcno|o|so|dll)$",
+                   full.names = TRUE))
+unlink(file.path(snap, "src/Makevars"))
+on.exit(unlink(snap, recursive = TRUE), add = TRUE)
+
+cov <- try(covr::package_coverage(path = snap, type = "tests", quiet = TRUE,
                                   install_path = tempfile("covr-lib-"),
                                   pre_clean = FALSE), silent = TRUE)
 # pre_clean = FALSE is load-bearing for the parallel lane: covr's pre-clean
@@ -95,15 +146,8 @@ if (inherits(cov, "try-error") || is.null(cov)) {
   attest.vacuous("covr-failed")
 }
 if (!length(cov)) attest.vacuous("empty-cov")
-# The lane SRT is "<hits>|<filename>:<line>" per instrumented line -- one
-# row per covr's own tally_coverage(by = "line") triple (covr exports no
-# to_srt; the renderer here is what covmerge.py's contract names).
-df <- try(covr:::tally_coverage(cov, by = "line"), silent = TRUE)
-if (inherits(df, "try-error") || !is.data.frame(df) || !nrow(df) ||
-    !all(c("filename", "line", "value") %in% names(df))) {
-  attest.vacuous("no-line-rows")
-}
-srt <- paste0(as.character(as.integer(df$value)), "|", df$filename, ":", df$line)
+srt <- .covr_srt_lines(cov)
+if (is.null(srt)) attest.vacuous("no-line-rows")
 if (!length(srt)) attest.vacuous("empty-srt")
 writeLines(srt, out.srt)
 if (file.exists(child.attest)) {

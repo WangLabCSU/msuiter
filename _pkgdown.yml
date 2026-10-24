@@ -85,6 +85,7 @@ reference:
   contents:
   - ms_stratify_hypermutants
   - MsStratification
+  - plot_hypermutator_burden
   - ms_cluster_signatures
   - ms_embed
   - plot_embedding
@@ -112,6 +113,7 @@ reference:
   - ms_import
   - ms_export
   - ms_convert
+  - plot_opportunity_distribution
   - ms_refdb_bundled
   - ms_refdb_manifest
   - ms_catalog_registry
@@ -142,6 +144,8 @@ reference:
   - print.MsQcRosterShare
   - ms_qc_provenance
   - print.MsQcProvenance
+  - plot_qc_dashboard
+  - plot_pseudosig_contribution
   - ms_hrd_report
   - print.MsHrdReport
   - as.data.frame.MsHrdReport

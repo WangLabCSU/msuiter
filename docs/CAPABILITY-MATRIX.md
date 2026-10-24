@@ -9,9 +9,11 @@
 > default method, the visualization deliverable, the delivery milestone. Update
 > once per completed milestone; any claim of "we cover X" is adjudicated
 > against this matrix.
-> Status legend: ✅ designed (architecture ready) · 🔶 partial (a baseline
-> version in v1) · ⏳ deferred to v1.x · 🔭 exploratory · ❌ explicitly not done
-> (non-goal)
+> Status legend: ✅ delivered (the shipped API/face; machine-checked by the
+> capability-matrix truth gate -- a checkmark on an unexported name reddens
+> the suite) · 🔶 partial (a baseline version ships in v1) · ⏳ deferred to
+> v1.x · 🔭 exploratory · ❌ explicitly not done. Architecture-ready designs
+> live in ARCHITECTURE.md; this matrix records what ships.
 > Milestone codenames (the sole authoritative definitions are in
 > [ROADMAP.md](ROADMAP.md)): **M0** engineering foundations (v0.1) · **M1s**
 > engine-and-catalog core (v0.1) · **M1c** catalog completeness + ID83
@@ -65,8 +67,9 @@ not think of" = L-A/L-B/L-E/L-H + the ⚡ items annotated per layer.
 | Engine (method =) | Mainstream source/lineage | Implementation layer | Status | Default |
 |---|---|---|---|---|
 | `ms_nmf(engine="kl")` | Brunet KL-MU (the SigProfiler/MP golden-standard kernel) | Rust | ✅ M1s | **the kernel of the default extraction pipeline** |
-| `ms_nmf(engine="eu"/"hals")` | Lee-EU; HALS (the RcppML idea) | Rust | ✅ M1s/M2 | optional |
-| `ms_nmf(engine="nsnmf"/"offset"/"lsnmf")` | the full R NMF family | Rust | 🔶 (on demand) | — |
+| `ms_nmf(engine="eu")` | Lee-EU MM-MU | Rust | ✅ M1s | optional |
+| `ms_nmf(engine="hals")` | HALS (the RcppML idea) | Rust | ⏳ v1.x | the kernel attests "deliberately absent" (src/rust/engine/src/nmf.rs) |
+| `ms_nmf(engine="nsnmf"/"offset"/"lsnmf")` | the full R NMF family | Rust | ⏳ on demand | — |
 | `ms_ard()` | SignatureAnalyzer ARD (Tan–Févotte; the Broad formula) | Rust | ✅ M2 | diagnostic mode |
 | `ms_sparse()` | the volume-regularized mvNMF (Leplat–Gillis) + L1 (the SparseSignatures idea) | Rust | ✅ M2 | optional |
 | `ms_correlated()` | correlation-aware (the Cornet/Paisley lineage, self-developed optimization) | Rust | ⏳ v1.x | optional (kept or dropped by outcome once pre-registered falsifiable claims qualify, reviews/00 A4) |
@@ -163,15 +166,15 @@ semantics + flat cleaning ✅ v0.2.
 
 | Workflow | Scenario (the research 03 ranking) | Status | Mining/visualization deliverable |
 |---|---|---|---|
-| `ms_atlas_fit()` (the common/rare two-stage atlas mode) | the standard flow of pan-cancer studies | 🔶 v1.0 | the cohort signature-landscape heatmap + the common/rare Sankey plot |
+| `ms_atlas_fit()` (the common/rare two-stage atlas mode) | the standard flow of pan-cancer studies | ⏳ v1.x | the cohort signature-landscape heatmap + the common/rare Sankey plot |
 | `ms_hrd_report()` | clinical HRD compound (Top-1) | ✅ v1.0 | the HRD report page (the verdict + uncertainty + text) |
-| `ms_exposure_panel()` | exposure-attribution epidemiology (Top-3) | ✅ v1.0 | geography/age/exposure-association plots |
-| `ms_lowcount_report()` | panel/ctDNA (Top-5/9) | 🔶 v1.0 | the sensitivity bound + the conformal interval plot |
+| `ms_exposure_panel()` | exposure-attribution epidemiology (Top-3) | ⏳ v1.x | geography/age/exposure-association plots |
+| `ms_lowcount_report()` | panel/ctDNA (Top-5/9) | ⏳ v1.x | the sensitivity bound + the conformal interval plot |
 | cohort mining: the signature x clinical/genomic-feature association sweep + multiple correction + visualization (**the visual data-mining layer**) | a formalization of domain practice (MSU-Infer) | 🔶 v1.0/v1.x | association heatmaps / forest plots / interactive tables |
 | `ms_damage_tempo()` | damage rhythm (near-zero competition) | ⏳ v1.x | the trajectory + test composite plot |
 | `ms_rna_report()` | the RNA-only cohort (Top-8; the G2 conditional upgrade) | ⏳ v1.x | the DNA-RNA concordance plot |
 | therapy forensics / cross-species / CHIP | Top-6/10 | ⏳ v1.x | the therapy timeline plot |
-| the unified report engine (the provenance checklist, multi-page HTML/PDF) | no standard in the domain (a blank) | ✅ v1.0 | common across all workflows |
+| the unified report engine (the provenance checklist; the multi-page HTML/PDF presentation ⏳ v1.x) | no standard in the domain (a blank) | ✅ v1.0 | common across all workflows |
 
 ## L-H platform layer
 
@@ -196,7 +199,8 @@ semantics + flat cleaning ✅ v0.2.
 | `ms_engine()` `fit_engine()` `required_pkgs()` `ms_extract_signatures()` `ms_extract_exposures()` `ms_extract_fit_time()` | L3 | the engine-registry S7 generics (the `ms_extract_*` are generic accessors; only the latter two enter the FFI surface) | M0/M2 |
 | `ms_benchmark()` | L3 | the mlr3-style benchmark grid; a non-certified engine emits an explicit warning | M0 skeleton / M7 complete |
 | `ms_sitrep()` | L3 | environment/dependency/refdb/thread diagnostics | M0 |
-| `ms_qc_report()` `ms_downsample()` `ms_convert()` `ms_update_refdb()` | L2 | the QC report, depth downsampling, opportunity conversion, reference-library update | from the M0 skeleton (`ms_update_refdb()`) / M4 |
+| `ms_qc_report()` `ms_downsample()` `ms_convert()` | L2 | the QC report, depth downsampling, opportunity conversion | from the M0 skeleton |
+| `ms_update_refdb()` | L2 | reference-library update (the cache-side extender for CN/SV/RNA-SBS/mouse sets) | ⏳ M4 |
 | `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | format interoperability, allele-specific CN / SV input, the catalog simulator (the first version of the ms_simulate variant-count layer: the multinomial/poisson/nb three arms, VCF-level placement ⏳M7) | M1c (CN/SV) / M4 (interoperability) / M7-pre (simulate) |
 | `ms_stratify_hypermutants()` | L2 | hypermutator stratification (classification + de novo exclusion + forced refit) | M1c |
 | `ms_atlas_fit()` `ms_hrd_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | application workflows | see L-G |

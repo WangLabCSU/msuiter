@@ -241,6 +241,11 @@ def main():
               REPO / "tools/ci/run-covr-shard.R",
               REPO / "tools/ci/ci-shard-aggregate.py",
               REPO / "tools/ci/covmerge.py",
+              REPO / "tools/ci/covr-srt-shape.R",
+              REPO / "tools/ci/run-covr-extras.R",
+              REPO / "tools/ci/check-dep-declaration.R",
+              REPO / "tools/ci/attest-r-version.R",
+              REPO / "src/rust/audit.toml",
               REPO / "tools/ci/shard-manifest.tsv",
               REPO / "tools/ci/shard-weights.tsv",
               REPO / "tools/ci/fanout-configs.tsv"):
@@ -527,7 +532,7 @@ def main():
     check("msrv runs cargo +1.71.0 test --workspace",
           "cargo +1.71.0 test --workspace" in m)
 
-    # ---- coverage (wiring only, no gate) ----------------------------------
+    # ---- coverage (wiring + the gating law) --------------------------------
     cov_job_text = str(ci["jobs"].get("coverage", {}))
     check("coverage job uses covr", "covr::" in cov_job_text)
     check("coverage test leg is sharded through the shared runner",
@@ -537,17 +542,96 @@ def main():
     coe_steps = [s2 for s2 in ci["jobs"].get("coverage", {}).get("steps", [])
                  if isinstance(s2, dict) and s2.get("continue-on-error") is True]
     # One non-fatal step carries the whole parallel covr wave (test shards +
-    # examples/vignettes ride the same background-pid wave).
-    check("coverage census is ADVISORY, matching the arm's long-standing non-gating law",
-          "--advisory" in cov_job_text and len(coe_steps) >= 1
-          and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps),
-          f"advisory aggregator + {len(coe_steps)} continue-on-error steps")
+    # examples/vignettes ride the same background-pid wave). The census that
+    # adjudicates it is fatal: the advisory era retired 2026-10-24 (f091163)
+    # and the zero-fragment merge path reddens with it (045dc9b).
+    check("coverage wave is non-fatal while the census gating it is fatal",
+          "--advisory" not in cov_job_text
+          and len(coe_steps) >= 1
+          and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps)
+          and any("ci-shard-aggregate.py" in str(s2.get("run", ""))
+                  and "--ledger" in str(s2.get("run", ""))
+                  for s2 in ci["jobs"]["coverage"]["steps"]
+                  if isinstance(s2, dict) and not s2.get("continue-on-error") is True),
+          f"no-advisory + gated --ledger census + {len(coe_steps)} continue-on-error steps")
     check("codecov upload wired", "codecov/codecov-action@" in cov_job_text)
     codecov_steps = [s for s in ci["jobs"].get("coverage", {}).get("steps", [])
                      if "codecov/codecov-action@" in str(s.get("uses", ""))]
     check("codecov upload not gated (fail_ci_if_error false)",
           any(s.get("with", {}).get("fail_ci_if_error") is False
               for s in codecov_steps))
+
+    # ---- warning-zero laws (push-run 39864490318 adjudication, 2026-10-23) --
+    # Each scanner here carries a firing positive control (house law: a
+    # scanner that cannot be proven to fire is a vacuous green and is
+    # refused), and each law closes one annotation class the archived run
+    # spoke against main@e42260a.
+    def _red_lines(blocks, pred):  # noqa - nested law helper
+        return [ln for sc in blocks for ln in sc.splitlines() if pred(ln)]
+
+    all_runs = run_blocks(ci) + run_blocks(sched)
+    # Comment-skip law as the INSTALL rule above: the archived incident may
+    # be NAMED in an adjudication comment (it is); an executed call may not.
+    to_srt_hits = _red_lines(all_runs,
+                             lambda ln: "covr::" in ln and "to_srt" in ln
+                             and not ln.lstrip().startswith("#"))
+    check("workflow text bans the phantom covr::to_srt call (covr 3.6.5 has no such export)",
+          not to_srt_hits, str(to_srt_hits))
+    check("to_srt ban fires on an injected violation (firing control)",
+          _red_lines(["x <- covr::to_srt(cov, file = y)"],
+                     lambda ln: "covr::" in ln and "to_srt" in ln) != [])
+
+    install_flags = ("--no-build-vignettes", "--no-manual")
+    viol = _red_lines(all_runs,
+                      lambda ln: "R CMD INSTALL" in ln and not ln.lstrip().startswith("#")
+                      and any(f in ln for f in install_flags))
+    check("no R CMD INSTALL line passes a vignette/manual option (INSTALL's parser rejects them)",
+          not viol, str(viol))
+    check("INSTALL-option ban fires on an injected violation (firing control)",
+          _red_lines(["R CMD INSTALL --no-docs --no-build-vignettes ."],
+                     lambda ln: "R CMD INSTALL" in ln and not ln.lstrip().startswith("#")
+                     and any(f in ln for f in install_flags)) != [])
+
+    # The cargo-audit ignore ledger: src/rust/audit.toml is the one place an
+    # advisory may be silenced, every entry needs adjudication text, the
+    # roster is FROZEN to the adjudicated set (an ID is immutable, so a
+    # future CVE in the same crate must still fire), and ci.yml must derive
+    # its flags from the ledger -- cargo-audit 0.22.x is measured NOT to load
+    # audit.toml itself, so the workflow is what makes the ledger speak.
+    audit_ledger = REPO / "src/rust/audit.toml"
+    ledger_ids = re.findall(r'"(RUSTSEC-[0-9]+-[0-9]+)"', txt(audit_ledger)) \
+        if audit_ledger.is_file() else []
+    check("audit.toml ignore roster == the adjudicated set",
+          set(ledger_ids) == {"RUSTSEC-2024-0436"}, str(sorted(ledger_ids)))
+    ledger_txt = txt(audit_ledger) if audit_ledger.is_file() else ""
+    check("every audit.toml ignore carries adjudication text",
+          bool(ledger_ids) and all(i in ledger_txt for i in ledger_ids)
+          and "Adjudicated" in ledger_txt,
+          "missing 'Adjudicated' provenance")
+    rust_runs = job_script(ci, "rust")
+    check("rust arm derives cargo-audit ignores from the ledger (single source)",
+          "audit.toml" in rust_runs and "--ignore" in rust_runs,
+          "cargo-audit 0.22.x does not load audit.toml unaided")
+
+    # R-version banner attestation: the 4.3 floor arm's DESCRIPTION claim was
+    # certified by five manual greps once; from now the arms certify it
+    # themselves, fail-closed, and the fan-out matrix label must match what
+    # the resolver actually delivered.
+    fan_text = job_script(ci, "R-CMD-check-fanout")
+    gp_text = job_script(ci, "guard-prep")
+    gs_text = job_script(ci, "guards-shards")
+    check("every R arm attests its version banner (fan-out, guards-shards, guard-prep)",
+          all("attest-r-version.R" in t for t in (fan_text, gs_text, gp_text)))
+    check("numeric matrix labels are certified by the attestation",
+          "matrix.config.r" in fan_text and "--label=" in fan_text)
+    check("guard-prep runs the warning-zero tool self-tests (firing controls gate)",
+          all(f"{t} --selftest" in gp_text
+              for t in ("run-covr-extras.R", "check-dep-declaration.R",
+                        "attest-r-version.R")))
+    check("coverage extras leg rides the committed attested runner",
+          "run-covr-extras.R" in cov_job_text)
+    check("dep-declaration census runs fail-closed in the guards lane",
+          "check-dep-declaration.R" in gs_text and "--selftest" not in gs_text.split("check-dep-declaration.R")[1][:60])
 
     # ---- action pinning (major version) -----------------------------------
     pairs = (action_pins.uses_pairs(ci_text)

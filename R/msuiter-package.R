@@ -7,4 +7,6 @@
 #'
 #' @keywords internal
 #' @useDynLib msuiter, .registration = TRUE
+#' @importFrom stats setNames
+#' @importFrom utils download.file getFromNamespace
 "_PACKAGE"
