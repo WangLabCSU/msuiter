@@ -27,18 +27,31 @@ skip_if_no_ggplot <- function() {
     exx <- normalizePath(exx_raw)
     if (has(exx)) return(exx)
   }
+  # The walker RETURNS its verdict -- a decision never lives inside the
+  # loop. fail() here used to look like a break but records and continues
+  # (this base's expectation semantics), so the exhausted walk spun for
+  # hours under covr's installed copy (witnessed 2026-10-24).
   repeat {
     if (has(dir)) return(dir)
-    up <- file.path(dir, "..")
-    if (identical(normalizePath(up), dir)) {
-      fail("package root with the bundled upstream module not locatable")
-    }
-    dir <- normalizePath(up)
+    up <- normalizePath(file.path(dir, ".."))
+    if (identical(up, dir)) return(NULL)
+    dir <- up
   }
 }
 
+# Installed copies carry no tools/: the byte-truth block skips there with
+# the sanctioned-absence wording (covr-divergences.tsv law) and runs its
+# full battery in the repo-mode testthat arms.
+.b2_root_or_skip <- function() {
+  root <- .b2_root()
+  if (is.null(root)) {
+    skip("tools/ is not shipped in the installed package; the byte-truth block runs in full in the repo-mode testthat arms")
+  }
+  root
+}
+
 .b2_pyfile <- function() {
-  file.path(.b2_root(), "tools", "channel-reference",
+  file.path(.b2_root_or_skip(), "tools", "channel-reference",
             "sigProfilerPlotting-9be822f.py")
 }
 
@@ -80,11 +93,25 @@ skip_if_no_ggplot <- function() {
 # Cross-check channel: the mapping-table TSVs (RGB/256 per class) must
 # reproduce the same hex vector -- parsing and transcription agree or fail.
 .b2_tsv_palette <- function(tsv) {
-  tab <- utils::read.table(file.path(.b2_root(), "tools", "channel-reference", tsv),
+  tab <- utils::read.table(file.path(.b2_root_or_skip(), "tools", "channel-reference", tsv),
                     sep = "\t", header = TRUE, stringsAsFactors = FALSE,
                     check.names = TRUE)
   toupper(sprintf("#%02X%02X%02X", tab$red, tab$green, tab$blue))
 }
+
+test_that("the root walker returns, never spins, when the ancestry holds no root", {
+  # The exhausted walk used to record fail() forever inside repeat (fail()
+  # continues on this base); witnessed 2026-10-24 as a covr shard stuck for
+  # hours. GREEN: from a rootless ancestry the walk comes back NULL in
+  # bounded time.
+  deep <- file.path(tempdir(), "b2-nowhere", "deeper")
+  dir.create(deep, recursive = TRUE, showWarnings = FALSE)
+  old <- getwd(); setwd(deep); on.exit(setwd(old), add = TRUE)
+  t0 <- proc.time()[["elapsed"]]
+  root <- .b2_root()
+  expect_true(is.null(root))
+  expect_lt(as.numeric(proc.time()[["elapsed"]] - t0), 5)
+})
 
 # ---------------------------------------------------------------------------
 # Byte-truth anchor: the bundled upstream module
@@ -112,7 +139,7 @@ test_that("the R DBS78 palette equals the parsed upstream bytes", {
                    .b2_upstream_palette("DBS78", 10L))
   expect_identical(names(consts),
                    utils::read.table(
-                     file.path(.b2_root(), "tools", "channel-reference",
+                     file.path(.b2_root_or_skip(), "tools", "channel-reference",
                                "DBS78.tsv"),
                      sep = "\t", header = TRUE, stringsAsFactors = FALSE,
                      check.names = TRUE)$class)
@@ -124,7 +151,7 @@ test_that("the R ID83 palette equals the parsed upstream bytes", {
                    .b2_upstream_palette("ID83", 16L))
   expect_identical(names(consts),
                    utils::read.table(
-                     file.path(.b2_root(), "tools", "channel-reference",
+                     file.path(.b2_root_or_skip(), "tools", "channel-reference",
                                "ID83.tsv"),
                      sep = "\t", header = TRUE, stringsAsFactors = FALSE,
                      check.names = TRUE)$class)
