@@ -33,10 +33,41 @@
 # TRUE when `class` derives from `ancestor` in the S7 class hierarchy. S7 0.2.2
 # exposes the parent chain through the same attribute its dispatch uses (no
 # exported class_parents()); the registration contract tests cover this walk.
+.ms_registry_lineage_matches <- function(cur, anc) {
+  # Lockstep parent-chain walk: both chains must terminate (NULL) at the same
+  # step with pairwise-equal class names.
+  while (!is.null(cur) && !is.null(anc)) {
+    if (!identical(attr(cur, "name"), attr(anc, "name"))) {
+      return(FALSE)
+    }
+    cur <- attr(cur, "parent")
+    anc <- attr(anc, "parent")
+  }
+  is.null(cur) && is.null(anc)
+}
+
 .ms_registry_derives <- function(class, ancestor) {
+  # Law (2026-10-24, covr coverage-lane forensics): an instrumented lazy-load
+  # DB re-materializes each S7 class independently of the object a subclass'
+  # parent slot captured at install time, so parent-chain identity against a
+  # namespace binding is NOT guaranteed. Accept on address (fast path) or on
+  # full shape + lockstep lineage; never on the name alone -- abstract,
+  # package, property names and the whole parent chain must agree, and the
+  # walk ends only at a simultaneous NULL (a truncated or grafted chain is
+  # rejected).
   cur <- class
+  aname <- attr(ancestor, "name")
   while (!is.null(cur)) {
     if (identical(cur, ancestor)) {
+      return(TRUE)
+    }
+    if (!is.null(aname) && identical(attr(cur, "name"), aname) &&
+        identical(attr(cur, "abstract"), attr(ancestor, "abstract")) &&
+        identical(attr(cur, "package"), attr(ancestor, "package")) &&
+        identical(names(attr(cur, "properties")),
+                  names(attr(ancestor, "properties"))) &&
+        .ms_registry_lineage_matches(attr(cur, "parent"),
+                                     attr(ancestor, "parent"))) {
       return(TRUE)
     }
     cur <- attr(cur, "parent")

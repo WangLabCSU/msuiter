@@ -192,7 +192,7 @@
 #'   denominator), `arms` (`data.frame(chrom, location, arm_start, arm_end)`),
 #'   `ploidy` (numeric; `ploidy[1]` is subtracted by the aneuploidy flag) and
 #'   `rm_black_arms` (single logical, default `FALSE`; drops the acrocentric
-#'   p-arms `{13,14,15,21,22}` from the aneuploidy count). Any other name is
+#'   p-arms `13,14,15,21,22` from the aneuploidy count). Any other name is
 #'   ignored.
 #'
 #' @return An object of class `MsHrdReport`. Its [as.data.frame()][as.data.frame.MsHrdReport]

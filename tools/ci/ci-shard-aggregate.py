@@ -12,9 +12,11 @@ fan-out invocation (kind=fanout). The census is structural, not trust-based:
   * files reported must cover the manifest's shard roster
   * attestations from outside the manifest die too      -- unknown shard
 
---advisory (coverage lane, whose covr arm is non-gating by long-standing
-semantics -- see the coverage step's continue-on-error posture) prints every
-defect it finds but exits green.
+--advisory is retired (2026-10-24): it let the coverage lane print defects
+and exit green -- a vacuous green in the gate itself. The lane gates now. The
+installed-copy context's structural absences are sanctioned the same way
+fan-out skips are: byte-exact rows in the committed divergences ledger
+(--ledger), reverse-audited so a row that sanctions nothing is a defect.
 
 --self-test builds a miniature attestation world, removes pieces from it,
 and requires each control to be OBSERVED FIRING. A control that never
@@ -143,12 +145,48 @@ def write_exclusion_marker(registry, tag, shard, out_path, out):
     return 0
 
 
-def census(manifest, attest_dir, kind, configs, out, exclusions=None):
+def parse_divergences(path, out):
+    """Read the covr sanctioned-divergences ledger (covr-divergences.tsv).
+
+    The covr lane runs the testthat corpus against the INSTALLED copy, a
+    context the repo-mode corpus was not written for: files that locate the
+    checkout (tools/) observe structural skips and attest executed=0. Such
+    an absence is permitted the same way fan-out skips are -- named in the
+    committed ledger, byte-checked at the census, and reverse-audited: a row
+    that sanctions nothing is itself a defect, so the ledger can never bank
+    silence."""
+    rows = {}
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) != 4 or not all(p.strip() for p in parts):
+                out("DEFECT malformed divergences row: %r" % line)
+                return None
+            shard, files, why, witness = parts
+            if not shard.isdigit():
+                out("DEFECT non-integer divergences shard: %r" % line)
+                return None
+            key = int(shard)
+            if key in rows:
+                out("DEFECT duplicate divergences row for shard %d" % key)
+                return None
+            rows[key] = {"files": set(f for f in files.split(",") if f),
+                        "why": why, "witness": witness}
+    return rows
+
+
+def census(manifest, attest_dir, kind, configs, out, exclusions=None,
+           divergences=None):
     k, rows = parse_manifest(manifest)
     roster = {}
     for shard, fname in rows:
         roster.setdefault(shard, []).append(fname)
     defects, executed_total, files_total, fails, errs = [], 0, 0, 0, 0
+    sanctioned_total = 0
+    used_rows = set()
     shards_ok = 0
     excluded_total = 0
     seen = set()
@@ -203,15 +241,39 @@ def census(manifest, attest_dir, kind, configs, out, exclusions=None):
             except (KeyError, ValueError):
                 defects.append("attestation unreadable counters: %s" % name)
                 continue
+            shard_defects = []
             if n_exec <= 0:
-                defects.append("zero executed: %s runs no tests and gates nothing" % name)
+                shard_defects.append("zero executed: %s runs no tests and gates nothing" % name)
             if n_fail != 0 or n_err != 0:
-                defects.append("non-zero fail/error: %s fail=%d error=%d" % (name, n_fail, n_err))
+                shard_defects.append("non-zero fail/error: %s fail=%d error=%d" % (name, n_fail, n_err))
             if fields.get("status") != "ok":
-                defects.append("attestation not ok: %s status=%r" % (name, fields.get("status")))
+                shard_defects.append("attestation not ok: %s status=%r" % (name, fields.get("status")))
             if n_file < len(roster[shard]):
-                defects.append("shard %d attests %d files, manifest names %d"
-                              % (shard, n_file, len(roster[shard])))
+                shard_defects.append("shard %d attests %d files, manifest names %d"
+                                    % (shard, n_file, len(roster[shard])))
+            row = divergences.get(shard) if divergences is not None else None
+            if row is not None:
+                att_why = fields.get("why")
+                why_ok = ((att_why is None and row["why"] == "-")
+                         or att_why == row["why"])
+                files_ok = set(roster[shard]) == row["files"]
+                if (fields.get("status") == "vacuous" and n_exec == 0
+                        and n_fail == 0 and n_err == 0 and why_ok and files_ok):
+                    sanctioned_total += 1
+                    used_rows.add(shard)
+                    out("SANCTIONED %s (shard %d): status=vacuous executed=0 "
+                        "why=%s [witness: %s]"
+                        % (name, shard, "-" if att_why is None else att_why,
+                           row["witness"]))
+                    shard_defects = []
+                else:
+                    shard_defects.append(
+                        "coverage divergences row for shard %d does not match "
+                        "(attestation status=%r why=%r executed=%d fail=%d "
+                        "vs ledger why=%r files=%s)"
+                        % (shard, fields.get("status"), att_why, n_exec,
+                           n_fail, row["why"], ",".join(sorted(row["files"]))))
+            defects.extend(shard_defects)
             executed_total += n_exec; files_total += n_file
             fails += n_fail; errs += n_err
             if n_exec > 0 and n_fail == 0 and n_err == 0 and fields.get("status") == "ok":
@@ -221,9 +283,16 @@ def census(manifest, attest_dir, kind, configs, out, exclusions=None):
             defects.append("unknown attestation (outside manifest): %s" % name)
         if name.endswith(".excl") and name not in seen:
             defects.append("rogue exclusion marker (unregistered): %s" % name)
-    out("AGGREGATE kind=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d excluded=%d defects=%d"
+    if divergences is not None:
+        for shard in sorted(divergences):
+            if shard not in used_rows:
+                defects.append("stale divergences row: shard %d sanctioned nothing "
+                               "(attestation healthy, absent, or off the row's byte "
+                               "signature -- ledger is [%s])"
+                               % (shard, divergences[shard]["witness"][:60]))
+    out("AGGREGATE kind=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d excluded=%d sanctioned=%d defects=%d"
         % (kind, shards_ok, k, files_total, len(rows), executed_total, fails, errs,
-           excluded_total, len(defects)))
+           excluded_total, sanctioned_total, len(defects)))
     for d in defects:
         out("DEFECT " + d)
     return len(defects)
@@ -369,6 +438,74 @@ def self_test(out):
             os.remove(mk_path)
             with open(at_path, "w") as fh:
                 fh.write(fanatt(2, mine) + "\n")
+        # -- Covr sanctioned-divergences ledger law (covr-divergences.tsv).
+        # The installed-copy context gives checkout-locating files structural
+        # executed=0 attests (sentry class, PR #52 forensics); the census
+        # gates, the ledger sanctions byte-exact vacuities, and rows that
+        # sanction nothing are themselves defects -- the ledger can never
+        # bank silence. --
+        for nm in list(os.listdir(adir)):
+            os.remove(os.path.join(adir, nm))
+        def covatt(shard, files, executed, status, why=None, skip=None):
+            d = {"kind": "coverage", "shard": str(shard), "files": str(files),
+                 "tests": str(executed + (1 if status == "vacuous" else 0)),
+                 "executed": str(executed), "pass": str(executed),
+                 "fail": "0", "error": "0",
+                 "skip": str(skip if skip is not None else 0),
+                 "warn": "0", "status": status}
+            if why is not None:
+                d["why"] = why
+            return " ".join(["MSUITER-ATTEST"] + ["%s=%s" % kv for kv in d.items()])
+        with open(os.path.join(adir, "shard-1.attest"), "w") as fh:
+            fh.write(covatt(1, 0, 0, "vacuous", skip=1) + "\n")
+        with open(os.path.join(adir, "shard-2.attest"), "w") as fh:
+            fh.write(covatt(2, 1, 4, "ok") + "\n")
+        collected = []
+        n = census(man, adir, "coverage", None, collected.append)
+        fired.append(n > 0 and any("zero executed" in c for c in collected))
+        out("covr-ungated-vacuous control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: covr vacuous slipped without a ledger")
+        led = os.path.join(base, "div.tsv")
+        def write_led(body):
+            with open(led, "w") as fh:
+                fh.write("# ledger\n" + body)
+        def cov_census(ledger_path):
+            rows = parse_divergences(ledger_path, out) if ledger_path else None
+            if rows is None and ledger_path:
+                return -1, []
+            collected = []
+            n = census(man, adir, "coverage", None, collected.append,
+                       divergences=rows)
+            return n, collected
+        write_led("1\ttest-a.R,test-b.R\t-\tself-test fixture\n")
+        n, collected = cov_census(led)
+        fired.append(n == 0 and any("SANCTIONED" in c for c in collected)
+                    and any("sanctioned=1" in c for c in collected))
+        out("covr-sanction control stays GREEN" if fired[-1]
+            else "SELF-TEST BROKEN: sanctioned covr vacuous went RED: %s" % collected)
+        write_led("1\ttest-a.R,test-b.R\tbogus-why\tself-test fixture\n")
+        n, collected = cov_census(led)
+        fired.append(n > 0 and any("does not match" in c for c in collected))
+        out("covr-forged-why control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: forged why passed: %s" % collected)
+        write_led("1\ttest-wrong.R\t-\tself-test fixture\n")
+        n, collected = cov_census(led)
+        fired.append(n > 0 and any("does not match" in c for c in collected))
+        out("covr-files-drift control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: roster drift passed: %s" % collected)
+        with open(os.path.join(adir, "shard-1.attest"), "w") as fh:
+            fh.write(covatt(1, 0, 0, "vacuous", why="covr-failed") + "\n")
+        write_led("1\ttest-a.R,test-b.R\t-\tself-test fixture\n")
+        n, collected = cov_census(led)
+        fired.append(n > 0 and any("covr-failed" in c for c in collected))
+        out("covr-failed masquerade control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: covr-failed masqueraded as sanctioned: %s" % collected)
+        with open(os.path.join(adir, "shard-1.attest"), "w") as fh:
+            fh.write(covatt(1, 2, 5, "ok") + "\n")
+        n, collected = cov_census(led)
+        fired.append(n > 0 and any("stale divergences row" in c for c in collected))
+        out("covr-stale-row control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: stale row rode unseen: %s" % collected)
         if not all(fired):
             out("AGGREGATE SELF-TEST FAILED")
             return 1
@@ -382,9 +519,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest"); ap.add_argument("--attest-dir")
     ap.add_argument("--kind", choices=["guards", "fanout", "coverage"], default="guards")
-    ap.add_argument("--fanout-configs"); ap.add_argument("--advisory", action="store_true")
+    ap.add_argument("--fanout-configs")
     ap.add_argument("--expect-config", help="fan-out: the arm's own OS-RCFG tag; the expected set is scoped to it")
     ap.add_argument("--exclusions", help="fan-out: the sanctioned-skip ledger (shard-exclusions.tsv)")
+    ap.add_argument("--ledger", help="coverage: the sanctioned-divergences ledger (covr-divergences.tsv)")
     ap.add_argument("--write-exclusion-marker", action="store_true",
                     help="render the marker ci.yml must leave for a registered (tag, shard)")
     ap.add_argument("--tag"); ap.add_argument("--shard"); ap.add_argument("--out")
@@ -428,10 +566,16 @@ def main(argv=None):
         exclusions = parse_exclusions(a.exclusions, out)
         if exclusions is None:
             return 2
-    n = census(a.manifest, a.attest_dir, a.kind, configs, out, exclusions=exclusions)
-    if n and a.advisory:
-        out("ADVISORY kind=%s: %d defects tolerated (non-gating lane)" % (a.kind, n))
-        return 0
+    divergences = None
+    if a.ledger:
+        if a.kind != "coverage":
+            out("DEFECT --ledger is coverage-only (kind=%s)" % a.kind)
+            return 2
+        divergences = parse_divergences(a.ledger, out)
+        if divergences is None:
+            return 2
+    n = census(a.manifest, a.attest_dir, a.kind, configs, out,
+               exclusions=exclusions, divergences=divergences)
     return 1 if n else 0
 
 

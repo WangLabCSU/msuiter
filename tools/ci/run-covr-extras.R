@@ -62,6 +62,15 @@
 )
 .STUB_SRT <- c("5|R/fit.R:10", "0|R/fit.R:11", "2|R/score.R:4")
 
+# --out-srt-prefix is a DIRECTORY: the writer joins prefix + name directly,
+# so the separator is decided once here, not at each call site (ci.yml
+# shipped the slashless "/tmp" and every extras fragment ever made landed
+# unreadable at /tmpmsuiter-extras-* -- attested 2026-10-24).
+.dir.prefix <- function(x) {
+  if (!nzchar(x)) return("/tmp/")
+  if (grepl("/$", x)) x else paste0(x, "/")
+}
+
 .run.production <- function() {
   root <- .kv("root", getwd())
   if (!file.exists(file.path(root, "DESCRIPTION"))) {
@@ -70,7 +79,7 @@
   }
   source(file.path(root, "tools", "ci", "covr-srt-shape.R"))
   types <- strsplit(.kv("types", "examples,vignettes"), ",", fixed = TRUE)[[1L]]
-  prefix <- .kv("out-srt-prefix", "/tmp")
+  prefix <- .dir.prefix(.kv("out-srt-prefix", "/tmp"))
   attest <- function(ty, status, why = NULL, lines = NULL) {
     line <- paste0("EXTRAS-ATTEST type=", ty, " status=", status,
                    if (is.null(why)) "" else
@@ -162,9 +171,11 @@
   }, add = TRUE)
   Sys.setenv(R_LIBS_SITE = "", R_PROFILE = "no", R_ENIRON = "no")
 
-  run.child <- function(leg, type) {
+  run.child <- function(leg, type, slash = TRUE) {
     lib <- file.path(fix, paste0("lib-", leg))
-    dir.create(lib, recursive = TRUE)
+    # Control 4 shares the good stub's library; dir.create would warn on the
+    # second visit and the green path must stay warning-zero.
+    if (!dir.exists(lib)) dir.create(lib, recursive = TRUE)
     st <- suppressWarnings(system2(ex$R, c("CMD", "INSTALL", "--no-docs",
                                             paste0("--library=", lib), stubs[[leg]]),
                                    stdout = file.path(out.dir, paste0("install-", leg, ".out")),
@@ -185,7 +196,8 @@
     Sys.setenv(R_LIBS_USER = lib)
     r <- suppressWarnings(system2(ex$Rscript,
         c(file.path(root, "tools", "ci", "run-covr-extras.R"),
-          paste0("--types=", type), paste0("--out-srt-prefix=", paste0(out.dir, "/")),
+          paste0("--types=", type),
+          paste0("--out-srt-prefix=", if (slash) paste0(out.dir, "/") else out.dir),
           paste0("--root=", root)),
         stdout = cap.o, stderr = cap.e, wait = TRUE))
     txt <- character()
@@ -236,11 +248,20 @@
          "phantom control: did not speak the attested no-line-rows verdict")
   expect(!file.exists(p$srt), "phantom control: wrote an SRT anyway")
 
+  # Control 4 (birth defect, the slashless call site): a prefix without the
+  # trailing separator must still deliver the fragment beside its siblings --
+  # what every ci.yml extras leg ever asked for and never got.
+  n <- run.child("good", "noslash", slash = FALSE)
+  expect(identical(n$status, 0L), "noslash control: child status not 0")
+  expect(grepl("EXTRAS-ATTEST type=noslash status=ok lines=3", n$txt),
+         "noslash control: did not speak status=ok through a slashless prefix")
+  expect(file.exists(n$srt), "noslash control: fragment did not land beside its siblings")
+
   if (length(defects)) {
     for (dd in defects) cat("EXTRAS SELF-TEST FAILED:", dd, "\n", sep = " ", file = stderr())
     quit(status = 1L)
   }
-  cat("EXTRAS SELF-TEST OK (3 controls: ok bytes + covmerge agreement, covr-failed, no-line-rows)\n")
+  cat("EXTRAS SELF-TEST OK (4 controls: ok bytes + covmerge agreement, covr-failed, no-line-rows, slashless prefix landing)\n")
   quit(status = 0L)
 }
 

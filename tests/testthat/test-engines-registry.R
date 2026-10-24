@@ -305,3 +305,47 @@ test_that("non-certified engines warn once per session per engine on resolution"
   .register_synth("synth_cert")
   expect_no_warning(match_ms_engine("synth_cert"))
 })
+
+# Law (2026-10-24, covr coverage-lane forensics): an instrumented lazy-load
+# DB re-materializes each S7 class independently of the object the subclass'
+# parent slot captured at install time, so derivation must bind to shape and
+# lineage, never to object address. Witness: PR #52 covr child transcripts,
+# REARM-DEGRADED on every engine re-arm under covr.
+test_that("derivation accepts a shape-true re-materialization and rejects clones", {
+  twin_shape <- function() list(
+    name = S7::new_property(S7::class_character),
+    mode = S7::new_property(S7::class_character),
+    params = S7::new_property(S7::class_list, default = list()),
+    deterministic = S7::new_property(S7::class_logical),
+    packages = S7::new_property(S7::class_character, default = character(0)),
+    label = S7::new_property(S7::class_character, default = "")
+  )
+  twin <- S7::new_class("MsEngine", package = "msuiter", abstract = TRUE,
+                        properties = twin_shape())
+  twin_child <- S7::new_class("MsTwinKl", package = "msuiter", parent = twin,
+    properties = list(
+      name = S7::new_property(default = "twin_kl"),
+      mode = S7::new_property(default = "fit"),
+      deterministic = S7::new_property(default = TRUE)
+    ))
+  expect_false(identical(attr(twin_child, "parent"), MsEngine))  # the split is real
+  expect_true(.ms_registry_derives(twin_child, MsEngine))        # shape+lineage binds
+  expect_true(.ms_registry_derives(MsSparse, MsEngine))           # identity path intact
+
+  msuiter_registry_reset()
+  expect_no_error(register_ms_engine(
+    name = "twin_kl", mode = "fit", engine_class = twin_child,
+    fit_fn = .make_fit_fn(), tags = "synthetic",
+    engine_version = "0.1.0", contract_version = "1",
+    certified = "certified"))
+
+  # adversarial: a name-only MsEngine clone (no shape, not abstract) must not pass
+  bogus <- S7::new_class("MsEngine", package = "msuiter")
+  expect_false(.ms_registry_derives(
+    S7::new_class("MsBogusKid", package = "msuiter", parent = bogus), MsEngine))
+  # adversarial: full shape under a foreign package identity must not pass
+  alien <- S7::new_class("MsEngine", package = "msuiter.test", abstract = TRUE,
+                         properties = twin_shape())
+  expect_false(.ms_registry_derives(
+    S7::new_class("MsAlienKid", package = "msuiter", parent = alien), MsEngine))
+})

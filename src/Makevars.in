@@ -1,4 +1,10 @@
-TARGET_DIR = ./rust/target
+# Concurrent covr shards each run their own in-tree Rust build; the defaults
+# below are shared paths whose recipes end in rm -Rf, so parallel installs
+# destroy each other's cargo state. The covr wave (run-covr-shard.R) points
+# each shard at a private home/target through these namespaced env vars.
+MSUITER_CARGO_HOME ?= $(CURDIR)/.cargo
+MSUITER_TARGET_DIR ?= ./rust/target
+TARGET_DIR = $(MSUITER_TARGET_DIR)
 LIBDIR = $(TARGET_DIR)/@LIBDIR@
 STATLIB = $(LIBDIR)/libmsuiter.a
 PKG_LIBS = -L$(LIBDIR) -lmsuiter

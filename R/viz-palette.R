@@ -45,6 +45,55 @@
 # The gray for the simplified non-SBS96 faces (DBS78/ID83 first pass).
 .ms_viz_mono_color <- "#4D4D4D"
 
+# The DBS78 legend palette, verified byte-for-byte against the bundled
+# upstream module (tools/channel-reference/sigProfilerPlotting-9be822f.py,
+# make_pickle_file branch context "DBS78", colors list at L915): the
+# RGB/256 triples below are the parsed source entries. Key = the reference
+# dinucleotide each color represents; the key/color pairing is attested by
+# two independent upstream sources (legend Rectangle geometry and the
+# plotDBS LabelEncoder bar-face indexing -- see
+# tools/channel-reference/DBS78-mapping-notes.md). The freeze is tested
+# against the committed file itself in test-viz-batch2.R (byte-truth law,
+# no re-typed literals).
+.ms_viz_dbs78_colors <- function() {
+  c(
+    "AC" = "#03BDEF", # [3, 189, 239]/256
+    "AT" = "#0366CC", # [3, 102, 204]/256
+    "CC" = "#A2CF63", # [162, 207, 99]/256
+    "CG" = "#016601", # [1, 102, 1]/256
+    "CT" = "#FF9999", # [255, 153, 153]/256
+    "GC" = "#E42926", # [228, 41, 38]/256
+    "TA" = "#FFB266", # [255, 178, 102]/256
+    "TC" = "#FF8001", # [255, 128, 1]/256
+    "TG" = "#CC99FF", # [204, 153, 255]/256
+    "TT" = "#4C0199"  # [76, 1, 153]/256
+  )
+}
+
+# The ID83 legend palette, same byte-truth policy (branch context "ID83",
+# colors list at L1182; key derivation via the plotID xlables token
+# matching -- tools/channel-reference/ID83-mapping-notes.md).
+.ms_viz_id83_colors <- function() {
+  c(
+    "1DelC" = "#FDBE6F", # [253, 190, 111]/256
+    "1DelT" = "#FF8002", # [255, 128, 2]/256
+    "1InsC" = "#B0DD8B", # [176, 221, 139]/256
+    "1InsT" = "#36A12E", # [54, 161, 46]/256
+    "2DelR" = "#FDCAB5", # [253, 202, 181]/256
+    "3DelR" = "#FC8A6A", # [252, 138, 106]/256
+    "4DelR" = "#F14432", # [241, 68, 50]/256
+    "5DelR" = "#BC191A", # [188, 25, 26]/256
+    "2InsR" = "#D0E1F2", # [208, 225, 242]/256
+    "3InsR" = "#94C4DF", # [148, 196, 223]/256
+    "4InsR" = "#4A98C9", # [74, 152, 201]/256
+    "5InsR" = "#1764AB", # [23, 100, 171]/256
+    "2DelM" = "#E2E2EF", # [226, 226, 239]/256
+    "3DelM" = "#B6B6D8", # [182, 182, 216]/256
+    "4DelM" = "#8683BD", # [134, 131, 189]/256
+    "5DelM" = "#62409B"  # [98, 64, 155]/256
+  )
+}
+
 # Canonical-order guard shared with the interop face: the viz faces
 # refuse to reorder silently.
 .ms_viz_check_table <- function(labels, tables = c("SBS96", "DBS78")) {

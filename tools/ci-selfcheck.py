@@ -532,7 +532,7 @@ def main():
     check("msrv runs cargo +1.71.0 test --workspace",
           "cargo +1.71.0 test --workspace" in m)
 
-    # ---- coverage (wiring only, no gate) ----------------------------------
+    # ---- coverage (wiring + the gating law) --------------------------------
     cov_job_text = str(ci["jobs"].get("coverage", {}))
     check("coverage job uses covr", "covr::" in cov_job_text)
     check("coverage test leg is sharded through the shared runner",
@@ -542,11 +542,18 @@ def main():
     coe_steps = [s2 for s2 in ci["jobs"].get("coverage", {}).get("steps", [])
                  if isinstance(s2, dict) and s2.get("continue-on-error") is True]
     # One non-fatal step carries the whole parallel covr wave (test shards +
-    # examples/vignettes ride the same background-pid wave).
-    check("coverage census is ADVISORY, matching the arm's long-standing non-gating law",
-          "--advisory" in cov_job_text and len(coe_steps) >= 1
-          and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps),
-          f"advisory aggregator + {len(coe_steps)} continue-on-error steps")
+    # examples/vignettes ride the same background-pid wave). The census that
+    # adjudicates it is fatal: the advisory era retired 2026-10-24 (f091163)
+    # and the zero-fragment merge path reddens with it (045dc9b).
+    check("coverage wave is non-fatal while the census gating it is fatal",
+          "--advisory" not in cov_job_text
+          and len(coe_steps) >= 1
+          and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps)
+          and any("ci-shard-aggregate.py" in str(s2.get("run", ""))
+                  and "--ledger" in str(s2.get("run", ""))
+                  for s2 in ci["jobs"]["coverage"]["steps"]
+                  if isinstance(s2, dict) and not s2.get("continue-on-error") is True),
+          f"no-advisory + gated --ledger census + {len(coe_steps)} continue-on-error steps")
     check("codecov upload wired", "codecov/codecov-action@" in cov_job_text)
     codecov_steps = [s for s in ci["jobs"].get("coverage", {}).get("steps", [])
                      if "codecov/codecov-action@" in str(s.get("uses", ""))]

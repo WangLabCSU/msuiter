@@ -8,6 +8,12 @@ Used by tests/testthat/test-channels-reference.R as a permanent
 upstream anchor for the canonical channel order (SBS192 has no upstream
 reference format; it is derived from SBS384 in data-raw/build_channels.R).
 
+`sigProfilerPlotting-9be822f.py` is the verbatim upstream plotting module
+(same repository, same commit, path `sigProfilerPlotting/sigProfilerPlotting.py`,
+SHA256 c5ace1456f802c5b6f2d84e702e4bcf4cac493b21e01752dec2916ae967517c6,
+fetched 2026-10-24). tests/testthat/test-viz-batch2.R parses the DBS78/ID83
+legend palettes out of it as the byte-truth anchor for the M4-03b freeze.
+
 ## License of the bundled files
 
 SigProfilerPlotting is distributed under the BSD 2-Clause License:
