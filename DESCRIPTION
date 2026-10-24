@@ -7,7 +7,7 @@ Description: Tally, extract and fit mutational signatures across modalities
     (SBS, DBS, indel and beyond). Numerical kernels live in a Rust workspace
     exposed through a stateless FFI, while the R side provides the object
     model, the engine registry and the tidy user interface.
-License: ApacheLicense (>= 2.0) + file LICENSE
+License: ApacheLicense (>= 2.0)
 URL: https://github.com/WangLabCSU/msuiter
 BugReports: https://github.com/WangLabCSU/msuiter/issues
 Encoding: UTF-8
