@@ -69,6 +69,7 @@ Collate:
     'hrd-reference.R'
     'hrd-report.R'
     'viz-palette.R'
+    'viz-batch2.R'
     'viz-profile.R'
     'viz-exposure-similarity.R'
     'ms-cluster.R'
