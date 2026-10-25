@@ -975,6 +975,18 @@ _FLOOR_ANCHORS = {
 FLOOR_RATIO = 3.0
 PASS_STATUSES = ("ok", "cached")
 
+# -- RB-10 post-cap authority law (perf/p7) ---------------------------------------
+# The table's anchors re-anchor onto witnesses minted after the fork-axis caps
+# went live (main@2e689cd). Post-cap containers ride the serial chain, so wall
+# tracks cpu: the A/B legs spoke wall 578.651 / cpu 577.969 (deviation 0.0012)
+# where every pre-cap R-face witness deviates by at least 0.218 -- the bar below
+# sits at 0.10, a 2.2x bite margin against pre-cap bytes. Authority dirs speak
+# the prefix; the legacy-domain re-mint (60 classes) speaks the legacy prefix.
+# Pre-cap bytes (fan-live, wall != cpu) may never satisfy either half.
+POST_CAP_AUTHORITY_PREFIX = "m7_floor_calibration_p7cap_"
+POST_CAP_LEGACY_PREFIX = "m7_floor_calibration_p7cap_legacy_"
+POST_CAP_WALL_CPU_TOL = 0.10
+
 # -- floor anchor provenance (RB-09(3)(i)/(v)) ------------------------------------
 # The anchors ARE the law and the provenance: every floor class descends from
 # a committed witness JSON whose own ``--reps`` equals the frozen protocol reps.
