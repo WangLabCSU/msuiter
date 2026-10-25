@@ -58,6 +58,16 @@ FORK_AXIS_CAPS: tuple[tuple[str, str], ...] = (
     ("R_PARALLELLY_AVAILABLECORES_SYSTEM", "1"),
 )
 
+
+def all_caps_speaking() -> list[str]:
+    """Every env the composed container rides, spelled ``NAME=VALUE``: the
+    speaking lens of build_container_cmd's -e block and of the cell identity.
+    The fork pair belongs in the cache key exactly where it sits in the argv
+    — a names-only lens cannot distinguish a pre-cap cell from a post-cap one
+    when the tree SHA coincides (Phase-7 O4, stale-cache cure class)."""
+    return ([f"{cap}={CAP_VALUE}" for cap in THREAD_CAPS]
+            + [f"{cap}={value}" for cap, value in FORK_AXIS_CAPS])
+
 # Memo §5 translation table (authoritative record for this harness).
 MIRROR_PREFIXES: dict[str, str] = {
     "docker.io": "9f6c5in3dh5vszgdz0.xuanyuan.run",
@@ -96,10 +106,8 @@ def build_container_cmd(image: str, runner: str, in_dir: Path, out_dir: Path,
     second root cause).
     """
     cmd: list[str] = ["docker", "run", "--rm"]
-    for cap in THREAD_CAPS:                     # caps BEFORE the image token
-        cmd += ["-e", f"{cap}={CAP_VALUE}"]
-    for cap, value in FORK_AXIS_CAPS:           # fork axis joins the same block
-        cmd += ["-e", f"{cap}={value}"]
+    for spec in all_caps_speaking():             # caps BEFORE the image token
+        cmd += ["-e", spec]                      # (identity lens == this lens)
     ind, outd = Path(in_dir).resolve(), Path(out_dir).resolve()
     cmd += ["-v", f"{ind}:/work/in:ro"]
     if catalog_mount is not None:
