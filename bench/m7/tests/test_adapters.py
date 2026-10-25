@@ -118,3 +118,49 @@ def test_thread_caps_frozen_and_injected_before_image_token():
         assert positions, f"cap {cap}=1 not injected via -e: {cmd}"
         assert all(p < img for p in positions), \
             f"cap {cap} injected after image token — positional cure violated"
+
+
+def test_fork_axis_caps_ride_every_arm_before_the_image_token():
+    """Phase-6 L1: the parallelly fork-axis cap entries (execution-layer
+    overrides documented by the image's installed parallelly Rd, proven in
+    container by the O0 census) ride EVERY composed arm argv byte-exactly
+    strictly before the image token -- the same positional law that cured
+    the G0 OOM storm. The seven thread caps stay unmodified alongside.
+    """
+    entries = dict(docker_cmd.FORK_AXIS_CAPS)
+    assert entries == {"R_PARALLELLY_AVAILABLECORES_METHODS": "system",
+                       "R_PARALLELLY_AVAILABLECORES_SYSTEM": "1"}, \
+        f"fork-axis cap entries drifted from the documented override pair: {entries}"
+    tmp = _tmp()
+    try:
+        forms = [
+            # adapter-protocol default argv (no catalog)
+            dict(runner="run_fake.py", runner_args=None, catalog_mount=None),
+            # p6 entry form: m7_entry.py wrapper + ENTRY_ARGS + child argv
+            dict(runner=docker_cmd.ENTRY_SCRIPT, entrypoint="python3",
+                 runner_args=docker_cmd.ENTRY_ARGS + ["Rscript", "/work/x.R"],
+                 catalog_mount=None),
+            # with the single-file catalog bind
+            dict(runner="run_fake.py", runner_args=None,
+                 catalog_mount=tmp / "catalog.csv"),
+        ]
+        for form in forms:
+            cmd = [str(p) for p in docker_cmd.build_container_cmd(
+                image="m7-fake:pinned", **form,
+                in_dir=tmp / "in", out_dir=tmp / "out")]
+            img = cmd.index("m7-fake:pinned")
+            for cap, value in sorted(entries.items()):
+                positions = [i for i, tok in enumerate(cmd)
+                             if tok == "-e" and i + 1 < len(cmd)
+                             and cmd[i + 1] == f"{cap}={value}"]
+                assert positions, (f"fork cap {cap}={value} not injected "
+                                   f"via -e for form {form}")
+                assert all(p < img for p in positions), \
+                    (f"fork cap {cap} injected after image token -- "
+                     f"positional cure violated for form {form}")
+            # the frozen thread caps ride unchanged, still all =1
+            for cap in docker_cmd.THREAD_CAPS:
+                assert f"-e" in cmd and f"{cap}=1" in cmd, \
+                    f"thread cap {cap}=1 no longer rides the argv (form {form})"
+    finally:
+        _cleanup(tmp)
