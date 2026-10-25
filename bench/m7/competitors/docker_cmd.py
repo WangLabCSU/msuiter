@@ -10,7 +10,9 @@ Two load-bearing invariants, both pinned by tests/test_adapters.py:
    BLAS/Stan caps already present in ``bench/g0/run_grid.py::build_docker_cmd``
    (OMP_NUM_THREADS, OMP_THREAD_LIMIT, STAN_OMP_NUM_THREADS,
    OPENBLAS_NUM_THREADS). Caps are pure execution-layer ceilings: sampling
-   semantics are untouched.
+   semantics are untouched. The ``FORK_AXIS_CAPS`` pair (Phase-6 L1) rides
+   the same pre-token block and closes the thread caps' one blind spot --
+   the forked ``parallelly``/``doParallelMC`` worker axis.
 
 2. **Mirror policy (memo §5).** Image *references* stored in the registry are
    either harness-built local tags or already mirror-spelled refs; every
@@ -39,6 +41,22 @@ THREAD_CAPS: tuple[str, ...] = (
     "MSUITER_THREADS", "STAN_OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS",
 )
 CAP_VALUE = "1"
+
+# Fork-axis ceiling (Phase-6 L1): the seven thread caps govern thread
+# libraries inside a process, not forked worker processes -- the R face's
+# `parallelly`/`doParallelMC` fan-out (NMF nrun launches) escaped them and
+# inflated identical cells ~1.7-1.9x under co-tenancy (Phase-5 dossier). The
+# pair below is the documented outside-R override of the image's installed
+# parallelly 1.48.0 `availableCores()` Rd (Advanced-usage section); proven
+# in-container by the O0 census: post-cap `availableCores(max = 4)` reports
+# 1, the engine banner flips to `Mode: sequential [foreach:doParallelMC]`
+# and the forked-worker census peaks at 0 children. Execution-layer only --
+# sampling semantics (rank range 2:5, n_bootstrap=20, n_nmf_run=50) ride
+# untouched.
+FORK_AXIS_CAPS: tuple[tuple[str, str], ...] = (
+    ("R_PARALLELLY_AVAILABLECORES_METHODS", "system"),
+    ("R_PARALLELLY_AVAILABLECORES_SYSTEM", "1"),
+)
 
 # Memo §5 translation table (authoritative record for this harness).
 MIRROR_PREFIXES: dict[str, str] = {
@@ -80,6 +98,8 @@ def build_container_cmd(image: str, runner: str, in_dir: Path, out_dir: Path,
     cmd: list[str] = ["docker", "run", "--rm"]
     for cap in THREAD_CAPS:                     # caps BEFORE the image token
         cmd += ["-e", f"{cap}={CAP_VALUE}"]
+    for cap, value in FORK_AXIS_CAPS:           # fork axis joins the same block
+        cmd += ["-e", f"{cap}={value}"]
     ind, outd = Path(in_dir).resolve(), Path(out_dir).resolve()
     cmd += ["-v", f"{ind}:/work/in:ro"]
     if catalog_mount is not None:
