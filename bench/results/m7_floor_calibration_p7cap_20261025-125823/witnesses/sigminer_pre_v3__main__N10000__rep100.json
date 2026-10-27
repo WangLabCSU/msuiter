@@ -1,0 +1,52 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigminer_pre_v3",
+  "--arms",
+  "main",
+  "--n-list",
+  "10000",
+  "--reps",
+  "100",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/tmp/p7lane/caches/p7-sigminer_pre_v3-main-N10000-r100/probe_b03bb572/probe_cache",
+  "--outdir",
+  "/tmp/p7lane/caches/p7-sigminer_pre_v3-main-N10000-r100/probe_b03bb572/probe_cache/out"
+ ],
+ "arm": "main",
+ "cell": "sigminer_pre_v3__main__N10000",
+ "n": 10000,
+ "provenance": {
+  "face": "R",
+  "image_digest": "sha256:57d7381cee1e243959a070b42cccd045fba5152715adce7d13afd1dff20a1d3f",
+  "image_ref": "msuiter-sigminer:p6-sigminer_pre_v3-r1",
+  "name": "sigminer_pre_v3",
+  "status": "ready",
+  "tree_sha": "196471a57000ff8a160400ebfc984f6ab0ea23e4",
+  "version": "2.3.3"
+ },
+ "reps": 100,
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 1694.785998,
+  "exit_status": 0,
+  "ru_stime": 1.76666,
+  "ru_utime": 1693.019338
+ },
+ "status_tail": "ok",
+ "tool": "sigminer_pre_v3",
+ "verdict": "OK",
+ "wall_seconds": 1695.566
+}

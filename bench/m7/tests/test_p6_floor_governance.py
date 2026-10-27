@@ -153,7 +153,7 @@ def test_census_counts_p6_containers_as_ours():
 # attestation land, and they keep biting afterwards (counterfactual-tested).
 
 PRECAP_SEALED_EPOCH = "6b3a66bc9d0224eb"      # measured before the flip
-POST_CAP_EPOCH_PIN = "UNSEALED-PENDING-RB10"   # measured value lands at GREEN
+POST_CAP_EPOCH_PIN = "f3e894a6933a2ffb"   # measured; set at the ADJ-O3 GREEN commit
 
 
 def _authority_dirs(*, legacy: bool) -> list[Path]:
@@ -179,25 +179,83 @@ def test_post_cap_authority_dirs_are_committed():
         "authority dir")
 
 
+GEOMETRY_BAND = (1.5, 2.5)        # GATE-1 fan-out band (the probe-gate law)
+GEOMETRY_PARITY_TOL = 0.25        # |post/frozen - 1| on the cpu/wall parity
+
+
+def _compiled_family(tool: str) -> bool:
+    """Pinned registry taxonomy, the probe gates' single source (A-prime: no
+    new name table): the R family is cap-honoring; any other runtime is a
+    compiled competitor whose shape law is frozen-parity geometry."""
+    return registry.lookup(tool).runtime != "R"
+
+
+def _profile_fails(tool: str, doc: dict, frozen: dict | None) -> list[str]:
+    """ADJ-O3-SERIAL-PRONG-SCOPE-1 (A-prime): R family rides the absolute
+    serial prong VERBATIM (the cap-honoring attestation; the pre-cap frozen
+    profile never speaks to it); compiled non-R competitors ride the
+    frozen-parity geometry attestation of ADJ-O2-SIGPROF-GATE-1/1b INSTEAD --
+    mirroring the sanctioned probe-gate split (run_probe_leg._class_gates),
+    one law per physics. Silence never passes: every prong speaks a fail."""
+    pcpu = (doc.get("sidecar") or {}).get("cpu_seconds")
+    pwall = doc.get("wall_seconds")
+    try:
+        compiled = _compiled_family(tool)
+    except Exception as exc:
+        return [f"tool {tool!r} absent from the pinned registry taxonomy: {exc}"]
+    if not compiled:
+        if not (isinstance(pcpu, (int, float)) and pcpu > 0
+                and isinstance(pwall, (int, float)) and pwall > 0):
+            return [f"zero-time/absent witness: wall={pwall} cpu={pcpu}"]
+        dev = abs(pwall - pcpu) / max(pwall, pcpu)
+        if dev > gov.POST_CAP_WALL_CPU_TOL:
+            return [f"fan-live bytes in a cap-honoring class: wall={pwall} "
+                    f"cpu={pcpu} dev={dev:.3f} > {gov.POST_CAP_WALL_CPU_TOL}"]
+        return []
+    fails: list[str] = []
+    digest = (doc.get("provenance") or {}).get("image_digest", "")
+    want = registry.lookup(tool).image_digest
+    if not want:
+        fails.append("no pinned image digest on record to attest")
+    elif digest != want:
+        fails.append(f"image digest not pinned-invariant: {digest!r} != {want!r}")
+    if frozen is None:
+        return fails + ["frozen same-class witness absent: parity cannot attest"]
+    fcpu = (frozen.get("sidecar") or {}).get("cpu_seconds")
+    fwall = frozen.get("wall_seconds")
+    if not all(isinstance(x, (int, float)) and x > 0
+               for x in (pcpu, pwall, fcpu, fwall)):
+        return fails + ["geometry parity inputs not numeric positive"]
+    pr = pcpu / pwall
+    fr = fcpu / fwall
+    band_live = GEOMETRY_BAND[0] <= fr <= GEOMETRY_BAND[1]
+    if band_live and not (GEOMETRY_BAND[0] <= pr <= GEOMETRY_BAND[1]):
+        fails.append(f"post cpu/wall {pr:.4f} outside fan-out band "
+                     f"{GEOMETRY_BAND} (frozen {fr:.4f} in-band)")
+    elif abs(pr / fr - 1.0) > GEOMETRY_PARITY_TOL:
+        fails.append(f"fan-out parity drift: post {pr:.4f} vs frozen {fr:.4f} "
+                     f"beyond tol {GEOMETRY_PARITY_TOL}")
+    return fails
+
+
 def test_post_cap_witnesses_speak_the_serial_chain_profile():
-    """Post-cap cells ride capped containers: the serial chain makes wall
-    track cpu (measured A/B: deviation 0.0012). A witness deviating past the
-    law tolerance is pre-cap fan-live bytes wearing post-cap clothing."""
+    """(AC) post-cap authority profile law, family-scoped per
+    ADJ-O3-SERIAL-PRONG-SCOPE-1 (2026-10-27T22:55Z): R family absolute
+    serial prong verbatim; compiled competitors frozen-parity geometry
+    instead. A missing frozen byte or an unclassifiable tool refuses."""
     scanned = 0
+    frozen_root = RESULTS / "m7_floor_calibration_20261009" / "witnesses"
     for legacy in (False, True):
         for d in _authority_dirs(legacy=legacy):
             for w in sorted((d / "witnesses").glob("*.json")):
                 doc = json.loads(w.read_text(encoding="utf-8"))
                 assert doc["verdict"] == "OK", f"{w.name}: verdict {doc['verdict']}"
                 assert doc["status_tail"] == "ok", f"{w.name}: {doc['status_tail']}"
-                wall = doc["wall_seconds"]
-                cpu = doc["sidecar"]["cpu_seconds"]
-                assert wall > 0 and cpu > 0, f"{w.name}: zero-time witness"
-                dev = abs(wall - cpu) / max(wall, cpu)
-                assert dev <= gov.POST_CAP_WALL_CPU_TOL, (
-                    f"{w.name}: wall={wall} cpu={cpu} dev={dev:.3f} > "
-                    f"{gov.POST_CAP_WALL_CPU_TOL} — fan-live bytes in a "
-                    f"post-cap authority dir")
+                fpath = frozen_root / w.name
+                frozen = (json.loads(fpath.read_text(encoding="utf-8"))
+                         if fpath.is_file() else None)
+                fails = _profile_fails(w.stem.split("__")[0], doc, frozen)
+                assert not fails, f"{d.name}/{w.name}: {'; '.join(fails)}"
                 scanned += 1
     assert scanned > 0, "post-cap authorities scanned zero witnesses"
 

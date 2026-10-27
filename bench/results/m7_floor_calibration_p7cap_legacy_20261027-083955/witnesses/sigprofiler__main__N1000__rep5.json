@@ -1,0 +1,50 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigprofiler",
+  "--arms",
+  "main",
+  "--n-list",
+  "1000",
+  "--reps",
+  "5",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/tmp/p7lane/caches/p7-sigprofiler-main-N1000-r5/probe_e4ea6f56/probe_cache",
+  "--outdir",
+  "/tmp/p7lane/caches/p7-sigprofiler-main-N1000-r5/probe_e4ea6f56/probe_cache/out"
+ ],
+ "arm": "main",
+ "cell": "sigprofiler__main__N1000",
+ "n": 1000,
+ "provenance": {
+  "image_digest": "sha256:7dba2f43ad3a3858ed1cfdedd278c9c2f52a665fd4c18ac91a482b74258bfbed",
+  "image_ref": "m7-sigprofiler:spa-1.1.5",
+  "name": "sigprofiler",
+  "status": "ready",
+  "version": "v1.1.5"
+ },
+ "reps": 5,
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 20.225991,
+  "exit_status": 0,
+  "ru_stime": 1.218458,
+  "ru_utime": 19.007533
+ },
+ "status_tail": "ok",
+ "tool": "sigprofiler",
+ "verdict": "OK",
+ "wall_seconds": 16.152
+}
