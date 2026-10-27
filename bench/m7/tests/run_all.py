@@ -193,6 +193,9 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_p6_yardstick", "test_p6_mini_fixture",
            "test_p6_flip", "test_p6_seal_evidence",
            "test_p6_anchor_registration",
+           # PHASE-7 O5: post-cap parity recompute contract (cpu-basis,
+           # <=2x mandate, path-bound MEASURED-then-STATED ratios):
+           "test_parity_recompute",
            # PERF P2 pair S: sidecar accounting v2 (cgroup delta, drain-and-
            # reap under the no-undercount law, MSUITER_M7_CG_ROOT injection):
            "test_p2_pipeline",
