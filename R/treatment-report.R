@@ -100,8 +100,8 @@
 .ms_trt_timing <- function(fit, clonality, treatments, map, samples) {
   exposures <- fit@exposures
   draws <- attr(exposures, "boot_draws")
-  cf <- set_names(clonality$clonal_fraction,
-                  paste0(clonality$sample, "::", clonality$signature))
+  cf <- stats::setNames(clonality$clonal_fraction,
+                        paste0(clonality$sample, "::", clonality$signature))
   unexposed <- setdiff(samples, treatments$sample[!is.na(treatments$treatment)])
   rows <- list()
   for (trt in names(map)) {
@@ -326,7 +326,8 @@
     build = build,
     method = method,
     n_boot = as.integer(n_boot),
-    seed = as.integer(seed),    dictionary = colnames(dict_info$dict),
+    seed = as.integer(seed),
+    dictionary = colnames(dict_info$dict),
     dictionary_sha256 = dict_info$sha256
   )
 }
@@ -358,7 +359,10 @@
 #'   yields the association table (`treatment`, `signature`, `n_exposed`,
 #'   `n_unexposed`, `prevalence_exposed`, `prevalence_unexposed`,
 #'   `mean_exposed`, `mean_unexposed`, `contrast`, `contrast_lower`,
-#'   `contrast_upper`, `is_associated`). The clonal-timing table (attrs
+#'   `contrast_upper`, `is_associated`). `is_associated` is an effect-size
+#'   call: the bootstrap interval must clear zero by the adjudication floor
+#'   `.MS_TRT_ASSOC_FLOOR` (50 exposure-count units, documented at the
+#'   constant). The clonal-timing table (attrs
 #'   `timing`: `treatment`, `signature`, `n_exposed`, `exposure_pre`,
 #'   `exposure_post`, `pre_lower`, `pre_upper`, `post_lower`, `post_upper`),
 #'   the degradation ledger (attr `attestation`: `face`, `status`, `detail`)
