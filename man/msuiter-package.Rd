@@ -22,5 +22,10 @@ Useful links:
 \author{
 \strong{Maintainer}: Shixiang Wang \email{wangshx@csu.edu.cn} [copyright holder]
 
+Authors:
+\itemize{
+  \item Shixiang Wang \email{wangshx@csu.edu.cn} [copyright holder]
+}
+
 }
 \keyword{internal}

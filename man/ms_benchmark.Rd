@@ -28,8 +28,8 @@ results <- data.frame(
 ms_benchmark(results, settings = list(seed = 1))
 }
 \seealso{
-Other benchmark: 
-\code{\link{ms_benchmark_grid}()},
-\code{\link{ms_run_benchmark}()}
+Other benchmark:
+\code{\link[=ms_benchmark_grid]{ms_benchmark_grid()}},
+\code{\link[=ms_run_benchmark]{ms_run_benchmark()}}
 }
 \concept{benchmark}
