@@ -144,7 +144,7 @@ def test_dry_run_plan_is_pinned_shape_and_side_effect_free():
         plan = json.loads(out[out.index("{"):])        # tolerate log lines
         assert plan["profile"] == "degraded" and plan["adapter"] == "docker"
         assert plan["competitors"] == ["sigminer", "sigprofiler"]
-        assert plan["caps"] == list(docker_cmd.THREAD_CAPS)
+        assert plan["caps"] == docker_cmd.all_caps_speaking()
         assert plan["cells"] == [
             {"tool": t, "arm": "main", "n": 100, "reps": 1}
             for t in ("sigminer", "sigprofiler")]
@@ -236,7 +236,83 @@ def test_cell_identity_covers_provider_seed():
     ident = run_bench.cell_identity("sigminer", REGISTRY["sigminer"], args)
     assert ident.get("provider_seed") == 7, \
         f"provider_seed absent from cache identity: {sorted(ident)}"
-    assert ident["caps"] == list(docker_cmd.THREAD_CAPS)
+    assert ident["caps"] == docker_cmd.all_caps_speaking()
+
+
+# ---- (P7-O4) fork-axis caps inside the cell identity -----------------------
+
+def _fork_entries(caps: list[str]) -> list[str]:
+    return [c for c in caps if c.split("=", 1)[0].startswith("R_PARALLELLY_")]
+
+
+def test_cell_identity_caps_carry_the_fork_axis_pair():
+    """Phase-7 O4 (post-cap epoch law): the identity's caps component names
+    EVERY env the composed container rides — the seven thread caps at =1 AND
+    both R_PARALLELLY entries. Without the fork pair inside the key, a
+    pre-cap cached cell could replay as a post-cap measurement whenever the
+    tree SHA coincides (the stale-cache cure class, fork-axis blind spot)."""
+    args = run_bench.parse_args(["--profile", "smoke", "--adapter", "mock"])
+    ident = run_bench.cell_identity("sigminer", REGISTRY["sigminer"], args)
+    fork = _fork_entries(ident["caps"])
+    assert sorted(fork) == ["R_PARALLELLY_AVAILABLECORES_METHODS=system",
+                            "R_PARALLELLY_AVAILABLECORES_SYSTEM=1"], \
+        f"fork-axis entries missing from cell identity caps: {ident['caps']}"
+    for cap in docker_cmd.THREAD_CAPS:
+        assert any(c.split("=", 1)[0] == cap and c.endswith("=1")
+                   for c in ident["caps"]), f"thread cap {cap} missing/=1"
+
+
+def test_precap_shaped_cachedir_is_demolished_never_served():
+    """Demolition proof, no live container: a cachedir planted at the
+    pre-cap-era identity shape (names-only caps in BOTH the identity and the
+    params slice, four guard files intact, .data_hash matching that era's
+    formula) must be demolished by the fork-aware key, never served as a
+    measurement. Pre-fix the planted hash equals the live formula, the four
+    guards replay and the cell comes back 'cached' — the exact hazard this
+    unit exists to deny."""
+    tmp = _tmp()
+    try:
+        argv = _base(tmp, "mock", "mock") + ["--n-list", "100", "--reps", "1"]
+        rc, _, err = _run(argv)
+        assert rc == 0, f"seed pass failed: {err[-300:]}"
+        cell = tmp / "cache" / "cells" / "mock__main__N100"
+        in_, out_ = cell / "in", cell / "out"
+        assert (in_ / ".data_hash").is_file()
+        assert all((out_ / g).exists() for g in run_bench.GUARD_FILES)
+        ident_doc = json.loads((out_ / "manifest.json").read_text("utf-8"))
+        pre_ident = {k: v for k, v in ident_doc.items()
+                     if k not in ("data_hash", "profile", "arm", "n",
+                                  "reps", "seeds", "protocol")}
+        # The pre-cap era spelled the caps component as the bare NAMES of the
+        # seven thread caps (no "=1", no fork pair). Planting exactly that
+        # shape reproduces the stale cell the old key would have served.
+        pre_ident["caps"] = list(docker_cmd.THREAD_CAPS)
+        params = json.loads((in_ / "params.json").read_text("utf-8"))
+        params_pre = {**params, "caps": list(docker_cmd.THREAD_CAPS)}
+        from g0 import grid
+        arm = next(a for a in grid.arms_for_profile("smoke")
+                   if a.name == "main")
+        pre_hash = run_bench.compute_data_hash(
+            (in_ / "counts.csv").read_text("utf-8"), arm, ident_doc["reps"],
+            params_pre, pre_ident)
+        (in_ / ".data_hash").write_text(pre_hash)         # plant the stale key
+        rc, _, err = _run(argv)
+        assert rc == 0, f"rerun pass failed: {err[-300:]}"
+        import csv as _csv
+        tables = sorted(p for p in (tmp / "results").iterdir()
+                       if p.name.startswith("timings_m7_")
+                       and p.name.endswith(".csv"))
+        assert tables, "rerun produced no timings table"
+        with tables[-1].open(newline="", encoding="utf-8") as fh:
+            rows = list(_csv.DictReader(fh))
+        row = next(r for r in rows if r["cell"] == "mock__main__N100")
+        assert row["status"] != "cached", (
+            "pre-cap-shaped cachedir was SERVED as a measurement — the cache "
+            "key is blind to the fork axis")
+        assert (in_ / ".data_hash").read_text("utf-8") != pre_hash, \
+            "demolition did not rewrite the hash: key not fork-aware"
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 # ---- ⑦⑧⑨ resample-verify: the seed-determinism gate ----------------------

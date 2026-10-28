@@ -78,7 +78,29 @@ def _utc_stamp() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
 
 
-def mint(wdir: Path, *, only: list[str] | None) -> int:
+def _validate_declared_probes(ledger: Path, caldir: str, declared: int) -> int:
+    """Attestation law: a declared probe count must equal the booked DONE rows
+    of its own campaign in the lane budget ledger (shape column
+    ``mint/<caldir>/...``). Hand-written ledger rows are impossible under the
+    sole-logger law, so an inflated declaration has nothing to stand on:
+    over- or under-speaking the booked legs is refused, not warned."""
+    booked = 0
+    for ln in ledger.read_text(encoding="utf-8").splitlines()[1:]:
+        cols = ln.split("\t")
+        if (len(cols) > 7 and cols[4].startswith(f"mint/{caldir}/")
+                and cols[7] == "DONE"):
+            booked += 1
+    if int(declared) != booked:
+        raise AssertionError(
+            f"--probes-declared={declared} but the ledger books {booked} DONE "
+            f"legs for mint/{caldir}/ -- attestation refused")
+    return booked
+
+
+def mint(wdir: Path, *, only: list[str] | None,
+         probes_declared: int | None = None,
+         campaign_note: str | None = None,
+         budget_ledger: Path | None = None) -> int:
     classes = grid_classes()
     if len(classes) != 21:
         print(f"[FATAL] degraded grid shape drifted: {len(classes)} classes",
@@ -121,21 +143,35 @@ def mint(wdir: Path, *, only: list[str] | None) -> int:
         print(f"[FATAL] ledger over incomplete set: {len(wmap)} < {expected}",
               file=sys.stderr)
         return 2
+    if probes_declared is not None:
+        if budget_ledger is None:
+            print("[FATAL] --probes-declared requires --budget-ledger to "
+                  "validate against", file=sys.stderr)
+            return 2
+        try:
+            probes = _validate_declared_probes(budget_ledger, wdir.name,
+                                               probes_declared)
+        except AssertionError as exc:
+            print(f"[FATAL] {exc}", file=sys.stderr)
+            return 2
+    else:
+        probes = probes_run
     ledger = {
         "schema": "m7-floor-calibration-1",
         "created_utc": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()),
         "hash_recorder": "python3 hashlib.sha256 (explicit algorithm, never "
                          "the platform shasum default)",
         "registry_sha256_at_mint": hashlib.sha256(registry_bytes).hexdigest(),
-        "probes": probes_run,
+        "probes": probes,
         "law": {
             "reps": f"all witnesses measured at REP-{REPS} (protocol scale)",
             "freshness": "fresh per-cell cachedir per probe; a 'cached' replay "
                          "is DEFECT, never a floor",
             "gate": "--floor-gate off: a probe measures, it never self-adjudicates",
         },
-        "campaign_note": "P6 evidence-loop calibration (lane manifest SS4); "
-                         "arms measured against their inspect-attested images",
+        "campaign_note": campaign_note or (
+            "P6 evidence-loop calibration (lane manifest SS4); "
+            "arms measured against their inspect-attested images"),
         "witness_sha256": wmap,
         "elapsed_seconds_probes_this_invocation": round(time.monotonic() - t_start, 1),
     }
@@ -171,6 +207,14 @@ def main(argv=None) -> int:
     ap.add_argument("--only", action="append", default=None,
                     help="restrict to this arm key (repeatable; development aid -- "
                          "the committed set must still be all six)")
+    ap.add_argument("--probes-declared", type=int, default=None,
+                    help="resume-pass attestation: the probe count this campaign's "
+                         "mint legs already spoke; validated against --budget-ledger")
+    ap.add_argument("--budget-ledger", type=Path, default=None,
+                    help="lane budget.tsv whose booked rows back the declaration")
+    ap.add_argument("--campaign-note", default=None,
+                    help="honest provenance sentence for THIS campaign's ledger "
+                         "(default: the frozen P6 SS4 note)")
     args = ap.parse_args(argv)
     if args.only:
         for t in args.only:
@@ -178,7 +222,8 @@ def main(argv=None) -> int:
                 print(f"[FATAL] unknown arm {t}", file=sys.stderr)
                 return 2
     wdir = RESULTS / (args.dir or f"m7_floor_calibration_p6_{_utc_stamp()}")
-    return mint(wdir, only=args.only)
+    return mint(wdir, only=args.only, probes_declared=args.probes_declared,
+                campaign_note=args.campaign_note, budget_ledger=args.budget_ledger)
 
 
 if __name__ == "__main__":

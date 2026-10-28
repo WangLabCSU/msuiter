@@ -152,7 +152,7 @@ def build_plan(args, competitor_names: list, specs: dict, arms) -> dict:
         "profile": args.profile, "adapter": args.adapter,
         "provider": args.provider, "provider_seed": args.provider_seed,
         "competitors": list(competitor_names),
-        "caps": list(docker_cmd.THREAD_CAPS),
+        "caps": docker_cmd.all_caps_speaking(),
         "master_seed": seeds.MASTER_SEED, "tool_namespace": M7_TOOL_NS,
         "cells": cells, "invocations": len(cells),
         "samples_total": sum(c["reps"] for c in cells),
@@ -271,7 +271,7 @@ def cell_identity(competitor: str, spec, args) -> dict:
             # law binds only where a tree was attested.
             "tree_sha": getattr(spec, "tree_sha", ""),
             "face": getattr(spec, "face", ""),
-            "caps": list(docker_cmd.THREAD_CAPS),
+            "caps": docker_cmd.all_caps_speaking(),
             "adapter": args.adapter, "provider": args.provider,
             "provider_seed": args.provider_seed}
 
@@ -295,7 +295,7 @@ def run_cell(args, competitor: str, spec, arm, n: int, counts_path: Path,
     params = {"competitor": competitor, "version": spec.version,
               "runner": spec.runner_script, "seed": batch,
               "sample_seeds": samples,
-              "caps": list(docker_cmd.THREAD_CAPS),
+              "caps": docker_cmd.all_caps_speaking(),
               "protocol": "documented defaults, zero overrides (memo §3)"}
     identity = cell_identity(competitor, spec, args)
     data_hash = compute_data_hash(counts_text, arm, arm.reps, params, identity)
@@ -462,8 +462,8 @@ def write_judgment(outdir: Path, args, rows, specs, ts: str) -> Path:
         "  counts from the frozen G0 simulator (master seed "
         f"{seeds.MASTER_SEED}, data streams bit-identical to G0)",
         "- documented defaults only: zero threshold/parameter overrides (memo §3)",
-        "- frozen thread caps on every container cell: "
-        + ", ".join(f"{c}=1" for c in docker_cmd.THREAD_CAPS),
+        "- frozen caps on every container cell: "
+        + ", ".join(docker_cmd.all_caps_speaking()),
         "- one Docker VM for every cell (10 vCPU / 8 GB class), no host-side",
         "  execution of container competitors (§4.1/§4.2)",
         f"- seeds: m7-tool-namespaced derivation, all on disk (Seeds.txt); "

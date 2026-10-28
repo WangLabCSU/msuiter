@@ -1,0 +1,52 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigminer_post_p1",
+  "--arms",
+  "comp_clock_only",
+  "--n-list",
+  "10000",
+  "--reps",
+  "100",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/tmp/p7lane/caches/p7-sigminer_post_p1-comp_clock_only-N10000-r100/probe_a0b94327/probe_cache",
+  "--outdir",
+  "/tmp/p7lane/caches/p7-sigminer_post_p1-comp_clock_only-N10000-r100/probe_a0b94327/probe_cache/out"
+ ],
+ "arm": "comp_clock_only",
+ "cell": "sigminer_post_p1__comp_clock_only__N10000",
+ "n": 10000,
+ "provenance": {
+  "face": "R",
+  "image_digest": "sha256:2e0ef8f6b74a14d8783a9fd03ac2878033cc93c2abb36f1ace927c76e49ef51c",
+  "image_ref": "msuiter-sigminer:p6-sigminer_post_p1-r1",
+  "name": "sigminer_post_p1",
+  "status": "ready",
+  "tree_sha": "1e174a044e1eb4288b73a664b1179c98b104d28c",
+  "version": "2.3.3"
+ },
+ "reps": 100,
+ "run_rc": 0,
+ "sidecar": {
+  "cpu_seconds": 1595.6796069999998,
+  "exit_status": 0,
+  "ru_stime": 1.729997,
+  "ru_utime": 1593.94961
+ },
+ "status_tail": "ok",
+ "tool": "sigminer_post_p1",
+ "verdict": "OK",
+ "wall_seconds": 1596.474
+}
