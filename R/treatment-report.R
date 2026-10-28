@@ -147,7 +147,8 @@
 # Argument gates (topic: input) -- fail closed, name the received value.
 .ms_trt_resolve_map <- function(exposure_map) {
   map <- if (is.null(exposure_map)) .ms_treatment_exposure_map else exposure_map
-  ok <- is.list(map) && length(map) && all(nzchar(names(map) %||% "")) &&
+  ok <- is.list(map) && length(map) &&
+    all(nzchar(if (is.null(names(map))) "" else names(map))) &&
     all(vapply(map, function(v) is.character(v) && length(v) &&
                   all(nzchar(v)), logical(1)))
   if (!ok) {
@@ -172,7 +173,7 @@
       c = "build the cohort with ms_simulate(), ms_tally() or ms_catalog()"
     )
   }
-  if (!identical(catalog@channels$name %||% "", "SBS96")) {
+  if (!identical(catalog@channels$name, "SBS96")) {
     msuiter_abort(
       "input",
       "the treatment-forensics face consumes SBS96 channel space",
