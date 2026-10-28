@@ -1,0 +1,5 @@
+"sample","genome","caller","assay","ploh_fraction","aneuploidy_count","hrd_score","evidence_tier","n_windows_scored","coverage_note","ploidy_source"
+"H1","GRCh37","ascat","wgs",5,5,1,"standard",10,"ploidy-source=caller; denominator=injected; aneuploidy=scored","caller"
+"H2","GRCh37","ascat","wgs",0.45,0,0,"standard",1,"ploidy-source=caller; denominator=injected; aneuploidy=scored","caller"
+"H3","GRCh37","ascat","wgs",0,5,0,"standard",10,"ploidy-source=caller; denominator=injected; aneuploidy=scored","caller"
+"H4","GRCh37","ascat","wgs",0,0,0,"standard",2,"ploidy-source=caller; denominator=injected; aneuploidy=scored","caller"

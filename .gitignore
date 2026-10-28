@@ -67,3 +67,4 @@ docs/site/
 /src/*.gcno
 /src/*.gcda
 /vignettes/*.html
+bench/scenarios/out/fixture/

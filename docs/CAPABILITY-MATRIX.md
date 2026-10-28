@@ -168,6 +168,7 @@ semantics + flat cleaning ✅ v0.2.
 |---|---|---|---|
 | `ms_atlas_fit()` (the common/rare two-stage atlas mode) | the standard flow of pan-cancer studies | ⏳ v1.x | the cohort signature-landscape heatmap + the common/rare Sankey plot |
 | `ms_hrd_report()` | clinical HRD compound (Top-1) | ✅ v1.0 | the HRD report page (the verdict + uncertainty + text) |
+| `ms_treatment_report()` | treatment-history forensics (the documented §3 differentiation: no mainstream tool ships a treatment-history reporting module) | ✅ v1.0 | the treatment-association table (bootstrap CIs) + clonal/subclonal timing split + the missing-record degraded attestation |
 | `ms_exposure_panel()` | exposure-attribution epidemiology (Top-3) | ⏳ v1.x | geography/age/exposure-association plots |
 | `ms_lowcount_report()` | panel/ctDNA (Top-5/9) | ⏳ v1.x | the sensitivity bound + the conformal interval plot |
 | cohort mining: the signature x clinical/genomic-feature association sweep + multiple correction + visualization (**the visual data-mining layer**) | a formalization of domain practice (MSU-Infer) | 🔶 v1.0/v1.x | association heatmaps / forest plots / interactive tables |
@@ -203,7 +204,7 @@ semantics + flat cleaning ✅ v0.2.
 | `ms_update_refdb()` | L2 | reference-library update (the cache-side extender for CN/SV/RNA-SBS/mouse sets) | ⏳ M4 |
 | `ms_import()` `ms_export()` `ms_segments()` `ms_sv()` `ms_simulate()` | L2 | format interoperability, allele-specific CN / SV input, the catalog simulator (the first version of the ms_simulate variant-count layer: the multinomial/poisson/nb three arms, VCF-level placement ⏳M7) | M1c (CN/SV) / M4 (interoperability) / M7-pre (simulate) |
 | `ms_stratify_hypermutants()` | L2 | hypermutator stratification (classification + de novo exclusion + forced refit) | M1c |
-| `ms_atlas_fit()` `ms_hrd_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | application workflows | see L-G |
+| `ms_atlas_fit()` `ms_hrd_report()` `ms_treatment_report()` `ms_exposure_panel()` `ms_lowcount_report()` `ms_rna_report()` `ms_damage_tempo()` | L4 | application workflows | see L-G |
 | `ms_nmf()` `ms_ard()` `ms_sparse()` `ms_lda()` `ms_correlated()` `ms_tensor()` `ms_supervised()` `ms_hdp()` `ms_bayes()` | L3 | the engine factories (S7 objects as first-class citizens, strings as sugar; the L-C/L-D status columns govern) | see L-C |
 | `ms_tally_rust()` `ms_extract_rust()` | L1 | **FFI internals** (not a user-API promise; frozen and governed by `docs/ffi-surface.md`, from M0) | M0/M1s |
 

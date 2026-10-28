@@ -715,11 +715,20 @@ jobs:
     # full 90 twice (runs 40013789288/40028404425) while main's measured
     # tail already reached 68m53s (push-run 39965044133); the weights table
     # prices files in testthat seconds, blind to the covr-instrumented cost
-    # of new files. 120 carries the measured tail plus the witness excess;
-    # the in-wave heartbeat below turns any future timer kill into a
-    # measurement (attest rising = slow-but-live, attest flat + live pinned
-    # = hang).
-    timeout-minutes: 120
+    # of new files. 120 carried the then-measured tail plus witness excess;
+    # the in-wave heartbeat turns any future timer kill into a measurement
+    # (attest rising = slow-but-live, attest flat + live pinned = hang).
+    # Ratchet 120->180 (PR #56 lineage, triple ceiling witness): run
+    # 40667262104 job 122744792649 ran 120m27s (09:49:35->11:50:02Z), run
+    # 40700329158 attempt 1 job 122858082848 ran 120m26s (13:51:43->
+    # 15:52:09Z), and the same job's targeted rerun attempt 2 ran 120m34s
+    # (15:58:33->17:59:07Z), each heartbeating attest flat 5/6 + live
+    # pinned 1/7 for the final hour -- the straggler-shard class of
+    # the PR #52 record, re-created by the manifest re-pack, not by
+    # content: the 14 content arms stayed green throughout and the
+    # 26m00s clean pass (push-run 40614650936) proves the wave is sound. 180 carries the straggler floor
+    # (>=118m witnessed) with one runner-slowness class of headroom.
+    timeout-minutes: 180
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

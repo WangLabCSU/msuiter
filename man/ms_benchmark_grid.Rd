@@ -40,8 +40,8 @@ A grid is a named list of scenarios. Create specs with
 U-M7-04 ergonomics ruling (no generic merge).
 }
 \seealso{
-Other benchmark: 
-\code{\link{ms_benchmark}()},
-\code{\link{ms_run_benchmark}()}
+Other benchmark:
+\code{\link[=ms_benchmark]{ms_benchmark()}},
+\code{\link[=ms_run_benchmark]{ms_run_benchmark()}}
 }
 \concept{benchmark}

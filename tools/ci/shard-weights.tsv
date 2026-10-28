@@ -77,3 +77,6 @@ test-viz-first-batch.R	11	74
 test-viz-kselect.R	0	24
 test-xval-m2-extract.R	948	7
 test-xval-sigminer.R	10	12
+test-scenario-atlas.R	2.2	41
+test-scenario-hrd.R	0.4	28
+test-treatment-report.R	13.1	87

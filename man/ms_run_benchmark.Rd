@@ -41,8 +41,8 @@ three separate functions by the U-M7-04 ergonomics ruling (no generic
 merge).
 }
 \seealso{
-Other benchmark: 
-\code{\link{ms_benchmark}()},
-\code{\link{ms_benchmark_grid}()}
+Other benchmark:
+\code{\link[=ms_benchmark]{ms_benchmark()}},
+\code{\link[=ms_benchmark_grid]{ms_benchmark_grid()}}
 }
 \concept{benchmark}
