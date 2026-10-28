@@ -149,6 +149,9 @@ reference:
   - ms_hrd_report
   - print.MsHrdReport
   - as.data.frame.MsHrdReport
+  - ms_treatment_report
+  - print.MsTreatmentReport
+  - as.data.frame.MsTreatmentReport
 - title: The benchmark-matrix driver
   desc: The scenario constructor and the driving loop (the naming ruling is in the 2026-10-10 decision record of docs/devlog).
   contents:
