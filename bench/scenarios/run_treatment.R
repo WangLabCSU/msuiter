@@ -17,6 +17,14 @@ OUT <- file.path(ROOT, "bench", "scenarios", "out")
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 if (requireNamespace("pkgload", quietly = TRUE) && dir.exists(file.path(ROOT, "R"))) {
   suppressWarnings(suppressMessages(pkgload::load_all(ROOT, quiet = TRUE)))
+  # load_all does not process NAMESPACE S3method directives; register the
+  # report methods runner-locally so dispatch matches the installed check.
+  ns <- asNamespace("msuiter")
+  for (m in c("print.MsTreatmentReport", "as.data.frame.MsTreatmentReport")) {
+    if (exists(m, envir = ns, inherits = FALSE)) {
+      assign(m, get(m, envir = ns), envir = globalenv())
+    }
+  }
 } else {
   library(msuiter)
 }

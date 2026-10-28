@@ -15,6 +15,14 @@ OUT <- file.path(ROOT, "bench", "scenarios", "out")
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
 if (requireNamespace("pkgload", quietly = TRUE) && dir.exists(file.path(ROOT, "R"))) {
   suppressWarnings(suppressMessages(pkgload::load_all(ROOT, quiet = TRUE)))
+  # load_all does not process NAMESPACE S3method directives; register the
+  # report methods runner-locally so dispatch matches the installed check.
+  ns <- asNamespace("msuiter")
+  for (m in c("print.MsHrdReport", "as.data.frame.MsHrdReport")) {
+    if (exists(m, envir = ns, inherits = FALSE)) {
+      assign(m, get(m, envir = ns), envir = globalenv())
+    }
+  }
 } else {
   library(msuiter)
 }
@@ -71,6 +79,7 @@ for (i in seq_len(nrow(rows))) {
 b <- as.data.frame(ms_hrd_report(segs, genome = "GRCh37", caller = "ascat",
                                  assay = "wgs", chr_size = .HRD_TEST_CHR_SIZE,
                                  arms = arms, ploidy = 2))
+b <- b[order(b$sample), , drop = FALSE] # same normalization as rows
 .check("seeded reruns are byte-identical", identical(rows, b))
 printed <- paste(capture.output(print(report)), collapse = "\n")
 .check("print face speaks provenance and ledger",
