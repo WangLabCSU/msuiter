@@ -52,7 +52,7 @@
   boot_e <- boot_means(idx)
   boot_u <- boot_means(other)
   if (!is.null(boot_e) && !is.null(boot_u)) {
-    ci <- unname(quantile(boot_e - boot_u, probs = .MS_TRT_CI_PROBS))
+    ci <- unname(stats::quantile(boot_e - boot_u, probs = .MS_TRT_CI_PROBS))
   }
   data.frame(
     signature = sig,
@@ -113,7 +113,7 @@
         if (!length(idx) || length(dim(draws)) != 3L) {
           return(c(NA_real_, NA_real_))
         }
-        unname(quantile(.ms_trt_boot_split(draws, sig, idx, side),
+        unname(stats::quantile(.ms_trt_boot_split(draws, sig, idx, side),
                         probs = .MS_TRT_CI_PROBS))
       }
       pre <- point(w * exposures[sig, samples[idx], drop = TRUE])
