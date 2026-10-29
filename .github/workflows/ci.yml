@@ -221,8 +221,13 @@ jobs:
             --attest-dir attest-guards --kind guards
 
   guards-shards:
-    # Measured 31 min (run 39815352743); headroom for the slow-runner tail.
-    timeout-minutes: 60
+    # Budget-line ratchet on two co-tenancy kill witnesses: PR #60 attempt-1
+    # (all 16 steps run at 61-min wall) and push-run 40844971894 (killed at
+    # 60:13 with steps 1-11 green, step 12 in-flight at 57.5 min). The green
+    # witness is 57m27s (run 40822738417 attempt-2) -- 96 % of the old line:
+    # the budget was starving a healthy arm, not detecting a hang. 120 carries
+    # the witnessed floor with one pool-slowness class of headroom.
+    timeout-minutes: 120
     needs: guard-prep
     runs-on: ubuntu-latest
     steps:
