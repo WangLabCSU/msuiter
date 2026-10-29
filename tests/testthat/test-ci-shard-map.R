@@ -204,7 +204,7 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   }
   expect_identical(budget_line("guard-prep"), "45")     # hot path 1 min; stall class needs slack (strike-3 witness)
   expect_identical(budget_line("guards"), "15")          # aggregator-only, measured 0 min
-  expect_identical(budget_line("guards-shards"), "60")   # measured 31 min; tail headroom
+  expect_identical(budget_line("guards-shards"), "120")  # old 60 starved a healthy arm: green witness 57m27s (run 40822738417 attempt-2, 96 % of the line); two kill witnesses -- PR #60 attempt-1 (all 16 steps run, 61-min wall) and push-run 40844971894 job 123350746358 (steps 1-11 green, step 12 in-flight at 57.5m, severed at 60:13) -- zero hang signatures; 120 = witnessed floor + one pool-slowness class, the uniform fan-out ceiling
   expect_identical(budget_line("coverage"), "180")      # hot 18 min; 90 consumed whole twice by PR #52 (runs 40013789288/40028404425) vs main's 68m53s tail (push-run 39965044133); 120 then consumed whole thrice by PR #56 (run 40667262104 job 122744792649 120m27s; run 40700329158 attempt1 job 122858082848 120m26s + its attempt-2 rerun 120m34s, heartbeat flat 5/6 with live pinned 1/7) -- the straggler-shard class re-created by the manifest re-pack; 180 = witnessed >=118m straggler floor + one runner-slowness class of headroom
   # Second witness (run 39839340513, 2026-10-23): the slow-runner class is a
   # RUNNER property, not an arm property -- the 10-22 strike hit ubuntu/oldrel-1,
