@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import docker_cmd, p6_arms
+from . import docker_cmd, ensemble_cache, p6_arms
 from .errors import AdapterUnavailable
 
 
@@ -42,11 +42,29 @@ def child_argv(tool: str, catalog_mount: Path | str | None) -> list[str]:
 
 def run(tool: str, cell: dict, spec,
         catalog_mount: Path | str | None = None) -> dict:
-    """Execute one arm cell per the §1/§6 mount contract."""
+    """Execute one arm cell per the §1/§6 mount contract.
+
+    L3 ensemble cache (Phase-9 O1, advisory default-off): with the operator's
+    ``MSUITER_ENS_CACHE_DIR`` set OUTSIDE the tree, a verified content-key hit
+    serves the gate-passed cell bytes without launching the container; every
+    miss — and every corrupt entry — runs the fresh path unchanged. The
+    measured leg then populates the entry (only ever reached past
+    run_container_cell's guard/sidecar validation)."""
     reason = docker_cmd.image_gate(spec)
     if reason is not None:
         raise AdapterUnavailable(
             f"{tool}: {reason} — skip-not-skip (memo §5 ii/§6)")
-    return docker_cmd.run_container_cell(
-        spec=spec, in_dir=Path(cell["in_dir"]), out_dir=Path(cell["out_dir"]),
-        child_argv=child_argv(tool, catalog_mount), catalog_mount=catalog_mount)
+    in_dir, out_dir = Path(cell["in_dir"]), Path(cell["out_dir"])
+    argv = child_argv(tool, catalog_mount)
+    hit = ensemble_cache.serve_if_cached(spec=spec, in_dir=in_dir,
+                                        out_dir=out_dir,
+                                        catalog_mount=catalog_mount,
+                                        child_argv=argv)
+    if hit is not None:
+        return hit
+    summary = docker_cmd.run_container_cell(
+        spec=spec, in_dir=in_dir, out_dir=out_dir, child_argv=argv,
+        catalog_mount=catalog_mount)
+    ensemble_cache.capture(spec=spec, in_dir=in_dir, out_dir=out_dir,
+                          catalog_mount=catalog_mount, child_argv=argv)
+    return summary

@@ -152,15 +152,24 @@ def witness_extras(rb_argv: list[str], *, tool: str, arm: str, n: int,
             "n": n, "wall_seconds": wall_seconds}
 
 
-def freshness_law(status_tail: str) -> str | None:
+def freshness_law(status_tail: str,
+                  sidecar: dict | None = None) -> str | None:
     """A floor witness must MEASURE: the orchestrator returning the cell as
     ``cached`` means the four-file guard replayed an earlier run, so the
     host-side wall of this verdict would be staging fiction riding a replayed
     sidecar. Defect the replay; the caller must clear the cell (or use a
-    fresh work dir) instead of certifying a replay as a measurement."""
+    fresh work dir) instead of certifying a replay as a measurement.
+
+    Phase-9 O1 extension (same law, second vector): an L3 ensemble-cache
+    served leg records ``"measurement": "cache-hit"`` with ~0 cpu — a byte
+    copy of an earlier measurement, not one. Served legs are banked as cache
+    evidence, never minted as floor witnesses."""
     if status_tail.strip() == "cached":
         return ("probe refused: cell replayed from cache (status 'cached') — "
                 "a witness must be a fresh measurement")
+    if (sidecar or {}).get("measurement") == "cache-hit":
+        return ("probe refused: sidecar speaks measurement='cache-hit' — "
+                "a served copy is not a measurement")
     return None
 
 
@@ -205,7 +214,14 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
     status_tail = _cell_status_tail(cachedir, cell)
     code, verdict = assess_cell(cachedir / "cells" / cell / "out",
                                 run_rc=run_rc, provenance=provenance)
-    replay = freshness_law(status_tail)
+    sidecar_doc = {}
+    sidecar_path = cachedir / "cells" / cell / "out" / "timing.json"
+    if sidecar_path.is_file():
+        try:
+            sidecar_doc = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            sidecar_doc = {}
+    replay = freshness_law(status_tail, sidecar=sidecar_doc)
     if replay is not None:
         code, verdict = 1, {"verdict": "DEFECT", "reason": replay}
     verdict.update({"cell": cell, "run_rc": run_rc, "status_tail": status_tail})
