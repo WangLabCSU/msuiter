@@ -198,7 +198,7 @@ def test_reporter_refuses_a_law_claiming_witness_missing_the_fields():
                            attestation={"law": att.ATTEST_LAW})  # fields absent
         anchor = _anchor_for(tmp, "x.json", 100.0, 100.0)
         try:
-            pr._witness_face(gov, anchor)
+            pr._witness_face(anchor)
             code = 0
         except SystemExit as exc:
             code, _ = exc.code
@@ -222,7 +222,7 @@ def test_reporter_admits_a_fully_attested_witness():
                                         "coex_probe": {"verdict": "NOT-FLAT"},
                                         "epoch": gov.floor_table_epoch()})
         anchor = _anchor_for(tmp, "y.json", 100.0, 100.0)
-        cpu, wall, doc = pr._witness_face(gov, anchor)
+        cpu, wall, doc = pr._witness_face(anchor)
         assert (cpu, wall) == (100.0, 100.0)
     finally:
         gov._RESULTS_DIR = old_results
@@ -246,7 +246,7 @@ def test_reporter_refuses_a_refused_preflight_verdict():
                                         "epoch": gov.floor_table_epoch()})
         anchor = _anchor_for(tmp, "z.json", 100.0, 100.0)
         try:
-            pr._witness_face(gov, anchor)
+            pr._witness_face(anchor)
             code = 0
         except SystemExit as exc:
             code, _ = exc.code
@@ -274,7 +274,7 @@ def test_reporter_refuses_a_stale_epoch_attestation():
                                         "epoch": "not-the-current-epoch"})
         anchor = _anchor_for(tmp, "stale.json", 100.0, 100.0)
         try:
-            pr._witness_face(gov, anchor)
+            pr._witness_face(anchor)
             code = 0
         except SystemExit as exc:
             code, _ = exc.code

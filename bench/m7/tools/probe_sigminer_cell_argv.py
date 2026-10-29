@@ -52,6 +52,8 @@ for _p in (str(HERE), str(HERE.parent / "g0")):         # frozen g0, read-only
 
 import run_bench                                          # noqa: E402
 from competitors import registry                            # noqa: E402
+import tools.attestation as att                             # noqa: E402
+import tools.matrix_governance as gov                       # noqa: E402
 
 # The full four-file cell contract (run_bench.GUARD_FILES including the
 # timing sidecar -- the probe certifies the sidecar's DEPTH, not just its
@@ -227,6 +229,17 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
     verdict.update({"cell": cell, "run_rc": run_rc, "status_tail": status_tail})
     verdict.update(witness_extras(rb_argv, tool=tool, arm=arm, n=n,
                                   wall_seconds=wall))
+    if code == 0:
+        # O3 attestation law: a witness is minted only together with the
+        # preflight quiet-gate verdict and the inversion-probe record, in
+        # its own bytes. No proofs, no OK — the DEFECT carries the reason.
+        attested = att.stamp_witness(
+            verdict, preflight_log=cachedir / "preflight_log.jsonl",
+            cell=cell, epoch=gov.floor_table_epoch())
+        if attested.get("verdict") == "DEFECT":
+            code, verdict = 1, attested
+        else:
+            verdict = attested
     if json_path:
         out_json = Path(json_path)
         out_json.parent.mkdir(parents=True, exist_ok=True)
