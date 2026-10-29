@@ -52,6 +52,8 @@ for _p in (str(HERE), str(HERE.parent / "g0")):         # frozen g0, read-only
 
 import run_bench                                          # noqa: E402
 from competitors import registry                            # noqa: E402
+import tools.attestation as att                             # noqa: E402
+import tools.matrix_governance as gov                       # noqa: E402
 
 # The full four-file cell contract (run_bench.GUARD_FILES including the
 # timing sidecar -- the probe certifies the sidecar's DEPTH, not just its
@@ -152,15 +154,24 @@ def witness_extras(rb_argv: list[str], *, tool: str, arm: str, n: int,
             "n": n, "wall_seconds": wall_seconds}
 
 
-def freshness_law(status_tail: str) -> str | None:
+def freshness_law(status_tail: str,
+                  sidecar: dict | None = None) -> str | None:
     """A floor witness must MEASURE: the orchestrator returning the cell as
     ``cached`` means the four-file guard replayed an earlier run, so the
     host-side wall of this verdict would be staging fiction riding a replayed
     sidecar. Defect the replay; the caller must clear the cell (or use a
-    fresh work dir) instead of certifying a replay as a measurement."""
+    fresh work dir) instead of certifying a replay as a measurement.
+
+    Phase-9 O1 extension (same law, second vector): an L3 ensemble-cache
+    served leg records ``"measurement": "cache-hit"`` with ~0 cpu — a byte
+    copy of an earlier measurement, not one. Served legs are banked as cache
+    evidence, never minted as floor witnesses."""
     if status_tail.strip() == "cached":
         return ("probe refused: cell replayed from cache (status 'cached') — "
                 "a witness must be a fresh measurement")
+    if (sidecar or {}).get("measurement") == "cache-hit":
+        return ("probe refused: sidecar speaks measurement='cache-hit' — "
+                "a served copy is not a measurement")
     return None
 
 
@@ -205,12 +216,30 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
     status_tail = _cell_status_tail(cachedir, cell)
     code, verdict = assess_cell(cachedir / "cells" / cell / "out",
                                 run_rc=run_rc, provenance=provenance)
-    replay = freshness_law(status_tail)
+    sidecar_doc = {}
+    sidecar_path = cachedir / "cells" / cell / "out" / "timing.json"
+    if sidecar_path.is_file():
+        try:
+            sidecar_doc = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            sidecar_doc = {}
+    replay = freshness_law(status_tail, sidecar=sidecar_doc)
     if replay is not None:
         code, verdict = 1, {"verdict": "DEFECT", "reason": replay}
     verdict.update({"cell": cell, "run_rc": run_rc, "status_tail": status_tail})
     verdict.update(witness_extras(rb_argv, tool=tool, arm=arm, n=n,
                                   wall_seconds=wall))
+    if code == 0:
+        # O3 attestation law: a witness is minted only together with the
+        # preflight quiet-gate verdict and the inversion-probe record, in
+        # its own bytes. No proofs, no OK — the DEFECT carries the reason.
+        attested = att.stamp_witness(
+            verdict, preflight_log=cachedir / "preflight_log.jsonl",
+            cell=cell, epoch=gov.floor_table_epoch())
+        if attested.get("verdict") == "DEFECT":
+            code, verdict = 1, attested
+        else:
+            verdict = attested
     if json_path:
         out_json = Path(json_path)
         out_json.parent.mkdir(parents=True, exist_ok=True)
