@@ -206,7 +206,10 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # PERF PHASE-9 O1: L3 hash-keyed ensemble cache (advisory-default-
            # off, key binds every component, corruption is a miss, served legs
            # mint nothing):
-           "test_ensemble_cache"]
+           "test_ensemble_cache",
+           # PERF PHASE-9 O3: co-tenancy attestation law — mint-side stamps,
+           # report-side refusal with a firing control, epoch stamp on rows:
+           "test_attestation_law"]
 
 
 def _collect(mod_name):
