@@ -100,8 +100,12 @@
 //! The trace is monotone non-increasing in exact arithmetic (MM property)
 //! and monotone up to floating-point roundoff here; tests assert
 //! non-increase within a 1e-9 relative slack at the convergence plateau.
-//! The iteration count is fixed by the caller (`max_iter`) — no early
-//! stopping, so a run is a pure function of `(V, k, max_iter, init)`.
+//! Faces differ only in witness density ([`TraceMode`]): the full-trace
+//! faces carry one witness per iteration, the terminals faces carry the
+//! two endpoints of the same walk with bit-identical numbers (the observer
+//! never feeds the updates). The iteration count is fixed by the caller
+//! (`max_iter`) — no early stopping, so a run is a pure function of
+//! `(V, k, max_iter, init)`.
 //!
 //! # Determinism
 //!
@@ -190,11 +194,30 @@ pub struct NmfFit {
     pub h: Vec<f64>,
     /// Objective trace: `objective[0]` at the initializer, `objective[t]`
     /// after `t` iterations (KL divergence for [`fit_kl`]/[`fit_kl_with_init`],
-    /// squared error for [`fit_eu`]/[`fit_eu_with_init`]). Length
-    /// `max_iter + 1`. Monotone non-increasing up to roundoff (MM property).
+    /// squared error for [`fit_eu`]/[`fit_eu_with_init`]). Full-trace faces
+    /// ([`TraceMode::Full`]) carry `max_iter + 1` rows; the terminals faces
+    /// ([`TraceMode::Endpoints`]) carry the endpoints of the same walk --
+    /// `objective[0]`, plus `objective[max_iter]` when `max_iter > 0` --
+    /// with bit-identical numbers. Monotone non-increasing up to roundoff
+    /// (MM property).
     pub objective: Vec<f64>,
     /// Iterations actually run (equals the requested `max_iter`).
     pub iterations: usize,
+}
+
+/// How deep the KL fit records its MM observer ([`NmfFit::objective]). The
+/// observer never feeds the updates -- the multiplicative-update property
+/// the protocol rests on -- so the faces below differ only in how often the
+/// objective GEMM runs, never in a certified byte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceMode {
+    /// One witness per iteration: `max_iter + 1` rows (the protocol-1
+    /// ceremony, kept for the protocol suite and the frozen-twin gates).
+    Full,
+    /// Endpoints only: the initializer witness, plus the post-loop witness
+    /// when `max_iter > 0` (the production default of the stable entry,
+    /// P10-A).
+    Endpoints,
 }
 
 /// KL-NMF (β = 1, default engine — D6). As written, these multiplicative
@@ -234,6 +257,21 @@ pub fn fit_kl_on_stream(
     fit_kl_with_init(v, m, n, k, &w0, &h0, max_iter)
 }
 
+/// [`TraceMode::Endpoints`] face of [`fit_kl_on_stream`] (see
+/// [`fit_kl_with_init_terminals`]).
+pub fn fit_kl_on_stream_terminals(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    max_iter: usize,
+    seed: u64,
+    stream: StreamId,
+) -> Result<NmfFit, MsError> {
+    let (w0, h0) = seeded_init(v, m, n, k, seed, stream)?;
+    fit_kl_with_init_terminals(v, m, n, k, &w0, &h0, max_iter)
+}
+
 /// EU-NMF (β = 2, Frobenius) with the seeded deterministic initialization
 /// documented in this module.
 pub fn fit_eu(
@@ -266,12 +304,28 @@ pub fn fit_kl_with_init(
     fit_kl_with_init_scratch(v, m, n, k, w0, h0, max_iter, &mut s)
 }
 
-/// The certified KL fit over a reusable working set — the single loop body
-/// behind [`fit_kl_with_init`] (which builds a throwaway scratch and
-/// delegates), so there is no second implementation and the byte law has
-/// one home: `tests/kl_scratch_bit_exact.rs` runs this face, the public
-/// face, and a frozen verbatim reference twin side by side at the real
-/// certified shapes and length, bit for bit, before this file may move.
+/// [`TraceMode::Endpoints`] face of [`fit_kl_with_init`] (see
+/// [`fit_kl_with_init_scratch_terminals`]).
+pub fn fit_kl_with_init_terminals(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    w0: &[f64],
+    h0: &[f64],
+    max_iter: usize,
+) -> Result<NmfFit, MsError> {
+    let mut s = KlScratch::new(m, n, k);
+    fit_kl_with_init_scratch_terminals(v, m, n, k, w0, h0, max_iter, &mut s)
+}
+
+/// The certified KL fit over a reusable working set — the full-trace face
+/// of the certified loop, delegating to the single audited body
+/// [`fit_kl_core`] ([`fit_kl_with_init`] builds a throwaway scratch and
+/// delegates through it), so there is no second implementation and the byte
+/// law has one home: `tests/kl_scratch_bit_exact.rs` runs this face, the
+/// public face, and a frozen verbatim reference twin side by side at the
+/// real certified shapes and length, bit for bit, before this file may move.
 ///
 /// The scratch carries no fit values across calls: the loop-invariant
 /// `lnv[i] = ln(KL_EPS + V[i])` is recomputed at every entry (same libm
@@ -289,6 +343,46 @@ pub fn fit_kl_with_init_scratch(
     max_iter: usize,
     s: &mut KlScratch,
 ) -> Result<NmfFit, MsError> {
+    fit_kl_core(v, m, n, k, w0, h0, max_iter, s, TraceMode::Full)
+}
+
+/// The [`TraceMode::Endpoints`] face of the certified KL loop: the same
+/// single body [`fit_kl_core`], the same update calls in the same order,
+/// the MM observer recorded only at `t = 0` and (for `max_iter > 0`) after
+/// the last iteration. `W`, `H` and `iterations` are bit-for-bit the
+/// [`fit_kl_with_init_scratch`] results -- the observer never feeds the
+/// updates -- pinned by `endpoints_trace_is_the_terminals_of_the_full_trace`
+/// below and, across the process boundary, by the cross-mode tests of
+/// `tests/kernel_cli_protocol.rs`.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+pub fn fit_kl_with_init_scratch_terminals(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    w0: &[f64],
+    h0: &[f64],
+    max_iter: usize,
+    s: &mut KlScratch,
+) -> Result<NmfFit, MsError> {
+    fit_kl_core(v, m, n, k, w0, h0, max_iter, s, TraceMode::Endpoints)
+}
+
+/// The single certified KL loop body. `trace` chooses the observer density
+/// only (see [`TraceMode`]); the update arithmetic and its fixed reduction
+/// order are face-invariant.
+#[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
+fn fit_kl_core(
+    v: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    w0: &[f64],
+    h0: &[f64],
+    max_iter: usize,
+    s: &mut KlScratch,
+    trace: TraceMode,
+) -> Result<NmfFit, MsError> {
     validate(v, m, n, k, w0, h0)?;
     s.ensure(m, n, k);
     for (slot, &vv) in s.lnv.iter_mut().zip(v.iter()) {
@@ -296,11 +390,28 @@ pub fn fit_kl_with_init_scratch(
     }
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
-    let mut objective = Vec::with_capacity(max_iter + 1);
+    let endpoints = match trace {
+        TraceMode::Full => false,
+        TraceMode::Endpoints => true,
+    };
+    let mut objective = Vec::with_capacity(if endpoints {
+        if max_iter == 0 {
+            1
+        } else {
+            2
+        }
+    } else {
+        max_iter + 1
+    });
     objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
     for _ in 0..max_iter {
         kl_h_step_core(v, &w, &mut h, m, n, k, &mut s.wh, &mut s.num);
         kl_w_step_core(v, &mut w, &h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow);
+        if !endpoints {
+            objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
+        }
+    }
+    if endpoints && max_iter > 0 {
         objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
     }
     Ok(NmfFit { w, h, objective, iterations: max_iter })
@@ -791,6 +902,48 @@ mod tests {
         for (idx, &x) in xs.iter().enumerate() {
             assert!(x.is_finite(), "non-finite at {idx}: {x}");
         }
+    }
+
+    /// The protocol-2 trace-shape law (P10-A): the terminals face is exactly
+    /// the terminals of the full trace. `W`, `H` and `iterations` are
+    /// bit-for-bit the full-face results -- the observer never feeds the
+    /// updates -- and `objective` carries exactly the full-walk values at
+    /// t = 0 and t = max_iter (identical bits, not merely equal numbers).
+    /// If this ever breaks, the production default face of the CLI
+    /// (`tests/kernel_cli_protocol.rs`) has drifted from the protocol-1
+    /// ceremony its cross-mode pins attest.
+    #[test]
+    fn endpoints_trace_is_the_terminals_of_the_full_trace() {
+        let mut rng = MsRng::from_stream(20261029, StreamId { replicate: 5, rank: 1, fold: 0 });
+        let (m, n, k, iters) = (9usize, 7usize, 3usize, 25usize);
+        let v = random_counts(&mut rng, m, n);
+        let w0: Vec<f64> = (0..m * k).map(|_| 0.5 + uniform(&mut rng)).collect();
+        let h0: Vec<f64> = (0..k * n).map(|_| 0.5 + uniform(&mut rng)).collect();
+        let mut s1 = KlScratch::new(m, n, k);
+        let mut s2 = KlScratch::new(m, n, k);
+        let full = fit_kl_with_init_scratch(&v, m, n, k, &w0, &h0, iters, &mut s1).unwrap();
+        let ends =
+            fit_kl_with_init_scratch_terminals(&v, m, n, k, &w0, &h0, iters, &mut s2).unwrap();
+        assert_eq!(ends.w, full.w, "the terminals face moved the certified bytes");
+        assert_eq!(ends.h, full.h);
+        assert_eq!(ends.iterations, full.iterations);
+        assert_eq!(ends.objective.len(), 2, "endpoints carry two witnesses at max_iter >= 1");
+        assert_eq!(ends.objective[0], full.objective[0], "the t = 0 witness moved");
+        assert_eq!(ends.objective[1], full.objective[iters], "the t = max_iter witness moved");
+        assert_monotone(&ends.objective);
+        // The degenerate length: max_iter = 0 has the init witness alone.
+        let one = fit_kl_with_init_terminals(&v, m, n, k, &w0, &h0, 0).unwrap();
+        assert_eq!(one.objective.len(), 1);
+        let one_full = fit_kl_with_init(&v, m, n, k, &w0, &h0, 0).unwrap();
+        assert_eq!(one.objective, one_full.objective, "the zero-length witness moved");
+        // The public stream faces keep the full walk (the frozen-twin and
+        // thread-invariance contracts): only the terminals faces are thin.
+        let stream_full = fit_kl_on_stream(&v, m, n, k, iters, 11, StreamId::ZERO).unwrap();
+        assert_eq!(stream_full.objective.len(), iters + 1);
+        let stream_ends = fit_kl_on_stream_terminals(&v, m, n, k, iters, 11, StreamId::ZERO).unwrap();
+        assert_eq!(stream_ends.w, stream_full.w);
+        assert_eq!(stream_ends.h, stream_full.h);
+        assert_eq!(stream_ends.objective[1], stream_full.objective[iters]);
     }
 
     /// Greedy max-cosine one-to-one matching between fitted and true W

@@ -62,13 +62,17 @@ kp_read_matrix_fast <- function(path, nrows, ncols, name) {
 
 ## ---- fast trace reader ------------------------------------------------------
 
-# Vectorized drop-in for kp_read_trace_csv(): header, exactly iters + 1
-# rows, every row a t,objective PAIR (the comma-count law again is what a
-# flat split cannot certify), the t column integer-shaped and counting
-# 0..iters without gaps, every objective finite. Returns the objective
-# vector -- the identical doubles the reference route's per-row loop
-# produces (the same as.numeric applied to the same %.17e text).
-kp_read_trace_fast <- function(path, iters.expect, name) {
+# Vectorized drop-in for kp_read_trace_csv(): header, the objective rows
+# demanded by the asked trace shape (.kp_trace_t: the kernel's endpoints
+# face or the full ceremony), every row a t,objective PAIR (the comma-count
+# law again is what a flat split cannot certify), the t column integer-
+# shaped and following that shape's witness set without gaps, every
+# objective finite. Returns the objective vector -- the identical doubles
+# the reference route's per-row loop produces (the same as.numeric applied
+# to the same %.17e text).
+kp_read_trace_fast <- function(path, iters.expect, name,
+                               shape = c("endpoints", "full")) {
+  shape <- shape[[1L]]
   if (!file.exists(path)) {
     stop("msuiter-kernel did not produce ", name,
          " in the output directory: ", path, domain = NA)
@@ -79,10 +83,11 @@ kp_read_trace_fast <- function(path, iters.expect, name) {
     stop(name, " must start with the 't,objective' header.", domain = NA)
   }
   rows <- lines[-1L]
-  want <- .kp_count(iters.expect, "iters") + 1L
-  if (!identical(length(rows), want)) {
-    stop(name, " must hold iterations + 1 = ", want,
-         " objective rows, got ", length(rows), ".", domain = NA)
+  want <- .kp_trace_t(iters.expect, shape, name)
+  if (!identical(length(rows), length(want))) {
+    stop(name, " does not match the '", shape, "' trace shape: asked ",
+         length(want), " objective rows, got ", length(rows), ".",
+         domain = NA)
   }
   commas <- nchar(gsub("[^,]", "", rows))
   bad <- which(commas != 1L)
@@ -91,16 +96,16 @@ kp_read_trace_fast <- function(path, iters.expect, name) {
          domain = NA)
   }
   toks <- strsplit(paste(rows, collapse = ","), ",", fixed = TRUE)[[1L]]
-  t.tok <- toks[seq_len(2L * want) %% 2L == 1L]
-  o.tok <- toks[seq_len(2L * want) %% 2L == 0L]
+  t.tok <- toks[seq_len(2L * length(rows)) %% 2L == 1L]
+  o.tok <- toks[seq_len(2L * length(rows)) %% 2L == 0L]
   ts <- suppressWarnings(as.integer(t.tok))
   if (anyNA(ts)) {
     hit <- which(is.na(ts))[[1L]]
     stop(name, " row ", hit, " is unreadable: ", rows[[hit]], domain = NA)
   }
-  if (!identical(ts, seq_len(want) - 1L)) {
-    stop(name, " iteration column must count 0, 1, ... without gaps.",
-         domain = NA)
+  if (!identical(ts, want)) {
+    stop(name, " iteration column does not follow the '", shape,
+         "' trace shape.", domain = NA)
   }
   obj <- suppressWarnings(as.numeric(o.tok))
   if (any(!is.finite(obj))) {
@@ -117,12 +122,14 @@ kp_read_trace_fast <- function(path, iters.expect, name) {
 # kp_attest_case assembles via the reference readers. The meta map keeps the
 # reference reader: fifteen lines are not where the time is (forensics
 # §7.2), and the asked-vs-reported attestation law stays a single route.
-kp_parse_case_fast <- function(out.dir, m, n, k, iters) {
+kp_parse_case_fast <- function(out.dir, m, n, k, iters,
+                               trace.shape = c("endpoints", "full")) {
   list(
     W = kp_read_matrix_fast(file.path(out.dir, "W.csv"), m, k, "W.csv"),
     H = kp_read_matrix_fast(file.path(out.dir, "H.csv"), k, n, "H.csv"),
     objective = kp_read_trace_fast(file.path(out.dir, "trace.csv"),
-                                   iters, "trace.csv"),
+                                    iters, "trace.csv",
+                                    shape = trace.shape[[1L]]),
     meta = kp_read_meta_csv(file.path(out.dir, "meta.csv"))
   )
 }

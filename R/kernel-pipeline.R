@@ -179,6 +179,22 @@ kp_handshake <- function(bin) {
        right = substr(line, i + 1L, nchar(line)))
 }
 
+# The t-column law of the certified kernel's two trace faces: 'endpoints'
+# is the production face (the initializer witness at t = 0 plus the
+# post-loop witness at t = iters, collapsed by unique() when no iteration
+# ran), 'full' is the opted-in --full-trace ceremony (one witness per
+# iteration). The shape is a law parameter, never a guess about the file:
+# a witness set that does not match the asked shape fails loud on either
+# side of the mismatch.
+.kp_trace_t <- function(iters.expect, shape, name) {
+  iters <- .kp_count(iters.expect, "iters", allow.zero = TRUE)
+  if (identical(shape, "endpoints")) return(unique(c(0L, iters)))
+  if (identical(shape, "full")) return(seq_len(iters + 1L) - 1L)
+  stop(name, ": unknown trace shape '", shape, "' -- expected 'endpoints' ",
+       "(the production face) or 'full' (the --full-trace face).",
+       domain = NA)
+}
+
 # Read and fail-closed-validate a cases manifest STRUCTURE: frozen header,
 # every row complete (8 columns), case names non-empty and unique, the
 # dimensional counts whole and positive. SEMANTIC classification -- the init
@@ -308,9 +324,13 @@ kp_read_matrix_csv <- function(path, nrows, ncols, name) {
          byrow = TRUE)
 }
 
-# trace.csv: header, exactly iters+1 objective rows, the t column counting
-# 0..iters without gaps, every objective finite.
-kp_read_trace_csv <- function(path, iters.expect, name) {
+# trace.csv: header, the objective rows demanded by the asked trace shape
+# (.kp_trace_t: the endpoints face or the full ceremony), every row a
+# t,objective pair, the t column following that shape's witness set without
+# gaps, every objective finite.
+kp_read_trace_csv <- function(path, iters.expect, name,
+                              shape = c("endpoints", "full")) {
+  shape <- shape[[1L]]
   if (!file.exists(path)) {
     stop("msuiter-kernel did not produce ", name,
          " in the output directory: ", path, domain = NA)
@@ -321,10 +341,11 @@ kp_read_trace_csv <- function(path, iters.expect, name) {
     stop(name, " must start with the 't,objective' header.", domain = NA)
   }
   rows <- lines[-1L]
-  want <- .kp_count(iters.expect, "iters") + 1L
-  if (!identical(length(rows), want)) {
-    stop(name, " must hold iterations + 1 = ", want,
-         " objective rows, got ", length(rows), ".", domain = NA)
+  want <- .kp_trace_t(iters.expect, shape, name)
+  if (!identical(length(rows), length(want))) {
+    stop(name, " does not match the '", shape, "' trace shape: asked ",
+         length(want), " objective rows, got ", length(rows), ".",
+         domain = NA)
   }
   ts <- integer(length(rows))
   obj <- numeric(length(rows))
@@ -339,9 +360,9 @@ kp_read_trace_csv <- function(path, iters.expect, name) {
       stop(name, " row ", i, " is unreadable: ", rows[[i]], domain = NA)
     }
   }
-  if (!identical(ts, seq_len(want) - 1L)) {
-    stop(name, " iteration column must count 0, 1, ... without gaps.",
-         domain = NA)
+  if (!identical(ts, want)) {
+    stop(name, " iteration column does not follow the '", shape,
+         "' trace shape.", domain = NA)
   }
   obj
 }
@@ -357,15 +378,26 @@ kp_read_trace_csv <- function(path, iters.expect, name) {
 # tests/testthat/test-kernel-attest-route.R pin both routes at identical()
 # grade over real certified bytes -- the receipt strength does not move
 # with the route -- and "reference" stays available for adjudication. An
-# unknown route is fail-closed.
+# unknown route is fail-closed. The trace law is shape-driven
+# (.kp_trace_t): trace.shape "endpoints" is the kernel's production face,
+# "full" the opted-in --full-trace ceremony; an unknown shape is
+# fail-closed and a witness set that contradicts the asked shape dies in
+# the reader.
 kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
-                           replicate, route = c("fast", "reference")) {
+                           replicate, route = c("fast", "reference"),
+                           trace.shape = c("endpoints", "full")) {
   where <- function(msg) paste0("receipt attestation failed for case '",
                                 case, "': ", msg)
   route <- route[[1L]]
   if (!identical(route, "fast") && !identical(route, "reference")) {
     stop(where(paste0("unknown attest route '", route,
                       "': expected 'fast' or 'reference'")), domain = NA)
+  }
+  trace.shape <- trace.shape[[1L]]
+  if (!identical(trace.shape, "endpoints") &&
+      !identical(trace.shape, "full")) {
+    stop(where(paste0("unknown trace shape '", trace.shape,
+                      "': expected 'endpoints' or 'full'")), domain = NA)
   }
   meta <- kp_read_meta_csv(file.path(out.dir, "meta.csv"))
   expect <- list(
@@ -378,7 +410,8 @@ kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
     m = as.character(m), n = as.character(n), k = as.character(k),
     iters = as.character(iters),
     iterations = as.character(iters),
-    trace_len = as.character(.kp_count(iters, "iters") + 1L))
+    trace_len = as.character(length(
+      .kp_trace_t(iters, trace.shape, where("trace.csv")))))
   for (key in names(expect)) {
     # unname(): a matrix cell slice can carry its column name as a
     # 'names' attribute; identical() compares attributes, and the receipt
@@ -396,12 +429,12 @@ kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
     w <- kp_read_matrix_fast(file.path(out.dir, "W.csv"), m, k, "W.csv")
     h <- kp_read_matrix_fast(file.path(out.dir, "H.csv"), k, n, "H.csv")
     obj <- kp_read_trace_fast(file.path(out.dir, "trace.csv"), iters,
-                              "trace.csv")
+                              "trace.csv", shape = trace.shape)
   } else {
     w <- kp_read_matrix_csv(file.path(out.dir, "W.csv"), m, k, "W.csv")
     h <- kp_read_matrix_csv(file.path(out.dir, "H.csv"), k, n, "H.csv")
     obj <- kp_read_trace_csv(file.path(out.dir, "trace.csv"), iters,
-                             "trace.csv")
+                             "trace.csv", shape = trace.shape)
   }
   invisible(list(case = case, W = w, H = h, objective = obj, meta = meta))
 }

@@ -17,7 +17,10 @@
 # Units A-1, A-2 and A-4 are red by absence until the GREEN commit adds
 # the `route` argument to kp_attest_case in R/kernel-pipeline.R. The
 # subject names are taken through .kpp_surface, so an unreachable surface
-# is an explicit TDD-red stop, never a silent pass.
+# is an explicit TDD-red stop, never a silent pass. A-6 rides the
+# P10-A trace-shape surface (kp_attest_case trace.shape, .kp_trace_t):
+# the two certified faces of the production kernel are law parameters of
+# the receipt, fail-closed on a contradiction, not advisory.
 
 .kar_scenario <- local({
   cached <- new.env(parent = emptyenv())
@@ -33,11 +36,13 @@
 })
 
 # The attest call this file drives, mirroring kp_run_batch's argument
-# positionally (manifest raw strings for seed/replicate).
-.kar_attest <- function(sc, route) {
+# positionally (manifest raw strings for seed/replicate) plus the trace
+# shape the receipt is attested under.
+.kar_attest <- function(sc, route, trace.shape = c("endpoints", "full")) {
   kp_attest_case(case = sc$case, out.dir = sc$case.out, m = sc$m,
                  n = sc$n, k = sc$k, iters = sc$iters, init = "nndsvd",
-                 seed = "11", replicate = "", route = route)
+                 seed = "11", replicate = "", route = route,
+                 trace.shape = trace.shape)
 }
 
 # Swap one namespace binding for the duration of expr (the house
@@ -65,10 +70,16 @@
   invisible(NULL)
 }
 
-test_that("A-1 the attest face carries a route argument defaulting to fast", {
+test_that("A-1 the attest face carries the route and trace-shape arguments
+           with the frozen defaults", {
   fmls <- names(formals(kp_attest_case))
   expect_true("route" %in% fmls)
   expect_identical(eval(formals(kp_attest_case)$route), c("fast", "reference"))
+  # TDD-red needle for the P10-A shape surface: an absent trace.shape
+  # argument reads NULL here, never a silent default.
+  expect_true("trace.shape" %in% fmls)
+  expect_identical(eval(formals(kp_attest_case)$trace.shape),
+                   c("endpoints", "full"))
 })
 
 test_that("A-2 mechanism: the fast route really consults the fast readers
@@ -79,7 +90,8 @@ test_that("A-2 mechanism: the fast route really consults the fast readers
   .kar_with("kp_read_trace_fast", boom, {
     r <- .kar_attest(sc, "reference")
     expect_true(is.matrix(r$W) && identical(dim(r$W), c(sc$m, sc$k)))
-    expect_identical(length(r$objective), sc$iters + 1L)
+    expect_identical(length(r$objective),
+                     length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
   })
   # Fast route under the sentinel: must reach it, or the switch is a no-op.
   .kar_with("kp_read_trace_fast", boom, {
@@ -95,6 +107,27 @@ test_that("A-3 identity: both routes hand back identical() receipt bundles
   expect_identical(b, a)
   # Guard against comparing two NULLs: the payload must be real.
   expect_true(is.matrix(a$W) && is.matrix(a$H) && is.finite(a$objective[1L]))
+  expect_identical(length(a$objective),
+                   length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
+})
+
+test_that("A-6 the trace-shape law is live: the contradicting face dies and
+           an unknown shape is fail-closed and named on both routes", {
+  sc <- .kar_scenario()
+  a <- .kar_attest(sc, "fast")
+  # The dead-metric control in the accepting direction: the explicit
+  # endpoints law hands back the very same receipt as the implicit one.
+  expect_identical(.kar_attest(sc, "fast", trace.shape = "endpoints"), a)
+  # Attesting the production bytes under the full-walk law dies at the
+  # shape-derived trace_len expectation.
+  expect_error(.kar_attest(sc, "fast", trace.shape = "full"), "trace_len")
+  expect_error(.kar_attest(sc, "reference", trace.shape = "full"),
+               "trace_len")
+  # An unknown shape is fail-closed and named, on both routes.
+  expect_error(.kar_attest(sc, "fast", trace.shape = "bogus"),
+               "expected 'endpoints' or 'full'")
+  expect_error(.kar_attest(sc, "reference", trace.shape = "bogus"),
+               "expected 'endpoints' or 'full'")
 })
 
 test_that("A-4 unknown routes are fail-closed and named", {

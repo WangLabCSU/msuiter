@@ -21,10 +21,12 @@
 //! msuiter-kernel fit-kl --in DIR --out DIR --m M --n N --k K --iters T
 //!                       [--init external|seeded|nndsvd|nndsvda]
 //!                       [--seed S] [--replicate R] [--dump-at t1,t2,...]
+//!                       [--full-trace]
 //!   reads  IN/V.csv, IN/W0.csv, IN/H0.csv          (init=external)
 //!   writes OUT/{W.csv, H.csv, trace.csv, meta.csv}  (+ ckXXXX/{W,H,obj}.csv)
 //!
 //! msuiter-kernel fit-kl --cases FILE --root INROOT --out-root OUTROOT
+//!                       [--full-trace]
 //!   FILE header:  case,init,seed,replicate,iters,m,n,k  (empty seed/replicate = default)
 //!   per row:      reads INROOT/<case>/..., writes OUTROOT/<case>/out/...
 //! ```
@@ -34,7 +36,14 @@
 //!   double round-trip convention established by `tools/kl-crosscheck`.
 //! * `trace.csv` has the header `t,objective`; row t is the objective
 //!   after t full (H step + W step) iterations, row 0 at the initializer
-//!   (nmf.rs "Trace semantics").
+//!   (nmf.rs "Trace semantics"). The production default records only the
+//!   two endpoints -- the row at t = 0 and, for T > 0, the row at
+//!   t = max_iter -- because the MM observer never feeds the updates;
+//!   `--full-trace` (legal on both surfaces) opts into the full
+//!   0..=max_iter walk, the protocol-1 ceremony. The face is
+//!   self-describing via the meta `trace_len` line, and both faces are
+//!   byte-identical in W/H and in the endpoint witnesses (pinned by
+//!   `tests/kernel_cli_protocol.rs`).
 //! * `meta.csv` is `key,value` lines, self-describing and timestamp-free:
 //!   two runs over equal inputs are BYTE-identical (the boundary's
 //!   reproducibility contract; pinned by the protocol test suite).
@@ -141,6 +150,10 @@ struct Case {
     /// Only meaningful for `Init::Seeded` (canonical replicate stream).
     replicate: u64,
     dump_at: Vec<usize>,
+    /// True on the opted-in `--full-trace` face (one witness per iteration,
+    /// the protocol-1 ceremony); false is the production default -- the
+    /// terminals face, `t = 0` and `t = max_iter` only (nmf `TraceMode`).
+    full_trace: bool,
 }
 
 /// Required-value helper (MSRV-safe stand-in for the 1.82 `ok_or` family).
@@ -163,6 +176,7 @@ fn dispatch_fit_kl(argv: &mut impl Iterator<Item = String>) -> Result<(), String
     let mut seed: Option<u64> = None;
     let mut replicate: Option<u64> = None;
     let mut dump_at: Vec<usize> = Vec::new();
+    let mut full_trace = false;
     // -- flags (batch face)
     let mut cases: Option<PathBuf> = None;
     let mut root: Option<PathBuf> = None;
@@ -187,6 +201,9 @@ fn dispatch_fit_kl(argv: &mut impl Iterator<Item = String>) -> Result<(), String
                     dump_at.push(parse_usize("--dump-at entry", tok.trim())?);
                 }
             }
+            // Valueless face selector, legal on both surfaces (module docs:
+            // the two faces differ only in observer density).
+            "--full-trace" => full_trace = true,
             "--cases" => cases = Some(PathBuf::from(take_value(argv, &flag)?)),
             "--root" => root = Some(PathBuf::from(take_value(argv, &flag)?)),
             "--out-root" => out_root = Some(PathBuf::from(take_value(argv, &flag)?)),
@@ -209,6 +226,7 @@ fn dispatch_fit_kl(argv: &mut impl Iterator<Item = String>) -> Result<(), String
                 seed,
                 replicate: check_replicate(init, replicate)?,
                 dump_at,
+                full_trace,
             };
             validate_init_args(init, case.seed)?;
             run_case(&case, &mut VCache::new())
@@ -232,7 +250,7 @@ fn dispatch_fit_kl(argv: &mut impl Iterator<Item = String>) -> Result<(), String
                         .to_string(),
                 );
             }
-            run_batch(&cases, &root, &out_root)
+            run_batch(&cases, &root, &out_root, full_trace)
         }
         _ => Err("--cases mode requires all of --cases, --root and --out-root".to_string()),
     }
@@ -292,23 +310,25 @@ fn fit_case(case: &Case, vc: &mut VCache) -> Result<msuiter_engine::nmf::NmfFit,
         Init::External => {
             let w0 = read_csv(&case.in_dir.join("W0.csv"), case.m * case.k, "W0.csv")?;
             let h0 = read_csv(&case.in_dir.join("H0.csv"), case.k * case.n, "H0.csv")?;
-            msuiter_engine::nmf::fit_kl_with_init(&v, case.m, case.n, case.k, &w0, &h0, case.iters)
-                .map_err(|e| format!("fit_kl_with_init: {e}"))
+            kl_face(case, &v, &w0, &h0)
         }
         Init::Seeded => {
             let seed = need(case.seed, "--seed (with --init seeded)")?;
             // Frozen per-replicate stream layout of the parallel drivers
             // (U-M1s-05): replicate R on {replicate: R, rank: 0, fold: 0}.
-            msuiter_engine::nmf::fit_kl_on_stream(
-                &v,
-                case.m,
-                case.n,
-                case.k,
-                case.iters,
-                seed,
-                msuiter_engine::rng::StreamId { replicate: case.replicate, rank: 0, fold: 0 },
-            )
-            .map_err(|e| format!("fit_kl_on_stream: {e}"))
+            let stream =
+                msuiter_engine::rng::StreamId { replicate: case.replicate, rank: 0, fold: 0 };
+            if case.full_trace {
+                msuiter_engine::nmf::fit_kl_on_stream(
+                    &v, case.m, case.n, case.k, case.iters, seed, stream,
+                )
+                .map_err(|e| format!("fit_kl_on_stream: {e}"))
+            } else {
+                msuiter_engine::nmf::fit_kl_on_stream_terminals(
+                    &v, case.m, case.n, case.k, case.iters, seed, stream,
+                )
+                .map_err(|e| format!("fit_kl_on_stream_terminals: {e}"))
+            }
         }
         Init::Nndsvd | Init::Nndsvda => {
             let seed = need(case.seed, &format!("--seed (with --init {label})"))?;
@@ -319,9 +339,27 @@ fn fit_case(case: &Case, vc: &mut VCache) -> Result<msuiter_engine::nmf::NmfFit,
                 _ => msuiter_engine::nndsvd::nndsvda_init(&v, case.m, case.n, case.k, seed),
             }
             .map_err(|e| format!("{label}: {e}"))?;
-            msuiter_engine::nmf::fit_kl_with_init(&v, case.m, case.n, case.k, &w0, &h0, case.iters)
-                .map_err(|e| format!("fit_kl_with_init: {e}"))
+            kl_face(case, &v, &w0, &h0)
         }
+    }
+}
+
+/// The observer-density face selector (nmf `TraceMode`): the production
+/// default rides the terminals face, the opted-in `--full-trace` the
+/// protocol-1 full walk. Same procedure, same certified bytes -- the
+/// observer never feeds the updates (nmf module docs).
+fn kl_face(
+    case: &Case,
+    v: &[f64],
+    w0: &[f64],
+    h0: &[f64],
+) -> Result<msuiter_engine::nmf::NmfFit, String> {
+    if case.full_trace {
+        msuiter_engine::nmf::fit_kl_with_init(v, case.m, case.n, case.k, w0, h0, case.iters)
+            .map_err(|e| format!("fit_kl_with_init: {e}"))
+    } else {
+        msuiter_engine::nmf::fit_kl_with_init_terminals(v, case.m, case.n, case.k, w0, h0, case.iters)
+            .map_err(|e| format!("fit_kl_with_init_terminals: {e}"))
     }
 }
 
@@ -343,8 +381,21 @@ fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case, vc: &mut VCache) -> 
 
     let mut trace = String::with_capacity(fit.objective.len() * 26);
     trace.push_str("t,objective\n");
-    for (t, obj) in fit.objective.iter().enumerate() {
-        writeln!(trace, "{t},{obj:.17e}").map_err(|e| format!("trace fmt: {e}"))?;
+    // Row labels name iterations, never array indices: the full face walks
+    // 0..=max_iter, the terminals face carries the witnesses at t = 0 and
+    // t = max_iter (nmf TraceMode::Endpoints -- the second witness IS the
+    // objective after the last iteration).
+    if case.full_trace {
+        for (t, obj) in fit.objective.iter().enumerate() {
+            writeln!(trace, "{t},{obj:.17e}").map_err(|e| format!("trace fmt: {e}"))?;
+        }
+    } else {
+        writeln!(trace, "0,{:.17e}", fit.objective[0])
+            .map_err(|e| format!("trace fmt: {e}"))?;
+        if let Some(&obj) = fit.objective.get(1) {
+            writeln!(trace, "{},{:.17e}", case.iters, obj)
+                .map_err(|e| format!("trace fmt: {e}"))?;
+        }
     }
     write_str(&case.out_dir.join("trace.csv"), &trace)?;
 
@@ -391,7 +442,11 @@ fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case, vc: &mut VCache) -> 
             .map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
         write_csv(&dir.join("W.csv"), &ck_fit.w, case.m, case.k)?;
         write_csv(&dir.join("H.csv"), &ck_fit.h, case.k, case.n)?;
-        write_str(&dir.join("obj.csv"), &format!("{:.17e}\n", ck_fit.objective[t]))?;
+        // The checkpoint re-run stopped at t, so its last recorded witness
+        // IS the objective at t on either face (nmf terminals law, pinned by
+        // endpoints_trace_is_the_terminals_of_the_full_trace).
+        let ck_obj = ck_fit.objective[ck_fit.objective.len() - 1];
+        write_str(&dir.join("obj.csv"), &format!("{:.17e}\n", ck_obj))?;
     }
     Ok(())
 }
@@ -399,7 +454,9 @@ fn emit_fit(fit: &msuiter_engine::nmf::NmfFit, case: &Case, vc: &mut VCache) -> 
 /// `--cases FILE --root INROOT --out-root OUTROOT`: one fit per manifest
 /// row, `INROOT/<case>/` in, `OUTROOT/<case>/out/` out. Aborts at the
 /// first faulty row (exit 2 via main) — a batch is an all-or-nothing unit.
-fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
+/// The `--full-trace` face selector is process-wide (per-row columns carry
+/// the per-case settings only).
+fn run_batch(cases: &Path, root: &Path, out_root: &Path, full_trace: bool) -> Result<(), String> {
     let text = std::fs::read_to_string(cases)
         .map_err(|e| format!("cannot read cases manifest {}: {e}", cases.display()))?;
     let mut lines = text.lines().filter(|l| !l.trim().is_empty());
@@ -454,6 +511,7 @@ fn run_batch(cases: &Path, root: &Path, out_root: &Path) -> Result<(), String> {
             seed,
             replicate,
             dump_at: Vec::new(),
+            full_trace,
         };
         run_case(&full, &mut vc).map_err(|e| format!("case {case}: {e}"))?;
         ran += 1;
@@ -555,6 +613,35 @@ mod tests {
             "--in in --out out --m 6 --n 5 --k 2 --iters 12 --weird 1"
         ))
         .is_err());
+    }
+
+    /// Protocol 2: `--full-trace` is a valueless flag legal on BOTH CLI
+    /// surfaces -- the dispatchers must classify it as part of the accepted
+    /// surface (never `unknown flag`), on either surface.
+    #[test]
+    fn full_trace_flag_is_part_of_the_accepted_cli_surface() {
+        let dir = scratch("fulltrace");
+        let indir = dir.join("in");
+        std::fs::create_dir_all(&indir).expect("in dir");
+        let v: Vec<f64> = (0..30).map(|i| 1.0 + (i % 7) as f64).collect();
+        write_csv(&indir.join("V.csv"), &v, 6, 5).unwrap();
+        let single = dispatch_fit_kl(&mut args(&format!(
+            "--in {} --out {} --m 6 --n 5 --k 2 --iters 3 --init nndsvd --seed 7 --full-trace",
+            indir.display(), dir.join("out").display()
+        )));
+        assert!(!matches!(&single, Err(e) if e.starts_with("unknown flag")),
+                "--full-trace rejected on the single-case surface: {single:?}");
+        single.expect("the single face with --full-trace runs");
+        std::fs::write(dir.join("cases.csv"),
+            "case,init,seed,replicate,iters,m,n,k\nin,nndsvd,7,,3,6,5,2\n").unwrap();
+        let batch = dispatch_fit_kl(&mut args(&format!(
+            "--cases {} --root {} --out-root {} --full-trace",
+            dir.join("cases.csv").display(), dir.display(), dir.join("bout").display()
+        )));
+        assert!(!matches!(&batch, Err(e) if e.starts_with("unknown flag")),
+                "--full-trace rejected on the batch surface: {batch:?}");
+        batch.expect("the batch face with --full-trace runs");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

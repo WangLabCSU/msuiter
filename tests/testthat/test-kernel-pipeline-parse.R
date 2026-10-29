@@ -44,7 +44,10 @@ test_that("L4-1 bit-exactness: the fast route reproduces the reference route
   # The reference objects must be real (guard against comparing NULLs).
   expect_true(is.matrix(W.ref) && identical(dim(W.ref), c(sc$m, sc$k)))
   expect_true(is.matrix(H.ref) && identical(dim(H.ref), c(sc$k, sc$n)))
-  expect_identical(length(tr.ref), sc$iters + 1L)
+  # The production face carries exactly the endpoints witnesses of the
+  # shape law (.kp_trace_t) -- not an iteration-each walk.
+  expect_identical(length(tr.ref),
+                   length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
 })
 
 test_that("L4-2 bit-exactness: seeded synthetic grids at the %.17e
@@ -95,7 +98,9 @@ test_that("L4-2 bit-exactness: seeded synthetic grids at the %.17e
   expect_identical(kp_read_matrix_csv(p, 4L, 4L, "W.csv"), ref)
   expect_true(is.matrix(fast) && identical(dim(fast), c(4L, 4L)))
   expect_true(all(is.finite(as.vector(fast))) && all(as.vector(fast) >= 0))
-  # trace edge: near-adjacent objectives must round-trip exactly.
+  # trace edges: near-adjacent objectives must round-trip exactly on both
+  # certified faces -- the opted-in full ceremony and the endpoints
+  # production face (the same walk, only its two endpoint witnesses).
   iters <- 8L
   obj <- c(9.5, near(9.5, FALSE), rep(base[20L] * 1e-300, 6L),
            base[21L] * 1e300, 0)
@@ -104,11 +109,21 @@ test_that("L4-2 bit-exactness: seeded synthetic grids at the %.17e
   writeLines(c("t,objective",
                paste0(seq_len(iters + 1L) - 1L, ",", sprintf("%.17e", obj))),
                con = tp)
-  tref <- kp_read_trace_csv(tp, iters, "trace.csv")
-  tfast <- kp.read.trace.fast(tp, iters, "trace.csv")
+  tref <- kp_read_trace_csv(tp, iters, "trace.csv", shape = "full")
+  tfast <- kp.read.trace.fast(tp, iters, "trace.csv", shape = "full")
   expect_identical(tfast, tref)
-  expect_identical(kp.read.trace.fast(tp, iters, "trace.csv"), tfast)
+  expect_identical(kp.read.trace.fast(tp, iters, "trace.csv",
+                                     shape = "full"), tfast)
   expect_true(all(is.finite(tfast)))
+  tpe <- file.path(d, "trace-endpoints.csv")
+  writeLines(c("t,objective",
+               paste0(c(0L, iters), ",",
+                      sprintf("%.17e", obj[c(1L, iters + 1L)]))),
+               con = tpe)
+  teref <- kp_read_trace_csv(tpe, iters, "trace-endpoints.csv")
+  tefast <- kp.read.trace.fast(tpe, iters, "trace-endpoints.csv")
+  expect_identical(tefast, teref)
+  expect_identical(tefast, tfast[c(1L, iters + 1L)])
 })
 
 test_that("L4-3 sharpness: a one-digit byte mutation is not identical() --
@@ -178,6 +193,24 @@ test_that("L4-4 fault equivalence: everything the reference route rejects,
     expect_error(kp_read_trace_csv(p, 1L, "t.csv"), info = p)
     expect_error(kp.read.trace.fast(p, 1L, "t.csv"), info = p)
   }
+  # Cross-shape firing control (iters = 2): each face's witness set is a
+  # strict law, not an advisory -- the full walk reads under the full law
+  # only, the endpoints pair under the endpoints law only, on BOTH routes.
+  # A reader that grew a shape parameter it then ignores stays green on
+  # every other unit here and dies on this one.
+  t.full3 <- w("t-full3.csv", c("t,objective", "0,1", "1,2", "2,3"))
+  t.ends2 <- w("t-ends2.csv", c("t,objective", "0,1", "2,3"))
+  expect_silent(kp_read_trace_csv(t.full3, 2L, "t.csv", shape = "full"))
+  expect_silent(kp.read.trace.fast(t.full3, 2L, "t.csv", shape = "full"))
+  expect_silent(kp_read_trace_csv(t.ends2, 2L, "t.csv"))
+  expect_silent(kp.read.trace.fast(t.ends2, 2L, "t.csv"))
+  for (pair in list(list(p = t.full3, wrong = "endpoints"),
+                    list(p = t.ends2, wrong = "full"))) {
+    expect_error(kp_read_trace_csv(pair$p, 2L, "t.csv",
+                                   shape = pair$wrong), info = pair$p)
+    expect_error(kp.read.trace.fast(pair$p, 2L, "t.csv",
+                                    shape = pair$wrong), info = pair$p)
+  }
 })
 
 test_that("L4-5 consumer surface: kp_parse_case_fast returns the
@@ -196,4 +229,16 @@ test_that("L4-5 consumer surface: kp_parse_case_fast returns the
   expect_identical(fast$H, ref$H)
   expect_identical(fast$objective, ref$objective)
   expect_identical(fast$meta, ref$meta)
+  expect_identical(length(ref$objective),
+                   length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
+  # Shape liveness control: the same bytes under the wrong shape law die
+  # on both assembly routes -- the shape parameter is not cosmetic.
+  expect_error(kp_attest_case(case = sc$case, out.dir = sc$case.out,
+                              m = sc$m, n = sc$n, k = sc$k,
+                              iters = sc$iters, init = "nndsvd",
+                              seed = "11", replicate = "",
+                              trace.shape = "full"))
+  expect_error(kp.parse.case.fast(sc$case.out, m = sc$m, n = sc$n,
+                                  k = sc$k, iters = sc$iters,
+                                  trace.shape = "full"))
 })
