@@ -311,3 +311,39 @@ test_that("the covr merge gate reddens zero fragments and the extras prefix cann
   expect_true(any(grepl("prefix <- .dir.prefix(", ex, fixed = TRUE)),
               info = "production no longer routes out-srt-prefix through the normalizer")
 })
+
+test_that("a cached R path cannot survive into the cargo jobs", {
+  # Law from run 40959865870 (2026-10-30): the rust and msrv cargo jobs share
+  # src/rust/target through Swatinem/rust-cache. The extendr-ffi build script
+  # (0.9.0, build.rs:212) bakes the absolute R library directory into a
+  # rustc-link-search instruction and declares no rerun trigger for R_HOME
+  # (:244 covers only R_INCLUDE_DIR), so when setup-r floats the runner's R
+  # (release 4.6.1 -> 4.6.2) the restored output still links against the old
+  # tree: rust-lld "unable to find library -lR". Any job that restores a
+  # shared target and builds the extendr shell crate must drop the
+  # extendr-ffi build-script output after the cache restore and before the
+  # first full-workspace cargo step.
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
+  job_window <- function(key) {
+    h <- which(ci == paste0("  ", key, ":"))
+    expect_identical(length(h), 1L, info = key)
+    win <- ci[seq(from = h + 1L, to = length(ci))]
+    nxt <- which(grepl("^  [A-Za-z0-9_-]+:$", win))
+    if (length(nxt)) win[seq_len(nxt[1L] - 1L)] else win
+  }
+  for (key in c("rust", "msrv")) {
+    win <- job_window(key)
+    cache_i <- which(grepl("Swatinem/rust-cache@", win, fixed = TRUE))
+    cargo_i <- which(grepl("cargo [^\\n]*--workspace", win))
+    clean_i <- which(grepl("clean -p extendr-ffi", win, fixed = TRUE))
+    # The patterns must speak on the committed bytes before the ordering
+    # assertions mean anything (vacuous-green ban).
+    expect_true(length(cache_i) >= 1L, info = paste0(key, ": cache restore"))
+    expect_true(length(cargo_i) >= 1L, info = paste0(key, ": workspace build"))
+    expect_identical(length(clean_i), 1L, info = paste0(key, ": invalidation step"))
+    expect_true(cache_i[1L] < clean_i[1L], info = paste0(key, ": restore then invalidate"))
+    expect_true(clean_i[1L] < min(cargo_i), info = paste0(key, ": invalidate before link"))
+  }
+})

@@ -185,8 +185,11 @@
 # Does the residue parse as a complete, valid protocol-1 output set?
 # Self-contained reference read (dimension, finiteness, non-negativity,
 # trace shape, meta key count) -- the property the silent-consumer hazard
-# hinges on: the residue PARSES CLEAN even though the batch died.
-.kpp_parses_clean <- function(case.out, m, n, k, iters) {
+# hinges on: the residue PARSES CLEAN even though the batch died. The
+# trace law is shape-driven (.kp_trace_t): the production face carries the
+# endpoints witnesses, the --full-trace ceremony one row per iteration.
+.kpp_parses_clean <- function(case.out, m, n, k, iters,
+                              trace.shape = c("endpoints", "full")) {
   ok <- TRUE
   read.grid <- function(path, rows, cols) {
     if (!file.exists(path)) return(NULL)
@@ -206,9 +209,14 @@
   tl <- readLines(trace.path, warn = FALSE)
   tl <- tl[nzchar(tl)]
   ok <- ok && identical(tl[[1L]], "t,objective")
-  ok <- ok && identical(length(tl) - 1L, as.integer(iters) + 1L)
-  tv <- suppressWarnings(as.numeric(unlist(
-    strsplit(tl[-1L], ",", fixed = TRUE), use.names = FALSE)))
+  want <- .kp_trace_t(iters, trace.shape[[1L]], "trace.csv")
+  ok <- ok && identical(length(tl) - 1L, length(want))
+  pair <- strsplit(tl[-1L], ",", fixed = TRUE)
+  ok <- ok && all(lengths(pair) == 2L)
+  ts <- suppressWarnings(as.integer(vapply(pair, function(x) x[[1L]], "",
+                                            USE.NAMES = FALSE)))
+  ok <- ok && identical(ts, want)
+  tv <- suppressWarnings(as.numeric(unlist(pair, use.names = FALSE)))
   ok <- ok && all(is.finite(tv))
   meta.path <- file.path(case.out, "meta.csv")
   if (!file.exists(meta.path)) return(FALSE)

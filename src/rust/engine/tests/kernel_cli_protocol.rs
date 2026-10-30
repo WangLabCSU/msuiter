@@ -156,6 +156,22 @@ fn version_handshake_announces_the_frozen_protocol() {
     assert!(out.stdout.contains("kl_eps=1e-12"), "stdout: {}", out.stdout);
 }
 
+/// Read `key,value` lines of meta.csv into owned lines matching a key.
+fn meta_line(dir: &Path, name: &str, key: &str) -> String {
+    read_text(dir, name)
+        .lines()
+        .find(|l| l.starts_with(&format!("{key},")))
+        .unwrap_or_else(|| panic!("meta.csv has no `{key}` line"))
+        .to_string()
+}
+
+/// The production default of protocol 2: the per-iteration KL objective is
+/// the observer it always was (nmf.rs module docs: it never feeds the
+/// updates), so production computes it at the two endpoints only.
+/// trace.csv is the header plus the rows t = 0 and t = max_iter, meta.csv
+/// stamps trace_len,2, and both rows and the factors are bit-identical to
+/// the in-process reference. The full 0..max_iter walk is the opted-in
+/// ceremony of `--full-trace` (pinned by the two tests below).
 #[test]
 fn external_init_matches_the_in_process_kernel_bit_for_bit() {
     let (m, n, k, v, w0, h0) = problem();
@@ -180,14 +196,110 @@ fn external_init_matches_the_in_process_kernel_bit_for_bit() {
     assert_eq!(h, reference.h, "CLI H diverged from the in-process kernel");
 
     let trace = read_text(&out_dir, "trace.csv");
-    let rows: Vec<&str> = trace.lines().skip(1).collect();
-    assert_eq!(rows.len(), 13, "trace.csv header + 13 rows expected");
-    let obj_final: f64 = rows[12].split(',').nth(1).unwrap().parse().unwrap();
+    let rows: Vec<String> = trace.lines().skip(1).map(str::to_string).collect();
+    assert_eq!(rows.len(), 2, "protocol-2 trace.csv is the header + the two endpoints");
+    let (t0, t1) = (
+        rows[0].split(',').next().unwrap().parse::<usize>().unwrap(),
+        rows[1].split(',').next().unwrap().parse::<usize>().unwrap(),
+    );
+    assert_eq!((t0, t1), (0, 12), "endpoints must ride t = 0 and t = max_iter");
+    let obj_init: f64 = rows[0].split(',').nth(1).unwrap().parse().unwrap();
+    let obj_final: f64 = rows[1].split(',').nth(1).unwrap().parse().unwrap();
+    assert_eq!(obj_init, reference.objective[0]);
     assert_eq!(obj_final, reference.objective[12]);
 
     let meta = read_text(&out_dir, "meta.csv");
-    for key in ["protocol,1", "init,external", "iterations,12", "engine_crate,"] {
-        assert!(meta.contains(key), "meta.csv missing `{key}`:\n{meta}");
+    for key in ["protocol,1", "init,external", "iterations,12", "trace_len,2"] {
+        assert!(meta.lines().any(|l| l == key), "meta.csv missing the line `{key}`:\n{meta}");
+    }
+    assert!(meta.lines().any(|l| l.starts_with("engine_crate,")),
+            "meta.csv has no engine_crate line:\n{meta}");
+}
+
+/// Cross-mode bit identity (the protocol-2 contract): the opted-in
+/// `--full-trace` face -- the protocol-1 ceremony, header + max_iter + 1
+/// rows -- and the production endpoints face are the same procedure at the
+/// same bytes: W/H files byte-identical, the meta obj_init/obj_final lines
+/// byte-identical strings, and the two production trace rows byte-identical
+/// to the corresponding full-trace rows.
+#[test]
+fn full_trace_flag_is_bit_identical_to_the_production_face() {
+    let (m, n, k, v, w0, h0) = problem();
+    let _ = (m, n, k);
+    let scratch = Scratch::new("cross-mode");
+    write_matrix(scratch.path(), "V.csv", &v, 5);
+    write_matrix(scratch.path(), "W0.csv", &w0, 2);
+    write_matrix(scratch.path(), "H0.csv", &h0, 5);
+    let prod = scratch.path().join("out-prod");
+    let full = scratch.path().join("out-full");
+    let in_arg = scratch.path().to_str().unwrap();
+    let out = run(&[
+        "fit-kl", "--in", in_arg,
+        "--out", prod.to_str().unwrap(),
+        "--m", "6", "--n", "5", "--k", "2", "--iters", "12",
+    ]);
+    assert_eq!(out.status, 0, "stderr: {}", out.stderr);
+    let out = run(&[
+        "fit-kl", "--in", in_arg,
+        "--out", full.to_str().unwrap(),
+        "--m", "6", "--n", "5", "--k", "2", "--iters", "12", "--full-trace",
+    ]);
+    assert_eq!(out.status, 0, "--full-trace must be a legal face selector; stderr: {}", out.stderr);
+
+    for name in ["W.csv", "H.csv"] {
+        assert_eq!(
+            fs::read(prod.join(name)).expect("prod factor"),
+            fs::read(full.join(name)).expect("full factor"),
+            "{name}: --full-trace moved the certified bytes"
+        );
+    }
+    for key in ["obj_init", "obj_final"] {
+        assert_eq!(
+            meta_line(&prod, "meta.csv", key),
+            meta_line(&full, "meta.csv", key),
+            "the observer at an endpoint moved its text"
+        );
+    }
+    assert_eq!(meta_line(&prod, "meta.csv", "trace_len"), "trace_len,2");
+    assert_eq!(meta_line(&full, "meta.csv", "trace_len"), "trace_len,13");
+    let prod_rows: Vec<String> = read_text(&prod, "trace.csv").lines().skip(1).map(str::to_string).collect();
+    let full_rows: Vec<String> = read_text(&full, "trace.csv").lines().skip(1).map(str::to_string).collect();
+    assert_eq!(full_rows.len(), 13, "the opted-in face must still walk 0..=max_iter");
+    assert_eq!(prod_rows[0], full_rows[0], "endpoint row 0 moved against the full walk");
+    assert_eq!(prod_rows[1], full_rows[12], "endpoint row max_iter moved against the full walk");
+}
+
+/// The full-trace face still carries the MM monotonicity property that the
+/// committed in-crate convention asserts (direction and tolerance are not
+/// invented here: `assert_monotone` in nmf.rs tests and the twin at
+/// tests/g2_zero_lock.rs:143-148 -- non-increase within a relative slack of
+/// 1e-9 * (1 + |previous|)).
+#[test]
+fn full_trace_satisfies_the_committed_monotonicity_convention() {
+    let (m, n, k, v, w0, h0) = problem();
+    let _ = (m, n, k);
+    let scratch = Scratch::new("monotone");
+    write_matrix(scratch.path(), "V.csv", &v, 5);
+    write_matrix(scratch.path(), "W0.csv", &w0, 2);
+    write_matrix(scratch.path(), "H0.csv", &h0, 5);
+    let out_dir = scratch.path().join("out");
+    let in_arg = scratch.path().to_str().unwrap();
+    let out = run(&[
+        "fit-kl", "--in", in_arg,
+        "--out", out_dir.to_str().unwrap(),
+        "--m", "6", "--n", "5", "--k", "2", "--iters", "12", "--full-trace",
+    ]);
+    assert_eq!(out.status, 0, "stderr: {}", out.stderr);
+    let trace: Vec<f64> = read_text(&out_dir, "trace.csv")
+        .lines()
+        .skip(1)
+        .map(|l| l.split(',').nth(1).unwrap().parse().unwrap())
+        .collect();
+    assert_eq!(trace.len(), 13);
+    for t in 1..trace.len() {
+        let slack = 1e-9 * (1.0 + trace[t - 1].abs());
+        assert!(trace[t] <= trace[t - 1] + slack,
+                "MM monotonicity broken at t = {t}: {} > {} + {slack}", trace[t], trace[t - 1]);
     }
 }
 
@@ -340,6 +452,116 @@ fn batch_mode_equals_single_case_runs() {
     .expect("kernel");
     assert_eq!(read_matrix(&root.path().join("caseB/out"), "W.csv"), reference.w);
     assert!(read_text(&root.path().join("caseB/out"), "meta.csv").contains("protocol,1"));
+}
+
+/// The batch face carries the per-case seed law the 50-run unit rides: the
+/// seed is a manifest column, so init=nndsvd runs at seed, seed+1, ... may
+/// ride one batch invocation (the replicate column stays gated to
+/// init=seeded -- that law is the kernel's and stays enforced). Two rows on
+/// the same bytes with the same seed are byte-identical; the neighbour seed
+/// moves the factors; every meta echoes its own row's seed. The completed
+/// batch names its case count on stderr (the census column the serving
+/// bridge reads) and a faulty row kills the batch without that line.
+#[test]
+fn batch_mode_carries_per_case_seeds_and_serves_the_full_trace_face() {
+    let (m, n, k, v, _w0, _h0) = problem();
+    let _ = (m, n, k);
+    let root = Scratch::new("seeds");
+    for case in ["sA0", "sA1"] {
+        let dir = root.path().join(case);
+        fs::create_dir_all(&dir).expect("case dir");
+        write_matrix(&dir, "V.csv", &v, 5);
+    }
+    fs::write(
+        root.path().join("seeds.csv"),
+        "case,init,seed,replicate,iters,m,n,k\n\
+         sA0,nndsvd,42,,12,6,5,2\n\
+         sA1,nndsvd,42,,12,6,5,2\n",
+    )
+    .expect("manifest");
+    let out = run(&[
+        "fit-kl",
+        "--cases", root.path().join("seeds.csv").to_str().unwrap(),
+        "--root", root.path().to_str().unwrap(),
+        "--out-root", root.path().to_str().unwrap(),
+    ]);
+    assert_eq!(out.status, 0, "stderr: {}", out.stderr);
+    assert!(out.stderr.contains("batch ok (2 cases)"),
+            "the census line must name the served case count; stderr: {}", out.stderr);
+    let a = fs::read(root.path().join("sA0/out/W.csv")).expect("sA0");
+    assert_eq!(a, fs::read(root.path().join("sA1/out/W.csv")).expect("sA1"),
+               "same seed, same bytes -- the batch collapsed two independent fits");
+    assert_eq!(meta_line(&root.path().join("sA0/out"), "meta.csv", "seed"), "seed,42");
+    assert_eq!(meta_line(&root.path().join("sA1/out"), "meta.csv", "seed"), "seed,42");
+    assert_eq!(meta_line(&root.path().join("sA0/out"), "meta.csv", "trace_len"),
+               "trace_len,2", "the batch default is the protocol-2 face");
+
+    // Neighbour seed moves the factors (the seed column is not decorative).
+    fs::write(
+        root.path().join("moves.csv"),
+        "case,init,seed,replicate,iters,m,n,k\n\
+         sA0,nndsvd,43,,12,6,5,2\n",
+    )
+    .expect("manifest");
+    let out = run(&[
+        "fit-kl",
+        "--cases", root.path().join("moves.csv").to_str().unwrap(),
+        "--root", root.path().to_str().unwrap(),
+        "--out-root", root.path().join("moves-out").to_str().unwrap(),
+    ]);
+    assert_eq!(out.status, 0, "stderr: {}", out.stderr);
+    let moved = fs::read(root.path().join("moves-out/sA0/out/W.csv")).expect("moved");
+    assert_ne!(moved, a, "seed 42 vs 43 collapsed -- the per-case seed law is inert");
+
+    // --full-trace is legal on the batch face and is the protocol-1 ceremony.
+    let out = run(&[
+        "fit-kl",
+        "--cases", root.path().join("seeds.csv").to_str().unwrap(),
+        "--root", root.path().to_str().unwrap(),
+        "--out-root", root.path().join("full-out").to_str().unwrap(),
+        "--full-trace",
+    ]);
+    assert_eq!(out.status, 0, "--full-trace must be legal in batch mode; stderr: {}", out.stderr);
+    assert_eq!(
+        meta_line(&root.path().join("full-out/sA0/out"), "meta.csv", "trace_len"),
+        "trace_len,13", "the opted-in face is the protocol-1 ceremony"
+    );
+    let w_full = fs::read(root.path().join("full-out/sA0/out/W.csv")).expect("full W");
+    assert_eq!(w_full, a, "--full-trace moved the certified bytes on the batch face");
+
+    // Firing control for the census column: a faulty row kills the batch and
+    // the completion line never prints.
+    fs::write(
+        root.path().join("broken.csv"),
+        "case,init,seed,replicate,iters,m,n,k\n\
+         sA0,nndsvd,42,,12,6,5,2\n\
+         sAx,bogus,1,,12,6,5,2\n",
+    )
+    .expect("manifest");
+    let out = run(&[
+        "fit-kl",
+        "--cases", root.path().join("broken.csv").to_str().unwrap(),
+        "--root", root.path().to_str().unwrap(),
+        "--out-root", root.path().join("broken-out").to_str().unwrap(),
+    ]);
+    assert_eq!(out.status, 2, "a faulty manifest row must exit 2");
+    assert!(!out.stderr.contains("batch ok"), "census line fired on a dead batch: {}", out.stderr);
+
+    // The replicate law stays the kernel's: a non-seeded row may not carry one.
+    fs::write(
+        root.path().join("illegal.csv"),
+        "case,init,seed,replicate,iters,m,n,k\n\
+         sA0,nndsvd,42,3,12,6,5,2\n",
+    )
+    .expect("manifest");
+    let out = run(&[
+        "fit-kl",
+        "--cases", root.path().join("illegal.csv").to_str().unwrap(),
+        "--root", root.path().to_str().unwrap(),
+        "--out-root", root.path().join("illegal-out").to_str().unwrap(),
+    ]);
+    assert_eq!(out.status, 2, "replicate off init=seeded must exit 2");
+    assert!(out.stderr.contains("replicate requires init=seeded"), "{}", out.stderr);
 }
 
 #[test]
