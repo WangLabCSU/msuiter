@@ -153,3 +153,60 @@ test_that("A-5 the fast route keeps the fail-closed receipt law: a mutated
   # Same bytes through the reference route: the same law, the same fault.
   expect_error(.kar_attest(sc, "reference"), "W.csv")
 })
+
+# A-7: the receipt law must stand where the kernel does not. The coverage
+# arm builds no binary, so every binary-gated attest unit above skips there
+# and the P10-A receipt body (shape law, trace_len law, both route faces)
+# reads uncovered to the patch gate -- coverage must not be a hostage of
+# the certified binary's presence. The staged bytes mirror what the
+# certified writer emits under the same laws A-3 attests against real
+# output: key,value meta lines, %.17e grids, the endpoints-face
+# t,objective file.
+test_that("A-7 the receipt law stands without the kernel: hand-staged
+           certified-face bytes attest on both routes and the shape law
+           is fail-closed", {
+  d <- tempfile("kar-receipt-")
+  dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  m <- 8L; n <- 6L; k <- 2L; iters <- 12L; seed <- 11L
+  w <- .kpp_fixture_v(seed = seed, m = m, n = k)
+  h <- .kpp_fixture_v(seed = seed + 1L, m = k, n = n)
+  writeLines(.kpp_grid(w), con = file.path(d, "W.csv"))
+  writeLines(.kpp_grid(h), con = file.path(d, "H.csv"))
+  obj <- .kpp_fixture_v(seed = seed + 2L, m = 1L, n = iters + 1L)
+  writeLines(c("t,objective",
+               paste0(c(0L, iters), ",",
+                      sprintf("%.17e", obj[c(1L, iters + 1L)]))),
+             con = file.path(d, "trace.csv"))
+  writeLines(c(
+    paste0("protocol,", .KP_PROTOCOL),
+    "command,fit-kl", "init,nndsvd", paste0("seed,", seed), "replicate,na",
+    paste0("m,", m), paste0("n,", n), paste0("k,", k),
+    paste0("iters,", iters), paste0("iterations,", iters),
+    # endpoints face: the initializer witness plus the post-loop witness.
+    "trace_len,2",
+    paste0("obj_init,", sprintf("%.17e", obj[[1L]])),
+    paste0("obj_final,", sprintf("%.17e", obj[[iters + 1L]])),
+    "eps,1e-9", "engine_crate,msuiter-engine"),
+    con = file.path(d, "meta.csv"))
+  attest <- function(route, shape = c("endpoints", "full"))
+    kp_attest_case(case = "kar-receipt", out.dir = d, m = m, n = n, k = k,
+                   iters = iters, init = "nndsvd", seed = "11",
+                   replicate = "", route = route, trace.shape = shape)
+  a <- attest("reference")
+  b <- attest("fast")
+  expect_identical(b, a)
+  # The payload must be real: a hand-staged grid read back, both faces.
+  expect_true(is.matrix(a$W) && identical(dim(a$W), c(m, k)))
+  expect_true(is.matrix(a$H) && identical(dim(a$H), c(k, n)))
+  expect_identical(length(a$objective), 2L)
+  expect_true(all(is.finite(a$objective)))
+  # The shape law is fail-closed and named, before a single byte is read.
+  expect_error(attest("fast", "bogus"), "unknown trace shape 'bogus'")
+  expect_error(attest("reference", "bogus"), "unknown trace shape 'bogus'")
+  # The fast case bundle is the same bytes through the vectorized route:
+  # value-identical to the attested receipt, field by field.
+  bundle <- kp_parse_case_fast(d, m, n, k, iters, trace.shape = "endpoints")
+  expect_identical(bundle[c("W", "H", "objective", "meta")],
+                   list(W = a$W, H = a$H, objective = a$objective,
+                        meta = a$meta))
+})
