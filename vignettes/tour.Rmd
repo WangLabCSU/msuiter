@@ -1,0 +1,212 @@
+---
+title: "Tour: from variants to a reference comparison"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{"Tour: from variants to a reference comparison"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+library(msuiter)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Tiny reporter for the error-message quality section: catches the
+# msuiter_error_* condition and shows its class plus the full message.
+show_error <- function(expr) {
+  r <- tryCatch({ force(expr); "no condition raised" },
+    error = function(e) {
+      paste0("condition class: ", class(e)[1], "\n", conditionMessage(e))
+    })
+  cat(r, "\n")
+}
+```
+
+## The working grammar
+
+msuiter moves typed objects between the layers: `ms_variants()` reads and
+validates caller output into an **MsVariants** input IR, `ms_tally()` runs it
+through the Rust kernel into an **MsCatalog** count IR, signature work
+produces an **MsSignature**, and reference knowledge arrives as an
+**MsRefDb**. Every face takes and returns an inspected object, so a broken
+record is caught at the boundary that owns it, with a message that names the
+field, the expectation and the fix. This tour runs the whole chain end to
+end on a synthetic fixture genome so the printed output below is the real
+kernel output, reproducible from this page alone.
+
+## A fixture genome in two dozen lines
+
+The tally layer reads the reference from a UCSC twoBit file. The block
+below is the same little-endian writer the test-suite helpers use, so the
+trivial genome (`chr1` = `ACAC…`, `chr2` = `GCGC…`) and the variants above it
+agree base for base: a C>A SNV at `chr1:12` sits in the trinucleotide
+context `A[C>A]A`, one of the 96 SBS channels.
+
+```{r fixture}
+.u32le <- function(v) writeBin(as.integer(v), raw(), size = 4L, endian = "little")
+.pack_bases <- function(bases) {
+  out <- raw((length(bases) + 3L) %/% 4L)
+  acc <- 0L; filled <- 0L; k <- 0L
+  for (b in bases) {
+    acc <- bitwOr(bitwShiftL(acc, 2L), b); filled <- filled + 1L
+    if (filled == 4L) { k <- k + 1L; out[k] <- as.raw(acc); acc <- 0L; filled <- 0L }
+  }
+  if (filled > 0L) out[k + 1L] <- as.raw(bitwShiftL(acc, 2L * (4L - filled)))
+  out
+}
+.write_2bit <- function(path) {
+  chr1 <- rep(c(2L, 1L), 32L); chr1[51L:53L] <- 0L
+  chr2 <- rep(c(3L, 1L), 20L)
+  recs <- list(
+    list(name = "chr1", size = 64L, dna = .pack_bases(chr1), nb = 50L, nl = 3L),
+    list(name = "chr2", size = 40L, dna = .pack_bases(chr2),
+         nb = integer(0), nl = integer(0)))
+  off <- 16L + sum(vapply(recs, function(r) 1L + nchar(r$name) + 4L, 0L))
+  index <- raw(); body <- raw()
+  for (r in recs) {
+    index <- c(index, as.raw(nchar(r$name)), charToRaw(r$name), .u32le(off))
+    rec <- c(.u32le(r$size), .u32le(length(r$nb)), .u32le(r$nb), .u32le(r$nl),
+             .u32le(0L), .u32le(0L), r$dna)
+    body <- c(body, rec); off <- off + length(rec)
+  }
+  bytes <- c(.u32le(0x1A412743L), .u32le(0L), .u32le(length(recs)),
+             .u32le(0L), index, body)
+  con <- file(path, "wb"); on.exit(close(con), add = TRUE)
+  writeBin(bytes, con); invisible(path)
+}
+genome <- file.path(tempdir(), "tour-2bit.2bit")
+.write_2bit(genome)
+```
+
+## Step 1 — ms_variants(): the typed input IR
+
+File input takes VCF/TSV/MAF (optionally gzipped); the canonical
+`data.frame(chrom, start, end, ref, alt)` form is validated directly. The
+parser is deliberately strict about what it will not guess: unusable alleles
+are not dropped silently — they enter the provenance **skip ledger**, which
+is the filter face of the io layer (the count of records that left the
+stream, keyed by reason).
+
+```{r variants}
+vcf <- c(
+  "##fileformat=VCFv4.2",
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
+  "chr7\t55191822\t.\tC\tT\t.\tPASS\t.",
+  "chr17\t7676594\t.\tCA\tC\t.\t.\t.",
+  "chr1\t100\t.\tG\t<NON_REF>\t.\tPASS\t.",
+  "chr2\t200\t.\tA\t.\t.\tPASS\t.")
+path <- tempfile(fileext = ".vcf"); writeLines(vcf, path)
+v <- ms_variants(path, "GRCh38", caller = "synthetic", matched_normal = "none")
+v
+str(v@provenance$parse)
+```
+
+Two of the four data lines become records; the symbolic and missing alleles
+left the stream as ledger entries `symbolic_alt` and `missing_alt`, so the
+drop is auditable rather than silent.
+
+## Step 2 — ms_tally(): the count IR through the Rust kernel
+
+Three SNVs in two samples, tabulated over the fixture genome. The result is
+an `MsCatalog`: a channels x samples count table plus the channel-registry
+snapshot (name, labels and a content hash) that later objects pin against.
+
+```{r tally}
+tab <- data.frame(
+  chrom  = c("chr1", "chr1", "chr1"),
+  start  = c(12L, 22L, 14L),
+  end    = c(12L, 22L, 14L),
+  ref    = c("C", "C", "C"),
+  alt    = c("A", "T", "T"),
+  sample = c("S1", "S1", "S2"))
+v2 <- ms_variants(tab, "GRCh38", caller = "synthetic", matched_normal = "none")
+cat1 <- ms_tally(v2, genome)
+cat1
+```
+
+The count table coerces on demand (`as.data.frame(cat1@counts)` gives the
+plain data.frame view) and filters by the usual row selection — here the
+nonzero channel queue:
+
+```{r counts}
+nz <- cat1@counts[rowSums(as.matrix(cat1@counts)) > 0, , drop = FALSE]
+nz
+class(as.data.frame(cat1@counts))
+```
+
+## Step 3 — ms_signature(): signatures pinned to a channel table
+
+An `MsSignature` carries a catalog summary whose `channel_hash` is **derived
+from a validated MsCatalog, never hand-forged** — the validator recomputes it
+and refuses any other value, which is what stops a signature dictionary from
+drifting off the channel table it was tallied against.
+
+```{r signature}
+labels <- cat1@channels$labels
+sigs <- matrix((seq_len(length(labels) * 2L) * 7L + 1L) %% 10L / 10,
+               length(labels), 2L,
+               dimnames = list(labels, c("SIG1", "SIG2")))
+exp1 <- matrix(c(40, 5, 10, 30), 2L, 2L,
+               dimnames = list(c("SIG1", "SIG2"), c("S1", "S2")))
+summary1 <- list(
+  n_channels   = length(labels), n_samples = 2L,
+  channel_name = cat1@channels$name, channel_hash = cat1@channels$hash,
+  build = "GRCh38")
+sig <- ms_signature(sigs, exp1, summary1, engine = "synthetic", seed = 1L)
+sig
+```
+
+## Step 4 — ms_refdb(): the reference face, bundled-first
+
+Reference dictionaries are versioned, digest-pinned objects. The bundled
+COSMIC v3.6 face ships inside the package, so the trusted default needs no
+download; `ms_refdb()` builds the same class from your own matrices plus the
+governance metadata.
+
+```{r refdb-bundled}
+br <- ms_refdb_bundled()
+names(br)
+db <- br[["SBS_GRCh38"]]
+db
+head(db@matrices[[1]][, 1:4], 3)
+```
+
+```{r refdb-own}
+ms_refdb(list(sbs = sigs), metadata = list(
+  version = "1", class = "SBS", build = "GRCh38", schema_version = "1",
+  sha256 = paste0(rep("a", 64), collapse = ""), license = "CC0-1.0",
+  build_independent = FALSE, availability = "GRCh38"))
+```
+
+## Errors speak for themselves
+
+Every boundary abort raises an `msuiter_error_*` condition carrying the class,
+the offending value and a concrete repair step. A few live samples, run on
+purpose-wrong input:
+
+```{r errors}
+forged <- summary1
+forged$channel_hash <- paste0(rep("0", 64), collapse = "")
+show_error(ms_signature(sigs, exp1, forged, engine = "synthetic", seed = 1L))
+show_error(ms_variants(data.frame(chrom = "chr1", start = -5, end = -5,
+                                  ref = "C", alt = "T"),
+                        "GRCh38", caller = "s", matched_normal = "none"))
+bp <- tempfile(fileext = ".bcf")
+con <- file(bp, "wb"); writeBin(as.raw(c(0x42, 0x43, 0x46, 0x02)), con); close(con)
+show_error(ms_variants(bp, "GRCh38", caller = "s", matched_normal = "none"))
+show_error(ms_refdb(list(sbs = sigs), metadata = list(
+  version = "1", class = "SBS", build = "GRCh38", schema_version = "1",
+  sha256 = "tooshort", license = "CC0-1.0",
+  build_independent = FALSE, availability = "GRCh38")))
+unlink(bp)
+```
+
+## Where to go next
+
+The function-to-concept-to-pillar bridge is [docs/MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md);
+one-row-per-export, so any face names the concept it serves and its peer
+counterpart. For extending the engine registry itself see the *Extending
+msuiter* article.
+
+```{r cleanup, include = FALSE}
+unlink(path); unlink(genome)
+```
