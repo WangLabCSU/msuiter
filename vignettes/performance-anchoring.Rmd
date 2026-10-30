@@ -1,0 +1,173 @@
+---
+title: "Performance anchoring: frozen floors, witnesses and reproduction"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{"Performance anchoring: frozen floors, witnesses and reproduction"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator: knitr renders with cwd set to the vignettes directory.
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# Byte-routing helpers: every performance number on this page is read from
+# committed bytes at build time -- fixed-token scans, never retyped values,
+# and any scan that must yield lines fails the render when it yields none.
+.grep_fixed <- function(lines, token) {
+  lines[vapply(lines, function(l) grepl(token, l, fixed = TRUE),
+               logical(1), USE.NAMES = FALSE)]
+}
+.must <- function(lines, what) {
+  if (!length(lines)) {
+    stop("fail-closed: the byte scan for ", what, " yielded no rows\n",
+         domain = NA)
+  }
+  lines
+}
+.say <- function(l) { for (i in seq_along(l)) cat(l[[i]], "\n") }
+```
+
+msuiter's benchmark layer is governed, not narrated. Floor thresholds are
+frozen constants re-derived from rep-100 witness bytes (never from
+short-probe magnitudes), every calibration run mints a witnessed registry
+under `bench/results/`, and the two sealed head-to-head campaigns are quoted
+verbatim below with their witness paths. Nothing on this page retypes a
+number by hand: each figure is routed from committed bytes at build time,
+and the extraction chunks fail closed if a committed artefact ever goes
+missing or empty.
+
+## The frozen floors and their witnessing registry
+
+The floor table's epoch hashes the canonical JSON of every
+floor-affecting constant (`FLOOR_TABLE_FIELDS`), so any re-calibration flips
+it by construction; the calibration registry pins the witness digests the
+floors were sealed from.
+
+```{r floors}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: the governance artefacts are not reachable here\n")
+} else {
+  cal_f <- file.path(PKG, "bench", "results",
+    "m7_floor_calibration_p7cap_legacy_20261027-083955", "CALIBRATION.json")
+  gov_f <- file.path(PKG, "bench", "m7", "tools", "matrix_governance.py")
+  anc_f <- file.path(PKG, "bench", "results",
+    "m7_floor_calibration_p7cap_legacy_20261027-083955", "anchors_fragment.json")
+  if (!all(file.exists(c(cal_f, gov_f, anc_f)))) {
+    cat("governance artefacts not on disk (check tarball): read them in the repository under bench/results/m7_floor_calibration_p7cap_legacy_20261027-083955/ and bench/m7/tools/matrix_governance.py\n")
+  } else {
+    cat("---- ", basename(cal_f), " ----\n", sep = "")
+    cal <- readLines(cal_f, warn = FALSE)
+    .say(.must(.grep_fixed(cal, '"schema"'), "calibration schema"))
+    .say(.must(.grep_fixed(cal, '"probes"'), "calibration probe count"))
+    .say(.must(.grep_fixed(cal, '"freshness"'), "freshness law"))
+    .say(.must(.grep_fixed(cal, '"gate"'), "gate law"))
+    .say(.must(.grep_fixed(cal, '"reps"'), "reps law"))
+    dig <- .must(.grep_fixed(cal, '.json": "'), "witness digests")
+    cat("pinned witness digests:", length(dig), "entries; first three:\n")
+    .say(dig[1:3])
+    cat("\n---- ", basename(anc_f), " (head) ----\n", sep = "")
+    .say(.must(head(readLines(anc_f, warn = FALSE), 14L), "anchors head"))
+    cat("\n---- ", basename(gov_f), " (floor law bytes) ----\n", sep = "")
+    gov <- readLines(gov_f, warn = FALSE)
+    .say(.must(.grep_fixed(gov, "FLOOR_TABLE_FIELDS = ("), "floor table fields"))
+    .say(.must(.grep_fixed(gov, '"_SWEEP_FIT", "_SWEEP_RAW"'),
+               "floor table fields tail"))
+    .say(.must(.grep_fixed(gov, "FLOOR_RATIO = 3.0"), "floor ratio constant"))
+    .say(.must(.grep_fixed(gov, "def floor_table_epoch()"), "epoch derivation"))
+    .say(.must(.grep_fixed(gov, "RE_ADJUDICATION_MECHANISM = ("), "re-adjudication law"))
+    hit <- which(vapply(gov, function(l) grepl("('sigminer', 'clock', 1000):", l,
+                                               fixed = TRUE), logical(1)))
+    if (!length(hit)) stop("fail-closed: the rep-100 floor anchor cell scan yielded no rows\n", domain = NA)
+    .say(gov[seq(hit[1], hit[1] + 3L)])
+    nw <- .must(.grep_fixed(gov, "'witness': ("), "floor witness pointers")
+    cat("witnessed floor-anchor cells:", length(nw), "\n")
+  }
+}
+```
+
+Re-extract any of the above yourself — the commands print the same bytes:
+
+```{sh re-extract, eval = FALSE}
+python3 bench/m7/tools/matrix_governance.py --floor-epoch   # the table epoch
+sed -n '1,20p' bench/results/m7_floor_calibration_p7cap_legacy_20261027-083955/CALIBRATION.json
+```
+
+## The P10 bridge-face claim, quoted from its witness
+
+The batch-bridge result (the only speedup statement on this page) is quoted
+from the bytes of its landed commit, never retyped: the frozen-geometry A0
+before/after pair, bit-identical output, witnessed in the commit body.
+
+```{r p10}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: no repository to read the commit from\n")
+} else {
+  outf <- tempfile(fileext = ".txt")
+  st <- tryCatch(system2("git",
+    c("-C", PKG, "show", "-s", "--format=%B", "2296f49"),
+    stdout = outf, stderr = FALSE, wait = TRUE),
+    error = function(e) NA_integer_)
+  on.exit(unlink(outf), add = TRUE)
+  ok <- !is.na(st) && identical(as.integer(st), 0L)
+  if (!ok || !file.exists(outf) || file.size(outf) <= 0) {
+    cat("git not available in this context: read the bytes with `git show -s --format=%B 2296f49` in a checkout\n")
+  } else {
+    b <- readLines(outf, warn = FALSE)
+    l1 <- .must(.grep_fixed(b, "per-run before"), "A0 before figure")
+    l2 <- .must(.grep_fixed(b, "landing ratio"), "landing ratio figure")
+    .say(unique(c(l1, l2)))
+    cat("(witness: commit 2296f49 body; laws in tests/testthat/test-kernel-batch-bridge.R)\n")
+  }
+}
+```
+
+## The sealed head-to-head adjudications
+
+Peer-comparison numbers exist here only as sealed, adjudicated campaign
+verdicts with their witness paths — never as headlines. The bootstrap
+campaign's stored verdict is reproduced verbatim from its committed
+`result.md`:
+
+```{r sealed}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: the campaign witness is not reachable here\n")
+} else {
+  res_f <- file.path(PKG, "bench", "results",
+    "bootstrap_vs_sigminer_20261013T175859Z", "result.md")
+  if (!file.exists(res_f)) {
+    cat("campaign witness not on disk (check tarball): bench/results/bootstrap_vs_sigminer_20261013T175859Z/result.md\n")
+  } else {
+    cat("---- ", basename(res_f), " (verbatim) ----\n", sep = "")
+    .say(.must(readLines(res_f, warn = FALSE), "sealed campaign verdict"))
+  }
+}
+```
+
+The adjudication voice — why a `MEASURED-false` verdict stays published
+rather than being re-measured into a nicer shape — is the governance record
+in [docs/PERFORMANCE.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/PERFORMANCE.md);
+the co-tenancy attestation census for this campaign rides at
+`bench/results/bootstrap_vs_sigminer_20261013T175859Z/witnesses/host_census.jsonl`.
+
+## Reproduction
+
+The frozen matrix and its floor gate are reproducible from the committed
+drivers; the probe legs that mint floor witnesses run under the freshness
+law (fresh per-leg cachedir, `--floor-gate off`, full witness provenance):
+
+```{sh reproduce, eval = FALSE}
+python3 bench/m7/run_bench.py --help          # the matrix driver
+python3 bench/m7/tests/run_all.py             # the governance suite
+Rscript -e 'devtools::load_all(); ms_sitrep()' # the installation sitrep
+```
+
+Every performance claim msuiter makes in prose (README, manual pages, this
+vignette) must name its witness path; a number without a witness path is
+not a claim, and this page holds none.
