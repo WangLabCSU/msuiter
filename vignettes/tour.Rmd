@@ -8,7 +8,23 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
-library(msuiter)
+# Root locator + dual-load idiom shared with the bench/scenarios drivers:
+# the source tree (check and site-build contexts) loads through pkgload; a
+# bare installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 # Tiny reporter for the error-message quality section: catches the
 # msuiter_error_* condition and shows its class plus the full message.
