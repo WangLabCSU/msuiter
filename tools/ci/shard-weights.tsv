@@ -65,6 +65,9 @@ test-ms-exposure-test.R	0	30
 test-ms-qc-report.R	112	42
 test-ms-qc-sentries.R	280	114
 test-ms-simulate.R	0	42
+test-pkgdown-citation.R	0	23
+test-pkgdown-msu-map.R	1	23
+test-pkgdown-reference-map.R	0	17
 test-r-floor-ops.R	0	1
 test-refdb.R	373	138
 test-release-materials.R	0	12

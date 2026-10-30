@@ -48,10 +48,13 @@ shard	file	seconds
 4	test-ms-embed.R	2
 4	test-ms-exposure-test.R	0
 4	test-ms-simulate.R	0
+4	test-pkgdown-citation.R	0
+4	test-pkgdown-reference-map.R	0
 4	test-r-floor-ops.R	0
 4	test-refdb.R	373
 4	test-release-materials.R	0
 4	test-scenario-atlas.R	2
+4	test-scenario-hrd.R	0
 4	test-sitrep.R	0
 4	test-stratify.R	0
 4	test-vendor-gate-law.R	0
@@ -76,6 +79,6 @@ shard	file	seconds
 6	test-ms-benchmark-driver.R	208
 6	test-ms-compare-boundary.R	2
 6	test-ms-downsample-io.R	36
-6	test-scenario-hrd.R	0
+6	test-pkgdown-msu-map.R	1
 6	test-treatment-report.R	13
 6	test-xval-sigminer.R	10
