@@ -12,7 +12,7 @@
       `ms_*_rust` export surface?
     - **No**.
   - **Yes** -> per the frozen protocol in
-    [docs/ffi-surface.md](../docs/ffi-surface.md), the "export manifest"
+    [docs/ffi-surface.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ffi-surface.md), the "export manifest"
     and "export detail table" sections were updated in lockstep
     (including `since` and `status`); the drift guard
     `tests/testthat/test-ffi-surface-drift.R` stays green; and the
