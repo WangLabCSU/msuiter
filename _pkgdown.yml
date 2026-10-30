@@ -10,16 +10,19 @@ development:
 
 navbar:
   structure:
-    left: [intro, reference, news]
+    left: [intro, reference, news, docs]
     right: [github]
   components:
     news:
       text: News
       href: news/index.html
+    docs:
+      text: Docs
+      href: https://github.com/WangLabCSU/msuiter/tree/main/docs
 
 reference:
 - title: The object model (S7)
-  desc: The central objects and the construction entry points (developer preview, the API marked experimental).
+  desc: The central objects and the construction entry points (developer preview, the API marked experimental). The full function-to-concept-to-pillar map is docs/MSU-MAP.md (https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md).
   contents:
   - ms_variants
   - ms_catalog
