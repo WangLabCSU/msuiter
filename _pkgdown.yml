@@ -168,10 +168,10 @@ reference:
 # the string"). The single vignette under vignettes/ stays named explicitly
 # -- no default-index fallback, the audit stays load-bearing.
 articles:
-- title: Tour: from variants to a reference comparison
+- title: "Tour: from variants to a reference comparison"
   contents:
   - tour
-- title: Application scenarios: atlas, HRD and treatment forensics
+- title: "Application scenarios: atlas, HRD and treatment forensics"
   contents:
   - scenarios
 - title: "Performance anchoring: frozen floors, witnesses and reproduction"
