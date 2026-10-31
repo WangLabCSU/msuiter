@@ -296,8 +296,8 @@ test_that("production defaults are preserved: baked baselines wired into the law
 
   # The ADR 0002 byte baselines ride in the script verbatim (load-bearing
   # constants of the content law -- this unit never edits them).
-  expect_match(txt, "BASELINE_UNCOMPRESSED=16911999")
-  expect_match(txt, "BASELINE_TAR=18319360")
+  expect_match(txt, "BASELINE_UNCOMPRESSED=16928778")
+  expect_match(txt, "BASELINE_TAR=18339840")
   # The refuted xz size band must be GONE from the law text (reporting the
   # baseline number as context is free; enforcing it is not).
   expect_false(grepl("xz size outside", txt, fixed = TRUE))
@@ -305,12 +305,12 @@ test_that("production defaults are preserved: baked baselines wired into the law
   scratch <- tempfile("vg-defaults-"); dir.create(scratch, recursive = TRUE)
   on.exit(unlink(scratch, recursive = TRUE), add = TRUE)
   # No injected baselines on the enforcement branch: the synthetic tree is
-  # miles below the baked 16911999/18319360 defaults -- the baked values must
+  # miles below the baked 16928778/18339840 defaults -- the baked values must
   # be LIVE in the law (not merely printed), so the run REDs on them.
   .ms_vg_build(scratch)
   r <- .ms_vg_run(script, c(paste0("MSUITER_VENDOR_SYNTH=", scratch),
                            "MSUITER_VENDOR_OS=Linux"))
   expect_identical(r$status, 1L)
   expect_match(r$out, "uncompressed size drifted")
-  expect_match(r$out, "baseline 16911999 B")
+  expect_match(r$out, "baseline 16928778 B")
 })

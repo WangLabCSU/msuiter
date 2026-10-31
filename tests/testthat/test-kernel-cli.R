@@ -135,7 +135,8 @@ test_that("msuiter-kernel announces the frozen protocol=1 handshake", {
   expect_match(out$stdout, "kl_eps=1e-12")
 })
 
-test_that("external-init fit reproduces the committed goldens (bit-stable factors, tol objective)", {
+test_that("external-init fit under --full-trace reproduces the committed
+           goldens (bit-stable factors, tol objective)", {
   indir <- .case1()
   gold  <- .kernel_repo(file.path("tests", "testthat", "fixtures",
     "kernel-cli", "golden_case1_T200"))
@@ -144,7 +145,8 @@ test_that("external-init fit reproduces the committed goldens (bit-stable factor
   dir.create(outdir, recursive = TRUE)
   out <- .kernel_cli_split(c("fit-kl",
     "--in", indir, "--out", outdir,
-    "--m", "96", "--n", "20", "--k", "3", "--iters", "200"))
+    "--m", "96", "--n", "20", "--k", "3", "--iters", "200",
+    "--full-trace"))
   on.exit(unlink(outdir, recursive = TRUE))
   expect_identical(out$status, 0L)
   # The factor surfaces are bit-stable across platforms: byte-for-byte
@@ -178,6 +180,59 @@ test_that("external-init fit reproduces the committed goldens (bit-stable factor
     expect_true(abs(as.numeric(om[k, 1L]) / as.numeric(gm[k, 1L]) - 1) <
                   .OBJ_RTOL, info = k)
   }
+})
+
+test_that("the production face is the endpoints ceremony of the same walk
+           (P10-A: header plus t in {0, 200}, trace_len 2, bit-stable
+           factors, self-consistent witnesses)", {
+  indir <- .case1()
+  gold  <- .kernel_repo(file.path("tests", "testthat", "fixtures",
+    "kernel-cli", "golden_case1_T200"))
+  outdir <- file.path(tempdir(), paste0("kernel-cli-ends-", Sys.getpid()))
+  unlink(outdir, recursive = TRUE)
+  dir.create(outdir, recursive = TRUE)
+  out <- .kernel_cli_split(c("fit-kl",
+    "--in", indir, "--out", outdir,
+    "--m", "96", "--n", "20", "--k", "3", "--iters", "200"))
+  on.exit(unlink(outdir, recursive = TRUE))
+  expect_identical(out$status, 0L)
+  # The factors of the production face are the goldens byte-for-byte: the
+  # observer never feeds the updates, so removing witnesses moves nothing.
+  for (f in c("W.csv", "H.csv")) {
+    expect_identical(.kernel_bytes(file.path(outdir, f)),
+                     .kernel_bytes(file.path(gold, f)), info = f)
+  }
+  lines <- readLines(file.path(outdir, "trace.csv"), warn = FALSE)
+  lines <- lines[nzchar(lines)]
+  expect_identical(lines[[1L]], "t,objective")
+  expect_identical(length(lines) - 1L, 2L)
+  ends <- strsplit(lines[-1L], ",", fixed = TRUE)
+  expect_identical(vapply(ends, function(x) x[[1L]], "", USE.NAMES = FALSE),
+                   c("0", "200"))
+  # Cross-ISA contract: the endpoint witnesses match the golden walk's
+  # first and last objective at the documented tolerance (same numerics
+  # as the --full-trace face above; intra-platform byte identity of the
+  # face switch is pinned in test-kernel-protocol2.R).
+  gt <- read.csv(file.path(gold, "trace.csv"))
+  for (i in 1:2) {
+    got <- as.numeric(ends[[i]][[2L]])
+    want <- gt$objective[[if (i == 1L) 1L else nrow(gt)]]
+    expect_true(abs(got / want - 1) < .OBJ_RTOL, info = paste0("t", i))
+  }
+  meta <- strsplit(readLines(file.path(outdir, "meta.csv"), warn = FALSE),
+                   ",", fixed = TRUE)
+  field <- function(key) {
+    hit <- meta[vapply(meta, function(x) identical(x[[1L]], key), logical(1L),
+                       USE.NAMES = FALSE)]
+    expect_identical(length(hit), 1L)
+    hit[[1L]][[2L]]
+  }
+  expect_identical(field("trace_len"), "2")
+  # Self-consistency law: trace rows and meta witnesses are the SAME
+  # {:.17e} renderings of the SAME doubles -- byte-equal on every
+  # platform, tolerance-free.
+  expect_identical(ends[[1L]][[2L]], field("obj_init"))
+  expect_identical(ends[[2L]][[2L]], field("obj_final"))
 })
 
 test_that("two runs of the same case are byte-identical (boundary determinism)", {

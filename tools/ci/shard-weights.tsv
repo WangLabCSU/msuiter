@@ -45,12 +45,12 @@ test-io-segments.R	0	223
 test-io-sv.R	0	105
 test-io-variants.R	0	226
 test-islam-xval.R	0	12
-test-kernel-attest-route.R	1	12
-test-kernel-cli.R	0	28
+test-kernel-attest-route.R	1	20
+test-kernel-cli.R	0	42
 test-kernel-gate-evidence.R	0	44
 test-kernel-pipeline-batch.R	0	177
 test-kernel-pipeline-farm.R	5	117
-test-kernel-pipeline-parse.R	0	44
+test-kernel-pipeline-parse.R	0	57
 test-kernel-pipeline-status.R	0	37
 test-kselect.R	28	147
 test-m2-e2e.R	2	13
@@ -65,6 +65,9 @@ test-ms-exposure-test.R	0	30
 test-ms-qc-report.R	112	42
 test-ms-qc-sentries.R	280	114
 test-ms-simulate.R	0	42
+test-pkgdown-citation.R	0	23
+test-pkgdown-msu-map.R	1	23
+test-pkgdown-reference-map.R	0	17
 test-r-floor-ops.R	0	1
 test-refdb.R	373	138
 test-release-materials.R	0	12
@@ -80,3 +83,6 @@ test-xval-sigminer.R	10	12
 test-scenario-atlas.R	2.2	41
 test-scenario-hrd.R	0.4	28
 test-treatment-report.R	13.1	87
+test-kernel-trace-shape.R	1	40
+test-kernel-bit-identity.R	79	476
+test-kernel-batch-bridge.R	172	346

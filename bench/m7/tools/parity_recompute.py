@@ -30,6 +30,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import tools.matrix_governance as gov                # noqa: E402
+import tools.attestation as att                      # noqa: E402
 from competitors.registry import REGISTRY             # noqa: E402
 
 BAR_PARITY = 2.0                     # perf-parity mandate: hard <=2x ceiling
@@ -59,6 +60,9 @@ def _witness_face(anchor: dict) -> tuple[float, float, dict]:
     if cpu != float(anchor["cpu_seconds"]) or wall != float(anchor["wall_seconds"]):
         raise SystemExit(2, f"{path}: witness bytes {cpu}/{wall} drifted from "
                             f"table {anchor['cpu_seconds']}/{anchor['wall_seconds']}")
+    refusal = att.reportability(doc, gov.floor_table_epoch())
+    if refusal is not None:
+        raise SystemExit(2, f"{path}: {refusal}")
     return cpu, wall, doc
 
 
@@ -94,7 +98,8 @@ def main() -> int:
             verdict = "PASS" if ratio <= BAR_PARITY else "BREACH"
             breaches += verdict == "BREACH"
             print(f"{face} {arm} N{n} reps={f_doc['reps']} cpu-basis "
-                  f"ratio={ratio:.4f} {verdict} (bar {BAR_PARITY}) | "
+                  f"ratio={ratio:.4f} {verdict} (bar {BAR_PARITY}) "
+                  f"{att.row_tokens(f_doc, gov.floor_table_epoch())} | "
                   f"face={f_cpu:.6f}s {gov.anchor_witness_path(gov._FLOOR_ANCHORS[key_f])} "
                   f"|| yard={y_cpu:.6f}s {gov.anchor_witness_path(gov._FLOOR_ANCHORS[key_y])}")
     faces_c = len(r_faces) * len(yards)

@@ -1,0 +1,222 @@
+---
+title: "Application scenarios: atlas, HRD and treatment forensics"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{"Application scenarios: atlas, HRD and treatment forensics"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator: knitr renders with cwd set to the vignettes directory, so
+# the package root is found by walking up to the source tree that carries
+# the fixture generators and the committed evidence.
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R")) &&
+        dir.exists(file.path(dd, "tests", "testthat"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+# Dual-load idiom shared with the bench/scenarios drivers: the source tree
+# (check and site-build contexts) loads through pkgload; a bare installed
+# package (reader-side) loads through library().
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+# load_all does not process the NAMESPACE S3method directives (see
+# bench/scenarios/run_treatment.R); register the report methods locally so
+# dispatch behaves identically in both load paths.
+for (m in c("print.MsTreatmentReport", "as.data.frame.MsTreatmentReport",
+            "print.MsHrdReport", "as.data.frame.MsHrdReport")) {
+  if (exists(m, envir = asNamespace("msuiter"), inherits = FALSE)) {
+    assign(m, get(m, envir = asNamespace("msuiter")), envir = globalenv())
+  }
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+msuiter's paper pillar 3 is the application-scenario layer: end-to-end
+workflows that adjudicate against planted truth or an independent oracle and
+persist their evidence tables. The three executable drivers live under
+`bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`; committed
+evidence under `bench/scenarios/out/`, each driver ends in its own
+OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
+runnable snippet of each against the same committed fixture generators the
+drivers use, and cross-checks the live output against the committed evidence
+table whenever that table is on disk.
+
+## Atlas mode: the full cohort adjudication
+
+The atlas scenario plants a synthetic cohort — five variant classes, known
+channel plan, known arm differential — then drives the public faces and
+adjudicates against the a-priori generator truth. The snippet reproduces the
+ingestion-and-tally core; the committed driver adds the class roster,
+extraction, hungarian fidelity and association legs with their verdict lines.
+The cohort generator below is the very one the driver and the governance
+tests share (`tests/testthat/helper-atlas.R`), so the numbers are the same
+bytes, not a lookalike.
+
+```{r atlas, message = FALSE}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: the fixture generators are not reachable here\n")
+} else {
+  source(file.path(PKG, "tests", "testthat", "helper-tally.R"))
+  source(file.path(PKG, "tests", "testthat", "helper-atlas.R"))
+  fx <- .atlas_cohort(dir = file.path(tempdir(), "tour-atlas"))
+  truth <- fx$truth
+  mv <- ms_variants(fx$variants, genome = "synth", caller = "atlas-synth",
+                    matched_normal = "none")
+  cat1 <- ms_tally(mv, genome = fx$twobit, mode = "SBS96")
+  cat("samples:", ncol(cat1@counts), " channels:", nrow(cat1@counts),
+      " planted:", paste(.ATLAS_PLANTED, collapse = ","), "\n")
+  cat("SBS96 plan exactness:",
+      identical(rowSums(cat1@counts)[truth$sbs_labels],
+                colSums(truth$sbs_plan)), "\n")
+  ev <- file.path(PKG, "bench", "scenarios", "out", "counts_sbs.csv")
+  if (file.exists(ev)) {
+    ref <- read.csv(ev, row.names = 1L, check.names = FALSE)
+    cat("live run vs committed evidence", ev, ": maxabs delta =",
+        max(abs(as.matrix(cat1@counts) - as.matrix(as.matrix(ref)))), "\n")
+  } else {
+    cat("committed evidence table not on disk (check tarball): the driver output lives in the repository under bench/scenarios/out/\n")
+  }
+}
+```
+
+The committed tables for this leg:
+`bench/scenarios/out/counts_sbs.csv`, `counts_dbs.csv`, `qc_report.csv`,
+`compare_sweep.csv`, `pbr.csv`, `prevalence.csv`, `association.csv`.
+
+## Byte-exact HRD: adjudication against the dual oracles
+
+The HRD leg reproduces Cortes-Castro's published values (PMID 31151873)
+pLOH-by-segment-integration and the aneuploidy count, and every adjudicated
+row must be *byte-identical* to the independent oracle implementation carried
+in `tests/testthat/helper-hrd.R`. The planted geometry encodes the composite
+claim: only the double-positive sample (pLOH-high **and** aneuploid) scores
+HRD.
+
+```{r hrd, message = FALSE}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: the oracle fixtures are not reachable here\n")
+} else {
+  source(file.path(PKG, "tests", "testthat", "helper-hrd.R"))
+  chr_size <- .HRD_TEST_CHR_SIZE
+  arms <- do.call(rbind, lapply(c("chr1", "chr2", "chr13", "chr17", "chr22"),
+    function(ch) data.frame(chrom = c(ch, ch), location = c("p", "q"),
+      arm_start = c(1L, chr_size %/% 2L + 1L),
+      arm_end = c(chr_size %/% 2L, chr_size), stringsAsFactors = FALSE)))
+  whole <- function(sample, chrom, state, minor)
+    .make_hrd_segments(sample, chrom, start = 1L, end = chr_size,
+                       state = state, minor_cn = minor)
+  segs <- do.call(rbind, c(
+    lapply(c("chr1", "chr2", "chr13", "chr17", "chr22"),
+           function(ch) whole("H1", ch, 5L, 0L)),
+    lapply(c("chr1", "chr2", "chr13", "chr17", "chr22"),
+           function(ch) whole("H3", ch, 3L, 1L)),
+    list(.make_hrd_segments("H2", "chr1", start = 1L, end = 450000L,
+                            state = 2L, minor_cn = 0L),
+         whole("H4", "chr1", 2L, 1L))))
+  report <- ms_hrd_report(segs, genome = "GRCh37", caller = "ascat",
+                          assay = "wgs", chr_size = chr_size,
+                          arms = arms, ploidy = 2)
+  rows <- as.data.frame(report)
+  rows <- rows[order(rows$sample), , drop = FALSE]
+  print(rows[c("sample", "ploh_fraction", "aneuploidy_count",
+               "hrd_score", "evidence_tier")])
+  oracle_ok <- TRUE
+  for (i in seq_len(nrow(rows))) {
+    sub <- segs[segs$sample == rows$sample[i], , drop = FALSE]
+    oracle_ok <- oracle_ok &&
+      identical(rows$ploh_fraction[i], .hrd_ref_ploh(sub, chr_size)) &&
+      identical(rows$aneuploidy_count[i],
+                .hrd_ref_aneuploidy_count(sub, arms, 2, rm_black_arms = FALSE))
+  }
+  cat("dual-oracle byte-exactness:", oracle_ok, "\n")
+  stopifnot(isTRUE(oracle_ok))
+  stopifnot(identical(rows$hrd_score[rows$sample == "H1"], 1L) &&
+            all(rows$hrd_score[rows$sample != "H1"] == 0L))
+  ev <- file.path(PKG, "bench", "scenarios", "out", "hrd_report.csv")
+  if (file.exists(ev)) {
+    ref <- read.csv(ev, check.names = FALSE)
+    cat("live run vs committed evidence", ev, ":",
+        identical(as.integer(ref$hrd_score), rows$hrd_score) &&
+        identical(as.character(ref$sample), rows$sample), "\n")
+  }
+}
+```
+
+A missing arm table degrades to attestation, never fabrication: the
+`coverage_note` ledger names the missing input and `aneuploidy_count`
+stays at zero rather than being invented. The committed table for this leg:
+`bench/scenarios/out/hrd_report.csv`.
+
+## Treatment forensics: association plus clonal timing
+
+No mainstream signature tool offers a treatment-history reporting module.
+msuiter's face fits the governed therapy classes (temozolomide, platinum,
+thiopurine) against the officially recognised signature identities served
+from the sealed bundled COSMIC v3.6 reference, adjudicates each cell by a
+bootstrap contrast clearing an effect-size floor, and splits the exposed
+mean into clonal/subclonal timing shares. The snippet runs the complete
+face on the committed synthetic cohort; the degradation faces (no treatment
+records, no clonality) return honest empty tables plus an attestation
+ledger, never invented rows.
+
+```{r treatment, message = FALSE}
+if (is.na(PKG)) {
+  cat("rendered outside the package root: the cohort generator is not reachable here\n")
+} else {
+  source(file.path(PKG, "tests", "testthat", "helper-treatment.R"))
+  fx <- .ms_trt_cohort()
+  sigs <- sort(unique(unlist(.MS_TRT_MAP, use.names = FALSE)))
+  clon <- expand.grid(sample = fx$samples, signature = sigs)
+  clon <- clon[c("sample", "signature")]
+  clon$clonal_fraction <- 0.5
+  rep1 <- ms_treatment_report(fx$catalog, fx$treatments, clonality = clon,
+                              n_boot = 200, seed = 7)
+  print(rep1)
+  tab <- as.data.frame(rep1)
+  cat("association rows:", nrow(tab), " adjudicated associated:",
+      sum(tab$is_associated), "\n")
+  prov <- attr(rep1, "provenance")
+  cat("provenance: refdb", prov$refdb_version, "build", prov$build,
+      "method", prov$method, "n_boot", prov$n_boot, "seed", prov$seed, "\n")
+  truth_ok <- all(tab$is_associated == vapply(seq_len(nrow(tab)), function(i)
+    fx$planted_truth(tab$treatment[i], tab$signature[i]), logical(1)))
+  cat("planted-fidelity adjudication:", truth_ok, "\n")
+  stopifnot(isTRUE(truth_ok))
+  ev <- file.path(PKG, "bench", "scenarios", "out", "treatment_association.csv")
+  if (file.exists(ev)) {
+    ref <- read.csv(ev, check.names = FALSE)
+    cat("live run vs committed evidence", ev, ":",
+        nrow(ref) == nrow(tab) &&
+        identical(as.logical(ref$is_associated), as.logical(tab$is_associated)),
+        "\n")
+  }
+}
+```
+
+The committed tables for this leg:
+`bench/scenarios/out/treatment_association.csv`,
+`treatment_timing.csv`. The recognition anchors and the adjudication-floor
+rationale are documented at the face's manual page
+(`?ms_treatment_report`) and in the Phase-8 design memo under
+`docs/devlog/`.
+
+## Reproducing the full verdicts
+
+Each driver prints its own adjudication lines and exits zero only on
+OVERALL PASS:
+
+```{sh verdicts, eval = FALSE}
+Rscript bench/scenarios/run_atlas.R
+Rscript bench/scenarios/run_hrd.R
+Rscript bench/scenarios/run_treatment.R
+```

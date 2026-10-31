@@ -27,6 +27,7 @@ target/
 
 # docs build
 docs/site/
+docs/dev/
 /pkgdown/_site/
 
 # data scratch

@@ -17,7 +17,10 @@
 # Units A-1, A-2 and A-4 are red by absence until the GREEN commit adds
 # the `route` argument to kp_attest_case in R/kernel-pipeline.R. The
 # subject names are taken through .kpp_surface, so an unreachable surface
-# is an explicit TDD-red stop, never a silent pass.
+# is an explicit TDD-red stop, never a silent pass. A-6 rides the
+# P10-A trace-shape surface (kp_attest_case trace.shape, .kp_trace_t):
+# the two certified faces of the production kernel are law parameters of
+# the receipt, fail-closed on a contradiction, not advisory.
 
 .kar_scenario <- local({
   cached <- new.env(parent = emptyenv())
@@ -33,11 +36,13 @@
 })
 
 # The attest call this file drives, mirroring kp_run_batch's argument
-# positionally (manifest raw strings for seed/replicate).
-.kar_attest <- function(sc, route) {
+# positionally (manifest raw strings for seed/replicate) plus the trace
+# shape the receipt is attested under.
+.kar_attest <- function(sc, route, trace.shape = c("endpoints", "full")) {
   kp_attest_case(case = sc$case, out.dir = sc$case.out, m = sc$m,
                  n = sc$n, k = sc$k, iters = sc$iters, init = "nndsvd",
-                 seed = "11", replicate = "", route = route)
+                 seed = "11", replicate = "", route = route,
+                 trace.shape = trace.shape)
 }
 
 # Swap one namespace binding for the duration of expr (the house
@@ -65,10 +70,16 @@
   invisible(NULL)
 }
 
-test_that("A-1 the attest face carries a route argument defaulting to fast", {
+test_that("A-1 the attest face carries the route and trace-shape arguments
+           with the frozen defaults", {
   fmls <- names(formals(kp_attest_case))
   expect_true("route" %in% fmls)
   expect_identical(eval(formals(kp_attest_case)$route), c("fast", "reference"))
+  # TDD-red needle for the P10-A shape surface: an absent trace.shape
+  # argument reads NULL here, never a silent default.
+  expect_true("trace.shape" %in% fmls)
+  expect_identical(eval(formals(kp_attest_case)$trace.shape),
+                   c("endpoints", "full"))
 })
 
 test_that("A-2 mechanism: the fast route really consults the fast readers
@@ -79,7 +90,8 @@ test_that("A-2 mechanism: the fast route really consults the fast readers
   .kar_with("kp_read_trace_fast", boom, {
     r <- .kar_attest(sc, "reference")
     expect_true(is.matrix(r$W) && identical(dim(r$W), c(sc$m, sc$k)))
-    expect_identical(length(r$objective), sc$iters + 1L)
+    expect_identical(length(r$objective),
+                     length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
   })
   # Fast route under the sentinel: must reach it, or the switch is a no-op.
   .kar_with("kp_read_trace_fast", boom, {
@@ -95,6 +107,27 @@ test_that("A-3 identity: both routes hand back identical() receipt bundles
   expect_identical(b, a)
   # Guard against comparing two NULLs: the payload must be real.
   expect_true(is.matrix(a$W) && is.matrix(a$H) && is.finite(a$objective[1L]))
+  expect_identical(length(a$objective),
+                   length(.kp_trace_t(sc$iters, "endpoints", "trace.csv")))
+})
+
+test_that("A-6 the trace-shape law is live: the contradicting face dies and
+           an unknown shape is fail-closed and named on both routes", {
+  sc <- .kar_scenario()
+  a <- .kar_attest(sc, "fast")
+  # The dead-metric control in the accepting direction: the explicit
+  # endpoints law hands back the very same receipt as the implicit one.
+  expect_identical(.kar_attest(sc, "fast", trace.shape = "endpoints"), a)
+  # Attesting the production bytes under the full-walk law dies at the
+  # shape-derived trace_len expectation.
+  expect_error(.kar_attest(sc, "fast", trace.shape = "full"), "trace_len")
+  expect_error(.kar_attest(sc, "reference", trace.shape = "full"),
+               "trace_len")
+  # An unknown shape is fail-closed and named, on both routes.
+  expect_error(.kar_attest(sc, "fast", trace.shape = "bogus"),
+               "expected 'endpoints' or 'full'")
+  expect_error(.kar_attest(sc, "reference", trace.shape = "bogus"),
+               "expected 'endpoints' or 'full'")
 })
 
 test_that("A-4 unknown routes are fail-closed and named", {
@@ -119,4 +152,61 @@ test_that("A-5 the fast route keeps the fail-closed receipt law: a mutated
   expect_error(.kar_attest(sc, "fast"), "W.csv")
   # Same bytes through the reference route: the same law, the same fault.
   expect_error(.kar_attest(sc, "reference"), "W.csv")
+})
+
+# A-7: the receipt law must stand where the kernel does not. The coverage
+# arm builds no binary, so every binary-gated attest unit above skips there
+# and the P10-A receipt body (shape law, trace_len law, both route faces)
+# reads uncovered to the patch gate -- coverage must not be a hostage of
+# the certified binary's presence. The staged bytes mirror what the
+# certified writer emits under the same laws A-3 attests against real
+# output: key,value meta lines, %.17e grids, the endpoints-face
+# t,objective file.
+test_that("A-7 the receipt law stands without the kernel: hand-staged
+           certified-face bytes attest on both routes and the shape law
+           is fail-closed", {
+  d <- tempfile("kar-receipt-")
+  dir.create(d, recursive = TRUE, showWarnings = FALSE)
+  m <- 8L; n <- 6L; k <- 2L; iters <- 12L; seed <- 11L
+  w <- .kpp_fixture_v(seed = seed, m = m, n = k)
+  h <- .kpp_fixture_v(seed = seed + 1L, m = k, n = n)
+  writeLines(.kpp_grid(w), con = file.path(d, "W.csv"))
+  writeLines(.kpp_grid(h), con = file.path(d, "H.csv"))
+  obj <- .kpp_fixture_v(seed = seed + 2L, m = 1L, n = iters + 1L)
+  writeLines(c("t,objective",
+               paste0(c(0L, iters), ",",
+                      sprintf("%.17e", obj[c(1L, iters + 1L)]))),
+             con = file.path(d, "trace.csv"))
+  writeLines(c(
+    paste0("protocol,", .KP_PROTOCOL),
+    "command,fit-kl", "init,nndsvd", paste0("seed,", seed), "replicate,na",
+    paste0("m,", m), paste0("n,", n), paste0("k,", k),
+    paste0("iters,", iters), paste0("iterations,", iters),
+    # endpoints face: the initializer witness plus the post-loop witness.
+    "trace_len,2",
+    paste0("obj_init,", sprintf("%.17e", obj[[1L]])),
+    paste0("obj_final,", sprintf("%.17e", obj[[iters + 1L]])),
+    "eps,1e-9", "engine_crate,msuiter-engine"),
+    con = file.path(d, "meta.csv"))
+  attest <- function(route, shape = c("endpoints", "full"))
+    kp_attest_case(case = "kar-receipt", out.dir = d, m = m, n = n, k = k,
+                   iters = iters, init = "nndsvd", seed = "11",
+                   replicate = "", route = route, trace.shape = shape)
+  a <- attest("reference")
+  b <- attest("fast")
+  expect_identical(b, a)
+  # The payload must be real: a hand-staged grid read back, both faces.
+  expect_true(is.matrix(a$W) && identical(dim(a$W), c(m, k)))
+  expect_true(is.matrix(a$H) && identical(dim(a$H), c(k, n)))
+  expect_identical(length(a$objective), 2L)
+  expect_true(all(is.finite(a$objective)))
+  # The shape law is fail-closed and named, before a single byte is read.
+  expect_error(attest("fast", "bogus"), "unknown trace shape 'bogus'")
+  expect_error(attest("reference", "bogus"), "unknown trace shape 'bogus'")
+  # The fast case bundle is the same bytes through the vectorized route:
+  # value-identical to the attested receipt, field by field.
+  bundle <- kp_parse_case_fast(d, m, n, k, iters, trace.shape = "endpoints")
+  expect_identical(bundle[c("W", "H", "objective", "meta")],
+                   list(W = a$W, H = a$H, objective = a$objective,
+                        meta = a$meta))
 })

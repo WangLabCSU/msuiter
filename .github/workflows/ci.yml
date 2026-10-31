@@ -221,8 +221,13 @@ jobs:
             --attest-dir attest-guards --kind guards
 
   guards-shards:
-    # Measured 31 min (run 39815352743); headroom for the slow-runner tail.
-    timeout-minutes: 60
+    # Budget-line ratchet on two co-tenancy kill witnesses: PR #60 attempt-1
+    # (all 16 steps run at 61-min wall) and push-run 40844971894 (killed at
+    # 60:13 with steps 1-11 green, step 12 in-flight at 57.5 min). The green
+    # witness is 57m27s (run 40822738417 attempt-2) -- 96 % of the old line:
+    # the budget was starving a healthy arm, not detecting a hang. 120 carries
+    # the witnessed floor with one pool-slowness class of headroom.
+    timeout-minutes: 120
     needs: guard-prep
     runs-on: ubuntu-latest
     steps:
@@ -336,14 +341,23 @@ jobs:
   # fragments of those same deleted lines (version digits, step numbers)
   # that carry no numeric claim of their own.
   R-CMD-check-fanout:
-    # Uniform 120: budgets are hang detectors sized to the measured tail, and
+    # Uniform 180: budgets are hang detectors sized to the measured tail, and
     # the measured tail is RUNNER-random, not arm-random. Witness 1 (run
     # 39815352743): ubuntu/oldrel-1 ate 19m45s setup-r + 15m25s deps, its
     # healthy wave severed at the 60 mark. Witness 2 (run 39839340513):
     # ubuntu/release ate 23m16s + 10m45s of the same slowness and died the
     # same death -- an arm whitelist is whack-a-mole. Healthy arms measure
-    # 24-41 min; 120 carries a 40-min stalled setup plus wave with headroom.
-    timeout-minutes: 120
+    # 24-41 min; 120 carried a 40-min stalled setup plus wave with headroom
+    # until the 2026-10-30/31 pair on main@a6c5870 (push-run 41082179842):
+    # R devel burned the whole 120 TWICE -- attempt-1 job 124154845151
+    # (2h01m03s) and its targeted rerun-failed attempt-2 job 124412728178
+    # (2h00m31s), both with steps 1-13 completed/success (setup-r, deps,
+    # banner attest, no-test check, shared INSTALL), the fan-out wave
+    # severed mid-flight, post-steps clean, zero hang signatures. Same
+    # co-tenancy straggler family the coverage arm met thrice at 120 and
+    # ratcheted to 180; the deep-check legs' own <=120 bounds are unrelated.
+    # 180 = witnessed >=120m straggler floor + one runner-slowness class.
+    timeout-minutes: 180
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
@@ -578,6 +592,16 @@ jobs:
         with:
           workspaces: src/rust
 
+      # Runner-float guard (run 40959865870, 2026-10-30): a restored shared
+      # target/ carries the extendr-ffi build-script output with the OLD R's
+      # absolute -L path (build.rs bakes rustc-link-search, no R_HOME rerun
+      # trigger), so setup-r floating the release R reddens the link with
+      # "unable to find library -lR". Rebuild it against this job's R_HOME.
+      - name: Invalidate the R-baked build-script cache
+        working-directory: src/rust
+        shell: bash
+        run: cargo clean -p extendr-ffi
+
       - name: cargo test --workspace
         working-directory: src/rust
         run: cargo test --workspace
@@ -667,6 +691,16 @@ jobs:
         with:
           workspaces: src/rust
           key: msrv-1.71.0
+
+      # Runner-float guard (run 40959865870, 2026-10-30): a restored shared
+      # target/ carries the extendr-ffi build-script output with the OLD R's
+      # absolute -L path (build.rs bakes rustc-link-search, no R_HOME rerun
+      # trigger), so setup-r floating the release R reddens the link with
+      # "unable to find library -lR". Rebuild it against this job's R_HOME.
+      - name: Invalidate the R-baked build-script cache
+        working-directory: src/rust
+        shell: bash
+        run: cargo +1.71.0 clean -p extendr-ffi
 
       # Windows: the extendr shell crate (msuiter) cannot link under a
       # bare cargo (R.lib import library is not on the MSVC link path --

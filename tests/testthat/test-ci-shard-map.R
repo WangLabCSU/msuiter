@@ -204,13 +204,13 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   }
   expect_identical(budget_line("guard-prep"), "45")     # hot path 1 min; stall class needs slack (strike-3 witness)
   expect_identical(budget_line("guards"), "15")          # aggregator-only, measured 0 min
-  expect_identical(budget_line("guards-shards"), "60")   # measured 31 min; tail headroom
+  expect_identical(budget_line("guards-shards"), "120")  # old 60 starved a healthy arm: green witness 57m27s (run 40822738417 attempt-2, 96 % of the line); two kill witnesses -- PR #60 attempt-1 (all 16 steps run, 61-min wall) and push-run 40844971894 job 123350746358 (steps 1-11 green, step 12 in-flight at 57.5m, severed at 60:13) -- zero hang signatures; 120 = witnessed floor + one pool-slowness class, the uniform fan-out ceiling
   expect_identical(budget_line("coverage"), "180")      # hot 18 min; 90 consumed whole twice by PR #52 (runs 40013789288/40028404425) vs main's 68m53s tail (push-run 39965044133); 120 then consumed whole thrice by PR #56 (run 40667262104 job 122744792649 120m27s; run 40700329158 attempt1 job 122858082848 120m26s + its attempt-2 rerun 120m34s, heartbeat flat 5/6 with live pinned 1/7) -- the straggler-shard class re-created by the manifest re-pack; 180 = witnessed >=118m straggler floor + one runner-slowness class of headroom
   # Second witness (run 39839340513, 2026-10-23): the slow-runner class is a
   # RUNNER property, not an arm property -- the 10-22 strike hit ubuntu/oldrel-1,
   # this one hit ubuntu/release + coverage. An arm whitelist is whack-a-mole;
   # every fan-out arm rides the uniform hang-detector ceiling.
-  expect_identical(budget_line("R-CMD-check-fanout"), "120")
+  expect_identical(budget_line("R-CMD-check-fanout"), "180")  # 120 consumed whole twice by push-run 41082179842 on main@a6c5870 (attempt-1 job 124154845151 2h01m03s; targeted rerun-failed attempt-2 job 124412728178 2h00m31s -- both: steps 1-13 completed/success, fan-out wave severed mid-flight, post-steps clean, zero hang signatures); 180 = witnessed >=120m straggler floor + one runner-slowness class, the uniform line the coverage arm already carries
 })
 
 test_that("the covr coverage aggregate is ledger-gated, never advisory", {
@@ -310,4 +310,40 @@ test_that("the covr merge gate reddens zero fragments and the extras prefix cann
               info = "run-covr-extras lost the prefix normalizer")
   expect_true(any(grepl("prefix <- .dir.prefix(", ex, fixed = TRUE)),
               info = "production no longer routes out-srt-prefix through the normalizer")
+})
+
+test_that("a cached R path cannot survive into the cargo jobs", {
+  # Law from run 40959865870 (2026-10-30): the rust and msrv cargo jobs share
+  # src/rust/target through Swatinem/rust-cache. The extendr-ffi build script
+  # (0.9.0, build.rs:212) bakes the absolute R library directory into a
+  # rustc-link-search instruction and declares no rerun trigger for R_HOME
+  # (:244 covers only R_INCLUDE_DIR), so when setup-r floats the runner's R
+  # (release 4.6.1 -> 4.6.2) the restored output still links against the old
+  # tree: rust-lld "unable to find library -lR". Any job that restores a
+  # shared target and builds the extendr shell crate must drop the
+  # extendr-ffi build-script output after the cache restore and before the
+  # first full-workspace cargo step.
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
+  job_window <- function(key) {
+    h <- which(ci == paste0("  ", key, ":"))
+    expect_identical(length(h), 1L, info = key)
+    win <- ci[seq(from = h + 1L, to = length(ci))]
+    nxt <- which(grepl("^  [A-Za-z0-9_-]+:$", win))
+    if (length(nxt)) win[seq_len(nxt[1L] - 1L)] else win
+  }
+  for (key in c("rust", "msrv")) {
+    win <- job_window(key)
+    cache_i <- which(grepl("Swatinem/rust-cache@", win, fixed = TRUE))
+    cargo_i <- which(grepl("cargo [^\\n]*--workspace", win))
+    clean_i <- which(grepl("clean -p extendr-ffi", win, fixed = TRUE))
+    # The patterns must speak on the committed bytes before the ordering
+    # assertions mean anything (vacuous-green ban).
+    expect_true(length(cache_i) >= 1L, info = paste0(key, ": cache restore"))
+    expect_true(length(cargo_i) >= 1L, info = paste0(key, ": workspace build"))
+    expect_identical(length(clean_i), 1L, info = paste0(key, ": invalidation step"))
+    expect_true(cache_i[1L] < clean_i[1L], info = paste0(key, ": restore then invalidate"))
+    expect_true(clean_i[1L] < min(cargo_i), info = paste0(key, ": invalidate before link"))
+  }
 })
