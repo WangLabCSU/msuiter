@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # Regenerate the offline vendor tarball and report its byte budget.
 # Baseline: docs/adr/0002-vendor-budget.md §2 (33 crates current; effective baseline
-# = 2026-09-30 memmap2/libc increment row).
+# = 2026-10-31 memmap2 0.9.12 patch bump row).
 #
 # The tarball is NOT committed: CRAN submission (U-M8-01) attaches a freshly
 # generated one to the source package. CI (U-M0-07) runs `--check` to catch
@@ -16,7 +16,8 @@
 # build, threading, CPU topology): the old ±0.1% band rested on a "~0.01%
 # across xz builds" premise that run 39289131194 refuted -- 1941840 B
 # against the 1744176 B baseline (+11.3%) while BOTH byte-exact laws matched
-# exactly (16911999 / 18319360). xz is therefore REPORTED freely but governed
+# exactly (16911999 / 18319360, the pre-2026-10-31 anchors). xz is therefore
+# REPORTED freely but governed
 # only by the compressor-sanity law 0 < xz < tar; the content-invariance law
 # this gate exists to protect is carried by the uncompressed and tar byte
 # baselines. Pinned by tests/testthat/test-vendor-gate-law.R.
@@ -27,8 +28,8 @@ set -eu
 # are the 1.71 vendor output. Local default-toolchain runs (1.92) vendor
 # +326 KB and will show DRIFT by design -- regenerate with
 # `rustup run 1.71.0 sh tools/vendor.sh` to verify.
-BASELINE_UNCOMPRESSED=16911999
-BASELINE_TAR=18319360
+BASELINE_UNCOMPRESSED=16928778
+BASELINE_TAR=18339840
 BASELINE_XZ=1744176   # context/report only -- the xz LAW is sanity-only (see the header note)
 
 # ---------------------------------------------------------------------------
