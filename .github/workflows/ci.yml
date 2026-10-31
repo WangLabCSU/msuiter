@@ -341,14 +341,23 @@ jobs:
   # fragments of those same deleted lines (version digits, step numbers)
   # that carry no numeric claim of their own.
   R-CMD-check-fanout:
-    # Uniform 120: budgets are hang detectors sized to the measured tail, and
+    # Uniform 180: budgets are hang detectors sized to the measured tail, and
     # the measured tail is RUNNER-random, not arm-random. Witness 1 (run
     # 39815352743): ubuntu/oldrel-1 ate 19m45s setup-r + 15m25s deps, its
     # healthy wave severed at the 60 mark. Witness 2 (run 39839340513):
     # ubuntu/release ate 23m16s + 10m45s of the same slowness and died the
     # same death -- an arm whitelist is whack-a-mole. Healthy arms measure
-    # 24-41 min; 120 carries a 40-min stalled setup plus wave with headroom.
-    timeout-minutes: 120
+    # 24-41 min; 120 carried a 40-min stalled setup plus wave with headroom
+    # until the 2026-10-30/31 pair on main@a6c5870 (push-run 41082179842):
+    # R devel burned the whole 120 TWICE -- attempt-1 job 124154845151
+    # (2h01m03s) and its targeted rerun-failed attempt-2 job 124412728178
+    # (2h00m31s), both with steps 1-13 completed/success (setup-r, deps,
+    # banner attest, no-test check, shared INSTALL), the fan-out wave
+    # severed mid-flight, post-steps clean, zero hang signatures. Same
+    # co-tenancy straggler family the coverage arm met thrice at 120 and
+    # ratcheted to 180; the deep-check legs' own <=120 bounds are unrelated.
+    # 180 = witnessed >=120m straggler floor + one runner-slowness class.
+    timeout-minutes: 180
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})

@@ -210,7 +210,7 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   # RUNNER property, not an arm property -- the 10-22 strike hit ubuntu/oldrel-1,
   # this one hit ubuntu/release + coverage. An arm whitelist is whack-a-mole;
   # every fan-out arm rides the uniform hang-detector ceiling.
-  expect_identical(budget_line("R-CMD-check-fanout"), "120")
+  expect_identical(budget_line("R-CMD-check-fanout"), "180")  # 120 consumed whole twice by push-run 41082179842 on main@a6c5870 (attempt-1 job 124154845151 2h01m03s; targeted rerun-failed attempt-2 job 124412728178 2h00m31s -- both: steps 1-13 completed/success, fan-out wave severed mid-flight, post-steps clean, zero hang signatures); 180 = witnessed >=120m straggler floor + one runner-slowness class, the uniform line the coverage arm already carries
 })
 
 test_that("the covr coverage aggregate is ledger-gated, never advisory", {
