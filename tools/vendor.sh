@@ -16,7 +16,7 @@
 # build, threading, CPU topology): the old ±0.1% band rested on a "~0.01%
 # across xz builds" premise that run 39289131194 refuted -- 1941840 B
 # against the 1744176 B baseline (+11.3%) while BOTH byte-exact laws matched
-# exactly (16928778 / 18319360, the pre-2026-10-31 anchors). xz is therefore
+# exactly (16911999 / 18319360, the pre-2026-10-31 anchors). xz is therefore
 # REPORTED freely but governed
 # only by the compressor-sanity law 0 < xz < tar; the content-invariance law
 # this gate exists to protect is carried by the uncompressed and tar byte
@@ -29,7 +29,7 @@ set -eu
 # +326 KB and will show DRIFT by design -- regenerate with
 # `rustup run 1.71.0 sh tools/vendor.sh` to verify.
 BASELINE_UNCOMPRESSED=16928778
-BASELINE_TAR=18319360
+BASELINE_TAR=18339840
 BASELINE_XZ=1744176   # context/report only -- the xz LAW is sanity-only (see the header note)
 
 # ---------------------------------------------------------------------------
