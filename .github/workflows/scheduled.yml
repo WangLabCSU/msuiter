@@ -170,7 +170,7 @@ jobs:
           path: docs
           retention-days: 14
 
-      # US-4 (docs/site v2): deployable bundle + dormant deploy guard. The
+      # US-4 (docs-site v2): deployable bundle + dormant deploy guard. The
       # bundle is the sha256 manifest of the built tree plus the trunk-sha
       # provenance stamp; the deploy step is a no-op-unless-enabled guard
       # reading the MEASURED Pages state (lane probe 2026-11-01: the pages
