@@ -86,3 +86,8 @@ test-treatment-report.R	13.1	87
 test-kernel-trace-shape.R	1	40
 test-kernel-bit-identity.R	79	476
 test-kernel-batch-bridge.R	172	346
+test-docs-get-started.R	7	14
+test-docs-bridge.R	1	16
+test-pkgdown-coherence.R	1	14
+test-site-claim-gate.R	42	15
+test-site-deploy-bundle.R	3	23
