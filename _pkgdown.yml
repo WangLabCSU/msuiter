@@ -10,9 +10,12 @@ development:
 
 navbar:
   structure:
-    left: [intro, reference, news, docs]
+    left: [intro, get-started, reference, news, docs]
     right: [github]
   components:
+    get-started:
+      text: Get started
+      href: articles/get-started.html
     news:
       text: News
       href: news/index.html
@@ -168,6 +171,9 @@ reference:
 # the string"). The single vignette under vignettes/ stays named explicitly
 # -- no default-index fallback, the audit stays load-bearing.
 articles:
+- title: "Get started: install, the five-minute path, output anatomy"
+  contents:
+  - get-started
 - title: "Tour: from variants to a reference comparison"
   contents:
   - tour
