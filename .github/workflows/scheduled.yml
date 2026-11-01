@@ -170,6 +170,50 @@ jobs:
           path: docs
           retention-days: 14
 
+      # US-4 (docs/site v2): deployable bundle + dormant deploy guard. The
+      # bundle is the sha256 manifest of the built tree plus the trunk-sha
+      # provenance stamp; the deploy step is a no-op-unless-enabled guard
+      # reading the MEASURED Pages state (lane probe 2026-11-01: the pages
+      # API answers 404 Not Found -- site not provisioned, so the guard can
+      # only ever voice DEPLOY DORMANT today). Activation is a separate
+      # controller decision; nothing here touches repository settings.
+      - name: "Site bundle: sha256 manifest + provenance stamp"
+        shell: Rscript {0}
+        env:
+          MSUITER_TRUNK_SHA: ${{ github.sha }}
+        run: |
+          res <- system2(file.path(R.home, "Rscript"),
+                         c("tools/site-bundle.R", "--site=docs/dev",
+                           "--out=site-bundle",
+                           paste0("--rev=", Sys.getenv("MSUITER_TRUNK_SHA", ""))),
+                         stdout = TRUE, stderr = TRUE)
+          cat(as.character(res), sep = "\n")
+          st <- attr(res, "status")
+          if (!is.null(st) && st != 0L) {
+            stop("site check: the site bundle face failed")
+          }
+
+      - name: Upload site bundle
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: pkgdown-site-bundle
+          path: site-bundle
+          retention-days: 14
+
+      - name: "Deploy to GitHub Pages (dormant guard)"
+        shell: Rscript {0}
+        run: |
+          res <- system2(file.path(R.home, "Rscript"),
+                         c("tools/site-deploy.R", "--live",
+                           "--bundle-dir=site-bundle"),
+                         stdout = TRUE, stderr = TRUE)
+          cat(as.character(res), sep = "\n")
+          st <- attr(res, "status")
+          if (!is.null(st) && st != 0L) {
+            stop("site check: the deploy guard refused (incomplete bundle)")
+          }
+
   vendor-prep:
     runs-on: ubuntu-latest
     timeout-minutes: 30
