@@ -261,6 +261,27 @@ test_that("US-1 dropping the articles entry is named", {
 })
 
 test_that("US-1 the constructed-perfect skeleton greens the laws (live control)", {
+  # Hermetic control: it constructs its OWN witness root (floors in a
+  # DESCRIPTION-shaped file, the lockfile face in a lock-shaped file, the
+  # named fixture on disk) rather than leaning on
+  # the checkout -- the R CMD check face ships no docs/ face, so a control
+  # aimed at the real corpus reddens for context reasons, not law reasons
+  # (measured 2026-11-01 check run 20-devtools-check.txt). Construction moves,
+  # the law does not.
+  root <- tempfile("ctl-perfect-root-")
+  dir.create(file.path(root, "docs", "paper"), recursive = TRUE)
+  dir.create(file.path(root, "tests", "testthat", "fixtures"),
+             recursive = TRUE)
+  writeLines(c("Package: msuiter", "Version: 0.0.0",
+               "Depends: R (>= 4.3)",
+               "SystemRequirements: Rust toolchain >= 1.71 (see DESCRIPTION)"),
+             file.path(root, "DESCRIPTION"))
+  writeLines(c("[renv]", "r.version = \"4.3\"",
+               "rust.toolchain = \"1.71\""),
+             file.path(root, "docs", "paper", "renv.lock"))
+  writeLines("0\t1\t2", file.path(root, "tests", "testthat", "fixtures",
+                                   "sigprofiler_sbs96_specimen.txt"))
+  on.exit(unlink(root, recursive = TRUE), add = TRUE)
   skeleton <- c(
     "---", "title: control", "---",
     "## Install",
@@ -275,10 +296,12 @@ test_that("US-1 the constructed-perfect skeleton greens the laws (live control)"
     "```",
     "The specimen rides the committed fixture named above.",
     "## Anatomy of the output")
-  r1 <- .gs_law_prose(skeleton, .ms_root)
+  r1 <- .gs_law_prose(skeleton, root)
   r2 <- .gs_law_path(skeleton)
-  r3 <- .gs_law_fixture(skeleton, .ms_root)
+  r3 <- .gs_law_fixture(skeleton, root)
   expect_identical(c(r1$violations, r2$violations, r3$violations),
-                    character(0))
+                    character(0),
+                    info = paste0(c(r1$violations, r2$violations, r3$violations),
+                                  collapse = "\n"))
   expect_identical(r1$tokens, 2L)   # 4.3 and 1.71 -- both byte-witnessed
 })

@@ -54,8 +54,18 @@ if (!is.na(PKG)) {
   print(desc[grepl("^Package:|^Version:|^Depends:|^SystemRequirements:",
                    desc)])
   lockfile <- file.path(PKG, "docs", "paper", "renv.lock")
-  if (!file.exists(lockfile)) stop("committed renv lockfile missing")
-  print(basename(lockfile))
+  if (file.exists(lockfile)) {
+    print(basename(lockfile))
+  } else if (!dir.exists(file.path(PKG, "docs", "paper"))) {
+    # The check/tarball build face: docs/ is a repository tree that
+    # .Rbuildignore withholds from the source package -- the lockfile is
+    # then simply outside this build context, said here rather than
+    # stopped on. In the site/lane render (docs/ present) the branch
+    # above must speak; its absence there would be a real defect.
+    print("renv.lock: repository-tree face -- outside the source-package build context")
+  } else {
+    stop("committed renv lockfile missing from its own committed directory")
+  }
 } else {
   print("install face reads the source DESCRIPTION")
 }
