@@ -86,6 +86,29 @@ test_that("US-4 the bundle manifest is re-derivable byte-for-byte (repro stamp)"
   unlink(c(o1, o2), recursive = TRUE)
 })
 
+test_that("US-4 manifest hashing is in-process: a stripped PATH cannot starve the bundle", {
+  root <- .sbd_root()
+  site <- .sbd_make_site()
+  out <- tempfile("ctl-b6-")
+  old <- Sys.getenv("PATH")
+  Sys.setenv(PATH = "nonexistent-path-for-hashing-law")
+  on.exit({
+    Sys.setenv(PATH = old)
+    unlink(c(site, out), recursive = TRUE)
+  }, add = TRUE)
+  r <- .sbd_run(root$bundle, c(paste0("--site=", site), paste0("--out=", out),
+                                "--rev=abc123def456"))
+  expect_identical(r$status, 0L, info = r$out)
+  man <- readLines(file.path(out, "manifest.tsv"), warn = FALSE)
+  expect_length(man, 3L)
+  hex <- strsplit("0123456789abcdef", "")[[1L]]
+  for (m in man) {
+    p <- strsplit(m, "\t", fixed = TRUE)[[1L]]
+    expect_identical(nchar(p[1L]), 64L)
+    expect_true(all(strsplit(p[1L], "")[[1L]] %in% hex))
+  }
+})
+
 test_that("US-4 the dormant deploy path speaks its proof line on the measured 404", {
   root <- .sbd_root()
   site <- .sbd_make_site()

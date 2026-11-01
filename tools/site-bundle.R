@@ -34,31 +34,20 @@ if (!length(files)) {
   stop("vacuous: zero files under the site tree ", abs_site)
 }
 rel <- substring(files, nchar(abs_site) + 2L)
-shas <- suppressWarnings(system2("shasum", c("-a", "256", files),
-                                 stdout = TRUE, stderr = TRUE))
-st <- attr(shas, "status")
-if (!is.null(st) && st != 0L) {
-  stop("shasum failed: ", paste0(as.character(shas), collapse = "\n"))
+if (!requireNamespace("digest", quietly = TRUE)) {
+  stop("digest namespace unavailable: manifest hashing is in-process by law")
 }
-lines <- as.character(shas)
-lines <- lines[nzchar(trimws(lines))]
-if (length(lines) != length(files)) {
-  stop("digest/manifest desync: files=", length(files), " digests=",
-       length(lines))
+sums <- character(length(files))
+for (i in seq_along(files)) {
+  sums[i] <- digest::digest(files[i], algo = "sha256", file = TRUE)
 }
-digest <- character(length(lines))
-hashed <- character(length(lines))
-for (i in seq_along(lines)) {
-  parts <- strsplit(trimws(lines[i]), "  ", fixed = TRUE)[[1L]]
-  digest[i] <- parts[1L]
-  hashed[i] <- parts[2L]
-}
-if (!all(identical(hashed, files))) {
-  stop("digest/path pairing desync")
+if (!all(nzchar(sums))) {
+  bad <- files[!nzchar(sums)]
+  stop("digest/manifest desync: empty hash for ", paste0(bad, collapse = ", "))
 }
 ord <- order(rel)
 dir.create(out, recursive = TRUE, showWarnings = FALSE)
-writeLines(paste0(digest[ord], "\t", rel[ord]), file.path(out, "manifest.tsv"))
+writeLines(paste0(sums[ord], "\t", rel[ord]), file.path(out, "manifest.tsv"))
 writeLines(c(paste0("trunk_sha\t", rev),
              paste0("files\t", length(files)),
              paste0("built_utc\t", format(Sys.time(), tz = "UTC"))),
