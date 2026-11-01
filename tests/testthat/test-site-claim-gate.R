@@ -170,9 +170,9 @@
 # --- green halves -----------------------------------------------------------------------
 
 test_that("US-5 the real built site (when present) passes the claim gate with life", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   sd <- .cg_site_dir()
-  if (is.na(sd)) skip("no lane-built site tree (build_site not run in this context)")
+  if (is.na(sd)) skip("no lane-built site tree (R CMD check context)")
   r <- .cg_scan(sd, .ms_root)
   expect_identical(r$violations, character(0),
                    info = paste0(r$violations, collapse = "\n"))
@@ -212,7 +212,7 @@ test_that("US-5 the shipped vignette faces carry no ungated headline and no supe
 # --- red halves: planted violations MUST fire ----------------------------------------
 
 test_that("US-5 a planted ungated G0 headline reddens the census (firing control)", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   site <- tempfile("ctl-cg-")
   dir.create(site, recursive = TRUE)
   writeLines(c("<html><body><p>The package is ", .cg_HEADLINES[1L],
@@ -235,7 +235,7 @@ test_that("US-5 a planted ungated G0 headline reddens the census (firing control
 })
 
 test_that("US-5 a planted ghost DOI reddens the census; a source-backed DOI passes", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   site <- tempfile("ctl-cg2-")
   dir.create(site, recursive = TRUE)
   writeLines("<html><body><p>see (doi:10.999999/fabricated.2026) </p></body></html>",
@@ -252,7 +252,7 @@ test_that("US-5 a planted ghost DOI reddens the census; a source-backed DOI pass
 })
 
 test_that("US-5 a planted paper-status superlative reddens; a witnessed route passes", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   site <- tempfile("ctl-cg3-")
   dir.create(site, recursive = TRUE)
   writeLines("<html><body><p>first-ever coverage tool</p></body></html>",
@@ -274,7 +274,7 @@ test_that("US-5 a planted paper-status superlative reddens; a witnessed route pa
 })
 
 test_that("US-5 an empty site tree can never pass (vacuous-green guard)", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   site <- tempfile("ctl-cg-empty-")
   dir.create(site, recursive = TRUE)
   on.exit(unlink(site, recursive = TRUE), add = TRUE)
