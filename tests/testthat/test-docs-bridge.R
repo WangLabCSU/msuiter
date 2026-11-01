@@ -193,10 +193,10 @@ test_that("US-2 the bridge links the re-derived docs roster exactly once each", 
 })
 
 test_that("US-2 the built bridge (when the lane site is present) 404-censuses clean", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   sd <- .br_site_dir()
   if (is.na(sd)) {
-    skip("no lane-built site tree (build_site not run in this context)")
+    skip("no lane-built site tree (R CMD check context)")
   }
   r <- .br_law_built(sd, .ms_root)
   expect_identical(r$violations, character(0),
@@ -254,7 +254,7 @@ test_that("US-2 the constructed-perfect regeneration greens the law (live contro
 })
 
 test_that("US-2 the built-census tool fires on a constructed-broken page (control)", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   root <- .ms_root
   site <- tempfile("ctl-site-")
   dir.create(site, recursive = TRUE)

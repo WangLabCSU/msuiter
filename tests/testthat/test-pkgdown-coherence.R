@@ -182,9 +182,9 @@ test_that("US-3 every vignette is registered, every article owns a vignette, nav
 })
 
 test_that("US-3 navbar internal hrefs resolve in the built tree when the lane site is present", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   sd <- .coh_site_dir()
-  if (is.na(sd)) skip("no lane-built site tree (build_site not run in this context)")
+  if (is.na(sd)) skip("no lane-built site tree (R CMD check context)")
   yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
   nb <- .coh_parse_navbar(yml)
   expect_true(nb$ok)
