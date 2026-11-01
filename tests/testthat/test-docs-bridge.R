@@ -198,6 +198,9 @@ test_that("US-2 the built bridge (when the lane site is present) 404-censuses cl
   if (is.na(sd)) {
     skip("no lane-built site tree (R CMD check context)")
   }
+  if (!requireNamespace("xml2", quietly = TRUE)) {
+    skip("no xml2 on this arm: built-half census not inspectable (R CMD check context)")
+  }
   r <- .br_law_built(sd, .ms_root)
   expect_identical(r$violations, character(0),
                    info = paste0(r$violations, collapse = "\n"))
@@ -255,6 +258,9 @@ test_that("US-2 the constructed-perfect regeneration greens the law (live contro
 
 test_that("US-2 the built-census tool fires on a constructed-broken page (control)", {
   if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
+  if (!requireNamespace("xml2", quietly = TRUE)) {
+    skip("no xml2 on this arm: built-half census not inspectable (R CMD check context)")
+  }
   root <- .ms_root
   site <- tempfile("ctl-site-")
   dir.create(site, recursive = TRUE)
