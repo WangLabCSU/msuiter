@@ -1,5 +1,6 @@
-# The pkgdown minimal skeleton (the M0 governance file, U-M0-08).
-# The full site (the MSU↔function mapping table, the performance-anchoring documentation, etc.) is extended when docs/ROADMAP.md M7 delivers.
+# The pkgdown site face (the M0 governance file, U-M0-08; the full site --
+# the MSU<->function map, the performance anchoring, the docs bridge -- was
+# delivered across the M7 docs/site lanes DS-1/DS-2).
 url: https://github.com/WangLabCSU/msuiter
 
 template:
@@ -10,12 +11,15 @@ development:
 
 navbar:
   structure:
-    left: [intro, get-started, reference, news, docs]
+    left: [intro, get-started, docs-bridge, reference, news, docs]
     right: [github]
   components:
     get-started:
       text: Get started
       href: articles/get-started.html
+    docs-bridge:
+      text: Docs bridge
+      href: articles/docs-bridge.html
     news:
       text: News
       href: news/index.html
@@ -164,12 +168,13 @@ reference:
   - ms_benchmark_grid
   - ms_run_benchmark
 
-# articles: the vignette rendering list (pkgdown picks the same-named source files under vignettes/ by name).
-# Section form per pkgdown >= 2.0 (issue #32 D3): each entry is a list with
-# a title and a contents list; the bare string list the M0 skeleton carried
-# was rejected by the sitrep articles check ("articles must be a list, not
-# the string"). The single vignette under vignettes/ stays named explicitly
-# -- no default-index fallback, the audit stays load-bearing.
+# articles: the vignette rendering list (pkgdown picks the same-named source
+# files under vignettes/ by name). Section form per pkgdown >= 2.0 (issue #32
+# D3): each entry is a list with a title and a contents list; the bare string
+# list the M0 skeleton carried was rejected by the sitrep articles check
+# ("articles must be a list, not the string"). Every vignette under
+# vignettes/ is named explicitly -- no default-index fallback, the coherence
+# law (test-pkgdown-coherence.R) owns the bijection and stays load-bearing.
 articles:
 - title: "Get started: install, the five-minute path, output anatomy"
   contents:
@@ -183,6 +188,9 @@ articles:
 - title: "Performance anchoring: frozen floors, witnesses and reproduction"
   contents:
   - performance-anchoring
+- title: "Docs bridge: navigating the repository docs corpus"
+  contents:
+  - docs-bridge
 - title: Extending msuiter
   contents:
   - extending
