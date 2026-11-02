@@ -220,8 +220,8 @@ unlink(bp)
 
 The function-to-concept-to-pillar bridge is [docs/MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md);
 one-row-per-export, so any face names the concept it serves and its peer
-counterpart. For extending the engine registry itself see the *Extending
-msuiter* article.
+counterpart. For extending the engine registry itself see the
+[extending msuiter](articles/extending.html) article.
 
 ```{r cleanup, include = FALSE}
 unlink(path); unlink(genome)
