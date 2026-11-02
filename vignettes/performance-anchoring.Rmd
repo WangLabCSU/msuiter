@@ -168,6 +168,20 @@ python3 bench/m7/tests/run_all.py             # the governance suite
 Rscript -e 'devtools::load_all(); ms_sitrep()' # the installation sitrep
 ```
 
+The one-command reproduction face is `docs/paper/reproduce.sh`, banked by
+the paper lane and attested in `docs/paper/reproduction-proof.md`. Its
+default `--verify` face dry-verifies every sealed number against committed
+bytes without containers, without network and without long campaigns.
+This page
+LINKS that face, it never forks it: exactly one reproduction script exists
+in the repository, no second script anywhere re-implements the `--verify`
+face, and the law `tests/testthat/test-reproduce-link.R` keeps that census
+true.
+
+```{sh one-command-face, eval = FALSE}
+bash docs/paper/reproduce.sh --verify   # dry-run verification of the sealed numbers
+```
+
 Every performance claim msuiter makes in prose (README, manual pages, this
 vignette) must name its witness path; a number without a witness path is
 not a claim, and this page holds none.
