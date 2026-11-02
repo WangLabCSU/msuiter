@@ -17,7 +17,7 @@ import time
 import traceback
 
 MODULES = ["test_sim", "test_coverage", "test_lrt", "test_provider", "test_adapter",
-           "test_seeds"]
+           "test_seeds", "test_primary_pi"]
 
 
 def main() -> int:
