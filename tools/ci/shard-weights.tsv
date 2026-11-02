@@ -95,3 +95,4 @@ test-scenarios-gallery.R	1	80
 test-peer-evidence.R	3	1611
 test-reproduce-link.R	0	18
 test-docs-tour-executable.R	10	28
+test-docs-scenarios-prose.R	1	46
