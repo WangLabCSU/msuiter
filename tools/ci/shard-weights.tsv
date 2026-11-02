@@ -91,3 +91,4 @@ test-docs-bridge.R	1	16
 test-pkgdown-coherence.R	1	14
 test-site-claim-gate.R	42	15
 test-site-deploy-bundle.R	3	31
+test-scenarios-gallery.R	1	80
