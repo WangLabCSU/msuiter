@@ -203,3 +203,50 @@ speaks only what the committed bytes prove (status-column census read from
 the bytes themselves, reader-verifier JSON verbatim, zero speed/coverage
 claims beyond what the tables attest). No real-data numerics beyond the
 sanctioned attestation classes.
+
+## Appendix A — pre-ignition verbatim attestation (executed 2026-11-02, G0-P lane)
+
+Images (built fresh from the byte-attested Dockerfiles above, serially per
+the 137-lesson; build logs /tmp/g0plane/logs/build_{sigfit,stl}.log):
+
+```
+g0-sigfit@sha256:88dca593b2423d760b5dcb543a58bcfdb2306c8ee7a9d6c611a4c4f95cd9847d
+g0-stl@sha256:8058116257450032fce980a90039e2a1e908e74262e9ec9448ce857d99d0af82
+```
+
+Harness docker-path liveness (smoke profile, real adapter, synthetic
+provider — a harness self-check, zero verdict power; verbatim):
+
+```
+[adapter] docker: 8/8 cells ok; timings -> cache/smoke_probe/out/timings_smoke_20261103-003143.csv
+```
+
+Runner law censuses (verbatim from `/tmp/g0plane/logs/`): RED bank (runner
+absent): `47/66 tests passed.` with all 19 lane laws FAIL, prior 47 green.
+GREEN bank (instruments + images present): `66/66 tests passed.`
+
+Authoritative-face pre-flight (co-tenancy attestation, verbatim):
+
+```
+PREFLIGHT-PASS gates=env,digests,pin,identity,ledger,marker,images,tenancy fanout=4
+```
+
+At that reading: `vm.loadavg = { 3.72 3.84 4.10 }` under BAR 10.0;
+`docker ps` = `shiny-server-test rocker/shiny:latest` (non-measurement
+scaffolding per governance scope); G0 digests matched their pins by live
+reading (`shasum` in-gate).
+
+Ignition (the ONE authoritative shot, verbatim):
+
+```
+IGNITION-FIRED pid=86033 stamp=20261102-163222 log=/tmp/g0plane/logs/20261102-163222.ignition.log
+[ignition] shard main start 2026-11-02T16:32:22Z (fan-out 0/4)
+[ignition] shard comp_clock_only start 2026-11-02T16:32:22Z (fan-out 1/4)
+[ignition] shard comp_mmr start 2026-11-02T16:32:22Z (fan-out 2/4)
+[ignition] shard comp_flat_triple start 2026-11-02T16:32:22Z (fan-out 3/4)
+```
+
+Campaign identity: cachedir `bench/g0/cache/primary_pi`, outdir
+`bench/results/docker_primary_pi_20261102-163222`, ledger row
+`{"kind":"launch","mode":"full","ts":"2026-11-02T16:32:22Z"}` — the single
+full row; continuation is G0_REUSE_CACHE resume, never a second ignition.
