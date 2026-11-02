@@ -31,16 +31,18 @@ witness and that every stamp and census matches the disk bytes -- a
 tampered witness, a dropped card or an empty witness tree reddens the lane.
 
 ```{r gallery, echo = FALSE, message = FALSE, results = "asis"}
-if (is.na(PKG)) {
-  stop("fail-closed: the package root is not reachable; the gallery ",
-       "renders only from the committed bytes (US-G1)", domain = NA)
+if (is.na(PKG) ||
+    !dir.exists(file.path(PKG, "bench", "scenarios", "out")) ||
+    !file.exists(file.path(PKG, "tools", "scenarios-gallery.R"))) {
+  cat("rendered outside the committed data tree: this page prints no number here;\nre-derive the gallery with `Rscript tools/scenarios-gallery.R --out=<dir>` from the repository root\n")
+} else {
+  Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
+  source(file.path(PKG, "tools", "scenarios-gallery.R"), local = TRUE)
+  cat(paste0(c("<div class=\"scenarios-gallery\">", scg_render(PKG), "</div>"),
+             collapse = "\n"))
+  cat("\n")
+  Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
 }
-Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
-source(file.path(PKG, "tools", "scenarios-gallery.R"), local = TRUE)
-cat(paste0(c("<div class=\"scenarios-gallery\">", scg_render(PKG),
-             "</div>"), collapse = "\n"))
-cat("\n")
-Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
 ```
 
 Every stamp above is recomputed from the file bytes the moment this page

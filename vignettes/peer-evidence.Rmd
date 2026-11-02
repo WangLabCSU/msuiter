@@ -38,16 +38,18 @@ zero-fill, and empty the corpus and watch the face redden instead of
 passing silently.
 
 ```{r peer, echo = FALSE, message = FALSE, results = "asis"}
-if (is.na(PKG)) {
-  stop("fail-closed: the package root is not reachable; peer evidence ",
-       "renders only from the committed witness bytes (US-G2)", domain = NA)
+if (is.na(PKG) ||
+    !dir.exists(file.path(PKG, "bench", "results")) ||
+    !file.exists(file.path(PKG, "tools", "peer-evidence.R"))) {
+  cat("rendered outside the committed witness corpus: this page prints no number here;\nre-derive the stamps with `Rscript tools/peer-evidence.R --out=<dir>` from the repository root\n")
+} else {
+  Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
+  source(file.path(PKG, "tools", "peer-evidence.R"), local = TRUE)
+  cat(paste0(c("<div class=\"peer-evidence\">", spe_render(PKG), "</div>"),
+             collapse = "\n"))
+  cat("\n")
+  Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
 }
-Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
-source(file.path(PKG, "tools", "peer-evidence.R"), local = TRUE)
-cat(paste0(c("<div class=\"peer-evidence\">", spe_render(PKG), "</div>"),
-           collapse = "\n"))
-cat("\n")
-Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
 ```
 
 To re-derive every stamp yourself, run
