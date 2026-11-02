@@ -1,0 +1,49 @@
+---
+title: "Scenario gallery: committed witness census, provenance-stamped"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{"Scenario gallery: committed witness census, provenance-stamped"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator: knitr renders with cwd set to the vignettes directory.
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+msuiter's application-scenario drivers (`bench/scenarios/run_atlas.R`,
+`run_hrd.R`, `run_treatment.R`) persist their evidence tables under
+`bench/scenarios/out/`. This page galleries every committed witness there:
+one card per file, each carrying an in-process sha256 provenance stamp, a
+row/column census and a verbatim excerpt of the leading data rows. No
+number on this page is hand-typed: `tools/scenarios-gallery.R` re-derives
+every digit from the committed bytes at build time, and the testthat law
+`tests/testthat/test-scenarios-gallery.R` audits that every card names its
+witness and that every stamp and census matches the disk bytes -- a
+tampered witness, a dropped card or an empty witness tree reddens the lane.
+
+```{r gallery, echo = FALSE, message = FALSE, results = "asis"}
+if (is.na(PKG)) {
+  stop("fail-closed: the package root is not reachable; the gallery ",
+       "renders only from the committed bytes (US-G1)", domain = NA)
+}
+Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
+source(file.path(PKG, "tools", "scenarios-gallery.R"), local = TRUE)
+cat(paste0(c("<div class=\"scenarios-gallery\">", scg_render(PKG),
+             "</div>"), collapse = "\n"))
+cat("\n")
+Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
+```
+
+Every stamp above is recomputed from the file bytes the moment this page
+builds; to re-derive the census yourself, run
+`Rscript tools/scenarios-gallery.R --out=<dir>` from the repository root and
+diff its `manifest.tsv` against what you see here.

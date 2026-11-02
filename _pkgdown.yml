@@ -191,6 +191,9 @@ articles:
 - title: "Docs bridge: navigating the repository docs corpus"
   contents:
   - docs-bridge
+- title: "Scenario gallery: committed witness census, provenance-stamped"
+  contents:
+  - scenarios-gallery
 - title: Extending msuiter
   contents:
   - extending
