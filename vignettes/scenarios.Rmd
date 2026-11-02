@@ -92,10 +92,13 @@ if (is.na(PKG)) {
 The committed tables for this leg:
 `bench/scenarios/out/counts_sbs.csv`, `counts_dbs.csv`, `qc_report.csv`,
 `compare_sweep.csv`, `pbr.csv`, `prevalence.csv`, `association.csv`.
+The headline committed table `counts_sbs.csv` is the 96-channel x 24-sample
+SBS grid — rows and columns re-derived from the witness bytes themselves by
+the gallery census face, each cell adjudicated against planted synthetic truth.
 
 ## Byte-exact HRD: adjudication against the dual oracles
 
-The HRD leg reproduces Cortes-Castro's published values (PMID 31151873)
+The HRD leg reproduces Cortes-Castro's published values (PMID 31151873) <!-- ms-num kind="citation" reason="PMID 31151873: external published reference, not our measurement" -->
 pLOH-by-segment-integration and the aneuploidy count, and every adjudicated
 row must be *byte-identical* to the independent oracle implementation carried
 in `tests/testthat/helper-hrd.R`. The planted geometry encodes the composite
