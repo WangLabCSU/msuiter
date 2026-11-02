@@ -224,7 +224,8 @@ engines never warn.
 A small synthetic catalog: 48 channels x 8 samples built from three planted
 signatures with disjoint channel blocks (seeded, so the vignette is
 reproducible). In a real analysis the catalog would come from
-`ms_variants() |> ms_tally()`.
+`ms_variants() |> ms_tally()` — the [tour](articles/tour.html) runs that
+chain end to end.
 
 ```{r synthetic-catalog}
 set.seed(11)
