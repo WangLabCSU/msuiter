@@ -181,6 +181,37 @@ def test_resume_control_accepts_single_full_row():
     assert "PREFLIGHT-PASS" in out, out[-800:]
 
 
+def test_decoy_campaign_state_isolation():
+    # Isolation proof for the campaign-state readers (marker/ledger/outdir/docker/load):
+    # a full decoy live-campaign state planted OUTSIDE every test sandbox -- ambient
+    # cachedir carrying a live-holder marker + outdir pointer + doubled-full-row
+    # ledger, a live measurement container on the ambient docker face, over-BAR load
+    # on the ambient sysctl face -- must leave every law green. A law that still reads
+    # live state inherits the decoy and reddens; this is the standing proof the suite
+    # passes while a campaign is simultaneously live.
+    decoy_c = _tmpdir("decoy_c")
+    decoy_o = _tmpdir("decoy_o")
+    (decoy_c / ".campaign-running").write_text(f"{os.getpid()}\n")    # live holder
+    (decoy_c / ".primary_pi_outdir").write_text(str(decoy_o) + "\n")  # outdir pointer
+    _seed_ledger(decoy_o, 2)                                           # doubled full rows
+    shim = _tmpdir("decoy_shim")
+    _docker_shim(shim, "ghost123 g0-sigfit", "iid123")                # live container
+    (shim / "sysctl").write_text("#!/bin/sh\necho '{ 42.00 42.00 42.00 }\\n'\nexit 0\n")
+    (shim / "sysctl").chmod(0o755)
+    mod = sys.modules[__name__]
+    saved = dict(os.environ)
+    try:
+        os.environ["G0_PI_CACHEDIR"] = str(decoy_c)
+        os.environ["G0_PI_SYSCTL"] = str(shim / "sysctl")
+        os.environ["PATH"] = f"{shim}{os.pathsep}{os.environ['PATH']}"
+        for name in sorted(vars(mod)):
+            if name.startswith("test_") and name != "test_decoy_campaign_state_isolation":
+                getattr(mod, name)()
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
+
+
 def test_resume_refuses_when_ledger_doubled():
     cache = _tmpdir("rsc2")
     out_d = _tmpdir("rsout2")
