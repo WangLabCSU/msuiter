@@ -2,7 +2,7 @@
 PI-confirmed identity ruling 2026-11-02; SIGNER-c lane promotion).
 
 Position (PI hierarchy ruling): sigprofiler is THE primary comparison
-target; this row and the sigminer row are AUXILIiARY comparison objects.
+target; this row and the sigminer row are AUXILIARY comparison objects.
 
 Pure-adapter contract (memo §3): the harness writes ``counts.csv /
 catalog.csv / params.json`` into the cell's ``in/`` (mounted read-only),
@@ -39,7 +39,7 @@ def _child_argv(catalog_mount: Path | str | None) -> list[str]:
     the §1 mount contract and nothing else."""
     catalog_dest = ("/work/catalog.csv" if catalog_mount is not None
                     else "/work/in/catalog.csv")
-    return ["Rscript", f"/work/{registry.COMPETITOR_ROW.runner_script}",
+    return ["Rscript", f"/work/{registry.lookup(registry.COMPETITOR_KEY).runner_script}",
             "--counts", "/work/in/counts.csv",
             "--catalog", catalog_dest,
             "--params", "/work/in/params.json",
