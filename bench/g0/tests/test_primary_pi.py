@@ -239,10 +239,9 @@ def test_bar_is_not_an_operator_knob():
 def test_mock_rehearsal_ledger_is_calibration_only():
     cache, out_d = _tmpdir("mrh_c"), _tmpdir("mrh_o")
     env = _valid_env(G0_PI_REHEARSAL="mock", G0_PI_REPS="1",
-                     G0_PI_SHARDS="nb clock_sparse",
+                     G0_PI_SHARDS="main nb clock_sparse",
                      G0_PI_CACHEDIR=str(cache), G0_PI_OUTDIR=str(out_d),
                      G0_PI_PREFLIGHT=None)
-    env.pop("G0_PI_PREFLIGHT", None)
     p, out = _run(env)
     assert p.returncode == 0, out[-1500:]
     assert "REHEARSAL-COMPLETE" in out, out[-800:]
@@ -254,11 +253,14 @@ def test_mock_rehearsal_ledger_is_calibration_only():
     lines = master.read_text().splitlines()
     assert lines[0] == NINE_COL_HEADER, lines[0]
     assert len(lines) > 1
-    host_rows = {l.split(",")[8] for l in lines[1:]}
-    cpu = {l.split(",")[6] for l in lines[1:]}
+    import csv as _csv
     import socket
-    assert host_rows == {socket.gethostname()}, host_rows
-    assert cpu == {"unmeasured"}, cpu
+    with master.open(newline="", encoding="utf-8") as fh:
+        rows9 = [r for r in _csv.DictReader(fh) if r.get("cell")]
+    assert rows9
+    assert {r["host"] for r in rows9} == {socket.gethostname()}
+    assert {r["cpu_seconds"] for r in rows9} == {"unmeasured"}
+    assert {r["hw_profile"] for r in rows9} == {CANON_PIN}
 
 
 # -- rollup + reader verifier units ---------------------------------------------------
