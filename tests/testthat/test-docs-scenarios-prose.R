@@ -100,10 +100,10 @@ test_that("US-H2 a tampered unmarked prose numeral is named", {
   hit <- grep("96-channel", lines, fixed = TRUE)
   expect_length(hit, 1L)
   bad <- lines
-  bad[hit] <- sub("96-channel", "97-channel", bad[hit], fixed = TRUE)
+  bad[hit] <- sub("96-channel", "9901-channel", bad[hit], fixed = TRUE)
   tmp <- tempfile(fileext = ".Rmd"); writeLines(bad, tmp)
   a <- ctx$e$scg_prose_audit(tmp, ctx$numset)
-  expect_true(any(grepl("97", a$violations, fixed = TRUE)),
+  expect_true(any(grepl("9901", a$violations, fixed = TRUE)),
                info = paste0(a$violations, collapse = "\n"))
   expect_true(any(grepl("not witness-bound", a$violations, fixed = TRUE)),
                info = "the tampered numeral must be named as off-census")
@@ -114,11 +114,11 @@ test_that("US-H2 a forged ms-num marker does not launder an off-census numeral",
   lines <- readLines(ctx$page, warn = FALSE)
   hit <- grep("96-channel", lines, fixed = TRUE)
   bad <- lines
-  bad[hit] <- paste0(sub("96-channel", "97-channel", bad[hit], fixed = TRUE),
+  bad[hit] <- paste0(sub("96-channel", "9901-channel", bad[hit], fixed = TRUE),
                      " <!-- ms-num kind=\"magic\" reason=\"because\" -->")
   tmp <- tempfile(fileext = ".Rmd"); writeLines(bad, tmp)
   a <- ctx$e$scg_prose_audit(tmp, ctx$numset)
-  expect_true(any(grepl("97", a$violations, fixed = TRUE)),
+  expect_true(any(grepl("9901", a$violations, fixed = TRUE)),
                info = paste0(a$violations, collapse = "\n"))
   expect_true(any(grepl("ms-num marker", a$violations, fixed = TRUE)),
                info = "the contract breach of the marker itself must be named")
