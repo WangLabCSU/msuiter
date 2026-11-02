@@ -21,6 +21,14 @@ PENDING_VERIFY = "PENDING-VERIFY"
 STATUS_READY = "ready"
 STATUS_PENDING_VERIFY = "pending-verify"
 
+# ---- SIGNER-c authority constants (lane card 2026-11-02/03) ----------------
+# The third competitor's name and version are single-sourced here so the
+# row, the adapter, the fixture and the (c) laws never re-type a display-
+# fragile literal; the (c) group polices both against the banked probe
+# authorities (probe01 PACKAGES record + the card's own bytes).
+COMPETITOR_KEY = "signal"
+COMPETITOR_PIN = "2.12.0"
+
 
 @dataclass(frozen=True)
 class CompetitorSpec:
