@@ -97,9 +97,9 @@ if [ -n "${G0_REUSE_CACHE:-}" ]; then
 else
   CACHE=${G0_PI_CACHEDIR:-cache/primary_pi}
   if [ "$REHEARSAL" = mock ]; then
-    OUT=${G0_PI_OUTDIR:-../results/docker_primary_pi_rehearsal_$ts}
+    OUT=${G0_PI_OUTDIR:-results/docker_primary_pi_rehearsal_$ts}
   else
-    OUT=${G0_PI_OUTDIR:-../results/docker_primary_pi_$ts}
+    OUT=${G0_PI_OUTDIR:-results/docker_primary_pi_$ts}
   fi
   [ -e "$CACHE/.primary_pi_outdir" ] && die2 "campaign already ignited under $CACHE — the identity survives its deaths: resume via G0_REUSE_CACHE"
   LEDGER="$OUT/campaign_launches.jsonl"
@@ -150,7 +150,7 @@ if [ "${G0_PI_PREFLIGHT:-}" = 1 ]; then
   if [ "$REHEARSAL" = mock ]; then
     echo "PREFLIGHT-PASS gates=mode,pin,identity,ledger,marker face=rehearsal"
   else
-    echo "PREFLIGHT-PASS gates=env,digests,pin,identity,ledger,marker,images,tenancy fanout=$FANOUT"
+    echo "PREFLIGHT-PASS gates=env,digests,pin,identity,ledger,marker,images,tenancy fanout=$FANOUT outpath=$OUT"
   fi
   exit 0
 fi

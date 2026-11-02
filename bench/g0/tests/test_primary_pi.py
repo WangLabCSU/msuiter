@@ -212,6 +212,66 @@ def test_decoy_campaign_state_isolation():
         os.environ.update(saved)
 
 
+# -- outdir-home laws (ADJUDICATION-01) ----------------------------------------------
+
+def _clean_preflight_env(**over) -> dict:
+    # tempdir identity + clean docker/sysctl faces shared by the outdir-home laws.
+    d = _tmpdir("outhome")
+    _docker_shim(d, "", "iid123")
+    fake = d / "sysctl"
+    fake.write_text("#!/bin/sh\necho '{ 0.90 0.90 0.90 }'\nexit 0\n")
+    fake.chmod(0o755)
+    return _valid_env(PATH=f"{d}{os.pathsep}{os.environ['PATH']}",
+                      G0_PI_SYSCTL=str(fake), **over)
+
+
+def test_ignore_law_covers_campaign_outdir_classes():
+    # Ignore-law face: the campaign outdir class and the sanctioned g0 results
+    # home must be ignored; the house committed-witness field under
+    # /bench/results/ must remain trackable (pattern must not swallow it).
+    root = str(G0_DIR.parents[1])
+
+    def ignored(path):
+        return subprocess.run(["git", "check-ignore", "-q", path], cwd=root,
+                              capture_output=True).returncode == 0
+
+    assert ignored("bench/g0/results/probe_any"), "sanctioned g0 results home not ignored"
+    assert ignored("bench/results/docker_primary_pi_PROBE"), "campaign outdir class not ignored"
+    assert not ignored("bench/results/degraded_pi_attestation.md"), "house witness field swallowed"
+
+
+def test_out_default_rehomed_to_ignored_home():
+    # OUT defaults ride the sanctioned ignored home: both face defaults carry the
+    # results/ prefix (source form pinned), no legacy ../results default survives,
+    # and the live preflight banner must speak the chosen outpath (CLI face law).
+    src = RUNNER.read_text()
+    assert src.count(":-results/docker_primary_pi_") == 2, "OUT defaults not both re-homed"
+    assert ":-../results/docker_primary_pi_" not in src, "legacy ../results default survived"
+    env = _clean_preflight_env(G0_PI_CACHEDIR=_tmpdir("outh_c"))
+    p, out = _run(env, expect_rc=0)
+    assert "outpath=results/docker_primary_pi_" in out, out[-800:]
+
+
+def test_frozen_pointer_inert_under_rehome():
+    # Inertness proof (invariant across the re-home): the RESUME face consumes the
+    # pointer verbatim, so a frozen-class pointer (../results/docker_primary_pi_*)
+    # must still resolve. Resolution is not vacuously green: a pointer that loses
+    # its ledger trips the single-ignition refusal (rc 2) -- the twin case is the
+    # firing control.
+    name = f"docker_primary_pi_inertlaw_{os.urandom(4).hex()}"
+    legacy = G0_DIR.parent / "results" / name
+    cache = _tmpdir("inert_c")
+    (cache / ".primary_pi_outdir").write_text(f"../results/{name}\n")
+    _seed_ledger(legacy, 1)
+    try:
+        _run(_clean_preflight_env(G0_REUSE_CACHE=str(cache)), expect_rc=0)
+        (legacy / "campaign_launches.jsonl").unlink()
+        p2, out2 = _run(_clean_preflight_env(G0_REUSE_CACHE=str(cache)), expect_rc=2)
+        assert "ledger refuses" in out2, out2[-400:]
+    finally:
+        shutil.rmtree(legacy, ignore_errors=True)
+
+
 def test_resume_refuses_when_ledger_doubled():
     cache = _tmpdir("rsc2")
     out_d = _tmpdir("rsout2")

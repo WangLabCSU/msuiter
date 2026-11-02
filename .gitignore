@@ -63,6 +63,9 @@ docs/dev/
 
 # G0 results are regenerated artifacts
 /bench/g0/results/
+# campaign outdir class (frozen era + pointer-resumed continuations): raw output
+# that shares the tracked house-witness tree, never committable -- ADJUDICATION-01
+/bench/results/docker_primary_pi_*
 
 # instrumented covr-lane byproducts: gcov counters and in-place vignette renders
 /src/*.gcno
