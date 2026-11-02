@@ -3,10 +3,11 @@
 
 Merges the shard-pass timings tables (shard-root/<tag>/timings_primary_*.csv)
 with the final serial pass table (the repair leg: a shard cell lost to an
-exit-137 re-measures there). Per cell the FIRST measured row wins
-(shard ok/cached beats a later cache-hit restatement); a shard fail row is
-replaced by the final pass row when that one measured. Adds the pin columns
-of the nine-column contract; cpu_seconds carries the literal `unmeasured`
+exit-137 re-measures there). Per cell the strongest measurement wins under the
+rank law ok > cached > fail (a shard ok keeps its measured seconds over a
+later cache-hit restatement; the repair leg's ok replaces a shard fail; the
+latest ok restatement resolves ties). Adds the pin columns of the nine-column
+contract; cpu_seconds carries the literal `unmeasured`
 because the adapter protocol reports no container CPU accounting and
 fabricating one would be a false claim (see the design booking §7).
 """
@@ -28,16 +29,28 @@ def _read6(path: Path) -> list:
     return rows
 
 
+def _rank(status: str) -> int:
+    return 2 if status == "ok" else (1 if status.startswith("cached") else 0)
+
+
 def merge(shard_root: Path, final_path: Path) -> dict:
-    """cell -> merged row dict (six measured columns)."""
+    """cell -> merged row dict (six measured columns).
+
+    Rank law: ok > cached > fail. A later, stronger row replaces a weaker one
+    (the repair leg's ok replaces a shard fail; a genuine cache-hit beats a
+    stale fail); equal ok rows resolve to the later restatement; equal-or-
+    weaker never displaces (a shard ok keeps its measured seconds over a
+    final cached restatement; the first fail keeps the original cause)."""
     merged = {}
     for f in sorted(shard_root.glob("*/timings_primary_*.csv")):
         for r in _read6(f):
-            if r["cell"] not in merged:
+            cur = merged.get(r["cell"])
+            nr, cr = _rank(r["status"]), _rank(cur["status"]) if cur else -1
+            if cur is None or nr > cr or (nr == cr == 2):
                 merged[r["cell"]] = r
     for r in _read6(final_path):
-        prev = merged.get(r["cell"])
-        if prev is None or not prev["status"].startswith(("ok", "cached")):
+        cur = merged.get(r["cell"])
+        if cur is None or _rank(r["status"]) > _rank(cur["status"]):
             merged[r["cell"]] = r
     return merged
 
