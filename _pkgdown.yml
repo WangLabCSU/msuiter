@@ -194,6 +194,9 @@ articles:
 - title: "Scenario gallery: committed witness census, provenance-stamped"
   contents:
   - scenarios-gallery
+- title: "Peer evidence: sealed witness-only comparisons"
+  contents:
+  - peer-evidence
 - title: Extending msuiter
   contents:
   - extending

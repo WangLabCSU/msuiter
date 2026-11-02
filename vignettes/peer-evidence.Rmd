@@ -1,0 +1,55 @@
+---
+title: "Peer evidence: sealed witness-only comparisons"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{"Peer evidence: sealed witness-only comparisons"}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator: knitr renders with cwd set to the vignettes directory.
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+msuiter admits peer comparisons to its public face only as committed
+witness bytes. The sanctioned corpus is `bench/results/*/witnesses` (the
+sealed campaign witness directories, the bootstrap-vs-sigminer campaigns
+among them) plus the atlas comparison sweep at
+`bench/scenarios/out/compare_sweep.csv`. Every number inside a peer-value
+marker below is a verbatim byte substring of the witness file named on that
+marker; the testthat law `tests/testthat/test-peer-evidence.R` re-parses
+this page's rendered output and demands exactly that, span by span. Each
+campaign card also stamps every witness with an in-process sha256 and a
+row census, re-derived from the file bytes at build time.
+
+The page runs no benchmarks and recomputes nothing: it renders what the
+sealed witnesses already say. A number with no witness byte behind it
+cannot reach this page -- the law's controls fabricate one and watch the
+audit name it, drop a scored column and watch the render refuse rather than
+zero-fill, and empty the corpus and watch the face redden instead of
+passing silently.
+
+```{r peer, echo = FALSE, message = FALSE, results = "asis"}
+if (is.na(PKG)) {
+  stop("fail-closed: the package root is not reachable; peer evidence ",
+       "renders only from the committed witness bytes (US-G2)", domain = NA)
+}
+Sys.setenv(MSUITER_TOOL_NO_MAIN = "1")
+source(file.path(PKG, "tools", "peer-evidence.R"), local = TRUE)
+cat(paste0(c("<div class=\"peer-evidence\">", spe_render(PKG), "</div>"),
+           collapse = "\n"))
+cat("\n")
+Sys.unsetenv("MSUITER_TOOL_NO_MAIN")
+```
+
+To re-derive every stamp yourself, run
+`Rscript tools/peer-evidence.R --out=<dir>` from the repository root and
+diff its `manifest.tsv` against what you see here.
