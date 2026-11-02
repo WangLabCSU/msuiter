@@ -87,7 +87,18 @@ def _seed_ledger(outdir: Path, n_full: int) -> None:
 def test_env_valid_passes_preflight_control():
     # Arrange/Act/Assert: the anti-vacuous anchor — a complete, honest
     # environment must PASS the whole pre-flight (rc 0 + PREFLIGHT-PASS).
-    p, out = _run(_valid_env(), expect_rc=0)
+    # Hermetic to the campaign: tempdir identity + clean docker/sysctl fakes
+    # (F3 digests stay real — digests are the thing under test, not host state).
+    d = _tmpdir("anchor")
+    _docker_shim(d, "", "img123")
+    fake = d / "sysctl"
+    fake.write_text("#!/bin/sh\necho '{ 0.90 0.90 0.90 }'\nexit 0\n")
+    fake.chmod(0o755)
+    env = _valid_env(PATH=f"{d}{os.pathsep}{os.environ['PATH']}",
+                     G0_PI_SYSCTL=str(fake),
+                     G0_PI_CACHEDIR=_tmpdir("anchor_c"),
+                     G0_PI_OUTDIR=_tmpdir("anchor_o"))
+    p, out = _run(env, expect_rc=0)
     assert "PREFLIGHT-PASS" in out, out[-800:]
 
 
@@ -152,11 +163,21 @@ def test_ignition_refuses_ledger_double_full_row():
 
 
 def test_resume_control_accepts_single_full_row():
+    # Resume control passes the whole pre-flight on a hermetic rig: tempdir
+    # cachedir/ledger + clean docker/sysctl fakes (a live campaign elsewhere
+    # must not turn the control red — co-tenancy sees the fakes, not the host).
+    d = _tmpdir("rshim")
+    _docker_shim(d, "", "img123")
+    fake = d / "sysctl"
+    fake.write_text("#!/bin/sh\necho '{ 0.90 0.90 0.90 }'\nexit 0\n")
+    fake.chmod(0o755)
     cache = _tmpdir("rsc")
     out_d = _tmpdir("rsout")
     _seed_ledger(out_d, 1)
     (cache / ".primary_pi_outdir").write_text(str(out_d) + "\n")
-    p, out = _run(_valid_env(G0_REUSE_CACHE=str(cache)), expect_rc=0)
+    p, out = _run(_valid_env(G0_REUSE_CACHE=str(cache),
+                             PATH=f"{d}{os.pathsep}{os.environ['PATH']}",
+                             G0_PI_SYSCTL=str(fake)), expect_rc=0)
     assert "PREFLIGHT-PASS" in out, out[-800:]
 
 
@@ -214,12 +235,16 @@ def test_co_tenancy_refuses_live_measurement_container():
 
 
 def test_co_tenancy_refuses_over_bar_load():
+    # Hermetic: clean docker fake so the tenancy census is quiet and the ONLY
+    # live signal is the load fake — the over-BAR path under test fires alone.
     d = _tmpdir("shim_load")
     d.mkdir(parents=True, exist_ok=True)
+    _docker_shim(d, "", "img123")
     fake = d / "sysctl"
     fake.write_text("#!/bin/sh\necho '{ 42.00 42.00 42.00 }'\nexit 0\n")
     fake.chmod(0o755)
     env = _valid_env(G0_PI_SYSCTL=str(fake),
+                     PATH=f"{d}{os.pathsep}{os.environ['PATH']}",
                      G0_PI_CACHEDIR=_tmpdir("shim_load_c"),
                      G0_PI_OUTDIR=_tmpdir("shim_load_o"))
     p, out = _run(env, expect_rc=2)
@@ -293,6 +318,27 @@ def test_rollup_merges_final_pass_repairs():
     assert m["stl__nb__N1000"][5] == "ok" and m["stl__nb__N1000"][4] == "95.0"
     assert all(c[6] == "unmeasured" and c[7] == "testhost" and c[8] == CANON_PIN
                for c in m.values())
+
+    # Resume shape: a pre-halt shard recorded fail, the resume re-measured the
+    # same cell to ok, the final pass restates it as a cache hit. The surviving
+    # measurement must win — a cached restatement must not fabricate 0.0 seconds
+    # over the real one, and an earlier fail row must not shadow the later ok.
+    d2 = _tmpdir("roll_resume")
+    sa = d2 / "shard_out" / "a_first" / "timings_primary_1.csv"
+    sb = d2 / "shard_out" / "b_after" / "timings_primary_2.csv"
+    f2 = d2 / "timings_primary_3.csv"
+    _write_timings(sa, [("sigfit__main__N1000", "main", 1000, 0.0, "fail: exit-137")])
+    _write_timings(sb, [("sigfit__main__N1000", "main", 1000, 77.0, "ok")])
+    _write_timings(f2, [("sigfit__main__N1000", "main", 1000, 0.0, "cached")])
+    out2 = d2 / "master.csv"
+    p = subprocess.run([sys.executable, str(ROLLUP), "--shard-root",
+                        str(d2 / "shard_out"), "--final", str(f2),
+                        "--host", "testhost", "--hw-profile", CANON_PIN,
+                        "--out", str(out2)], capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    m2 = [l.split(",") for l in out2.read_text().splitlines()[1:]]
+    assert len(m2) == 1, m2
+    assert m2[0][5] == "ok" and m2[0][4] == "77.0", m2[0]
 
 
 def test_reader_verifier_passes_and_flags_divergence():
