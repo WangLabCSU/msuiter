@@ -162,8 +162,132 @@ scg_render <- function(root) {
   c(header, scg_cards(der, root))
 }
 
+# --- US-H2 prose-census face ---------------------------------------------------------------
+
+# The one census face for scenario prose: every multi-digit numeral the page
+# states about the atlas must be derivable from the committed witness bytes
+# themselves (digit runs plus header/row/column structural counts), or be
+# covered by an ms-num marker whose kind/reason contract this face re-checks.
+
+.scg_DIGITS <- strsplit("0123456789", "")[[1L]]
+
+.scg_digit_runs <- function(s) {
+  ch <- strsplit(s, "")[[1L]]
+  out <- character(0); cur <- character(0)
+  for (c0 in ch) {
+    if (c0 %in% .scg_DIGITS) {
+      cur <- c(cur, c0)
+    } else {
+      if (length(cur) >= 2L) out <- c(out, paste0(cur, collapse = ""))
+      cur <- character(0)
+    }
+  }
+  if (length(cur) >= 2L) out <- c(out, paste0(cur, collapse = ""))
+  out
+}
+
+# attribute extraction by char walk (no capture regex: this base's tre law)
+.scg_attr <- function(line, key) {
+  ch <- strsplit(line, "")[[1L]]
+  nd <- strsplit(paste0(key, "=\""), "")[[1L]]
+  m <- length(nd)
+  if (length(ch) < m) return(NA_character_)
+  for (i in seq_len(length(ch) - m + 1L)) {
+    if (all(ch[i + seq_len(m) - 1L] == nd)) {
+      j <- i + m; cur <- character(0)
+      while (j <= length(ch) && !identical(ch[[j]], "\"")) {
+        cur <- c(cur, ch[[j]]); j <- j + 1L
+      }
+      return(paste0(cur, collapse = ""))
+    }
+  }
+  NA_character_
+}
+
+scg_numset <- function(dir) {
+  if (!dir.exists(dir)) .scg_stop(paste0("vacuous: no witness directory at ", dir))
+  files <- sort(list.files(dir, pattern = "[.]csv$"))
+  if (!length(files)) .scg_stop(paste0("vacuous: zero csv witnesses under ", dir))
+  vals <- character(0)
+  for (f in files) {
+    ln <- readLines(file.path(dir, f), warn = FALSE)
+    if (!length(ln)) next
+    vals <- c(vals, as.character(length(ln)), as.character(length(ln) - 1L))
+    hdr <- scg_cells(ln[[1L]], scg_delim(f))
+    vals <- c(vals, as.character(length(hdr)), as.character(max(length(hdr) - 1L, 0L)))
+    for (l in ln) vals <- c(vals, .scg_digit_runs(l))
+  }
+  sort(unique(vals[grepl("^[0-9][0-9]+$", vals)]))
+}
+
+scg_prose_audit <- function(page, numset) {
+  if (!file.exists(page)) .scg_stop(paste0("scenario page not readable: ", page))
+  if (!length(numset)) .scg_stop("vacuous: empty witness census")
+  lines <- readLines(page, warn = FALSE)
+  prose <- rep(TRUE, length(lines))
+  fence <- which(grepl("^```", lines))
+  k <- 1L
+  while (k <= length(fence)) {
+    a <- fence[k]
+    b <- if (k + 1L <= length(fence)) fence[k + 1L] else length(lines)
+    prose[a:b] <- FALSE
+    k <- k + 2L
+  }
+  if (!sum(prose)) .scg_stop(paste0("vacuous: zero prose lines in ", page))
+  v <- character(0); bound <- 0L; marked <- 0L
+  for (i in seq_along(lines)) {
+    if (!prose[i]) next
+    runs <- .scg_digit_runs(lines[i])
+    if (!length(runs)) next
+    if (grepl("<!-- ms-num", lines[i], fixed = TRUE)) {
+      kind <- .scg_attr(lines[i], "kind")
+      reason <- .scg_attr(lines[i], "reason")
+      ok <- !is.na(kind) && kind %in% c("illustrative", "citation") &&
+        !is.na(reason) && nzchar(reason) &&
+        ((identical(kind, "illustrative") && grepl("synthetic", reason, fixed = TRUE)) ||
+         (identical(kind, "citation") &&
+          (grepl("PMID", reason, fixed = TRUE) || grepl("doi", reason, fixed = TRUE) ||
+           grepl("external", reason, fixed = TRUE))))
+      if (!ok) {
+        v <- c(v, paste0("ms-num marker malformed at line ", i, ": kind=",
+                        if (is.na(kind)) "<absent>" else kind))
+        # a marker that fails its contract launders nothing: the numerals
+        # still owe the census their witness bytes
+        for (tk in runs) {
+          if (!(tk %in% numset)) {
+            v <- c(v, paste0("prose numeral not witness-bound: ", tk,
+                            " (line ", i, ")"))
+          }
+        }
+      } else {
+        marked <- marked + length(runs)
+      }
+    } else {
+      for (tk in runs) {
+        if (tk %in% numset) bound <- bound + 1L
+        else v <- c(v, paste0("prose numeral not witness-bound: ", tk, " (line ", i, ")"))
+      }
+    }
+  }
+  list(bound = bound, marked = marked, violations = v)
+}
+
 # CLI main: runs unless the sourcing face raised the shared marker.
 if (!identical(Sys.getenv("MSUITER_TOOL_NO_MAIN", ""), "1")) {
+  if (any(grepl("^--prose-check", .args))) {
+    root <- scg_root()
+    wd <- .scg_get("--witness-dir=", required = FALSE)
+    wdir <- if (nzchar(wd)) wd else scg_witness_dir(root)
+    page <- .scg_get("--page=", required = FALSE)
+    if (!nzchar(page)) page <- file.path(root, "vignettes", "scenarios.Rmd")
+    ns <- scg_numset(wdir)
+    a <- scg_prose_audit(page, ns)
+    cat(paste0("PROSE CENSUS: page=", basename(page), " census-tokens=", length(ns),
+               " unmarked=", a$bound, " marked=", a$marked,
+               " violations=", length(a$violations), "\n", sep = ""))
+    for (v0 in a$violations) cat("VIOLATION: ", v0, "\n", sep = "")
+    quit(status = if (length(a$violations)) 1L else 0L)
+  }
   out <- .scg_get("--out=")
   root <- scg_root()
   der <- scg_derive(root)
