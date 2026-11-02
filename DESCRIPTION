@@ -28,7 +28,8 @@ Suggests: BSgenome.Hsapiens.UCSC.hg19,
     rmarkdown,
     sigminer,
     testthat (>= 3.0.0),
-    withr
+    withr,
+    xml2
 VignetteBuilder: knitr
 Collate:
     'classes-utils.R'

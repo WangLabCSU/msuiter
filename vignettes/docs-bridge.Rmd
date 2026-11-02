@@ -1,0 +1,41 @@
+---
+title: "Docs bridge: navigating the repository docs corpus"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Docs bridge}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This page navigates the repository `docs/` corpus. It links, never copies:
+every row's right-hand column is the canonical location, and the governance
+test behind this page re-derives the row set from the repository bytes
+itself -- a corpus document added or renamed without a bridge row reddens
+the suite.
+
+## The corpus
+
+| Document | What it answers | Canonical location |
+|---|---|---|
+| ARCHITECTURE.md | the layer diagram, the error contract, the named-methods claim table (G0-gated) | [ARCHITECTURE.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ARCHITECTURE.md) |
+| CAPABILITY-MATRIX.md | "what does msuiter cover" -- the authoritative capability checklist | [CAPABILITY-MATRIX.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/CAPABILITY-MATRIX.md) |
+| MSU-MAP.md | function-to-concept-to-pillar bridge, one row per export | [MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md) |
+| PERFORMANCE.md | the frozen floors, the witnesses behind them, how to reproduce a cell | [PERFORMANCE.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/PERFORMANCE.md) |
+| IMPLEMENTATION-PLAN.md | the engineering plan behind the current tree | [IMPLEMENTATION-PLAN.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/IMPLEMENTATION-PLAN.md) |
+| ROADMAP.md | milestone definitions and the delivery ladder | [ROADMAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ROADMAP.md) |
+| ffi-surface.md | the R↔Rust boundary inventory | [ffi-surface.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ffi-surface.md) |
+| adr/ | the architecture decision records (one file per accepted decision) | [docs/adr/](https://github.com/WangLabCSU/msuiter/tree/main/docs/adr) |
+| ADR 0001 | why the twoBit reader rides the byte-string path | [0001-twobit-reader-choice.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/adr/0001-twobit-reader-choice.md) |
+| ADR 0002 | the vendor budget and the offline build posture | [0002-vendor-budget.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/adr/0002-vendor-budget.md) |
+| devlog/ | the dated decision and delivery log of the campaign | [docs/devlog/](https://github.com/WangLabCSU/msuiter/tree/main/docs/devlog) |
+
+## In this site
+
+Start at [Get started](get-started.html) for the install floors and the
+five-minute path, read the [tour](tour.html) for the working grammar, the
+[scenarios atlas](scenarios.html) for the applied faces, and
+[performance anchoring](performance-anchoring.html) for how every quoted
+number routes to a committed witness. To extend the engine registry see
+[extending msuiter](extending.html). Every exported face is documented in
+the [reference index](../reference/index.html); release notes ride the
+[news index](../news/index.html).
