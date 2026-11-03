@@ -130,7 +130,9 @@ def test_digest_is_the_live_inspect_bytes_measured_from_the_committed_witness():
     assert digest == doc["Id"], (
         "registry digest diverges from the committed live-inspect .Id witness")
     tagged = {row.split("@")[-1] for row in doc.get("RepoDigests") or []}
-    assert digest.removeprefix("sha256:") in tagged, (
+    # RepoDigests entries carry the algorithm prefix byte-true ("<n>@<a>:<h>"),
+    # so the witness comparison runs on the full digest, not a stripped form.
+    assert digest in tagged, (
         "registry digest is not the RepoDigest the witness recorded")
 
 
@@ -289,8 +291,10 @@ def test_caps_ride_every_form_before_the_image_token():
         assert positions and all(p < img for p in positions), \
             f"fork cap {cap}={value} missing or after the image token"
     # the entry wrapper is what executes; the competitor command is its child
-    assert docker_cmd.ENTRY_SCRIPT in cmd and "--" in cmd
-    assert cmd.index("Rscript") > cmd.index("--") > cmd.index(img)
+    # compose injects the mount path ("/work/" + name), so the law compares the
+    # rendered token, keeping the one coordinate source (byte-true law).
+    assert f"/work/{docker_cmd.ENTRY_SCRIPT}" in cmd and "--" in cmd
+    assert cmd.index("Rscript") > cmd.index("--") > img
 
 
 # --------------------------------------------------------------------------

@@ -74,11 +74,10 @@ def test_missing_pinned_image_refuses_with_sentinel():
 
 
 def test_pending_verify_provenance_refuses_even_with_docker_present():
-    """Signal: registry probe could not resolve its provenance (§2c). Its
-    adapter must refuse unconditionally until the PI supplies coordinates."""
-    mod = importlib.import_module("competitors.signal_adapter")
-    spec = registry.load()["signal"]
-    assert spec.status == "pending-verify"
+    """RULING (controller, 2026-11-03, gate-flip law): the row's promotion supersedes the pre-promotion posture -- the refusal is policed on the SYNTHETIC pending form (the ceremony the sigminer flip used)."""
+    mod = importlib.import_module("competitors.signeR_adapter")
+    spec = dataclasses.replace(
+        registry.load()["signeR"], image_digest=registry.PENDING_VERIFY)
     tmp = _tmp()
     try:
         try:
@@ -89,10 +88,10 @@ def test_pending_verify_provenance_refuses_even_with_docker_present():
                 f"refusal must state the reason, got: {e}"
         except Exception as e:                          # noqa: BLE001
             raise AssertionError(
-                f"signal: pending-verify must yield AdapterUnavailable, "
+                f"signeR: pending-verify must yield AdapterUnavailable, "
                 f"got {type(e).__name__}: {e}") from e
         else:
-            raise AssertionError("signal adapter ran despite pending-verify "
+            raise AssertionError("signeR adapter ran despite pending-verify "
                                  "provenance")
     finally:
         _cleanup(tmp)

@@ -13,7 +13,12 @@
 # drift is a build death, never a silent float.
 options(repos = c(CRAN = "https://p3m.dev/cran/__linux__/noble/2026-03-10",
                   Bioc_3_22 = "https://bioconductor.org/packages/3.22/bioc"))
-install.packages("signeR", dependencies = TRUE, quiet = TRUE)
+# Hard-closure only: the Suggests pair BSgenome.Hsapiens.UCSC.hg19/hg38
+# (banked DESCRIPTION, probe03) rides the unreachable data/annotation mirror
+# and the witnessed call surface never touches it (zero-invention law).
+install.packages("signeR",
+                 dependencies = c("Depends", "Imports", "LinkingTo"),
+                 quiet = FALSE)
 
 # ---- build-time pin assert (G0 build-guard idiom) ----
 version <- as.character(packageVersion("signeR"))
@@ -41,7 +46,7 @@ if (!"M" %in% names(formals(get("signeR", asNamespace("signeR"))))) {
 # the sigminer row's RB-03 convergence-gate provisioning discipline).
 install.packages("jsonlite", dependencies = NA, quiet = TRUE)
 jv <- as.character(packageVersion("jsonlite"))
-if (is.null(jv) || !nzchar(jv) || identical(jv, NA_character)) {
+if (is.null(jv) || !nzchar(jv) || identical(jv, "NA")) {
   stop("jsonlite provisioning unverified", call. = FALSE)
 }
 cat("[image] signeR ", version, ", jsonlite ", jv, " provisioned\n", sep = "")

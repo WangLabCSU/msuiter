@@ -8,9 +8,9 @@
   "STAN_OMP_NUM_THREADS=1",
   "OPENBLAS_NUM_THREADS=1"
  ],
- "competitor": "signal",
+ "competitor": "signeR",
  "protocol": "documented defaults, zero overrides (memo \u00a73)",
- "runner": "run_signal.R",
+ "runner": "run_signeR.R",
  "sample_seeds": {
   "main__N100__r0": 411000000,
   "main__N100__r1": 411000001

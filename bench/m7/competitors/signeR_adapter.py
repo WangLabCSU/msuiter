@@ -15,6 +15,15 @@ opportunity matrix rides the documented uniform branch, and no tuning token
 ever enters the argv (zero-invention law; an undocumented required lever
 would make the row refuse, not the adapter improvise one).
 
+Build posture (controller governance add 2026-11-03): the image carries
+the hard-dependency closure only (Depends/Imports/LinkingTo -- the
+install.packages-default set, stated explicitly at the call site); the
+four package Suggests (vignette-side rendering plus the hg19/hg38
+annotation-data pair, banked DESCRIPTION probe03) are NOT installed and
+the witnessed call surface touches zero Suggests-side symbols -- the
+installer CORE_API assert enumerates it; the machine-readable form of
+this posture rides the row provenance record.
+
 The run is NON-SEEDABLE (the documented usage carries no seed argument) and
 the runner records that in ``runner_notes.json`` — the row never asserts a
 reproducibility the package does not document (memo §3).

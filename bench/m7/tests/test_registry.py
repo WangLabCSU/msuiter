@@ -4,7 +4,7 @@ Contract pinned here (implementation is the GREEN slice — RED-by-absence is
 the expected state of this batch):
 
   competitors.registry.load()      -> {name: CompetitorSpec} for exactly
-                                      {sigminer, sigprofiler, signal}
+                                      {sigminer, sigprofiler, signeR}
   CompetitorSpec.status            ∈ {"ready", "pending-verify"}
   registry.lookup(name)            -> spec; unknown name raises ValueError
                                       listing the available names (the
@@ -24,7 +24,7 @@ if str(HERE) not in sys.path:
 
 from competitors import docker_cmd, registry                  # noqa: E402  (RED seam)
 
-EXPECTED_NAMES = {"sigminer", "sigprofiler", "signal",
+EXPECTED_NAMES = {"sigminer", "sigprofiler", "signeR",
                   # P6 evidence-loop arms (pre-registration SS1 roster; minted
                   # from competitors.p6_arms — the six keys are data, their
                   # frozen SHAs are policed by test_p6_roster):
@@ -67,10 +67,13 @@ def test_registry_provenance_pins_are_recorded():
         digest = getattr(reg[name], "image_digest", None)
         assert isinstance(digest, str) and digest.strip(), \
             f"{name}: image_digest field missing/empty (use PENDING-VERIFY)"
-    # The registry probe (§2c) could not resolve Signal in this network's
-    # CRAN/Bioconductor indexes; until the PI supplies coordinates it must
-    # be pending-verify, and it must say so rather than look ready.
-    assert reg["signal"].status == "pending-verify"
+    # RULING (controller, 2026-11-03): the §2c probe inability predated the
+    # PI ruling of 2026-11-02; the row now rides the live-inspect witness that
+    # test_signer_row polices byte-for-byte, so ready is the lawful posture.
+    row = reg["signeR"]
+    assert row.status == registry.STATUS_READY, row.pending_reason
+    assert row.image_digest.startswith("sha256:") and len(row.image_digest) == 71, \
+        f"sibling digest shape: {row.image_digest!r}"
 
 
 def test_registry_lookup_unknown_name_lists_available():
@@ -78,7 +81,7 @@ def test_registry_lookup_unknown_name_lists_available():
         registry.lookup("sigmapro")
     except ValueError as e:
         msg = str(e)
-        assert "sigminer" in msg and "sigprofiler" in msg and "signal" in msg, \
+        assert "sigminer" in msg and "sigprofiler" in msg and "signeR" in msg, \
             f"error must list available names, got: {msg!r}"
     else:
         raise AssertionError("lookup() of an unknown name did not raise")
@@ -111,8 +114,14 @@ def test_sigminer_entry_carries_the_build9_verified_digest():
     assert reason2 is not None and "provenance not captured" in reason2, (
         "a malformed/mismatched-shape digest must still be refused "
         f"pre-daemon: {reason2!r}")
-    # The unverified sibling keeps its sentinel state untouched by the flip.
-    signal = registry.load()["signal"]
-    assert signal.status == "pending-verify" and \
-        docker_cmd.image_gate(signal) is not None, (
-        "signal must remain pending-verify and compose-time refused")
+    # RULING (controller, 2026-11-03, gate-flip law): the sibling was promoted
+    # on the live-inspect witness (build12, network-none self-witness green);
+    # refusal semantics survive the flip, policed here on a synthetic form.
+    sib = registry.load()["signeR"]
+    assert sib.status == registry.STATUS_READY and \
+        sib.image_digest.startswith("sha256:") and len(sib.image_digest) == 71, (
+        "the sibling must carry a verified-shape digest", sib.image_digest)
+    malformed_sib = dataclasses.replace(sib, image_digest="sha256:0" * 4)
+    reason3 = docker_cmd.image_gate(malformed_sib)
+    assert reason3 is not None and "provenance not captured" in reason3, (
+        "a malformed sibling digest must still be refused pre-daemon")

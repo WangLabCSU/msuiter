@@ -4,7 +4,7 @@
 #
 # Contract: run inside the harness-built competitor image, launched by
 # adapters/m7_entry.py:
-#   Rscript run_signal.R --counts <csv> --catalog <csv> --params <json> --outdir <dir>
+#   Rscript run_signeR.R --counts <csv> --catalog <csv> --params <json> --outdir <dir>
 # Reads the simulated 96-channel catalogue (sample_id x channel), drives the
 # package's documented entry point at its DOCUMENTED DEFAULTS (zero
 # threshold/parameter overrides, memo §3), and writes the adapter-protocol
@@ -38,7 +38,7 @@ counts_path <- getArg("--counts")
 params_path <- getArg("--params")
 outdir      <- getArg("--outdir")
 if (is.null(counts_path) || is.null(params_path) || is.null(outdir)) {
-  stop("run_signal.R: --counts/--params/--outdir are required")
+  stop("run_signeR.R: --counts/--params/--outdir are required")
 }
 # --catalog is protocol-carried (reference mount). The de-novo cell at
 # documented defaults does not consume it: reference matching is the
@@ -78,8 +78,16 @@ fit <- tryCatch(
 if (!is.list(fit) || is.null(fit$Ehat)) {
   fail("signeR() returned no documented Ehat exposure surface")
 }
-E <- as.matrix(fit$Ehat)                        # documented: samples x signatures
-if (!is.matrix(E) || nrow(E) != nrow(M) || ncol(E) < 1L) {
+E <- as.matrix(fit$Ehat)
+                        if (!is.matrix(E)) {
+  fail("Ehat is not a matrix")
+}
+# orientation law (measured 2026-11-03, SHAPE-VIOLATION E 1 x 2 M 2 x 96):
+# the fit delivers Ehat in the coef face signatures x samples; the documented
+# table face (Rd \value, median of E samples) is samples x signatures.
+if (nrow(E) != nrow(M) && ncol(E) == nrow(M)) E <- t(E)
+if (nrow(E) != nrow(M) || ncol(E) < 1L) {
+  cat(sprintf("SHAPE-VIOLATION E %d x %d M %d x %d ISM %d\n", nrow(E), ncol(E), nrow(M), ncol(M), as.integer(is.matrix(E))))
   fail("Ehat shape disagrees with the input sample axis")
 }
 if (is.null(rownames(E))) rownames(E) <- rownames(M)
@@ -90,7 +98,11 @@ if (is.null(labels)) labels <- paste0("S", seq_len(ncol(E)))
 # can OBSERVE the de-novo calls (PERF P4 idiom, mirrors run_sigminer.R; an
 # empty/non-conforming matrix commits NO witness — the cell then honestly
 # declares de-novo-unresolved instead of fabricating one) ----
-Phat <- tryCatch(Average_sign(fit$Signexposures), error = function(e) NULL)
+Phat <- fit$Phat  # documented: estimated signatures, median of P samples
+cat(sprintf("PHAT-PROBE ISN %d DIM %d x %d\n", as.integer(is.null(Phat)),
+            as.integer(if (!is.null(Phat)) nrow(Phat) else -1L),
+            as.integer(if (!is.null(Phat)) ncol(Phat) else -1L)))
+if (is.matrix(Phat) && nrow(Phat) == ncol(E) && ncol(Phat) == ncol(M)) Phat <- t(Phat)
 if (!is.null(Phat) && is.matrix(Phat) && ncol(Phat) == ncol(E) &&
     nrow(Phat) == ncol(M)) {
   header_line <- scan(counts_path, what = "", nmax = 1L, sep = "\n",
@@ -111,12 +123,12 @@ if (!is.null(Phat) && is.matrix(Phat) && ncol(Phat) == ncol(E) &&
 
 # ---- adapter-protocol long table ------------------------------------------
 rows <- list()
-for (j in seq_len(ncol(E))) {
-  sample <- rownames(E)[[j]]
-  for (i in seq_len(nrow(E))) {
-    v <- as.numeric(E[[j, i]])
+for (i in seq_len(nrow(E))) {
+  sample <- rownames(E)[[i]]
+  for (j in seq_len(ncol(E))) {
+    v <- as.numeric(E[[i, j]])
     vs <- if (is.na(v)) "NaN" else sprintf("%.4f", v)
-    rows[[length(rows) + 1L]] <- c(sample, labels[[i]], vs, "NaN", "NaN",
+    rows[[length(rows) + 1L]] <- c(sample, labels[[j]], vs, "NaN", "NaN",
                                     "absolute", if (identical(v, 0)) "1" else "0")
   }
 }
@@ -128,12 +140,12 @@ for (r in rows) writeLines(paste(r, collapse = ","), con)
 close(con)
 
 # ---- reproducibility honesty (memo §3): documented usage carries no seed --
-notes <- list(competitor = "signal", version = version,
+notes <- list(competitor = "signeR", version = version,
               seed = params$seed,
               non_seedable = "signeR documents no seed parameter (memo §3)",
               nsign = if (!is.null(fit$Nsign)) fit$Nsign else NA)
 writeLines(toJSON(notes, auto_unbox = TRUE, pretty = TRUE),
            file.path(outdir, "runner_notes.json"))
 
-cat(sprintf("[run_signal] %d samples x %d signatures -> %s\n",
+cat(sprintf("[run_signeR] %d samples x %d signatures -> %s\n",
             nrow(E), ncol(E), out))

@@ -20,7 +20,7 @@
 # package fetch follows the G0-established idiom.
 #
 # Build (context = bench/m7/adapters):
-#   docker build -f Dockerfile.signal -t m7-signeR:bioc2.12.0 .
+#   docker build -f Dockerfile.signeR -t m7-signeR:bioc2.12.0 .
 # After the verified build the harness captures `docker image inspect`
 # bytes into competitors/registry.py row (c); inventing a digest is
 # prohibited (§5 ii).
@@ -30,9 +30,34 @@ FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.5.2
 # measurement wrapper m7_entry.py is python and the registry launches it via
 # entrypoint="python3", but the r-ver base carries no interpreter (host
 # preflight probe06: NO-PYTHON3 verbatim). Single-purpose delta: provision
-# exactly that interpreter, nothing else.
+# the interpreter plus the system headers the probed hard-dependency closure
+# compiles against (measured: Rhtslib vendored htslib dies on missing
+# zlib.h; the rest is the standard genomics-dev set, names adjudicated by apt).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates python3 \
+    && apt-get install -y --no-install-recommends ca-certificates \
+            python3 \
+            zlib1g-dev \
+            libxml2-dev \
+            libxslt-dev \
+            libcurl4-openssl-dev \
+            liblzma-dev \
+            liblz4-dev \
+            libbz2-dev \
+            libglpk-dev \
+            libopenblas-dev \
+            liblapack-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libtiff-dev \
+            libgeos-dev \
+            libgdal-dev \
+            libudunits2-dev \
+            libnetcdf-dev \
+            libprotobuf-dev \
+            protobuf-compiler \
+            libssh-dev \
+            libfreetype6-dev \
+            libfontconfig-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # The install plus the build-guard asserts ride a COPY'd file, not an
@@ -42,12 +67,12 @@ RUN apt-get update \
 # package itself and asserts packageVersion()=="2.12.0" plus the witnessed
 # call surface from the package's own NAMESPACE/Rd bytes — drift is a build
 # death, never a silent float (G0 build-guard idiom).
-COPY install_signal.R /tmp/install_signal.R
-RUN Rscript /tmp/install_signal.R
+COPY install_signeR.R /tmp/install_signeR.R
+RUN Rscript /tmp/install_signeR.R
 
 WORKDIR /work
 COPY m7_entry.py /work/
-COPY run_signal.R /work/
+COPY run_signeR.R /work/
 
 # The four-file trust guard at container scope (memo §4/§9d idiom, as the
 # sigminer row carries it): the mini-cell fixture replays the REAL composed
@@ -55,11 +80,11 @@ COPY run_signal.R /work/
 # --network=none. Build dies unless intervals/errors/timing all speak with
 # valid bytes — an undeclared runtime dependency is a build-time death
 # here, never a mid-measurement auto-install.
-COPY mini_signal/ /work/mini/in/
-COPY self_witness_signal.sh /tmp/self_witness_signal.sh
-RUN --network=none sh /tmp/self_witness_signal.sh
+COPY mini_signeR/ /work/mini/in/
+COPY self_witness_signeR.sh /tmp/self_witness_signeR.sh
+RUN --network=none sh /tmp/self_witness_signeR.sh
 
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
-# /work/run_signal.R ... (docker_cmd.py ENTRY_SCRIPT); CMD is documentation
+# /work/run_signeR.R ... (docker_cmd.py ENTRY_SCRIPT); CMD is documentation
 # of that shape only.
 CMD ["python3", "/work/m7_entry.py"]

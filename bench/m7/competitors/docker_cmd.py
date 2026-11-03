@@ -29,6 +29,7 @@ it inside the ``in`` bind fails under the Docker Desktop virtiofs driver
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -141,6 +142,18 @@ def image_gate(spec) -> str | None:
     if probe.returncode != 0:
         return (f"image {spec.image_ref!r} is not present in the local "
                 f"image store")
+    # The tag must resolve to the CAPTURED digest -- right shape, wrong
+    # bytes is the store's absence under the provenance coordinate, and a
+    # gate that only asks "does the tag exist" lets a re-tagged or moved
+    # pointer run under a dead digest (the stale-green class).
+    try:
+        docs = json.loads(probe.stdout)
+        ids = {d.get("Id") for d in docs} if isinstance(docs, list) else set()
+    except (ValueError, TypeError):
+        docs, ids = None, set()
+    if spec.image_digest not in ids:
+        return (f"image {spec.image_ref!r} is not present in the local "
+                f"image store under the captured digest")
     return None
 
 

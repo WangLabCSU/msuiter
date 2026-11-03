@@ -94,11 +94,11 @@ def _tmp() -> Path:
 def _authoritative_argv(tmp: Path) -> list:
     # degraded+docker is the authoritative shape. The gate must fire before
     # any image state is consulted, so the competitor here is the
-    # PENDING-VERIFY `signal` row: ungated it only skips (skip-not-skip,
+    # PENDING-VERIFY `signeR` row: ungated it only skips (skip-not-skip,
     # rc 1), never a container launch. The gate is adapter-shaped, not
     # competitor-shaped — post-GREEN it fires long before this choice reads.
     return ["--profile", "degraded", "--adapter", "docker",
-            "--competitors", "signal", "--arms", "main", "--n-list", "100",
+            "--competitors", "signeR", "--arms", "main", "--n-list", "100",
             "--cachedir", str(tmp / "cache"), "--outdir", str(tmp / "results")]
 
 

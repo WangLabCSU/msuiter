@@ -4,8 +4,8 @@
 #
 # The composed argv is the zero-touch composer's, verbatim in shape:
 # competitors/docker_cmd.py ENTRY_ARGS (["--params", IN/params.json,
-# "--outdir", OUT, "--"]) wrapping the signal adapter's _child_argv(None)
-# (Rscript /work/run_signal.R --counts ... --catalog ... --params ...
+# "--outdir", OUT, "--"]) wrapping the signeR adapter's _child_argv(None)
+# (Rscript /work/run_signeR.R --counts ... --catalog ... --params ...
 # --outdir ...) with the frozen THREAD_CAPS all at CAP_VALUE=1.
 #
 # Build dies unless: rc=0; intervals.csv carries the exact seven-column
@@ -28,7 +28,7 @@ test -s "$IN/catalog.csv"
 test -s "$IN/params.json"
 
 python3 /work/m7_entry.py --params "$IN/params.json" --outdir "$OUT" -- \
-  Rscript /work/run_signal.R --counts "$IN/counts.csv" \
+  Rscript /work/run_signeR.R --counts "$IN/counts.csv" \
   --catalog "$IN/catalog.csv" --params "$IN/params.json" --outdir "$OUT"
 
 test -s "$OUT/intervals.csv"

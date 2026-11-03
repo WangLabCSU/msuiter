@@ -1,0 +1,81 @@
+[
+ {
+  "Architecture": "arm64",
+  "Comment": "buildkit.dockerfile.v0",
+  "Config": {
+   "ArgsEscaped": true,
+   "Cmd": [
+    "python3",
+    "/work/m7_entry.py"
+   ],
+   "Env": [
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "R_VERSION=4.5.2",
+    "R_HOME=/usr/local/lib/R",
+    "TZ=Etc/UTC",
+    "CRAN=https://p3m.dev/cran/__linux__/noble/2026-03-10",
+    "LANG=en_US.UTF-8"
+   ],
+   "Labels": {
+    "org.opencontainers.image.authors": "Carl Boettiger <cboettig@ropensci.org>",
+    "org.opencontainers.image.base.name": "docker.io/library/ubuntu:noble",
+    "org.opencontainers.image.description": "Reproducible builds to fixed version of R",
+    "org.opencontainers.image.licenses": "GPL-2.0-or-later",
+    "org.opencontainers.image.ref.name": "ubuntu",
+    "org.opencontainers.image.revision": "c0ab9c6258faba7cc82259848149b83586104c67",
+    "org.opencontainers.image.source": "https://github.com/rocker-org/rocker-versioned2",
+    "org.opencontainers.image.title": "rocker/r-ver",
+    "org.opencontainers.image.vendor": "Rocker Project",
+    "org.opencontainers.image.version": "R-4.5.2"
+   },
+   "WorkingDir": "/work"
+  },
+  "Created": "2026-11-03T00:53:41.479668633Z",
+  "Descriptor": {
+   "digest": "sha256:68f8e25bfca2ed9291c29597abff2e4932770f8a2f3d1e69aad84fe2abe6c575",
+   "mediaType": "application/vnd.oci.image.index.v1+json",
+   "size": 856
+  },
+  "Id": "sha256:68f8e25bfca2ed9291c29597abff2e4932770f8a2f3d1e69aad84fe2abe6c575",
+  "Identity": {
+   "Build": [
+    {
+     "CreatedAt": "2026-11-03T00:53:41.5846798Z",
+     "Ref": "sgaw57sq2xhiowrlcptxgsscd"
+    }
+   ]
+  },
+  "Metadata": {
+   "LastTagTime": "2026-11-03T00:53:41.559605508Z"
+  },
+  "Os": "linux",
+  "RepoDigests": [
+   "m7-signer@sha256:68f8e25bfca2ed9291c29597abff2e4932770f8a2f3d1e69aad84fe2abe6c575"
+  ],
+  "RepoTags": [
+   "m7-signer:bioc2.12.0"
+  ],
+  "RootFS": {
+   "Layers": [
+    "sha256:e5dae71ade4390c09123a86ada6c9bc64ac469d0495acae5b2216a627395050c",
+    "sha256:a5c13ac5a744eea06135e3925db8f49fb55cc28219baf4cc47a82c503523f4ac",
+    "sha256:86fc87be63f785e0454d15a3b24b0d09a61420b817c8f9c6a72d974403cca832",
+    "sha256:fe8a18f1e2968fe9b068ba12157d59a9af08c58932e6a6729aad505ced047e80",
+    "sha256:6853f91392d283ae316cc8f8852bfed791358a68fc6aa913e7d53d08c53cd7ed",
+    "sha256:178b78cd421f2f4956eb7ad69863d1e8cb085f2911983821c6e5ae8fbcf00e6c",
+    "sha256:97215a928d4964f465216a98d3c8df48eac76bf588fd9f2f2fc618af058c7c4c",
+    "sha256:461f602c2dc87568631bba5db44df4e0f6fcd46c9a0d00dfbb458371f16e475e",
+    "sha256:2981b050eb58bb6cd36eccc44ca033ab2ccff4d0eb6cdeccbc1e264ec04f83bf",
+    "sha256:9b04734d3174ed9a701e16b36f7f77a6979e82eae69e9e7c43a823d3f97592d2",
+    "sha256:092a69144bc23334448d33366418155e7ed28ee322f072f1b44ea77a5f78116a",
+    "sha256:89e9de033490190e2f60e13d0e906cb5ca904ac8dc81f545841f9be12def1894",
+    "sha256:f652cd66945453f524849e9a9327289f6d6767ad07a7fedd586545fd8194e71a",
+    "sha256:f0aa14f954eea1f530546dcb08f2495ff68b3ac7613788a968be6cd7006a1b70",
+    "sha256:1d242d45b391b1a5013974e51fc71a46946adbaebed63292819deb92e0c90147",
+    "sha256:4828380fcdd906f8d2f6fc5c7f0782392682bfcf862a860e9ebbdc0992767202"
+   ],
+   "Type": "layers"
+  },
+  "Size": 3038850693
+ }
+]
