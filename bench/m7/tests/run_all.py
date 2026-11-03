@@ -209,7 +209,10 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_ensemble_cache",
            # PERF PHASE-9 O3: co-tenancy attestation law — mint-side stamps,
            # report-side refusal with a firing control, epoch stamp on rows:
-           "test_attestation_law"]
+           "test_attestation_law",
+           # SIGNER-c lane (memo §2c/§10.2, PI identity ruling 2026-11-02):
+           # auxilary Bioconductor row promotion laws + skip-not-skip controls:
+           "test_signer_row"]
 
 
 def _collect(mod_name):

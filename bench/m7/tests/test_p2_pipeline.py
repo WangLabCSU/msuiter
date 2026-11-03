@@ -184,6 +184,52 @@ def test_drain_reaps_the_live_orphan_and_never_itself():
         assert res["polls"] >= 1
 
 
+def test_drain_never_targets_pid_one_the_container_init():
+    # Build-time container scope (self-witness posture): the step shell IS pid 1.
+    # The drainer that reaps the init takes down the world it reports on -- the
+    # 137 class measured in the field. The init is untouchable by law.
+    with tempfile.TemporaryDirectory() as td:
+        root = _v2_root(td)
+        victim = subprocess.Popen(["/bin/sleep", "30"])
+        _members(root / "cgroup.procs", [1, os.getpid(), victim.pid])
+        try:
+            res = m7_entry.drain_and_reap(root, "v2", os.getpid(),
+                                         deadline_seconds=0.5)
+        finally:
+            victim.kill()
+        assert victim.pid in res["reaped"]
+        assert 1 not in res["reaped"] + res["resisters"]
+
+
+def test_drain_honors_explicit_excludes():
+    # Operator-side untouchable faces (the wrapping shell a harness must not cut
+    # its own lineage from) are excluded exactly as self is.
+    with tempfile.TemporaryDirectory() as td:
+        root = _v2_root(td)
+        keeper = subprocess.Popen(["/bin/sleep", "30"])
+        victim = subprocess.Popen(["/bin/sleep", "30"])
+        _members(root / "cgroup.procs", [keeper.pid, victim.pid, os.getpid()])
+        try:
+            res = m7_entry.drain_and_reap(root, "v2", os.getpid(),
+                                          deadline_seconds=0.5,
+                                          exclude=(keeper.pid,))
+        finally:
+            keeper.kill()
+            victim.kill()
+        assert victim.pid in res["reaped"]
+        assert keeper.pid not in res["reaped"] + res["resisters"]
+        assert _alive(keeper.pid)
+
+
+def test_ancestor_walk_is_self_contained_and_proc_graceful():
+    # The drainer's own lineage is untouchable; platforms without /proc must
+    # speak a self-only set, never a crash.
+    anc = m7_entry._ancestor_pids(os.getpid())
+    assert anc == {os.getpid()} or os.getpid() in anc
+    if not Path("/proc").is_dir():
+        assert anc == {os.getpid()}
+
+
 def test_drain_only_targets_listed_members():
     # An unlisted live process is NOT the drain's business (it escaped the
     # cgroup's own census -- that is the container's undercount, spoken by

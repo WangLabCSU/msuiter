@@ -186,16 +186,38 @@ def _pid_alive(pid: int) -> bool:
         return True                      # exists, not ours to signal: alive
 
 
+def _ancestor_pids(pid: int) -> set:
+    """Self plus its live lineage via /proc; a platform without /proc speaks
+    the self-only set (the walk's absence must never be a crash)."""
+    anc = {pid}
+    if not Path("/proc").is_dir():
+        return anc
+    cur = pid
+    for _ in range(64):
+        try:
+            fields = Path(f"/proc/{cur}/stat").read_text(
+                encoding="utf-8", errors="replace").rsplit(")", 1)[-1].split()
+            ppid = int(fields[1])
+        except (OSError, ValueError, IndexError):
+            break
+        if ppid <= 0 or ppid in anc:
+            break
+        anc.add(ppid)
+        cur = ppid
+    return anc
+
+
 def drain_and_reap(root, source: str, self_pid: int, *,
                    deadline_seconds: float = 2.0,
-                   interval: float = 0.05) -> dict:
+                   interval: float = 0.05,
+                   exclude=()) -> dict:
     """Drain the cgroup's member census to stable and reap.
 
     Poll until every listed member except ``self_pid`` has left the world
     (the drain), or the deadline passes; anything still live then gets
-    SIGKILLed and is poll-verified dead. ``self_pid`` is untouchable by
-    construction: a sidecar that can report after killing its own
-    measurement is the worse failure. Returns
+    SIGKILLed and is poll-verified dead. ``self_pid``, the process-tree init, the live lineage and ``exclude`` faces are untouchable by
+    construction: a sidecar that can report after killing its own measurement -- or the shell carrying it -- is the worse
+    failure. Returns
     ``{"reaped": [...], "resisters": [...], "polls": n}``.
     """
     if source == "absent":
@@ -203,8 +225,9 @@ def drain_and_reap(root, source: str, self_pid: int, *,
     polls = 0
     deadline = time.monotonic() + deadline_seconds
     while True:
+        untouchable = set(exclude) | _ancestor_pids(self_pid) | {1, self_pid}
         targets = [p for p in read_members(root, source)
-                   if p != self_pid and _pid_alive(p)]
+                   if p not in untouchable and _pid_alive(p)]
         polls += 1
         if not targets or time.monotonic() >= deadline:
             break

@@ -21,6 +21,16 @@ PENDING_VERIFY = "PENDING-VERIFY"
 STATUS_READY = "ready"
 STATUS_PENDING_VERIFY = "pending-verify"
 
+# ---- SIGNER-c authority constants (lane card 2026-11-02/03) ----------------
+# The third competitor's name and version are single-sourced here so the
+# row, the adapter, the fixture and the (c) laws never re-type a display-
+# fragile literal; the (c) group polices both against the banked probe
+# authorities (probe01 PACKAGES record + the card's own bytes).
+COMPETITOR_KEY = "signeR"
+COMPETITOR_PIN = "2.12.0"
+COMPETITOR_IMAGE = "m7-signer:bioc2.12.0"
+_PROVENANCE_RECORD = 'Bioconductor 3.22 release series, the package of that index whose PACKAGES-record MD5 7872383e48eed0b6f753bfdee9f32d7e matches the fetched source tarball byte-for-byte; version pinned at 2.12.0 (live probes 2026-11-02/03: probe01 reads the PACKAGES record the BiocManager itself parses, index size 2300; probe02 re-confirms the CRAN negative control, index 25569). Build posture (controller governance add 2026-11-03): the image carries the hard-dependency closure only (Depends/Imports/LinkingTo, the install.packages-default set, stated explicitly at the call site); the four Suggests entries [BSgenome.Hsapiens.UCSC.hg19, BSgenome.Hsapiens.UCSC.hg38, knitr, rmarkdown] are NOT installed and the witnessed call surface touches zero Suggests-side symbols (the installer CORE_API assert enumerates it). Maintainer Renan Valieris <renan.valieris@accamargo.org.br>, canonical repository https://github.com/TojalLab/signeR read from the package DESCRIPTION URL field (never a GitHub name search, whose hits were unrelated sign-tools, controller-banked). AUXILIARY comparison object per the PI hierarchy ruling 2026-11-02 (primary); harness-built image from the mirror-spelled rocker r-ver base (probe05 inspect-recorded pull), build-time packageVersion assert plus the network-none container-side four-file self-witness.'
+
 
 @dataclass(frozen=True)
 class CompetitorSpec:
@@ -101,25 +111,17 @@ REGISTRY: dict[str, CompetitorSpec] = {
             "codeload archive family is dead on this network (404 from "
             "inside the build network), recorded in memo §9b (memo §2b)"),
     ),
-    "signal": CompetitorSpec(
-        name="signal",
+    'signeR': CompetitorSpec(
+        name=COMPETITOR_KEY,
         runtime="R",
-        version="UNRESOLVED",
-        image_ref="",
-        image_digest="",
-        status=STATUS_PENDING_VERIFY,
-        entrypoint="",
-        runner_script="",
-        provenance=(
-            "registry probes 2026-10-08: absent from the CRAN index and "
-            "from the Bioconductor 3.22 index (BiocManager::repositories()); "
-            "gh api repos/debruijn-lab/Signal → 404; GitHub search finds no "
-            "canonical repo. Kept per the PI brief; refuses to run until the "
-            "PI supplies package coordinates (memo §2c)"),
-        pending_reason=(
-            "pending-verify: PI coordinates required — package/version/image "
-            "unresolved on this network (memo §2c; see the signeR "
-            "hypothesis recorded in memo §10.2, HYPOTHESIS / UNVERIFIED)"),
+        version=COMPETITOR_PIN,
+        image_ref=COMPETITOR_IMAGE,
+        image_digest="sha256:68f8e25bfca2ed9291c29597abff2e4932770f8a2f3d1e69aad84fe2abe6c575",
+        status=STATUS_READY,
+        entrypoint="python3",        # m7_entry.py measures the Rscript child
+        runner_script=f"run_{COMPETITOR_KEY}.R",
+        provenance=_PROVENANCE_RECORD,
+        pending_reason="",
     ),
 }
 

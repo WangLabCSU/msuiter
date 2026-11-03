@@ -1,0 +1,90 @@
+# U-M7-02 competitor image (signeR Bioconductor 2.12.0) — design memo §2c,
+# PI-confirmed identity ruling 2026-11-02; signeR-c lane.
+#
+# NETWORK POLICY (memo §5, binding): the base pull spells the mirror host
+# explicitly — docker.io is served by 9f6c5in3dh5vszgdz0.xuanyuan.run.
+# Direct upstream pulls fail on this network (proxy 407) and are prohibited;
+# a 407 is recorded as environmental evidence, never routed around.
+#
+# Base provenance (signeR-c probe05, 2026-11-02, verbatim from the verified
+# mirror pull's `docker image inspect`): Id/RepoDigest
+# sha256:fd4ccdd3a4a6f7ef805e2daeee2a0fe3bf126bc231f36351223baecf5a595a4c,
+# label R_VERSION=4.5.2, Size 1287276420, arm64/linux.
+#
+# Pin provenance (signeR-c probe bank under /tmp/signeR-clane/logs/,
+# 2026-11-02/03): signeR@2.12.0 present in the Bioconductor 3.22 release
+# index (index size 2300, BiocManager::repositories() enumeration verbatim);
+# the fetched source tarball's MD5 matches the PACKAGES index field
+# byte-for-byte (7872383e48eed0b6f753bfdee9f32d7e); CRAN negative control
+# holds (absent from the CRAN index). §5 governs image pulls; the in-build
+# package fetch follows the G0-established idiom.
+#
+# Build (context = bench/m7/adapters):
+#   docker build -f Dockerfile.signeR -t m7-signeR:bioc2.12.0 .
+# After the verified build the harness captures `docker image inspect`
+# bytes into competitors/registry.py row (c); inventing a digest is
+# prohibited (§5 ii).
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.5.2
+
+# RB-01 pilot-catch idiom (same as Dockerfile.sigminer): the cell protocol's
+# measurement wrapper m7_entry.py is python and the registry launches it via
+# entrypoint="python3", but the r-ver base carries no interpreter (host
+# preflight probe06: NO-PYTHON3 verbatim). Single-purpose delta: provision
+# the interpreter plus the system headers the probed hard-dependency closure
+# compiles against (measured: Rhtslib vendored htslib dies on missing
+# zlib.h; the rest is the standard genomics-dev set, names adjudicated by apt).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+            python3 \
+            zlib1g-dev \
+            libxml2-dev \
+            libxslt-dev \
+            libcurl4-openssl-dev \
+            liblzma-dev \
+            liblz4-dev \
+            libbz2-dev \
+            libglpk-dev \
+            libopenblas-dev \
+            liblapack-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libtiff-dev \
+            libgeos-dev \
+            libgdal-dev \
+            libudunits2-dev \
+            libnetcdf-dev \
+            libprotobuf-dev \
+            protobuf-compiler \
+            libssh-dev \
+            libfreetype6-dev \
+            libfontconfig-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# The install plus the build-guard asserts ride a COPY'd file, not an
+# Rscript -e one-liner (the structural note in Dockerfile.sigminer records
+# why: a swallowed continuation newline once silently commented out the
+# tail asserts). The installer pins the Bioc 3.22 release index for the
+# package itself and asserts packageVersion()=="2.12.0" plus the witnessed
+# call surface from the package's own NAMESPACE/Rd bytes — drift is a build
+# death, never a silent float (G0 build-guard idiom).
+COPY install_signeR.R /tmp/install_signeR.R
+RUN Rscript /tmp/install_signeR.R
+
+WORKDIR /work
+COPY m7_entry.py /work/
+COPY run_signeR.R /work/
+
+# The four-file trust guard at container scope (memo §4/§9d idiom, as the
+# sigminer row carries it): the mini-cell fixture replays the REAL composed
+# argv (m7_entry wrapper + the documented-defaults child) under
+# --network=none. Build dies unless intervals/errors/timing all speak with
+# valid bytes — an undeclared runtime dependency is a build-time death
+# here, never a mid-measurement auto-install.
+COPY mini_signeR/ /work/mini/in/
+COPY self_witness_signeR.sh /tmp/self_witness_signeR.sh
+RUN --network=none sh /tmp/self_witness_signeR.sh
+
+# The harness always invokes python3 /work/m7_entry.py ... -- Rscript
+# /work/run_signeR.R ... (docker_cmd.py ENTRY_SCRIPT); CMD is documentation
+# of that shape only.
+CMD ["python3", "/work/m7_entry.py"]
