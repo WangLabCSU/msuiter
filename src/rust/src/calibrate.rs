@@ -135,6 +135,20 @@ impl GenerativeArm {
                             format!("arm size must be positive (or +inf for the Poisson arm), got {size}"),
                         ));
                     }
+                    // audit #74 P1-2: nb_sample's input contract is
+                    // panics-on-violation (validate_nb_sample is the
+                    // worker-side gate); the wire parse is where a user κ
+                    // becomes data, so the NB_RATE_MAX domain is checked
+                    // here -- exactly the rule validate_nb_size enforces.
+                    if size.is_finite() && size > resample::NB_RATE_MAX {
+                        return Err(MsError::new(
+                            "argument",
+                            format!(
+                                "arm size {size} exceeds the NB rate domain (max {}); the Poisson limit uses \"poisson\"",
+                                resample::NB_RATE_MAX
+                            ),
+                        ));
+                    }
                     return Ok(GenerativeArm::NegativeBinomial(size));
                 }
                 Err(MsError::new(
@@ -1299,6 +1313,16 @@ mod tests {
         assert_eq!(GenerativeArm::parse("nb").unwrap_err().topic, "argument");
         assert_eq!(GenerativeArm::parse("nb:-1").unwrap_err().topic, "argument");
         assert_eq!(GenerativeArm::parse("nb:x").unwrap_err().topic, "argument");
+        // audit #74 P1-2 (2026-11-04): the wire face must speak the raw
+        // primitive's NB_RATE_MAX domain itself -- errors, not panics
+        // (contract 4), matching the workers' build_cell_job prevalidation.
+        assert_eq!(
+            GenerativeArm::parse("nb:1e13").unwrap_err().topic,
+            "argument",
+            "kappa past NB_RATE_MAX must be a structured refusal at the parse"
+        );
+        assert!(GenerativeArm::parse("nb:1e12").is_ok(), "NB_RATE_MAX itself is admissible");
+        assert!(GenerativeArm::parse("nb:8").is_ok());
     }
 
     // ------------------------------------------------------------------

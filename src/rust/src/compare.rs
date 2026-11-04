@@ -137,6 +137,31 @@ pub struct NullDraw {
     pub quantiles: Vec<f64>,
 }
 
+/// audit #74 P1-1 (measured: a burden 1e12 call hung in
+/// `resample::multinomial` for >10 min, witness banked). The null faces
+/// are declared bounded-duration uninterruptible (docs/ffi-surface.md
+/// contracts 6/7); an uncapped burden makes that declaration a lie.
+/// The burden rides an f64 through `as u64`, so the exact-integer domain
+/// of an R double is the outer bound (the `fit.rs` / bootstrap precedent:
+/// beyond 2^53 the "whole number" gate is vacuous).
+pub(crate) const NULL_BURDEN_EXACT_MAX: f64 = (1u64 << 53) as f64;
+/// audit #74 P1-1: the multinomial arms burn one stream word per
+/// mutation at a measured 2.85e8 words/s on the attested rig; this cap
+/// bounds the worst-case single call to ~3 min -- far below a session
+/// freeze, far above every legitimate roster scale (<= 1e5 x 200).
+pub(crate) const NULL_RESAMPLE_WORD_BUDGET: u128 = 4e10 as u128;
+
+/// Shared burden cap for both multinomial null faces: None = admissible.
+fn null_burden_reject(burden: f64, n_draws: usize) -> Option<&'static str> {
+    if burden > NULL_BURDEN_EXACT_MAX {
+        Some("burden exceeds the 2^53 exact-integer domain of an R double")
+    } else if (burden as u128) * (n_draws as u128) > NULL_RESAMPLE_WORD_BUDGET {
+        Some("burden x n_draws exceeds the bounded-duration resample budget")
+    } else {
+        None
+    }
+}
+
 /// Run one null evaluation (memo §5 contract): `m ≥ 2` channels,
 /// `n_draws ≥ 200`, finite `burden ≥ 1` for the catalog families, finite
 /// quantiles in (0, 1), any `seed ≥ 0`. Every violation is a structured
@@ -169,6 +194,12 @@ pub fn compare_null(
             return Err(MsError::new(
                 "argument",
                 format!("catalog nulls need a finite burden >= 1, got {burden}"),
+            ));
+        }
+        if let Some(reason) = null_burden_reject(burden, n_draws) {
+            return Err(MsError::new(
+                "argument",
+                format!("catalog nulls refuse an unbounded draw: {reason} (burden {burden}, n_draws {n_draws})"),
             ));
         }
     }
@@ -371,6 +402,12 @@ pub fn shape_null(
         return Err(MsError::new(
             "argument",
             format!("the shape null needs a finite burden >= 1, got {burden}"),
+        ));
+    }
+    if let Some(reason) = null_burden_reject(burden, n_draws) {
+        return Err(MsError::new(
+            "argument",
+            format!("the shape null refuses an unbounded draw: {reason} (burden {burden}, n_draws {n_draws})"),
         ));
     }
     if quantiles.is_empty() {
@@ -715,5 +752,39 @@ mod tests {
         let grid: Vec<f64> = (1..=10).map(|i| i as f64).collect();
         let got = quantile_type7(&grid, 0.95);
         assert!((got - 9.55).abs() < 1e-12, "type-7 quantile {got}");
+    }
+
+    #[test]
+    fn unbounded_burden_and_word_budget_are_refused_before_any_draw() {
+        // audit #74 P1-1 (2026-11-04): the multinomial arms burn one stream
+        // word per mutation and the null faces are declared bounded-duration
+        // uninterruptible (docs/ffi-surface.md contract 7) -- an uncapped
+        // burden is a session freeze, so the burden domain and the
+        // n_draws x burden word product must gate BEFORE the first draw.
+        let q = [0.95f64];
+        let fam = NullFamily::Catalog(crate::calibrate::GenerativeArm::Multinomial);
+        let e = compare_null(fam, 96, 1e12, 200, &q, 3).unwrap_err();
+        assert_eq!(e.topic, "argument");
+        // product attack: individually plausible scalars, jointly over budget
+        let e = compare_null(fam, 96, 1e9, 200, &q, 3).unwrap_err();
+        assert_eq!(e.topic, "argument");
+        // the attested-roster legitimate scale stays admissible
+        assert!(compare_null(fam, 96, 1e5, 200, &q, 3).is_ok());
+        // shape face carries the same law
+        let u = vec![1.0f64; 96];
+        let e = shape_null(&u, 1e12, 200, &q, 3).unwrap_err();
+        assert_eq!(e.topic, "argument");
+    }
+
+    #[test]
+    fn over_range_nb_kappa_never_reaches_the_panic_contract() {
+        // audit #74 P1-2 (2026-11-04): the catalog_nb arm feeds user kappa
+        // straight into nb_sample, whose input contract is panics-on-violation;
+        // the NB_RATE_MAX domain must gate at the wire parse as a structured
+        // argument error, exactly as the calibration workers prevalidate.
+        let e = NullFamily::parse("catalog_nb:1e13").unwrap_err();
+        assert_eq!(e.topic, "argument");
+        assert!(NullFamily::parse("catalog_nb:8").is_ok());
+        assert!(NullFamily::parse("catalog_poisson").is_ok());
     }
 }
