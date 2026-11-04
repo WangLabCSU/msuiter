@@ -48,9 +48,12 @@ def _grid_classes():
     return out
 
 
-def test_all_six_p6_tools_are_measured_tools():
+def test_all_p6_tools_are_measured_tools():
     """An arm absent from _MEASURED_TOOLS rides the campaign ungated — the
-    silent-skip class task law 3 forbids. RED until SS4 anchors land."""
+    silent-skip class task law 3 forbids. The census is roster-derived, so
+    the seventh arm (the R1-PARITY batch face, controller ruling (ii)
+    2026-11-04) is gated by it on the same terms: RED until its SS4 anchors
+    land."""
     missing = [t for t in p6_arms.P6_ARM_SPECS if t not in gov._MEASURED_TOOLS]
     assert not missing, f"P6 campaign tools without floor anchors: {missing}"
 
@@ -170,7 +173,8 @@ def _authority_dirs(*, legacy: bool) -> list[Path]:
 
 def test_post_cap_authority_dirs_are_committed():
     """Both authority halves must exist as committed dirs: the campaign mint
-    (6 tools x 21 classes) and the legacy re-mint (60 classes). RED until
+    (one set per roster tool x 21 classes) and the legacy re-mint (60
+    classes). RED until
     the RB-10 mints complete."""
     assert _authority_dirs(legacy=False), (
         "no m7_floor_calibration_p7cap_<stamp> campaign authority dir")
@@ -261,15 +265,17 @@ def test_post_cap_witnesses_speak_the_serial_chain_profile():
 
 
 def test_post_cap_authority_covers_the_full_registry_domain():
-    """Every governed class needs post-cap bytes: the 126 campaign stems
-    (6 tools x the frozen 21-class grid) in the campaign authority, the 60
+    """Every governed class needs post-cap bytes: the campaign stems (one
+    roster tool x the frozen 21-class grid: 147 since the R1-PARITY batch
+    face joined the roster on 2026-11-04 by controller ruling (ii), 126 for
+    the sealed six) in the campaign authority, the 60
     legacy stems (defined by the frozen 20261009 dir: 42 grid + 18 ladder)
     in the legacy authority. A missing stem is an unmeasured class riding
     stale bytes; a stray stem is bytes nobody governed."""
     expected_main = {
         f"{t}__{arm}__N{n}__rep{gov.PROTOCOL_REPS}.json"
         for t in p6_arms.P6_ARM_SPECS for arm, n in _grid_classes()}
-    assert len(expected_main) == 126, f"campaign domain drifted: {len(expected_main)}"
+    assert len(expected_main) == 147, f"campaign domain drifted: {len(expected_main)}"
     present_main: set[str] = set()
     for d in _authority_dirs(legacy=False):
         present_main |= {w.name for w in (d / "witnesses").glob("*.json")}

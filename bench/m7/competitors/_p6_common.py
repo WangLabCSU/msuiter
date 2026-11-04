@@ -1,11 +1,14 @@
-"""Shared container-adapter engine for the six P6 sigminer-v3 arms.
+"""Shared container-adapter engine for the P6 sigminer-v3 arms.
 
-One engine, six thin per-arm modules: the measurement contract is identical
+One engine, one thin module per arm: the measurement contract is identical
 across arms (same four-file cell protocol, same frozen thread caps injected by
 docker_cmd before the image token, same zero parameter overrides — memo §2a).
-The ONLY behavioural difference between an arm's two faces is the --backend
-token placed after the runner script, forwarded verbatim from the roster data
-(competitors.p6_arms); the R face keeps the legacy call chain byte-identical
+The ONLY behavioural difference between two faces of one lineage is the
+--backend token placed after the runner script, forwarded verbatim from the
+roster data (competitors.p6_arms); the runner script itself is the arm's own
+roster-named bytes (an arm that rides a forked runner/witness pair says so in
+its roster row, and the frozen original stays byte-pinned for the rest), so
+the R face keeps the legacy call chain byte-identical
 (the token is carried in argv for witnessability, consumed only by the rust
 face's documented backend selection).
 
@@ -30,9 +33,10 @@ def child_argv(tool: str, catalog_mount: Path | str | None) -> list[str]:
     the arm runner resolves against the tree's documented backend parameter.
     """
     face = p6_arms.P6_ARM_SPECS[tool]["face"]
+    runner = p6_arms.runner_script(p6_arms.P6_ARM_SPECS[tool])
     catalog_dest = ("/work/catalog.csv" if catalog_mount is not None
                     else "/work/in/catalog.csv")
-    return ["Rscript", f"/work/{p6_arms.ARM_RUNNER}",
+    return ["Rscript", f"/work/{runner}",
             "--counts", "/work/in/counts.csv",
             "--catalog", catalog_dest,
             "--params", "/work/in/params.json",

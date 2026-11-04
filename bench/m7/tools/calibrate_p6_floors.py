@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Resumable P6 floor-calibration batch: REP-100 witnesses for the six arms.
+"""Resumable P6 floor-calibration batch: REP-100 witnesses for every arm.
 
 The RB-09 floor law is all-or-nothing per tool: a tool that arrives in
 _MEASURED_TOOLS must carry one OK, reps-matched witness for EVERY protocol
 class it will run, or floor_for KeyErrors mid-campaign after hours of
-measurement. This tool mints exactly those bytes -- 6 arms x the 21 frozen
-degraded-grid classes = 126 witnesses -- through the SAME probe that sealed
+measurement. This tool mints exactly those bytes -- every arm on the roster x
+the 21 frozen degraded-grid classes (147 with the R1-PARITY batch face, 126
+for the sealed six) -- through the SAME probe that sealed
 the legacy table (tools/probe_sigminer_cell_argv.run_probe), so the witness
 schema, the freshness law and the --floor-gate off posture (a probe measures,
 it never self-adjudicates) are inherited, not re-implemented.
