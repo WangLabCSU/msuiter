@@ -90,3 +90,4 @@ directory's files for the output contract.
 - `docs/devlog/2026-10-10-m7-benchmark-ergonomics.md` — benchmark trio naming ruling
 - `docs/devlog/2026-10-10-m7-rb11-restoration.md` — RB-11 restoration record
 - `docs/devlog/2026-10-10-m7-bootstrap-campaign.md` — GO-05 campaign pre-registration (protocol)
+- `docs/devlog/2026-11-04-m7-build-pin-drift-attestation.md` — arm-recipe digest-pin drift attestation and blob-seal law

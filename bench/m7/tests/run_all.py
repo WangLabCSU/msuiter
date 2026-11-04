@@ -138,6 +138,12 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       M7_MSUITER_SOURCE_SHA overlay routes the export to the new sha (R-face
       arms carry none), malformed overlays die pre-flight, and the witnessed-
       object cat-file gate is inherited verbatim by the overlaid route
+  (AM) test_recipe_blob_pins   the arm-recipe digest-pin reading test
+      (DEBT-BUILD-PIN-DRIFT remedy (b)): every pin is a git blob digest at a
+      named seal commit, re-measured against its seal-commit blob, HEAD, the
+      on-disk FLAT_INPUTS bytes and the last-touch lineage head; missing
+      seals, unpinned copies, orphan digest literals and any unattested
+      fourth launcher move all redden the suite
 """
 
 from __future__ import annotations
@@ -212,7 +218,11 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            "test_attestation_law",
            # SIGNER-c lane (memo §2c/§10.2, PI identity ruling 2026-11-02):
            # auxilary Bioconductor row promotion laws + skip-not-skip controls:
-           "test_signer_row"]
+           "test_signer_row",
+           # DEBT-BUILD-PIN-DRIFT tooling lane (controller ruling 2026-11-04,
+           # remedy (b)): the arm-recipe digest pins speak blob digests at named
+           # seal commits and every one of them is read on every suite run:
+           "test_recipe_blob_pins"]
 
 
 def _collect(mod_name):
