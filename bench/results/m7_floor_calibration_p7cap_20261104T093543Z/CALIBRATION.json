@@ -1,0 +1,42 @@
+{
+ "attestation_mode": "none-with-reason",
+ "attestation_sanction": {
+  "key": "sigminer_post_v3_rust_batch",
+  "ruling": "controller ruling 2026-11-04 (2) -- batch-bridge no-stamp route, Phase-D Instrument B"
+ },
+ "campaign_note": "R1-PARITY batch-bridge face: 21 classes at REP-100, null/pre-law attestation face per controller ruling 2026-11-04 (2)",
+ "created_utc": "2026-11-04T12:08:10+00:00",
+ "elapsed_seconds_probes_this_invocation": 9146.6,
+ "hash_recorder": "python3 hashlib.sha256 (explicit algorithm, never the platform shasum default)",
+ "law": {
+  "freshness": "fresh per-cell cachedir per probe; a 'cached' replay is DEFECT, never a floor",
+  "gate": "--floor-gate off: a probe measures, it never self-adjudicates",
+  "reps": "all witnesses measured at REP-100 (protocol scale)"
+ },
+ "probes": 21,
+ "registry_sha256_at_mint": "7c2c609dfed1ff5c6dfeb8bdb4ff896030be5fc25d9bf5406d5f12eb5f25a1cf",
+ "schema": "m7-floor-calibration-1",
+ "witness_sha256": {
+  "sigminer_post_v3_rust_batch__clock__N1000__rep100.json": "94f790292e4f4f77e3978536c730a4419ca36e8744acef50f638a51b6589c899",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json": "60a6ef75d216603a1fc0c5dc9f12549dd40ae8403b00c1ec7ef1c42b09c9ddca",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json": "3fd3af97370dcad13273d17f6e63d00e5695059d163129d7e3b71fe8e5d6aca7",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json": "efc4109503f805642c14aa7f0d75ba22b8140b73da2714a16f1dcb6c744f2d62",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json": "e135d7bbdc0041e6d15a97d0646db3c4ac737f67a3bd1b2a8a86cca0220e9fac",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json": "32221709d63717371194b66be5670a369e08a38dd3b55b9aac99c1ceb1de0e59",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json": "23a3c2b4bc60fd4ba189ade597d097868fafdc326756f17c51ca41ea782e26ae",
+  "sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json": "57f55108334de9195524b2223514de9fb58cb2e296a398f393afc6438859b49b",
+  "sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json": "bc2745db1e28c6ef00347ab4fffb1e1a698103e7c7fc6b16bd78ab6aa09a2aa6",
+  "sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json": "3a13721f12b7ec5897a8cd2b7e62c9e7e3f6f543ea0d0ff396977561d21e5f99",
+  "sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json": "cbb5bd1c8d50e880095e5ff165c431b88e31a0db388580ef7d6a496392a85039",
+  "sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json": "da07152204a7338f43d8d084c1bfbf56b8374d93a9fa881343dbd1ef2cd2b0ce",
+  "sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json": "1f738168cab2ec5da3070bca974e4c5bf933e3b9d8f8a04f64eefeca2a00270f",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json": "b7f352ae1d02fa0319a87cb9b8516a71c4fc4791681a8a4bd29e727a9eeb78a4",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json": "abb96f5b139a637bfee97ab7a134ccb462c6386d7441d299c4763577d923b377",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json": "a7ec5635b81cad26cd44a0845aba3a9187016d87403267cb66e069887816b975",
+  "sigminer_post_v3_rust_batch__main__N10000__rep100.json": "bcb496a64e85e2e9de0e775e2cfdc03ffc42fe7956579b9a7ad7cca7d840f3d6",
+  "sigminer_post_v3_rust_batch__main__N1000__rep100.json": "99f913c6d0ef208a73bef727674e6e1612bb158256fa86a6f6371e61c8fd26ee",
+  "sigminer_post_v3_rust_batch__main__N100__rep100.json": "904ef2cf116caf7a155e3d88a4147682beeeb517cf13fab5f289aa58a2579dce",
+  "sigminer_post_v3_rust_batch__nb__N1000__rep100.json": "80924e8013c4da422ad166a9846011225eec33ee39b866b7cf1bb866f2fcee98",
+  "sigminer_post_v3_rust_batch__sparse__N1000__rep100.json": "16a8738d19ab2493a58f3f9e5db51047bea01bc8758c10394b2cfe4ec1a03908"
+ }
+}
