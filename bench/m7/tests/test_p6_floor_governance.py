@@ -27,6 +27,7 @@ if str(HERE) not in sys.path:
 
 from competitors import p6_arms, registry           # noqa: E402  (RED seam)
 import tools.matrix_governance as gov               # noqa: E402
+import tools.attestation_sanctions as attestation_sanctions  # noqa: E402
 
 RESULTS = HERE.parent / "results"
 
@@ -110,7 +111,14 @@ def test_calibration_ledger_declares_provenance_fields():
     """CALIBRATION.json (schema m7-floor-calibration-1) must exist beside the
     witnesses and carry the explicit-algorithm recorder + registry sha at mint.
     probes > 0 is the RB-10 (AC) edge: a resume pass that verified bytes without
-    declaring its mint's probes speaks probes=0 and must not pass the ledger."""
+    declaring its mint's probes speaks probes=0 and must not pass the ledger.
+
+    Phase-D addendum (controller ruling 2026-11-04 (2)): from the ruling
+    forward every ledger also declares its attestation face -- live, or
+    none-with-reason with its sanction booked in tools/attestation_sanctions.
+    Committed ledgers predate the law date and stay exempt: bytes cannot be
+    retroactively demanded of the past (the same law that keeps the 375
+    quotable)."""
     dirs = _p6_calibration_dirs()
     if not dirs:
         raise AssertionError(
@@ -121,6 +129,8 @@ def test_calibration_ledger_declares_provenance_fields():
         assert led["hash_recorder"].startswith("python3 hashlib.sha256"), led
         assert led.get("registry_sha256_at_mint"), "registry sha at mint missing"
         assert isinstance(led.get("probes"), int) and led["probes"] > 0
+        why = attestation_sanctions.ledger_post_law_ok(led)
+        assert why is None, f"{d}: {why}"
 
 
 def test_measurement_images_cover_every_ready_p6_arm():

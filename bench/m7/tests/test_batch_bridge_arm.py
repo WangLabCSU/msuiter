@@ -47,8 +47,10 @@ if str(HERE) not in sys.path:
 from competitors import docker_cmd, p6_arms, registry   # noqa: E402 (RED seams)
 from competitors import _p6_common                      # noqa: E402 (RED seam)
 import tools.attestation as att                         # noqa: E402
+import tools.attestation_sanctions as attestation_sanctions  # noqa: E402
 import tools.matrix_governance as gov                   # noqa: E402
 from tools import p6_emit_arm_pins                      # noqa: E402
+from tests import coex_fixtures as fx                    # noqa: E402
 
 TOOL = "sigminer_post_v3_rust_batch"
 FACE = "rust_batch"
@@ -280,7 +282,13 @@ def test_batch_face_witnesses_speak_the_final_table_epoch():
     must never be committed after the table moved to E1. The batch face's
     witnesses are admissible ONLY while their attestation epoch equals the
     live floor_table_epoch — this is what forces the fixed-point mint order
-    (or the controller's sanctioned re-adjudication device) at GREEN time."""
+    (or the controller's sanctioned re-adjudication device) at GREEN time.
+
+    The dual-face law (Phase-D Instrument B, controller ruling 2026-11-04
+    (2)) rides the same sweep: every batch-face witness speaks ONE face —
+    the lv1 block, or an explicitly sanctioned null label from
+    tools/attestation_sanctions — never both, never an unsanctioned
+    orphan."""
     # Arrange
     classes = _grid_classes()
     stale = []
@@ -295,6 +303,10 @@ def test_batch_face_witnesses_speak_the_final_table_epoch():
         refusal = att.reportability(doc, gov.floor_table_epoch())
         if refusal is not None:
             stale.append(f"{TOOL}|{arm}|N{n}: {refusal}")
+            continue
+        face = attestation_sanctions.dual_face_ok(doc)
+        if face is not None:
+            stale.append(f"{TOOL}|{arm}|N{n}: {face}")
     assert not stale, f"epoch-collision victims: {stale[:4]}"
 
 
@@ -387,17 +399,22 @@ def test_control_lying_fragment_refuses_registration():
 
 def test_control_stale_epoch_attestation_is_not_reportable():
     """The report-side epoch trap bites: a well-formed lv1 attestation
-    carrying a stale epoch is history, not a measurement."""
+    carrying a stale epoch is history, not a measurement.
+
+    Phase-D reseed (A-extension rider): the embedded coex block is now
+    held to the mint teeth at the report face too — the block is the
+    rig-sealed face, so the refusal this unit sees is the EPOCH face
+    speaking, which is the law this keeper exists to name."""
     # Arrange
     live = gov.floor_table_epoch()
     doc_stale = {"attestation": {
         "law": att.ATTEST_LAW, "preflight": {"decision": "GO"},
-        "coex_probe": {"verdict": "FLAT"}, "epoch": "0" * len(live)}}
+        "coex_probe": fx.rig_record(), "epoch": "0" * len(live)}}
     # Act
     refusal = att.reportability(doc_stale, live)
     ok = att.reportability({"attestation": {
         "law": att.ATTEST_LAW, "preflight": {"decision": "GO"},
-        "coex_probe": {"verdict": "FLAT"}, "epoch": live}}, live)
+        "coex_probe": fx.rig_record(), "epoch": live}}, live)
     # Assert
     assert refusal is not None and "epoch" in refusal, "stale stamp passed"
     assert ok is None, "a fresh honest stamp must be reportable"

@@ -151,6 +151,14 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       identity comparator's surface and its biting, the 21-class anchor
       completeness law, and three firing controls over the existing gate
       machinery so no green in this file can be vacuous
+  (B) test_null_face_route the Phase-D sanctioned no-stamp route: the
+      attestation-mode routing law at the probe's mint face (live mints
+      lv1, sanctioned-null mints the labelled explicit null, garbage and
+      unsanctioned keys DEFECT), the null face's reportability-equality to
+      the pre-law face, the minter's pre-daemon validation matrix, the
+      ledger's attestation-mode declaration law, and the data-gated
+      sanction registry with its dual-face law — every refusal paired
+      with a seen-to-fire control
 """
 
 from __future__ import annotations
@@ -237,7 +245,11 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # R1-PARITY Phase-B: the batch-bridge face battery (its own
            # registration is the ordered-green evidence: absence-FAILs flip to
            # PASS as each face lands, the firing controls never stop biting)
-           "test_batch_bridge_arm"]
+           "test_batch_bridge_arm",
+           # PHASE-D Instrument B (controller ruling 2026-11-04 (2)): the
+           # sanctioned no-stamp route — routing law, data-gated sanction
+           # registry, dual-face law, ledger mode declaration:
+           "test_null_face_route"]
 
 
 def _collect(mod_name):
