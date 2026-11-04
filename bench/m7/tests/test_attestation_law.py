@@ -15,6 +15,14 @@ The practices this pins:
 The refusal path itself must be seen to fire (governance-scan-integrity law:
 an unseen-to-fire control is a vacuous control): the hand-made witness
 without the fields is that control.
+
+Phase-D reseed (controller ruling 2026-11-04): the admissible coex face is
+no longer typed here — it is DRIVEN out of tools/coex_inversion_probe via
+tests/coex_fixtures (byte-true-fixtures law), the mint leg carries its
+context (image/campaign/replay-probe) so the targeted teeth bite in
+isolation, and the forgery loop grew the teeth-era negatives (state C,
+lying verdict, masked-serial cohort) each naming its own defect in the
+refusal it speaks.
 """
 
 from __future__ import annotations
@@ -22,6 +30,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # bench/m7
@@ -32,16 +41,7 @@ from tools import attestation as att                   # noqa: E402 (RED-by-abse
 from tools import matrix_governance as gov             # noqa: E402
 from tools import parity_recompute as pr               # noqa: E402
 from tools import probe_sigminer_cell_argv as probe    # noqa: E402
-
-
-def _good_coex_record() -> dict:
-    return {"schema": 1, "shape": "coex-inversion/N=3",
-            "legs": [{"probe": "r1", "wall_s": 1101.0, "cpu_s": 1101.5},
-                    {"probe": "r2", "wall_s": 1096.0, "cpu_s": 1096.2},
-                    {"probe": "r3", "wall_s": 1089.0, "cpu_s": 1089.9}],
-            "solo_mean_s": 969.9, "deltas_pct": [13.5, 13.0, 12.3],
-            "bar_pct": 5.0, "verdict": "NOT-FLAT",
-            "measured_utc": "2026-10-28T00:00:00Z"}
+from tests import coex_fixtures as fx                  # noqa: E402
 
 
 def _write(path: Path, doc) -> Path:
@@ -55,25 +55,35 @@ def _preflight_log(tmp: Path, *, decision="GO") -> Path:
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps({"ts": "2026-10-28T00:00:00Z",
-                            "cell": "tool__arm__N100",
+                            "cell": fx.CELL,
                             "live_measurement_containers": 0,
                             "decision": decision}) + "\n")
     return log
 
 
+def _mint_context(tmp: Path, name: str = "coex.json") -> dict:
+    """The mint-side context kwargs: image/campaign agree with the staged
+    record, the replay probe answers for every container. Only the face a
+    unit is probing is ever left out of the honest face."""
+    return {"preflight_log": _preflight_log(tmp), "cell": fx.CELL,
+            "epoch": "e1", "image_digest": fx.IMAGE_DIGEST,
+            "campaign": fx.CAMPAIGN, "live_probe": fx.fake_live_probe(),
+            "coex_path": str(tmp / name)}
+
+
 # -- (1) mint-side law ---------------------------------------------------------
 
-def test_build_requires_the_preflight_quiet_verdict(tmpdir=None):
+def test_build_requires_the_preflight_quiet_verdict():
     """No preflight record for the cell => no attestation => no mint: the
     quiet-gate verdict must be provable from bytes, not remembered."""
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_"))
     try:
-        _write(tmp / "coex.json", _good_coex_record())
-        os.environ[att.COEX_ENV] = str(tmp / "coex.json")
+        fx.stage(tmp)                                   # honest coex + ledger
+        ctx = _mint_context(tmp)
+        ctx["preflight_log"] = tmp / "absent.jsonl"
+        os.environ[att.COEX_ENV] = ctx.pop("coex_path")
         try:
-            att.build_attestation(preflight_log=tmp / "absent.jsonl",
-                                 cell="tool__arm__N100", epoch="e1")
+            att.build_attestation(**ctx)
             raised = ""
         except att.AttRefusal as exc:
             raised = str(exc)
@@ -81,68 +91,81 @@ def test_build_requires_the_preflight_quiet_verdict(tmpdir=None):
             "missing quiet-gate record must refuse the mint with a spoken reason"
     finally:
         os.environ.pop(att.COEX_ENV, None)
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_build_requires_a_well_formed_coex_probe_record():
     """The deliberate-inversion (N=3 class) probe record is mandatory and
-    shape-checked: absent, malformed, or a non-inversion shape all refuse."""
-    import tempfile
+    tooth-checked: absent, malformed, self-reported (state C), a lying
+    verdict, or a masked-serial cohort all refuse, each naming its own
+    defect; the rig-emitted face is the shared seen-to-fire control."""
     tmp = Path(tempfile.mkdtemp(prefix="att_"))
     try:
-        log = _preflight_log(tmp)
-        os.environ.pop(att.COEX_ENV, None)
-        for bad in (None, "notjson", "wrongshape", "wrongverdict"):
-            if bad is None:
-                os.environ[att.COEX_ENV] = str(tmp / "missing.json")
-            elif bad == "notjson":
-                _write(tmp / "bad.json", "{nope")
-                os.environ[att.COEX_ENV] = str(tmp / "bad.json")
-            elif bad == "wrongshape":
-                rec = _good_coex_record()
-                rec["shape"] = "solo"
-                _write(tmp / "ws.json", rec)
-                os.environ[att.COEX_ENV] = str(tmp / "ws.json")
+        span = fx.LEG_SPAN_S
+        # same walls, same container ids as the honest cohort -- the ONE
+        # forged dimension is the windows: no common intersection (T3 keeps
+        # the bind/inspect pairing honest, so a re-seal may not swap faces
+        # the binding does not know about)
+        disjoint = [fx.leg(10, fx.COHORT_WALLS[0], stagger_s=0.0),
+                    fx.leg(11, fx.COHORT_WALLS[1], stagger_s=2.0 * span),
+                    fx.leg(12, fx.COHORT_WALLS[2], stagger_s=span)]
+        honest = fx.rig_record()
+        cases = [
+            ("missing", None, "absent"),
+            ("notjson", "{nope", "coex"),
+            ("wrongshape", fx.reseal(honest, shape="solo"), "shape"),
+            ("wrongverdict", fx.reseal(honest, verdict="PRETTY-FLAT"),
+             "verdict"),
+            ("stateC", fx.handwritten_record(), "bind"),
+            ("lying_verdict", fx.reseal(honest, verdict="FLAT"),
+             "verdict"),
+            ("masked_serial", fx.reseal(honest, legs=disjoint), "overlap"),
+        ]
+        for name, doc, needle in cases:
+            if doc is None:
+                path = tmp / f"{name}-missing.json"
             else:
-                rec = _good_coex_record()
-                rec["verdict"] = "PRETTY-FLAT"
-                _write(tmp / "wv.json", rec)
-                os.environ[att.COEX_ENV] = str(tmp / "wv.json")
+                path = _write(tmp / f"{name}.json", doc)
+            os.environ[att.COEX_ENV] = str(path)   # the gate reads the env face
+            ctx = _mint_context(tmp)
+            ctx.pop("coex_path")                    # env carries the path
             try:
-                att.build_attestation(preflight_log=log,
-                                     cell="tool__arm__N100", epoch="e1")
-                spoke = False
-            except att.AttRefusal:
-                spoke = True
-            assert spoke, f"coex-probe forgery [{bad}] must refuse the mint"
-        _write(tmp / "good.json", _good_coex_record())
-        os.environ[att.COEX_ENV] = str(tmp / "good.json")
-        a = att.build_attestation(preflight_log=log, cell="tool__arm__N100",
-                                  epoch="post-cap-epoch-1")
+                att.build_attestation(**ctx)
+                spoke, reason = False, ""
+            except att.AttRefusal as exc:
+                spoke, reason = True, str(exc)
+            assert spoke, f"coex-probe forgery [{name}] must refuse the mint"
+            assert needle in reason.lower(), \
+                f"[{name}] refusal must name its defect: {reason!r}"
+        # firing control: the rig-emitted, rig-booked face is admissible
+        fx.stage(tmp)
+        os.environ[att.COEX_ENV] = str(tmp / "coex.json")
+        ctx = _mint_context(tmp)
+        ctx.pop("coex_path")
+        ctx["epoch"] = "post-cap-epoch-1"
+        a = att.build_attestation(**ctx)
         assert a["law"] == att.ATTEST_LAW
         assert a["preflight"]["decision"] == "GO"
         assert a["coex_probe"]["verdict"] == "NOT-FLAT"
         assert a["epoch"] == "post-cap-epoch-1"
     finally:
         os.environ.pop(att.COEX_ENV, None)
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_probe_mints_only_attested_witnesses():
     """The mint face stamps the attestation into the witness bytes; the
     refusal path converts a mint without the proofs into a DEFECT verdict —
     never a silent un-attested OK."""
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_"))
     try:
-        _write(tmp / "coex.json", _good_coex_record())
+        fx.stage(tmp)                                   # coex + ledger booking
         os.environ[att.COEX_ENV] = str(tmp / "coex.json")
         log = _preflight_log(tmp)
-        doc = {"verdict": "OK", "cell": "tool__arm__N100"}
+        doc = {"verdict": "OK", "cell": fx.CELL}
         stamped = att.stamp_witness(doc, preflight_log=log,
-                                    cell="tool__arm__N100", epoch="e7")
+                                    cell=fx.CELL, epoch="e7",
+                                    image_digest=fx.IMAGE_DIGEST,
+                                    campaign=fx.CAMPAIGN,
+                                    live_probe=fx.fake_live_probe())
         assert stamped["attestation"]["law"] == att.ATTEST_LAW
         assert stamped["verdict"] == "OK"
         assert doc.get("attestation") is None, \
@@ -153,8 +176,6 @@ def test_probe_mints_only_attested_witnesses():
         assert refused["verdict"] == "DEFECT" and "attestation" not in refused
     finally:
         os.environ.pop(att.COEX_ENV, None)
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_freshness_law_still_rejects_plain_replay():
@@ -188,7 +209,6 @@ def test_reporter_refuses_a_law_claiming_witness_missing_the_fields():
     """THE FIRING CONTROL: a hand-made witness that claims the attestation
     law but carries no fields must be REFUSED (exit 2) with a spoken reason
     — the refusal path must be seen to fire."""
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_rep_"))
     old_results = gov._RESULTS_DIR
     try:
@@ -205,12 +225,9 @@ def test_reporter_refuses_a_law_claiming_witness_missing_the_fields():
         assert code == 2, "a law-claiming witness without fields must refuse"
     finally:
         gov._RESULTS_DIR = old_results
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_reporter_admits_a_fully_attested_witness():
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_rep_"))
     old_results = gov._RESULTS_DIR
     try:
@@ -219,21 +236,18 @@ def test_reporter_admits_a_fully_attested_witness():
         _companion_witness(w, cpu=100.0, wall=100.0,
                            attestation={"law": att.ATTEST_LAW,
                                         "preflight": {"decision": "GO"},
-                                        "coex_probe": {"verdict": "NOT-FLAT"},
+                                        "coex_probe": fx.rig_record(),
                                         "epoch": gov.floor_table_epoch()})
         anchor = _anchor_for(tmp, "y.json", 100.0, 100.0)
         cpu, wall, doc = pr._witness_face(anchor)
         assert (cpu, wall) == (100.0, 100.0)
     finally:
         gov._RESULTS_DIR = old_results
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_reporter_refuses_a_refused_preflight_verdict():
     """A leg whose quiet-gate record speaks REFUSE cannot be reported as a
     measurement — the co-tenancy law is not decorative."""
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_rep_"))
     old_results = gov._RESULTS_DIR
     try:
@@ -242,7 +256,7 @@ def test_reporter_refuses_a_refused_preflight_verdict():
         _companion_witness(w, cpu=100.0, wall=100.0,
                            attestation={"law": att.ATTEST_LAW,
                                         "preflight": {"decision": "REFUSE"},
-                                        "coex_probe": {"verdict": "FLAT"},
+                                        "coex_probe": fx.rig_record(),
                                         "epoch": gov.floor_table_epoch()})
         anchor = _anchor_for(tmp, "z.json", 100.0, 100.0)
         try:
@@ -253,15 +267,12 @@ def test_reporter_refuses_a_refused_preflight_verdict():
         assert code == 2
     finally:
         gov._RESULTS_DIR = old_results
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_reporter_refuses_a_stale_epoch_attestation():
     """Post-cap witness law codified: an attested witness carrying an epoch
     token other than the table being adjudicated against is epoch-mismatched
     material — refused, not quietly consumed."""
-    import tempfile
     tmp = Path(tempfile.mkdtemp(prefix="att_rep_"))
     old_results = gov._RESULTS_DIR
     try:
@@ -270,7 +281,7 @@ def test_reporter_refuses_a_stale_epoch_attestation():
         _companion_witness(w, cpu=100.0, wall=100.0,
                            attestation={"law": att.ATTEST_LAW,
                                         "preflight": {"decision": "GO"},
-                                        "coex_probe": {"verdict": "FLAT"},
+                                        "coex_probe": fx.rig_record(),
                                         "epoch": "not-the-current-epoch"})
         anchor = _anchor_for(tmp, "stale.json", 100.0, 100.0)
         try:
@@ -281,8 +292,6 @@ def test_reporter_refuses_a_stale_epoch_attestation():
         assert code == 2
     finally:
         gov._RESULTS_DIR = old_results
-        import shutil
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def test_committed_record_stays_rederivable_and_every_row_speaks_the_epoch():
