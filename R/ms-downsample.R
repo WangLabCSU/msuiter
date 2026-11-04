@@ -76,6 +76,8 @@ ms_downsample <- function(catalog, depth = "min", seed = 1) {
   out <- counts
   # One seed, one sequential stream over the sample columns (the sanity
   # harness convention): reproducible for a given catalog + seed.
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   set.seed(seed)
   for (j in seq_len(ncol(counts))) {
     tj <- totals[j]

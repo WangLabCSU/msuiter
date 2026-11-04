@@ -131,6 +131,8 @@ ms_simulate <- function(signatures, exposures, arm = "multinomial",
     as.numeric(signatures %*% (exposures[, j] * scale))
   })
 
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   set.seed(seed)
   counts <- matrix(0, nrow = nrow(signatures), ncol = n)
   for (j in seq_len(n)) {
