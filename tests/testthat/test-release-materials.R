@@ -122,7 +122,8 @@ test_that("URL triangle: DESCRIPTION <-> _pkgdown.yml (repository-only leg)", {
   m <- regmatches(url_d,
                   regexec("^https://github[.]com/([^/]+)/([^/]+)$", url_d))[[1]]
   expect_length(m, 3L)
-  expected_pages <- sprintf("https://%s.github.io/%s", m[2L], m[3L])
+  # GitHub Pages hosts are lowercase: derive the owner part lowercased
+  expected_pages <- sprintf("https://%s.github.io/%s", tolower(m[2L]), m[3L])
   yml <- readLines(yfile, warn = FALSE)
   hit <- grep("^url:", yml)
   expect_length(hit, 1L)

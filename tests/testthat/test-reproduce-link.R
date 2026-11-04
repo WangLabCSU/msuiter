@@ -53,7 +53,11 @@
   files <- list.files(root, recursive = TRUE, full.names = FALSE,
                        pattern = "[.]sh$")
   files <- files[!endsWith(files, "/")]
-  files[!grepl(".git/", files, fixed = TRUE)]
+  files <- files[!grepl(".git/", files, fixed = TRUE)]
+  # R CMD check copies (00_pkg_src/ + the installed tree) are build
+  # artifacts, not repository content -- the same sanctioned class the
+  # gitignore hygiene law already waives
+  files[!grepl(".Rcheck/", files, fixed = TRUE)]
 }
 
 .rl_fork_census <- function(root) {
