@@ -119,6 +119,7 @@ P6_ARM_SPECS: dict[str, dict[str, str]] = {
         "tree_sha": "15b827981dd1a4be28207eb084f78140b70f8f09",
         "ns_sha256": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
         "version": "2.3.3", "face": "rust_batch",
+        "image_digest": "sha256:dd8bc22acac18323c90c04514f6427ca09554ad71b0f6bd39e4fd2fd61975ee9",
         "runner_script": "run_sigminer_arm_batch.R",
         "self_witness": "self_witness_batch_arm.sh",
         "lineage_base": "sigminer_post_v3_rust",
