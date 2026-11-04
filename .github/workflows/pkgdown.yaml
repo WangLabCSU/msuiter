@@ -47,8 +47,11 @@ jobs:
           needs: check          # Suggests ride in: the guides render ggplot faces
           extra-packages: any::pkgdown, any::pkgload, any::quarto, local::.
 
-      - name: Build site
-        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+      - name: Build site (release face, lands at the docs/ root)
+        run: |
+          pkgdown::build_site(override = list(development = list(mode = "release")),
+                              new_process = FALSE, install = FALSE, quiet = TRUE)
+          pkgdown::build_github_pages(pkgdown::as_pkgdown("."))
         shell: Rscript {0}
 
       - name: Deploy to GitHub Pages

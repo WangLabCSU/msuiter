@@ -760,8 +760,10 @@ def main():
     check("pkgdown.yaml: Pages write + id-token permissions",
           pkperm.get("pages") == "write" and pkperm.get("id-token") == "write")
     pktxt = PKG.read_text() if PKG.is_file() else ""
-    check("pkgdown.yaml: builds via pkgdown::build_site_github_pages",
-          "pkgdown::build_site_github_pages" in pktxt)
+    check("pkgdown.yaml: builds the RELEASE face (the Pages artifact root is docs/, not docs/dev)",
+          'development = list(mode = "release")' in pktxt)
+    check("pkgdown.yaml: writes the GitHub-Pages extras (.nojekyll via build_github_pages)",
+          "build_github_pages" in pktxt)
     check("pkgdown.yaml: deploys via actions/upload-pages-artifact",
           any("upload-pages-artifact@" in u
               for j in pkjobs.values()
