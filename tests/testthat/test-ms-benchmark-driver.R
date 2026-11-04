@@ -1,5 +1,5 @@
 # U-M7-pre: ms_run_benchmark() -- the grid driver first version (design
-# memo docs/devlog/2026-10-05-benchmark-design-memo.md, D1 stage 1 + D2
+# memo vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd, D1 stage 1 + D2
 # PROVISIONAL).
 #
 # Anchors: seed determinism (same seed -> identical results table), the

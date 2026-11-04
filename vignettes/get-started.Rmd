@@ -53,16 +53,14 @@ if (!is.na(PKG)) {
   desc <- readLines(file.path(PKG, "DESCRIPTION"), warn = FALSE)
   print(desc[grepl("^Package:|^Version:|^Depends:|^SystemRequirements:",
                    desc)])
-  lockfile <- file.path(PKG, "docs", "paper", "renv.lock")
+  lockfile <- file.path(PKG, "inst", "repro", "renv.lock")
   if (file.exists(lockfile)) {
     print(basename(lockfile))
-  } else if (!dir.exists(file.path(PKG, "docs", "paper"))) {
-    # The check/tarball build face: docs/ is a repository tree that
-    # .Rbuildignore withholds from the source package -- the lockfile is
-    # then simply outside this build context, said here rather than
-    # stopped on. In the site/lane render (docs/ present) the branch
-    # above must speak; its absence there would be a real defect.
-    print("renv.lock: repository-tree face -- outside the source-package build context")
+  } else if (!dir.exists(file.path(PKG, "inst", "repro"))) {
+    # inst/repro ships inside the source package, so this branch is the
+    # synthetic-root face of the governing test rather than a real build
+    # context; say so rather than stopping.
+    print("renv.lock: outside this build context")
   } else {
     stop("committed renv lockfile missing from its own committed directory")
   }
@@ -198,7 +196,7 @@ construction -- the same seal the tour demonstrates from the refusing side.
 ## Where to go next
 
 The concept bridge is
-[docs/MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md)
+[vignettes/articles/msu-map.qmd](https://github.com/WangLabCSU/msuiter/blob/main/vignettes/articles/msu-map.qmd)
 (one row per export: concept, pillar, peer counterpart). The narrative tour
 continues in [tour.html](tour.html); the whole docs corpus is navigated from
 [docs-bridge.html](docs-bridge.html); every exported face is documented in

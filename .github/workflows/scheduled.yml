@@ -1,4 +1,4 @@
-# msuiter scheduled deep checks (U-M0-07) — docs/ARCHITECTURE.md §9:
+# msuiter scheduled deep checks (U-M0-07) — vignettes/articles/architecture.qmd §9:
 # "valgrind + ASAN/UBSAN scheduled job". Weekly. valgrind and sanitizer are
 # diagnostic tripwires allowed to fail (not merge gates); site is a hard
 # gate (U-M7-04 slice-C, C5): a site that no longer builds must go red.

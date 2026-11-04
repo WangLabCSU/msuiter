@@ -1,6 +1,6 @@
 # Engine registry (U-M0-04; ARCHITECTURE.md section 3.4, decisions A14/A17).
 #
-# The registry is data, not a class explosion (docs/research/06-s7-class-system.md
+# The registry is data, not a class explosion (vignettes/articles/research-06-s7-class-system.qmd
 # section 6): rows keyed by engine name carry the spec class, the fit function
 # and the governance fields (engine_version / contract_version / certified).
 # MsEngine objects are the first-class citizens of the API (A14); strings are
@@ -10,7 +10,7 @@
 # third party only calls it when defining its own methods on msuiter generics).
 #
 # No real engine is registered by the package itself; engines land with M1s
-# and later (docs/IMPLEMENTATION-PLAN.md). D9: external tools never enter the
+# and later (vignettes/articles/implementation-plan.qmd). D9: external tools never enter the
 # ms_* API through this registry -- they stay bench-only adapters.
 
 # Internal registry state (never exported): one row per engine name, plus the

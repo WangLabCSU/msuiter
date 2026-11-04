@@ -132,7 +132,7 @@ test_that("the probe discriminates: siblings of the ignored classes stay tracked
   }
   negatives <- c(
     "scripts/__pycache__/w.pyc",           # outside both anchored roots
-    "docs/__pycache__/w.pyc",
+    "R/__pycache__/w.pyc",                 # the former docs/ tree is gone
     "tools/hyg_probe/__pycache_x/w.pyc",   # near-miss directory names
     "tools/hyg_probe/__pycacheX/w.pyc",
     "tools/hyg_probe/w.pyc"                # bare file next to a cache dir

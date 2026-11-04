@@ -1,4 +1,4 @@
-# msuiter CI (U-M0-07) -- docs/ARCHITECTURE.md §9 CI contract.
+# msuiter CI (U-M0-07) -- vignettes/articles/architecture.qmd §9 CI contract.
 #
 # Jobs:
 #   guard-prep  : fast static guards + the single vendor-tarball generation
@@ -29,7 +29,7 @@
 #                 continues to carry the branch-protection semantics; the
 #                 repo-root guard scripts it names run in guard-prep
 #                 (U-M0-01/02/05/06 handoff, see
-#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07), and its
+#                 vignettes/articles/implementation-plan.qmd §3.1 U-M0-07), and its
 #                 Cargo.lock pin assertion (ADR 0002 §4.4) stays as the
 #                 belt-and-braces check beside dependabot.
 #   guards-shards : K parallel repo-layout testthat shard processes against
@@ -49,7 +49,7 @@
 # consumed by guards-shards, the check fan-out arms, and coverage; it is
 # machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
 # guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
-# docs/devlog/2026-10-21-ci-shard-parallel.md.
+# vignettes/articles/devlog-2026-10-21-ci-shard-parallel.qmd.
 #
 # This repository currently has remote origin (WangLabCSU/msuiter); these
 # workflows activate on the next push.

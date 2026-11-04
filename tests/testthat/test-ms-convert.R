@@ -1,5 +1,5 @@
 # U-M4-02c: ms_convert() -- opportunity conversion (design memo
-# docs/devlog/2026-10-04-M4-02c-convert-memo.md).
+# vignettes/articles/devlog-2026-10-04-M4-02c-convert-memo.qmd).
 #
 # Anchors: the sigminer cross-check (the maintainer's own upstream
 # implementation, numeric agreement 1e-12), the same-opportunity

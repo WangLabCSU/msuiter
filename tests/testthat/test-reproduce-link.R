@@ -1,8 +1,8 @@
 # test-reproduce-link.R: DS-3 US-G3 reproduce-face is link-not-fork law
 # (docs/site v3). The paper lane banked the one-command reproduction face at
-# docs/paper/reproduce.sh (default --verify: dry-run verification of every
+# inst/repro/reproduce.sh (default --verify: dry-run verification of every
 # sealed number against committed bytes; its attestation ledger rides
-# docs/paper/reproduction-proof.md). The site must LINK to that face, never
+# vignettes/articles/reproduction-proof.qmd). The site must LINK to that face, never
 # fork it. This law demands: the navigation docs name the target by path and
 # name the --verify face; the target exists and itself names --verify; and
 # the repo-wide census sees EXACTLY ONE reproduction script -- no second
@@ -12,8 +12,8 @@
 # script, an unlinked doc, an unnamed face and a deleted target all redden;
 # the constructed-perfect synthetic root greens clean (vacuous-green ban).
 
-.rl_TARGET <- "docs/paper/reproduce.sh"
-.rl_PROOF <- "docs/paper/reproduction-proof.md"
+.rl_TARGET <- "inst/repro/reproduce.sh"
+.rl_PROOF <- "vignettes/articles/reproduction-proof.qmd"
 .rl_FACE <- "--verify"
 
 # --- the doc-reference audit ----------------------------------------------------------
@@ -123,7 +123,9 @@ test_that("US-G3 exactly one reproduction script exists and no tools/ fork rides
                           target = TRUE, target_has_face = TRUE,
                           proof = TRUE) {
   root <- tempfile("rl-fake-")
-  dir.create(file.path(root, "docs", "paper"), recursive = TRUE)
+  dir.create(file.path(root, dirname(.rl_TARGET)), recursive = TRUE)
+  dir.create(file.path(root, dirname(.rl_PROOF)), recursive = TRUE)
+  dir.create(file.path(root, "docs"), recursive = TRUE)
   if (target) {
     writeLines(c("#!/usr/bin/env bash",
                  if (target_has_face) "MODE=\"${1:---verify}\"" else "MODE=legacy",

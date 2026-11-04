@@ -1,0 +1,159 @@
+---
+title: "Building mutation catalogs"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Building mutation catalogs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette: the
+# source tree (check and site-build contexts) loads through pkgload; a bare
+# installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`ms_tally()` turns variant records into **mutation catalogs** — sample ×
+channel count matrices on the community channel schemas. This guide walks
+the tally for SBS and DBS against a reference genome, shows the schema
+family, and closes with hypermutant stratification. Bringing variants in is
+covered by [Importing variant data](import-data.html); the extraction step
+that consumes catalogs is [Extracting signatures](signature-extraction.html).
+
+## A genome to tally against
+
+The tally needs the reference genome around each variant to place
+mutations in their trinucleotide (and transcriptional) context. msuiter
+reads the 2bit format directly — point `ms_tally()` at a `.2bit` file for
+the build your variants were called against (for example the UCSC or
+Ensembl 2bit download for GRCh38).
+
+For a fully offline guide, build a miniature two-chromosome 2bit with the
+same writer the package's own executable tour uses, and place variants on
+it:
+
+```{r genome, cache = FALSE}
+.u32le <- function(x) writeBin(as.integer(x), raw(), size = 4L, endian = "little")
+.pack_bases <- function(ints) {
+  code <- c(A = 0L, C = 1L, G = 2L, T = 3L)
+  bases <- code[match(ints, c(1L, 2L, 3L, 4L))]
+  bases[is.na(bases)] <- 0L
+  out <- raw((length(bases) + 3L) %/% 4L)
+  acc <- 0L; filled <- 0L; k <- 0L
+  for (b in bases) {
+    acc <- bitwOr(bitwShiftL(acc, 2L), b); filled <- filled + 1L
+    if (filled == 4L) { k <- k + 1L; out[k] <- as.raw(acc); acc <- 0L; filled <- 0L }
+  }
+  if (filled > 0L) out[k + 1L] <- as.raw(bitwShiftL(acc, 2L * (4L - filled)))
+  out
+}
+.write_2bit <- function(path) {
+  chr1 <- rep(c(2L, 1L), 32L)
+  chr2 <- rep(c(3L, 1L), 20L)
+  recs <- list(
+    list(name = "chr1", size = 64L, dna = .pack_bases(chr1),
+         nb = integer(0), nl = integer(0)),
+    list(name = "chr2", size = 40L, dna = .pack_bases(chr2),
+         nb = integer(0), nl = integer(0)))
+  off <- 16L + sum(vapply(recs, function(r) 1L + nchar(r$name) + 4L, 0L))
+  index <- raw(); body <- raw()
+  for (r in recs) {
+    index <- c(index, as.raw(nchar(r$name)), charToRaw(r$name), .u32le(off))
+    rec <- c(.u32le(r$size), .u32le(length(r$nb)), .u32le(r$nb), .u32le(r$nl),
+             .u32le(0L), .u32le(0L), r$dna)
+    body <- c(body, rec); off <- off + length(rec)
+  }
+  bytes <- c(.u32le(0x1A412743L), .u32le(0L), .u32le(length(recs)),
+             .u32le(0L), index, body)
+  con <- file(path, "wb"); on.exit(close(con), add = TRUE)
+  writeBin(bytes, con); invisible(path)
+}
+genome <- file.path(tempdir(), "catalogs-2bit.2bit")
+.write_2bit(genome)
+```
+
+Replace this file with a real 2bit in your own analysis — the rest of the
+grammar is unchanged.
+
+## The SBS tally
+
+```{r variants}
+tab <- data.frame(
+  chrom  = c("chr1", "chr1", "chr1", "chr2", "chr2", "chr1"),
+  start  = c(12L, 22L, 14L, 9L, 31L, 50L),
+  end    = c(12L, 22L, 14L, 9L, 31L, 50L),
+  ref    = c("C", "C", "C", "T", "T", "G"),
+  alt    = c("A", "T", "T", "A", "C", "T"),
+  sample = c("S1", "S1", "S2", "S2", "S3", "S3"))
+v <- ms_variants(tab, "GRCh38", caller = "catalogs-guide",
+                 matched_normal = "none")
+cat96 <- ms_tally(v, genome, mode = "SBS96")
+cat96
+```
+
+The result is an `MsCatalog`: the sample × channel matrix plus a validated
+channel-table record (name and content hash) that every downstream step —
+extraction, fitting, comparison, export — pins its semantics to.
+
+```{r inspect}
+cnt <- cat96@counts
+dim(cnt)                      # channels x samples
+head(cnt[1L:4L, ])            # the first four channels
+cat96@channels$name
+```
+
+## The schema family
+
+`mode` selects the channel schema. The substitution family spans the
+96-channel canonical schema, the transcriptionally stranded 192, the
+stranded-with-mutational-signature 384, and the full 1536 expansion; DBS
+variants tally to 78 channels:
+
+```{r modes}
+cat78 <- ms_tally(v, genome, mode = "DBS78")
+cat78@channels$name
+dim(cat78@counts)
+```
+
+The schema registry is versioned and content-hashed; importing or exporting
+a catalog whose labels do not ride the registry is rejected at the boundary
+(see [Importing variant data](import-data.html)).
+
+MNV calls and complex substitutions do not fold silently into SBS/DBS
+channels: they are routed to their own ledger and skipped, so a catalog is
+always an honest accounting of what the tallier saw.
+
+## Stratifying hypermutants
+
+Tumors with extreme mutation burden can dominate an analysis. The
+stratifier assigns samples to a hypermutant class (data-driven by default,
+or with a manual cutoff) so you can fit or describe the two arms separately:
+
+```{r stratify}
+strat <- ms_stratify_hypermutants(cat96, seed = 1)
+strat
+```
+
+## Where to go next
+
+- [Extracting signatures](signature-extraction.html): de novo extraction
+  from a catalog, with K-selection evidence.
+- [Fitting known signatures](signature-fitting.html): exposures against a
+  reference set.
+- [Quality control](quality-control.html): burden and pseudosignature QC
+  faces on the catalog you just built.

@@ -110,7 +110,7 @@
   corpus <- character(0)
   for (d in c("man", "R", "vignettes", "inst", "docs")) {
     fs <- list.files(file.path(root, d),
-                     pattern = "[.](R|Rd|Rmd|md|yml|txt|lock)$",
+                     pattern = "[.](R|Rd|Rmd|qmd|md|yml|txt|lock)$",
                      full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
     for (f in fs) corpus <- c(corpus, readLines(f, warn = FALSE))
   }

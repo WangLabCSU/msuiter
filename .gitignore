@@ -25,9 +25,9 @@ target/
 /src/Makevars
 /src/Makevars.win
 
-# docs build
-docs/site/
-docs/dev/
+# docs build (the pkgdown output root; the former docs/ corpus moved to
+# vignettes/ -- the site itself is built and published by .github/workflows/pkgdown.yaml)
+/docs/
 /pkgdown/_site/
 
 # data scratch

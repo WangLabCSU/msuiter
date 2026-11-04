@@ -2,11 +2,11 @@
 # docs-sync: API-surface consistency check (U-M0-05; ARCHITECTURE section 9
 #     the docs-sync check: "the drift goes red").
 #
-# Contract (docs/CAPABILITY-MATRIX.md, the matrix-governance rows):
+# Contract (vignettes/articles/capability-matrix.qmd, the matrix-governance rows):
 #   every user-facing `ms_*` API name that appears in ARCHITECTURE.md or
 #   ROADMAP.md must be listed in the CAPABILITY-MATRIX "L-H API surface" table.
 #   FFI internals (`ms_tally_rust`, `ms_extract_rust`, i.e. any `ms_*_rust`
-#   name, governed separately by docs/ffi-surface.md) are excluded.
+#   name, governed separately by vignettes/articles/ffi-surface.qmd) are excluded.
 #
 # Any ARCH/ROADMAP user API missing from the L-H table is drift -> exit 1.
 # The CI wiring lands in U-M0-07; this script is the check itself.
@@ -21,17 +21,17 @@ options(warn = 1)
   if (length(f) > 0L) dirname(dirname(normalizePath(f[1]))) else normalizePath(".")
 })
 
-.rd <- function(...) file.path(.repo_root, "docs", ...)
+.rd <- function(...) file.path(.repo_root, "vignettes", "articles", ...)
 
 # Token regex: `ms_` preceded by a non-identifier character (so
 # `register_ms_engine` does not match), lowercase snake_case body.
 .token_regex <- "(?<![A-Za-z0-9_])ms_[a-z0-9_]+"
 
-# FFI internals: governed by docs/ffi-surface.md, not user API promises.
+# FFI internals: governed by vignettes/articles/ffi-surface.qmd, not user API promises.
 .is_ffi_internal <- function(token) grepl("_rust$", token)
 
 .extract_lh_table_apis <- function() {
-  lines <- readLines(.rd("CAPABILITY-MATRIX.md"), warn = FALSE)
+  lines <- readLines(.rd("capability-matrix.qmd"), warn = FALSE)
   start <- grep("^#{2,3} L-H API surface", lines)
   if (length(start) != 1L) {
     stop("docs-sync: could not locate the L-H API surface table heading",
@@ -68,8 +68,8 @@ options(warn = 1)
 
 lh_apis <- .extract_lh_table_apis()
 docs <- rbind(
-  .extract_doc_apis(.rd("ARCHITECTURE.md")),
-  .extract_doc_apis(.rd("ROADMAP.md"))
+  .extract_doc_apis(.rd("architecture.qmd")),
+  .extract_doc_apis(.rd("roadmap.qmd"))
 )
 user <- docs[!.is_ffi_internal(docs$api), , drop = FALSE]
 
@@ -84,7 +84,7 @@ cat(sprintf(
   length(lh_apis), length(unique(user$api))
 ))
 if (length(ffi)) {
-  cat(sprintf("docs-sync: FFI internals excluded (docs/ffi-surface.md): %s\n",
+  cat(sprintf("docs-sync: FFI internals excluded (vignettes/articles/ffi-surface.qmd): %s\n",
               paste(ffi, collapse = ", ")))
 }
 
@@ -130,7 +130,7 @@ cat("docs-sync: OK -- no API-surface drift\n")
 }
 
 .roadmap_checkbox_check <- function() {
-  lines <- readLines(.rd("ROADMAP.md"), warn = FALSE)
+  lines <- readLines(.rd("roadmap.qmd"), warn = FALSE)
   heads <- grep(.section_head, lines, perl = TRUE)
   if (!length(heads)) {
     stop("docs-sync: ROADMAP.md exposes no section headings", call. = FALSE)
@@ -170,7 +170,7 @@ cat("docs-sync: checkbox-truth: OK -- every in-scope checked box cites its",
 
 # ---------------------------------------------------------------------------
 # Half three: _pkgdown.yml reference-index completeness (U-M7-04 slice-C, C4).
-# Contract (controller ruling 2026-10-10; docs/ARCHITECTURE.md section 9
+# Contract (controller ruling 2026-10-10; vignettes/articles/architecture.qmd section 9
 #     "the drift goes red", extended): every symbol NAMESPACE exports must
 # appear in the _pkgdown.yml reference index -- pkgdown only publishes what
 # the index names, so an unlisted export is an invisible API that no site

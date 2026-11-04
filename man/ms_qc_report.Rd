@@ -34,5 +34,5 @@ COSMIC artifact roster: cancer.sanger.ac.uk/cosmic/signatures/SBS
 (SBS27, SBS43, SBS45–60, SBS95). oxoG sentinel: Costello et al., NAR
 2013 (doi:10.1093/nar/gks1443). FFPE sentinel: Guo et al., Nat Commun
 2022 (doi:10.1038/s41467-022-32041-5). Design memo:
-`docs/devlog/2026-10-04-M4-02b-qc-memo.md` sections 1, 3 and 4.
+`vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` sections 1, 3 and 4.
 }

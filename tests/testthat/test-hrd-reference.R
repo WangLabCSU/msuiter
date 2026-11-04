@@ -1,6 +1,6 @@
 # test-hrd-reference.R -- U-M6s-01 RED batch, per-digit reference fidelity.
 #
-# Ground-truth anchoring (design memo docs/devlog/2026-10-07-m6s-hrd-report-design.md
+# Ground-truth anchoring (design memo vignettes/articles/devlog-2026-10-07-m6s-hrd-report-design.qmd
 # section 1, "Ground-truth provenance"). The single ground truth is
 # cran/SigMiner R/get_pLOH_score.R and R/get_Aneuploidy_score.R -- the
 # Cortes-Castro et al. HRD implementation carried by the SigProfiler-suite

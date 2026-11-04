@@ -50,6 +50,7 @@ except ImportError:
 REPO = Path(__file__).resolve().parent.parent
 CI = REPO / ".github/workflows/ci.yml"
 SCHED = REPO / ".github/workflows/scheduled.yml"
+PKG = REPO / ".github/workflows/pkgdown.yaml"
 DEP = REPO / ".github/dependabot.yml"
 LOCK = REPO / "src/rust/Cargo.lock"
 
@@ -255,6 +256,7 @@ def main():
         ci = load_yaml(CI)
         sched = load_yaml(SCHED)
         dep = load_yaml(DEP)
+        pkgy = load_yaml(PKG) if PKG.is_file() else None
         check("workflow YAML parses (safe_load)", True)
     except Exception as e:  # noqa: BLE001 - report and stop
         check("workflow YAML parses (safe_load)", False, str(e))
@@ -737,6 +739,35 @@ def main():
           "reference/index.html" in st and "articles/extending.html" in st)
     check("scheduled: site job uploads the rendered site artifact",
           any("upload-artifact@" in u for u in uses_list(site)))
+
+    # ---- the Pages publishing workflow (push-built pkgdown site) -----------
+    # The site is published on every push to main by .github/workflows/
+    # pkgdown.yaml (repo Pages build_type: workflow). The scheduled site job
+    # above stays the weekly deep check; this one is the publisher.
+    pk = pkgy or {}
+    check("pkgdown.yaml exists and parses", bool(pk))
+    pkjobs = pk.get("jobs") or {}
+    bd = pkjobs.get("build-deploy", {})
+    check("pkgdown.yaml: build-deploy job exists", bool(bd))
+    check("pkgdown.yaml: pushes to main trigger the build",
+          str(pk.get("on", {}).get("push", {}).get("branches", "")).find("main") >= 0
+          or bool(pk.get(True, {}).get("push", {}).get("branches")))
+    check("pkgdown.yaml: job carries a measured timeout (hang-detector law)",
+          isinstance(bd.get("timeout-minutes"), (int, float))
+          and 0 < bd.get("timeout-minutes") <= 120,
+          f"got {bd.get('timeout-minutes')}")
+    pkperm = (bd.get("permissions") or {})
+    check("pkgdown.yaml: Pages write + id-token permissions",
+          pkperm.get("pages") == "write" and pkperm.get("id-token") == "write")
+    pktxt = PKG.read_text() if PKG.is_file() else ""
+    check("pkgdown.yaml: builds via pkgdown::build_site_github_pages",
+          "pkgdown::build_site_github_pages" in pktxt)
+    check("pkgdown.yaml: deploys via actions/upload-pages-artifact",
+          any("upload-pages-artifact@" in u
+              for j in pkjobs.values()
+              for u in [str(s.get("uses", "")) for s in j.get("steps", [])]))
+    check("pkgdown.yaml: pins the MSRV Rust toolchain (the guides compile the engine)",
+          "rust-toolchain@1.71.0" in pktxt or "rust-toolchain@stable" in pktxt)
 
     # ---- the CRAN-shape monolith the PR gate retired (round 2) --------------
     # Sealed by test-ci-shard-map.R: the full-test-phase monolith must keep

@@ -1,6 +1,6 @@
 # ms-convert.R: opportunity conversion between mutational opportunity
 # representations (U-M4-02c; design memo
-# docs/devlog/2026-10-04-M4-02c-convert-memo.md).
+# vignettes/articles/devlog-2026-10-04-M4-02c-convert-memo.qmd).
 #
 # The sigfit convert_signatures semantics (research/02 section 8 "The key citations"): a
 # signature is divided by the source opportunities and multiplied by the

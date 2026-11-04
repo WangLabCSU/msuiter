@@ -11,7 +11,7 @@
 # first-appearance order), and every tally fact is recorded in provenance.
 #
 # Transcription-strand policy (mirrors sbs.rs, documented in
-# docs/ffi-surface.md -- NOT a degradation path):
+# vignettes/articles/ffi-surface.qmd -- NOT a degradation path):
 #   * mode "SBS192" REQUIRES a `strand` column on the variant table
 #     (structured error without one: B/N-strand records have no SBS192
 #     channel, so silently defaulting the annotation would misplace real

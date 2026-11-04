@@ -1,0 +1,137 @@
+---
+title: "Comparing signatures and exposures"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Comparing signatures and exposures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette: the
+# source tree (check and site-build contexts) loads through pkgload; a bare
+# installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`ms_compare()` is the calibrated-similarity face of the package: it matches
+two signature sets under a chosen protocol, scores each match with a
+similarity metric, and attaches **null distributions** so a cosine is
+never read without its sampling context. This guide covers the comparison
+container, the exposure-level group test, and the clustering/embedding
+post-fitting analyses.
+
+## Two sets of signatures
+
+A synthetic cohort generated under two exposure programs, extracted de
+novo, and compared against the generating reference — the everyday
+"did we recover the processes?" question:
+
+```{r cohort}
+ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S   <- ref[, c(1, 5, 9)]
+colnames(S) <- paste0("CS", 1:3)
+E1  <- matrix(rep(c(0.5, 0.3, 0.2), each = 12), 3, 12)
+E2  <- matrix(rep(c(0.2, 0.5, 0.3), each = 12), 3, 12)
+E   <- cbind(E1, E2)
+sim <- ms_simulate(S, exposures = E, burden = 3000, seed = 3)
+ext <- suppressWarnings(ms_extract(sim, k = 3))
+```
+
+## The comparison container
+
+`ms_compare()` takes the estimated and reference signature matrices (the
+channel rows must match), the two exposure matrices for the activity
+protocol, and the null-distribution controls. The result is an
+`MsComparison` — a metrics table keyed by signature pair, with raw and
+BH-adjusted null probabilities:
+
+```{r compare}
+cmp <- ms_compare(ext@signatures, S,
+                  exposures_est = ext@exposures, exposures_ref = E,
+                  null_n = 200, null_n_draws = 500, seed = 1L)
+cmp
+```
+
+The metrics table carries the cosine per matched pair plus the `p_null`
+and `q_bh` columns; the protocol field names the match protocol family
+applied. `metric` selects the similarity measure (cosine by default), and
+`protocol` switches between the Hungarian assignment, the Islam greedy
+threshold sweep, and the Jiang activity protocol:
+
+```{r protocol}
+cmp_isl <- ms_compare(ext@signatures, S, protocol = "islam",
+                      exposures_est = ext@exposures, exposures_ref = E,
+                      null_n = 200, null_n_draws = 500, seed = 1L)
+cmp_isl
+```
+
+The null faces: an analytic null (catalog-shape conditioned) and an
+empirical Monte-Carlo null controlled by `null_n`, `null_n_draws`, and the
+`seed` (the seed is gated to the same bounded range as every other FFI
+face). Comparing two *extracted* sets — not one against a reference — uses
+the same call with the second matrix in the `reference` position.
+
+## Group differences in exposure
+
+`ms_exposure_test()` asks a per-signature question: does this signature's
+activity differ between two sample groups? It returns a tidy table with a
+raw and a BH-adjusted Wilcoxon-style test per signature:
+
+```{r exposure-test}
+grp <- factor(rep(c("early", "late"), each = 12))
+et  <- ms_exposure_test(ext@exposures, grp)
+et
+```
+
+A signature with `pass_bh = TRUE` under a real design is a candidate
+etiological or temporal difference — the test is diagnostic, and its
+assumptions belong to the exposure scale you pass in.
+
+## Clustering and embedding
+
+Two post-fitting analyses round out the comparison family.
+`ms_cluster_signatures()` groups signatures whose pairwise similarity
+exceeds a threshold (connected components over the threshold graph) and
+names a medoid per cluster:
+
+```{r cluster}
+cl <- ms_cluster_signatures(ext@signatures, threshold = 0.9)
+cl
+```
+
+`ms_embed()` projects the sample × signature exposure matrix into a
+low-dimensional space (k-means by default; UMAP when the suggested
+package is installed):
+
+```{r embed}
+em <- ms_embed(ext@exposures, method = "kmeans", clusters = 2, seed = 1)
+head(em)
+```
+
+Both results have dedicated figure types — `plot_similarity_heatmap()`,
+`plot_exposure_heatmap()`, and `plot_embedding()` — shown in
+[the visualization gallery](visualization-gallery.html).
+
+## Where to go next
+
+- [Calibrated statistics](calibrated-statistics.html): coverage-calibrated
+  uncertainty for presence calls and exposure intervals.
+- [Fitting known signatures](signature-fitting.html): the exposure
+  matrices this guide consumed.
+- [The visualization gallery](visualization-gallery.html): the comparison
+  figure types.

@@ -1,0 +1,242 @@
+---
+title: "Importing variant data and converting formats"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Importing variant data and converting formats}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with get-started and the tour:
+# the source tree (check and site-build contexts) loads through pkgload; a
+# bare installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+# This page runs against committed test bytes only: the SigProfiler specimen
+# fixture under tests/testthat/fixtures/, plus small objects built in memory
+# with ms_simulate(). No downloads, no real data -- the claims-are-measured
+# law of the docs/site lanes.
+FIX <- local({
+  if (is.na(PKG)) stop("the io fixtures require the source checkout")
+  fp <- file.path(PKG, "tests", "testthat", "fixtures",
+                  "sigprofiler_sbs96_specimen.txt")
+  if (!file.exists(fp)) stop("specimen fixture missing: ", fp)
+  fp
+})
+```
+
+## One door for every external format
+
+The io layer is the only part of msuiter that touches external formats. Each
+entry point dispatches on its first argument: a file path is read and repaired
+at load time (column mapping, coordinate parsing, a skip ledger that counts
+every dropped record into provenance), while a canonical data.frame skips the
+reading and goes straight to validation. Every violation raises an
+`msuiter_error_*` condition that names the field, the expectation and the fix.
+
+## Variant records: `ms_variants()`
+
+The canonical record is a data.frame with columns `chrom`, `start`, `end`,
+`ref` and `alt`, plus optional `vaf` and `filter`. Alleles are uppercase
+`A/C/G/T/N` strings of any length, so single-base substitutions, equal-length
+multi-base events and length-changing events all ride the same table; routing
+into the channel-specific tallies happens downstream, at the catalog layer.
+Coordinates are 1-based and closed (`start >= 1`, `end >= start`). Three
+provenance arguments are required -- `genome`, `caller` and `matched_normal`
+(use `"none"` for tumor-only calls); `vaf_floor` is optional.
+
+```{r variants-df}
+tab <- data.frame(
+  chrom  = c("chr1", "chr1", "chr7",    "chr17"),
+  start  = c(12L,    22L,    55191822L, 7676594L),
+  end    = c(12L,    23L,    55191822L, 7676595L),
+  ref    = c("C",    "CA",   "C",       "CA"),
+  alt    = c("A",    "TT",   "T",       "C"),
+  vaf    = c(0.62,   0.55,   0.71,      0.48),
+  filter = c("PASS", "PASS", "PASS",    ".")
+)
+v <- ms_variants(tab, genome = "GRCh38", caller = "synthetic",
+                 matched_normal = "none", vaf_floor = 0.05)
+v
+v@table
+```
+
+The double-base row (`CA` -> `TT`) and the length-changing row (`CA` -> `C`)
+validate through the same constructor as the SNV row; the optional `vaf` and
+`filter` columns pass through untouched into provenance and the typed table.
+
+File input works the same way for VCF, TSV and MAF (optionally
+gzip-compressed). Writing VCF-like records to a tempfile shows the reading
+face, including the multiallelic expansion and the skip ledger:
+
+```{r variants-vcf}
+lines <- c(
+  "##fileformat=VCFv4.2",
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
+  "chr7\t55191822\t.\tC\tT\t.\tPASS\t.",
+  "chr1\t22\t.\tCA\tTT,G\t.\t.\t.",
+  "chr1\t30\t.\tC\t<NON_REF>\t.\t.\t."
+)
+vcf_path <- tempfile(fileext = ".vcf")
+writeLines(lines, vcf_path)
+v2 <- ms_variants(vcf_path, "GRCh38", caller = "demo-caller",
+                  matched_normal = "none")
+v2@table
+v2@provenance$parse
+unlink(vcf_path)
+```
+
+The multi-allelic site expands to a record per ALT allele, the symbolic
+`<NON_REF>` allele lands in `skip_reasons` (never silently dropped), and
+`end` is derived as `pos + nchar(ref) - 1` where the source carries no end
+coordinate. TSV and MAF files are remapped with
+`chrom_col`/`pos_col`/`end_col`/`ref_col`/`alt_col` (TSV defaults to
+`chrom/pos/ref/alt`, MAF to the standard GDC-style names), with `filter_col`
+and `vaf_col` as optional passthroughs, and `format` forces the reader when
+the extension is not decisive. BCF is rejected with an actionable message,
+and so is any stray argument in `...` -- the io functions have no passthrough.
+
+## Segments and rearrangements: `ms_segments()` and `ms_sv()`
+
+Copy-number segments and structural variants enter through the same dispatch.
+The canonical segment record is `chrom`/`start`/`end` plus the ordered
+allele-specific pair `minor`/`major` (the total copy number is their sum). On
+the file path the caller's columns are mapped for the
+SigProfilerMatrixGenerator copy-number callers (ASCAT, ASCAT_NGS, ABSOLUTE,
+PCAWG, FACETS, BATTENBERG, PURPLE, SEQUENZA), auto-detected from the column
+signature with `caller = "auto"`; a canonical data.frame carries no
+per-caller columns, so an explicit `caller` label is required there.
+
+```{r segments-sv}
+seg <- ms_segments(
+  data.frame(chrom = "chr7", start = 100000L, end = 9000000L,
+             minor = 1L, major = 1L),
+  caller = "ASCAT"
+)
+seg
+
+sv <- ms_sv(data.frame(
+  chrom1 = "19", start1 = 21268384L, end1 = 21268385L,
+  chrom2 = "19", start2 = 21327858L, end2 = 21327859L,
+  strand1 = "+", strand2 = "+"
+))
+sv[, c("svtype", "size_bp", "clustered")]
+```
+
+`ms_sv()` takes BEDPE -- the six coordinate columns plus either an `svclass`
+column or the `strand1`/`strand2` pair -- and derives the rearrangement
+class, the event size and the kat-region `clustered` flag like the upstream
+SigProfilerMatrixGenerator implementation. Both functions return typed
+data.frames with the reading provenance in attribute `"provenance"`.
+
+## Catalog and signature files: `ms_export()` and `ms_import()`
+
+The catalog face interchanges channel x column matrices in the verified
+layouts: `cosmic` (first header column `Type`) and `sigprofiler` (first
+header column `MutationType`). Import resolves the channel table by exact
+label-set match against the registry -- no silent reordering, no silent
+subsets -- or you pin it with `channel_table`.
+
+```{r import-specimen}
+sig <- ms_import(FIX, format = "sigprofiler", kind = "signatures")
+sig
+c(channel = sig@catalog_summary$channel_name,
+  build   = strtrim(sig@catalog_summary$build, 24L))
+```
+
+`kind = "catalog"` expects finite non-negative whole numbers and returns an
+`MsCatalog`; `kind = "signatures"` reads the columns as probabilities and
+returns an `MsSignature` with the legal zero-column exposure face, its
+catalog summary recording the file's sha256 digest.
+
+### A round trip through both layouts
+
+Export accepts either an `MsCatalog` (the counts, a column per sample) or an
+`MsSignature` (the signature probabilities); `file = NULL` returns the
+assembled data.frame instead of writing. The specimen imported above feeds a
+simulated catalog, and both objects then go out and come back through their
+respective layouts:
+
+```{r roundtrip-setup}
+ex <- matrix(rep(0.1, ncol(sig@signatures)), ncol = 1L)
+cat1 <- ms_simulate(sig, ex, burden = 400, seed = 7)
+cat1
+head(ms_export(cat1, format = "cosmic"), 2L)
+```
+
+```{r roundtrip-files}
+cosmic_file <- tempfile(fileext = ".txt")
+ms_export(cat1, format = "cosmic", file = cosmic_file)
+cat2 <- ms_import(cosmic_file, format = "cosmic", kind = "catalog")
+max(abs(cat2@counts - cat1@counts))   # integer counts survive verbatim
+
+sp_file <- tempfile(fileext = ".txt")
+ms_export(sig, format = "sigprofiler", file = sp_file)
+sig2 <- ms_import(sp_file, format = "sigprofiler", kind = "signatures")
+max(abs(sig2@signatures - sig@signatures))
+file.remove(c(cosmic_file, sp_file))
+```
+
+The count matrix comes back unchanged; the probability matrix carries only
+floating-point dust from the decimal serialisation.
+
+## Opportunity conversion: `ms_convert()`
+
+Signatures fitted genome-wide and signatures fitted on exomes sit on
+different trinucleotide opportunity baselines. `ms_convert()` re-expresses an
+SBS96 signature set between opportunity vectors with the sigfit
+`convert_signatures` semantics: divide by the source opportunities, multiply
+by the target ones, re-normalize each column. The bundled tables are
+`"human-genome"` and `"human-exome"`; a custom named frequency vector is
+accepted for panel targets.
+
+```{r convert}
+exome <- ms_convert(sig, from = "human-genome", to = "human-exome")
+exome
+colSums(exome@signatures)[1L:3L]
+```
+
+The `MsSignature` method returns a new object with the converted
+`signatures` slot and the exposures untouched -- exposure shares are
+opportunity-agnostic under this semantics. Converting back recovers the
+genome-scale profile:
+
+```{r convert-back}
+back <- ms_convert(exome, from = "human-exome", to = "human-genome")
+max(abs(back@signatures - sig@signatures))  # floating-point residue only
+identical(dim(exome@exposures), dim(sig@exposures))
+```
+
+A plain numeric matrix works too, provided it carries the SBS96 registry
+rownames in canonical order -- the opportunity values are matched by label,
+never by position:
+
+```{r convert-matrix}
+m <- ms_convert(sig@signatures, "human-genome", "human-exome")
+identical(dim(m), dim(sig@signatures))
+```
+
+## Where to go next
+
+The five-minute path in [get-started.html](get-started.html) builds the same
+inputs by hand and anatomizes the output; the narrative chain continues in
+[tour.html](tour.html) from variants to a reference comparison. The
+application-oriented lanes start at [scenarios.html](scenarios.html); the
+whole docs corpus is navigated from [docs-bridge.html](docs-bridge.html), and
+every exported face is documented in the
+[reference index](../reference/index.html).
+```
