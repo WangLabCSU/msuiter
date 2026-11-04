@@ -197,8 +197,19 @@ def test_registry_row_mints_pre_flip_safe():
                                         or "provenance" in reason), (
         "an unattested row must be compose-time refused, skip-not-skip")
     else:
-        assert docker_cmd.image_gate(row) is None, (
-            "a flipped row must carry an inspect-attested digest")
+        reason = docker_cmd.image_gate(row)
+        if reason is not None:
+            # Hosts without the campaign image store (the CI face) may only
+            # ever see a LOCALITY refusal here; a table/provenance ground
+            # must not hide behind locality, and the committed digest shape
+            # is asserted directly in its place.
+            assert reason == "docker CLI not available on this host" or \
+                reason == (f"image {row.image_ref!r} is not present in the "
+                           f"local image store"), (
+                f"flipped row gate refused on a non-locality ground: {reason}")
+            assert (row.image_digest or "").startswith("sha256:") and \
+                len(row.image_digest or "") == 71, (
+                "a flipped row must carry an inspect-attested digest")
 
 
 def test_batch_face_adapter_module_serves_the_shared_contract():
