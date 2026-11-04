@@ -86,6 +86,7 @@ shard	file	seconds
 6	test-r-floor-ops.R	0
 6	test-release-materials.R	0
 6	test-reproduce-link.R	0
+6	test-rng-hygiene.R	0
 6	test-site-claim-gate.R	42
 6	test-sitrep.R	0
 6	test-stratify.R	0

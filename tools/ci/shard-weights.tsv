@@ -1,8 +1,3 @@
-# Measured per-file weights for the CI shard generator (tools/ci/gen-shard-manifest.R).
-# seconds/expects from the ProgressReporter transcript of run 39536641469 guards leg
-# (banked: /tmp/ciopt/logs/run39536641469/10_guards.txt; the split sim files carry the
-# apportionment recorded in docs/devlog/2026-10-21-ci-shard-parallel.md).
-# Weights steer balance only -- test-ci-shard-map.R keeps this roster lockstep with disk.
 file	seconds	expects
 test-calibrate-plot.R	1	53
 test-calibrate-real.R	1	133
@@ -29,7 +24,12 @@ test-classes-roundtrip.R	0	68
 test-classes-signature.R	0	76
 test-classes-utils.R	0	16
 test-classes-variants.R	0	74
+test-docs-bridge.R	1	16
+test-docs-extending-surface.R	1	20
+test-docs-get-started.R	7	14
+test-docs-scenarios-prose.R	1	19
 test-docs-sync.R	0	10
+test-docs-tour-executable.R	10	28
 test-engines-registry.R	0	120
 test-extend-contract.R	0	31
 test-extract.R	16	163
@@ -46,12 +46,15 @@ test-io-sv.R	0	105
 test-io-variants.R	0	226
 test-islam-xval.R	0	12
 test-kernel-attest-route.R	1	20
+test-kernel-batch-bridge.R	172	346
+test-kernel-bit-identity.R	79	476
 test-kernel-cli.R	0	42
 test-kernel-gate-evidence.R	0	44
 test-kernel-pipeline-batch.R	0	177
 test-kernel-pipeline-farm.R	5	117
 test-kernel-pipeline-parse.R	0	57
 test-kernel-pipeline-status.R	0	37
+test-kernel-trace-shape.R	1	40
 test-kselect.R	28	147
 test-m2-e2e.R	2	13
 test-ms-benchmark-driver.R	208	72
@@ -65,35 +68,28 @@ test-ms-exposure-test.R	0	30
 test-ms-qc-report.R	112	42
 test-ms-qc-sentries.R	280	114
 test-ms-simulate.R	0	42
+test-peer-evidence.R	3	1611
 test-pkgdown-citation.R	0	23
+test-pkgdown-coherence.R	1	14
 test-pkgdown-msu-map.R	1	23
 test-pkgdown-reference-map.R	0	17
 test-r-floor-ops.R	0	1
 test-refdb.R	373	138
 test-release-materials.R	0	12
+test-reproduce-link.R	0	18
+test-rng-hygiene.R	0	13
+test-scenario-atlas.R	2.2	41
+test-scenario-hrd.R	0.4	28
+test-scenarios-gallery.R	1	80
+test-site-claim-gate.R	42	15
+test-site-deploy-bundle.R	3	31
 test-sitrep.R	0	13
 test-stratify.R	0	132
+test-treatment-report.R	13.1	87
 test-vendor-gate-law.R	0	33
-test-viz-bootstrap.R	0	39
 test-viz-batch2.R	2	179
+test-viz-bootstrap.R	0	39
 test-viz-first-batch.R	11	74
 test-viz-kselect.R	0	24
 test-xval-m2-extract.R	948	7
 test-xval-sigminer.R	10	12
-test-scenario-atlas.R	2.2	41
-test-scenario-hrd.R	0.4	28
-test-treatment-report.R	13.1	87
-test-kernel-trace-shape.R	1	40
-test-kernel-bit-identity.R	79	476
-test-kernel-batch-bridge.R	172	346
-test-docs-get-started.R	7	14
-test-docs-bridge.R	1	16
-test-pkgdown-coherence.R	1	14
-test-site-claim-gate.R	42	15
-test-site-deploy-bundle.R	3	31
-test-scenarios-gallery.R	1	80
-test-peer-evidence.R	3	1611
-test-reproduce-link.R	0	18
-test-docs-tour-executable.R	10	28
-test-docs-scenarios-prose.R	1	19
-test-docs-extending-surface.R	1	20
