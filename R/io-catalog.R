@@ -126,8 +126,20 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
     cols <- if (S7::S7_inherits(x, MsCatalog)) x@samples else
       paste0("col", seq_len(ncol(mat)))
   }
+  hdr <- .ms_io_header_col[[format]]
+  collide <- unique(cols[cols == hdr])
+  if (length(collide)) {
+    msuiter_abort(
+      "input",
+      sprintf("column names must not collide with the %s header column \"%s\"",
+              format, hdr),
+      i = "the first exported column is the channel label carrier",
+      j = paste0("colliding names: ", paste(collide, collapse = ", ")),
+      c = "rename those samples/signatures before exporting (a silent rename would not round-trip)"
+    )
+  }
   out <- data.frame(..hdr.. = rownames(mat), stringsAsFactors = FALSE)
-  names(out)[1L] <- .ms_io_header_col[[format]]
+  names(out)[1L] <- hdr
   for (j in seq_len(ncol(mat))) {
     out[[cols[j]]] <- mat[, j]
   }
@@ -205,6 +217,29 @@ ms_import <- function(file, format = "cosmic",
   labels <- tab[[1L]]
   table_nm <- .ms_io_resolve_table(labels, channel_table = channel_table)
   mat <- as.matrix(tab[, -1L, drop = FALSE])
+  if (!is.numeric(mat)) {
+    chr <- as.character(mat)
+    num <- suppressWarnings(as.numeric(chr))
+    bad <- which(is.na(num) & !is.na(chr))[1L]
+    if (!is.na(bad)) {
+      off_i <- (bad - 1L) %% nrow(mat) + 1L
+      off_j <- (bad - 1L) %/% nrow(mat) + 1L
+      col_nm <- colnames(mat)[off_j]
+      if (is.null(col_nm)) {
+        col_nm <- paste0("col", off_j)
+      }
+      msuiter_abort(
+        "input",
+        sprintf("%s-format data cells must be numeric", format),
+        i = "the interop grid is numeric counts or probabilities; literal cells are uninterpretable",
+        j = sprintf("offending cell: row %d (%s), column %d (%s), value %s",
+                    off_i, labels[off_i], off_j, col_nm,
+                    msuiter_quote_trunc(chr[bad])),
+        c = "repair the cell in the source file or re-export with ms_export()"
+      )
+    }
+    mat <- matrix(num, nrow = nrow(mat), dimnames = dimnames(mat))
+  }
   rownames(mat) <- labels
   if (kind == "catalog") {
     if (any(!is.finite(mat)) || any(mat < 0) || any(mat != floor(mat))) {

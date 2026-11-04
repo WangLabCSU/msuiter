@@ -131,6 +131,33 @@ test_that("interop error paths are structured", {
   )
 })
 
+test_that("audit #74 P1-3/P2: header collisions and non-numeric cells refuse structurally", {
+  # (1) export: a sample named like the header column would silently lose
+  # its identity on roundtrip -- the only legal move is a structured stop.
+  labels <- msuiter:::.ms_io_channel_tables()$SBS96
+  collide <- ms_catalog(matrix(1, 96, 1, dimnames = list(labels, "Type")),
+    list(name = "SBS96", labels = labels), "Type",
+    provenance = list(genome = "GRCh37"))
+  expect_ms_error(ms_export(collide, format = "cosmic"), "input",
+    regexp = "collide")
+  # (2) import: a literal cell in the numeric grid is uninterpretable --
+  # it must arrive as msuiter_error_input naming the offending cell, not
+  # as a bare simpleError out of the coercion (the no-bare-stop law).
+  path <- tempfile(fileext = ".txt")
+  on.exit(unlink(path), add = TRUE)
+  body <- matrix(c(labels, rep("1", 96L)), nrow = 96L, ncol = 2L,
+                 dimnames = list(labels, NULL))
+  body[3L, 2L] <- "x"                                # one literal value cell
+  write.table(data.frame(type = body[, 1L], sample.a = body[, 2L],
+    stringsAsFactors = FALSE), file = path, sep = "\t",
+    row.names = FALSE, quote = FALSE)
+  cnd <- tryCatch(ms_import(path, format = "cosmic", kind = "catalog"),
+                  error = function(e) e)
+  expect_false(inherits(cnd, "warning"),
+    info = "the bad cell must arrive as an error, not a coercion warning")
+  expect_s3_class(cnd, "msuiter_error_input")
+})
+
 
 test_that("the pinned SigProfiler specimen imports and roundtrips", {
   # Upstream anchor: SigProfilerAssignment de-novo SBS96 output (memo §4;
