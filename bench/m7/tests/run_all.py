@@ -144,6 +144,13 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       on-disk FLAT_INPUTS bytes and the last-touch lineage head; missing
       seals, unpinned copies, orphan digest literals and any unattested
       fourth launcher move all redden the suite
+  (AL) test_batch_bridge_arm the R1-PARITY batch-bridge transport face: the
+      seventh roster key's identity quintuple plus lineage, its own runner
+      fork and trust guard (with the frozen pair's byte tripwires), the
+      roster-driven child argv, the pre-flip-safe registry row, the bit-
+      identity comparator's surface and its biting, the 21-class anchor
+      completeness law, and three firing controls over the existing gate
+      machinery so no green in this file can be vacuous
 """
 
 from __future__ import annotations
@@ -222,7 +229,11 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # DEBT-BUILD-PIN-DRIFT tooling lane (controller ruling 2026-11-04,
            # remedy (b)): the arm-recipe digest pins speak blob digests at named
            # seal commits and every one of them is read on every suite run:
-           "test_recipe_blob_pins"]
+           "test_recipe_blob_pins",
+           # R1-PARITY Phase-B: the batch-bridge face battery (its own
+           # registration is the ordered-green evidence: absence-FAILs flip to
+           # PASS as each face lands, the firing controls never stop biting)
+           "test_batch_bridge_arm"]
 
 
 def _collect(mod_name):
