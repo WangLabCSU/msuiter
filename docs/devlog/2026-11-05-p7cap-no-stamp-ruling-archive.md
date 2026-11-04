@@ -1,0 +1,58 @@
+# P7cap batch-face no-stamp ruling -- archival record (audit #74 P2)
+
+Date of this record: 2026-11-05. Auditors and the paper supplementary
+material can verify the no-stamp attestation face of the 21
+`m7_floor_calibration_p7cap_20261104T093543Z` witnesses without access
+to any controller session; everything below is committed material.
+
+## The ruling
+
+    controller ruling 2026-11-04 (2) -- batch-bridge no-stamp route,
+    Phase-D Instrument B
+
+This string is the verbatim committed ruling text carried by
+`bench/m7/tools/attestation_sanctions.py::SANCTIONED_NULL_FACES`
+(key `sigminer_post_v3_rust_batch`, face `null/pre-law`, law
+`attestation-lv1`). The file's own header law states that an edit to
+that table is an edit to the controller's word, and
+`bench/m7/tests/test_null_face_route.py` (group B of the m7 suite)
+pins the set byte-exactly as its tripwire -- so the ruling text cannot
+silently mutate without reddening the lane.
+
+## What the ruling sanctions
+
+The batch-bridge comparison face rides the same null/pre-law face as
+the frozen 147-row comparison base: witnesses minted on the batch
+route carry `attestation: null` plus a `null_attestation_face` block
+whose `reason` must be a KEY of the sanctioned registry (exact key, no
+prefix, no fuzz). The minter exposes the route through
+`bench/m7/tools/calibrate_p6_floors.py --attestation none-with-reason`;
+the one-witness-one-face law (`attestation_sanctions.dual_face_ok`)
+forbids both an lv1 stamp and a null label on one witness, and forbids
+an orphan null label without the ruling behind it. An unsanctioned
+replay -- same command without the ruling -- hard-fails (group B pins
+this dual-face law with a seen-to-fire refusal control).
+
+## Verification recipe (auditor, read-only)
+
+1. `python3 -m tests.run_all --only test_null_face_route,test_attestation_law`
+   from `bench/m7/` -- the route law, the registry, the ledger mode
+   declaration, and the seal law all speak green.
+2. `bench/results/m7_floor_calibration_p7cap_20261104T093543Z/witnesses/*.json`:
+   every one of the 21 witnesses carries `attestation: null` and a
+   `null_attestation_face` block quoting the ruling string above;
+   `tools/matrix_governance.register_p6_anchors` verifies each anchor
+   against its witness (the witness is the authority).
+3. The witnesses are REP-100, verdict OK, with sidecar cpu/wall seconds
+   matching the anchor table byte-for-byte (pinned by group AC).
+
+## Why the route exists
+
+The batch-bridge arm "mints its comparison-base witnesses without the
+co-tenancy attestation, because the face it rides is the same face as
+the 147-row comparison base" (group B docstring, verbatim); the
+registry note adds that "the co-tenancy qualifier arrives with the
+arm's own campaign, not this lane" (verbatim). The no-stamp route is
+the sanctioned way for its witnesses to speak the pre-law face without
+a stamp this lane cannot lawfully mint. "The ruling converts that from
+folklore into a data-gated opt-out" (group B docstring, verbatim).
