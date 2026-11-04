@@ -55,6 +55,11 @@ _SOLO_MEAN_TOL = 1e-6
 _HEX64 = re.compile(r"[0-9a-f]{64}")            # bare sha256 hex faces
 _SHA256_URI = re.compile(r"sha256:[0-9a-f]{64}")
 COEX_SEAL_COL = "record_sha256"           # the rig's self-consistency digest
+#: The explicit null face of the sanctioned no-stamp route (Phase-D
+#: Instrument B, controller ruling 2026-11-04 (2)): a witness that
+#: lawfully declines the attestation SPEAKS that decision — this label,
+#: never the pre-law key-absent hand-written face.
+NULL_FACE_KEY = "null_attestation_face"
 
 
 class AttRefusal(RuntimeError):
@@ -438,6 +443,24 @@ def stamp_witness(doc: dict, *, preflight_log, cell: str, epoch: str,
     return {**doc, "attestation": block}
 
 
+def label_null_face(doc: dict, *, reason: str, sanctioned: dict) -> dict:
+    """The sanctioned null face (Phase-D Instrument B): the explicit,
+    labelled DECLINE — never the key-absent accident. The witness carries
+    "attestation": null plus this label, so the face is legible from its
+    own bytes; reportability and the printed row stay identical to the
+    pre-law face (the opt-out upgrades nothing). Returns a new document
+    (immutability)."""
+    if not isinstance(sanctioned, dict) or not str(sanctioned.get("ruling", "")):
+        raise AttRefusal(
+            f"null attestation face over reason {reason!r} without a "
+            "sanctioned ruling row — the opt-out is controller data, not a "
+            "lane option")
+    return {**doc, "attestation": None,
+            NULL_FACE_KEY: {"law": ATTEST_LAW, "reason": reason,
+                           "ruling": str(sanctioned["ruling"]),
+                           "face": str(sanctioned.get("face", "null/pre-law"))}}
+
+
 # -- report side ---------------------------------------------------------------
 
 def reportability(doc: dict, current_epoch: str) -> str | None:
@@ -447,6 +470,13 @@ def reportability(doc: dict, current_epoch: str) -> str | None:
     att = doc.get("attestation")
     if att is None:
         return None
+    if NULL_FACE_KEY in doc:
+        # the sanctioned null label and an lv1 block on one witness is a
+        # contradiction, checked here so the road is closed even when the
+        # batteries are not the caller (no import of attestation_sanctions:
+        # the one-way dependency runs the other direction)
+        return ("witness speaks both the lv1 face and the sanctioned null "
+                "label — the dual-face law admits one face per witness")
     if not isinstance(att, dict) or att.get("law") != ATTEST_LAW:
         return ("attestation block present but not a well-formed "
                 f"{ATTEST_LAW!r} document — fields absent is a refusal, "

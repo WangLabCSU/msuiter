@@ -53,6 +53,7 @@ for _p in (str(HERE), str(HERE.parent / "g0")):         # frozen g0, read-only
 import run_bench                                          # noqa: E402
 from competitors import registry                            # noqa: E402
 import tools.attestation as att                             # noqa: E402
+import tools.attestation_sanctions as attestation_sanctions  # noqa: E402
 import tools.matrix_governance as gov                       # noqa: E402
 
 # The full four-file cell contract (run_bench.GUARD_FILES including the
@@ -178,7 +179,8 @@ def freshness_law(status_tail: str,
 def run_probe(tool: str, *, arm: str, n: int, reps: int,
               json_path: str | None = None, work: str | None = None,
               campaign: str | None = None, image_digest: str | None = None,
-              live_probe=None) -> int:
+              live_probe=None, attestation: str = "live",
+              null_face_reason: str | None = None) -> int:
     """Drive one synthetic ``tool`` cell end-to-end and emit the witness JSON.
 
     Shared core for the per-tool probe entry points; the tool name is the
@@ -190,7 +192,10 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
     image digest defaults to the registry row this probe itself launched
     (the one image whose bytes the witness describes), and live_probe is
     the injectable T6 replay face (the gov.pre_flight_assert probe= idiom;
-    None means the real daemon answers at mint time)."""
+    None means the real daemon answers at mint time). The attestation
+    token is the Phase-B routing face -- "live" stamps, "none-with-reason"
+    mints the labelled explicit null OVER a sanctioned ruling key, and
+    anything else DEFECTS: no default ever un-attests silently."""
     try:
         spec = registry.lookup(tool)
     except Exception as exc:                       # row absent/unloadable
@@ -242,19 +247,39 @@ def run_probe(tool: str, *, arm: str, n: int, reps: int,
         # O3 attestation law: a witness is minted only together with the
         # preflight quiet-gate verdict and the inversion-probe record, in
         # its own bytes. No proofs, no OK — the DEFECT carries the reason.
-        # Phase-D: the mint context (which campaign, which image bytes, which
-        # replay face) rides through to the gate; the image default is the
-        # registry row this probe launched — the mint cannot launder an image
-        # it did not run.
-        attested = att.stamp_witness(
-            verdict, preflight_log=cachedir / "preflight_log.jsonl",
-            cell=cell, epoch=gov.floor_table_epoch(),
-            image_digest=image_digest or spec.image_digest,
-            campaign=campaign, live_probe=live_probe)
-        if attested.get("verdict") == "DEFECT":
-            code, verdict = 1, attested
+        # Phase-D (controller ruling 2026-11-04): the mint context (which
+        # campaign, which image bytes, which replay face) rides through to
+        # the gate, and the attestation MODE is a spoken routing token --
+        # the sanctioned null route is a SEPARATE face here; the stamp
+        # internals below are byte-frozen (A11 keeper).
+        if attestation == "live":
+            attested = att.stamp_witness(
+                verdict, preflight_log=cachedir / "preflight_log.jsonl",
+                cell=cell, epoch=gov.floor_table_epoch(),
+                image_digest=image_digest or spec.image_digest,
+                campaign=campaign, live_probe=live_probe)
+            if attested.get("verdict") == "DEFECT":
+                code, verdict = 1, attested
+            else:
+                verdict = attested
+        elif attestation == "none-with-reason":
+            sanctioned = attestation_sanctions.sanction_ok(null_face_reason or "")
+            if sanctioned is None:
+                code, verdict = 1, {
+                    **verdict, "verdict": "DEFECT",
+                    "reason": (
+                        f"null attestation face needs a sanctioned reason: "
+                        f"{(null_face_reason or '<unsaid>')!r} is not in "
+                        "SANCTIONED_NULL_FACES — the opt-out is controller "
+                        "ruling data, not a lane option")}
+            else:
+                verdict = att.label_null_face(
+                    verdict, reason=null_face_reason, sanctioned=sanctioned)
         else:
-            verdict = attested
+            code, verdict = 1, {
+                **verdict, "verdict": "DEFECT",
+                "reason": f"unknown attestation mode {attestation!r} — "
+                          "the routing token is live or none-with-reason"}
     if json_path:
         out_json = Path(json_path)
         out_json.parent.mkdir(parents=True, exist_ok=True)
