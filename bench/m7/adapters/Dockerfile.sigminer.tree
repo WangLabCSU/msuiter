@@ -182,6 +182,7 @@ RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
 # that names neither -- and the two asserts below are what make a stale fork a
 # build death rather than a silent re-derivation.
 COPY run_sigminer_arm_batch.R /work/run_sigminer_arm_batch.R
+# blob-pin bench/m7/adapters/run_sigminer_arm_batch.R @ 472c8be9e418cd7d8601dcd1d5d4377af8b9073f
 RUN test "$(sha256sum /work/run_sigminer_arm_batch.R | cut -d' ' -f1)" = \
       "3cb83336eb4acb2fa16283b509d62ad49f633d3bcd34fa8ef9b8f495193d00f4" \
     || (echo "[FATAL] run_sigminer_arm_batch.R bytes diverge from the committed fork" >&2; exit 1)
@@ -190,6 +191,13 @@ COPY self_witness_arm.sh /tmp/self_witness_arm.sh
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
       "926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663" \
     || (echo "[FATAL] self_witness_arm.sh bytes diverge from the committed witness" >&2; exit 1)
+# Both committed guards ride the build context, so both are attested here; the
+# arm replays only the one its roster row names, bound below by $SELF_WITNESS.
+COPY self_witness_batch_arm.sh /tmp/self_witness_batch_arm.sh
+# blob-pin bench/m7/adapters/self_witness_batch_arm.sh @ 472c8be9e418cd7d8601dcd1d5d4377af8b9073f
+RUN test "$(sha256sum /tmp/self_witness_batch_arm.sh | cut -d' ' -f1)" = \
+      "95bde92228e54bf668ce48a472c5057ee34a7abbb137b3a68b3fb34d68ce076d" \
+    || (echo "[FATAL] self_witness_batch_arm.sh bytes diverge from the committed fork guard" >&2; exit 1)
 # The container-scope four-file trust guard + arm gates, replayed under
 # network-none over the (AE)-sealed mini_cell_p6 fixture bytes (death #7
 # adjudication; frozen idiom). Any undeclared runtime dependency dies HERE,
