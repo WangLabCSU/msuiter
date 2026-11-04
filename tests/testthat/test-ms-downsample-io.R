@@ -148,7 +148,7 @@ test_that("audit #74 P1-3/P2: header collisions and non-numeric cells refuse str
   body <- matrix(c(labels, rep("1", 96L)), nrow = 96L, ncol = 2L,
                  dimnames = list(labels, NULL))
   body[3L, 2L] <- "x"                                # one literal value cell
-  write.table(data.frame(type = body[, 1L], sample.a = body[, 2L],
+  write.table(data.frame(Type = body[, 1L], sample.a = body[, 2L],
     stringsAsFactors = FALSE), file = path, sep = "\t",
     row.names = FALSE, quote = FALSE)
   cnd <- tryCatch(ms_import(path, format = "cosmic", kind = "catalog"),
@@ -156,6 +156,9 @@ test_that("audit #74 P1-3/P2: header collisions and non-numeric cells refuse str
   expect_false(inherits(cnd, "warning"),
     info = "the bad cell must arrive as an error, not a coercion warning")
   expect_s3_class(cnd, "msuiter_error_input")
+  # The header is spelled correctly, so a green here can only come from the
+  # cell gate: pin the message, or the test rides the header refusal instead.
+  expect_match(conditionMessage(cnd), "data cells must be numeric")
 })
 
 
