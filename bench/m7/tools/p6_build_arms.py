@@ -80,8 +80,15 @@ def resolve_msuiter_source_sha() -> str:
 # byte-frozen mini_cell/ dir stays the single home of the COSMIC catalog and
 # params, overlaid under the regeneration) -- omitting either is a
 # solve-time "not found", the first bake's recorded death.
+# The batch-bridge fork rides along in EVERY context: the shared Dockerfile
+# COPYs both cell-surface bytes unconditionally (Docker has no conditional
+# COPY), and its own byte-pin turns a stale fork into a build death. The six
+# sealed arms stay exactly as they were -- the fork is inert for an arm whose
+# roster row names the frozen pair, because child_argv picks the runner from
+# the row, and the guard that runs is the one the row names.
 FLAT_INPUTS = ("install_sigminer_arm.R", "run_sigminer_arm.R", "m7_entry.py",
-               "self_witness_arm.sh", "Dockerfile.sigminer.tree")
+               "self_witness_arm.sh", "Dockerfile.sigminer.tree",
+               "run_sigminer_arm_batch.R", "self_witness_batch_arm.sh")
 TREE_INPUTS = ("mini_cell", "mini_cell_p6")
 
 
@@ -162,9 +169,22 @@ def assemble(tool: str, scratch: Path) -> tuple[Path, Path]:
     shutil.copy2(pin, ctx / "arm_pin.json")
 
     _export_tree(SIGMINER_GT, spec["tree_sha"], ctx / "sigminer", log)
-    if spec["face"] == "rust":
+    if p6_arms.rides_kernel(spec):
         _export_tree(MSUITER_SRC, resolve_msuiter_source_sha(),
                      ctx / "msuiter", log)
+        # The batch transport is younger than the frozen P6 source pin: it
+        # needs the bridge R layer in the exported tree. Die HERE, naming the
+        # sanctioned overlay, rather than forty layers into a bake.
+        if spec["face"] == p6_arms.FACE_RUST_BATCH:
+            for layer in ("R/kernel-bridge.R", "R/kernel-pipeline.R"):
+                if not (ctx / "msuiter" / layer).is_file():
+                    sys.stderr.write(
+                        f"[FATAL] {tool}: the batch face needs {layer} in the "
+                        f"exported msuiter source tree, and "
+                        f"resolve_msuiter_source_sha() did not deliver it -- "
+                        f"build under the documented M7_MSUITER_SOURCE_SHA "
+                        f"overlay at or after the bridge commit\n")
+                    raise SystemExit(2)
     else:
         (ctx / "msuiter").mkdir()   # inert: the FACE-gated layers never read it
     return ctx, log
@@ -180,7 +200,7 @@ def attested_identity(tool: str, image_digest: str) -> dict:
             "image_digest": image_digest,
             "tree_sha": spec["tree_sha"], "face": spec["face"],
             "msuiter_source_sha": (resolve_msuiter_source_sha()
-                                   if spec["face"] == "rust" else None)}
+                                   if p6_arms.rides_kernel(spec) else None)}
 
 
 def build(tool: str, scratch: Path) -> dict:
@@ -194,6 +214,7 @@ def build(tool: str, scratch: Path) -> dict:
             "--build-arg", f"EXPECTED_VERSION={spec['version']}",
             "--build-arg", f"NS_SHA256={spec['ns_sha256']}",
             "--build-arg", f"FACE={spec['face']}",
+            "--build-arg", f"SELF_WITNESS={p6_arms.self_witness(spec)}",
             "-t", tag, "."]
     print(f"[build] {tool} face={spec['face']} tree={spec['tree_sha'][:10]} -> {tag}")
     _run(argv, cwd=ctx, log=log)

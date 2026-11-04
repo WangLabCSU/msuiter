@@ -49,10 +49,12 @@ ARG EXPECTED_VERSION
 ARG NS_SHA256
 ARG FACE
 
+ARG SELF_WITNESS=self_witness_arm.sh
 RUN test -n "$TOOL" && test -n "$TREE_SHA" && test -n "$EXPECTED_VERSION" \
     && test -n "$NS_SHA256" \
-    && case "$FACE" in R|rust) : ;; *) echo "[FATAL] FACE must be R or rust, got: $FACE" >&2; exit 1 ;; esac \
-    && echo "[image] arm build identity: tool=$TOOL face=$FACE tree=$TREE_SHA version=$EXPECTED_VERSION"
+    && case "$FACE" in R|rust|rust_batch) : ;; *) echo "[FATAL] FACE must be R, rust or rust_batch, got: $FACE" >&2; exit 1 ;; esac \
+    && case "$SELF_WITNESS" in self_witness_arm.sh|self_witness_batch_arm.sh) : ;; *) echo "[FATAL] SELF_WITNESS must be one of the two committed guards, got: $SELF_WITNESS" >&2; exit 1 ;; esac \
+    && echo "[image] arm build identity: tool=$TOOL face=$FACE tree=$TREE_SHA version=$EXPECTED_VERSION guard=$SELF_WITNESS"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates cmake \
@@ -101,7 +103,7 @@ RUN Rscript -e 'options(repos = c(CRAN = "https://cran.r-project.org")); install
 # version-gated, never floated silently: drift is a build death. The crates.io
 # index is pinned sparse+HTTPS (proxy-shaped); a blocked index is a build
 # death, never a silent fallback.
-RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no rust strata"; exit 0; fi \
+RUN case "$FACE" in rust|rust_batch) : ;; *) echo "[image] R face -- no rust strata"; exit 0 ;; esac \
     && apt-get update \
     && apt-get install -y --no-install-recommends rustc cargo \
     && rm -rf /var/lib/apt/lists/* \
@@ -109,12 +111,12 @@ RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no rust strata"; exit 0
     && cargo --version | grep -q '^cargo 1\.75\.0'
 
 COPY msuiter/ /tmp/msuiter/
-RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no msuiter layer"; exit 0; fi \
+RUN case "$FACE" in rust|rust_batch) : ;; *) echo "[image] R face -- no msuiter layer"; exit 0 ;; esac \
     && export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://index.crates.io/" \
     && R CMD INSTALL --preclean --no-multiarch /tmp/msuiter \
     && Rscript -e 'if (!requireNamespace("msuiter", quietly = TRUE)) quit(status = 1L)'
 
-RUN if [ "$FACE" != rust ]; then echo "[image] R face -- no kernel layer"; exit 0; fi \
+RUN case "$FACE" in rust|rust_batch) : ;; *) echo "[image] R face -- no kernel layer"; exit 0 ;; esac \
     && export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://index.crates.io/" \
     && cargo build --release --locked --quiet \
          --manifest-path=/tmp/msuiter/src/rust/engine/Cargo.toml \
@@ -171,6 +173,18 @@ COPY install_sigminer_arm.R /work/install_sigminer_arm.R
 RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
       "1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569" \
     || (echo "[FATAL] /work copy of install_sigminer_arm.R diverges from the committed fork" >&2; exit 1)
+# The batch-bridge arm rides a forked runner and a forked trust guard; the
+# frozen pair above stays byte-pinned and byte-present for the rest of the
+# roster (their digests are the sealed bytes the 147 committed parity rows were
+# measured through, so the fork ships BESIDE them, never in place of them).
+# Which pair a cell executes is decided by competitors/_p6_common.child_argv
+# from the roster's roster-named data keys, so this layer is inert for an arm
+# that names neither -- and the two asserts below are what make a stale fork a
+# build death rather than a silent re-derivation.
+COPY run_sigminer_arm_batch.R /work/run_sigminer_arm_batch.R
+RUN test "$(sha256sum /work/run_sigminer_arm_batch.R | cut -d' ' -f1)" = \
+      "3cb83336eb4acb2fa16283b509d62ad49f633d3bcd34fa8ef9b8f495193d00f4" \
+    || (echo "[FATAL] run_sigminer_arm_batch.R bytes diverge from the committed fork" >&2; exit 1)
 COPY self_witness_arm.sh /tmp/self_witness_arm.sh
 # blob-pin bench/m7/adapters/self_witness_arm.sh @ 34fdc2ce031be0f6d24f1f826dae67a88c5285b5
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
@@ -180,7 +194,18 @@ RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
 # network-none over the (AE)-sealed mini_cell_p6 fixture bytes (death #7
 # adjudication; frozen idiom). Any undeclared runtime dependency dies HERE,
 # never mid-measurement.
-RUN --network=none sh /tmp/self_witness_arm.sh
+# The arm rides the guard its roster row names, and the expected bytes are
+# bound to THAT name: a batch arm cannot build under the frozen guard's bytes
+# (its face guard refuses the third face), and a sealed arm cannot smuggle in
+# the fork. One name, one digest, no either/or.
+COPY $SELF_WITNESS /tmp/self_witness_candidate.sh
+RUN want="926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663" \
+    && if [ "$SELF_WITNESS" = self_witness_batch_arm.sh ]; then \
+         want="95bde92228e54bf668ce48a472c5057ee34a7abbb137b3a68b3fb34d68ce076d"; fi \
+    && test "$(sha256sum /tmp/self_witness_candidate.sh | cut -d' ' -f1)" = "$want" \
+    || (echo "[FATAL] $SELF_WITNESS bytes diverge from the committed guard it names" \
+         >&2; exit 1)
+RUN --network=none sh /tmp/self_witness_candidate.sh
 
 # The harness always invokes python3 /work/m7_entry.py ... -- Rscript
 # /work/run_sigminer_arm.R ... (competitors/_p6_common.child_argv); CMD is
