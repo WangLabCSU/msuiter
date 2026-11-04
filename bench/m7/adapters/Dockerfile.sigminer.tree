@@ -81,6 +81,7 @@ RUN test "$(sha256sum /tmp/tree/NAMESPACE | cut -d" " -f1)" = "$NS_SHA256"
 # committed bytes ARE the build input (tests/test_p6_roster.py mirrors the pin
 # files to the roster; these lines pin the scripts to their committed bytes).
 COPY install_sigminer_arm.R /tmp/install_sigminer_arm.R
+# blob-pin bench/m7/adapters/install_sigminer_arm.R @ 34fdc2ce031be0f6d24f1f826dae67a88c5285b5
 RUN test "$(sha256sum /tmp/install_sigminer_arm.R | cut -d' ' -f1)" = \
       "1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569" \
     || (echo "[FATAL] install_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
@@ -133,10 +134,12 @@ ENV MSUITER_KERNEL_BIN=/usr/local/bin/msuiter-kernel
 # ---- cell-surface bytes, all pinned to the committed fork -------------------
 WORKDIR /work
 COPY m7_entry.py /work/
+# blob-pin bench/m7/adapters/m7_entry.py @ 54c58d70dfb5057f5089d21c5afffb46d4716118
 RUN test "$(sha256sum /work/m7_entry.py | cut -d' ' -f1)" = \
-      "7ce0c147ccb7f3c3cb5fddf8062335544823eabfb6ab5423eb23a94b480c14be" \
+      "5abcb21e86bc91d896bcdecba35bc3549c1855a5001b8731b05ab8df165ba010" \
     || (echo "[FATAL] m7_entry.py bytes diverge from the frozen launcher" >&2; exit 1)
 COPY run_sigminer_arm.R /work/
+# blob-pin bench/m7/adapters/run_sigminer_arm.R @ 821319238c3dc0e5448b3f422635617c85f47298
 RUN test "$(sha256sum /work/run_sigminer_arm.R | cut -d' ' -f1)" = \
       "018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208" \
     || (echo "[FATAL] run_sigminer_arm.R bytes diverge from the committed fork" >&2; exit 1)
@@ -164,10 +167,12 @@ COPY mini_cell_p6/ /work/mini/in/
 # a path this file never materialized. Placed late so the resolver strata
 # keep their build-cache lineage.
 COPY install_sigminer_arm.R /work/install_sigminer_arm.R
+# blob-pin bench/m7/adapters/install_sigminer_arm.R @ 34fdc2ce031be0f6d24f1f826dae67a88c5285b5
 RUN test "$(sha256sum /work/install_sigminer_arm.R | cut -d' ' -f1)" = \
       "1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569" \
     || (echo "[FATAL] /work copy of install_sigminer_arm.R diverges from the committed fork" >&2; exit 1)
 COPY self_witness_arm.sh /tmp/self_witness_arm.sh
+# blob-pin bench/m7/adapters/self_witness_arm.sh @ 34fdc2ce031be0f6d24f1f826dae67a88c5285b5
 RUN test "$(sha256sum /tmp/self_witness_arm.sh | cut -d' ' -f1)" = \
       "926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663" \
     || (echo "[FATAL] self_witness_arm.sh bytes diverge from the committed witness" >&2; exit 1)
