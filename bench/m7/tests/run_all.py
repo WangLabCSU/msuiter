@@ -270,9 +270,23 @@ def _collect(mod_name):
             if name.startswith("test_") and callable(fn)]
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    modules = MODULES
+    if "--only" in argv:
+        i = argv.index("--only")
+        if i + 1 >= len(argv):
+            print("--only needs a comma-separated module list")
+            return 2
+        wanted = [m for m in argv[i + 1].split(",") if m]
+        unknown = [m for m in wanted if m not in MODULES]
+        if unknown:
+            print(f"--only names not in MODULES: {', '.join(unknown)}")
+            return 2
+        # Preserve the registered order (the full-run order law).
+        modules = [m for m in MODULES if m in wanted]
     units, failures = [], []
-    for mod_name in MODULES:
+    for mod_name in modules:
         units += _collect(mod_name)
     for label, fn in units:
         t0 = time.time()

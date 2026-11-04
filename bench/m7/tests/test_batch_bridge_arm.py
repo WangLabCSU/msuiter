@@ -41,8 +41,11 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]          # bench/m7
-if str(HERE) not in sys.path:
-    sys.path.insert(0, str(HERE))
+# the g0 read-only import seam is self-registered: these units must not
+# depend on another module having run first.
+for _p in (str(HERE), str(HERE.parent / "g0")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from competitors import docker_cmd, p6_arms, registry   # noqa: E402 (RED seams)
 from competitors import _p6_common                      # noqa: E402 (RED seam)

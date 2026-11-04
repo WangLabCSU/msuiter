@@ -117,6 +117,7 @@ jobs:
         run: sh tools/deep-checks/run_sanitizer_leg.sh leg "${{ matrix.sanitizer }}"
 
   site:
+    timeout-minutes: 15  # audit #74 P2 hardening
     # pkgdown site-build tripwire (U-M7-04 slice-C, C5). The per-PR 13-check
     # topology is frozen, so the site render rides the weekly deep check (and
     # manual dispatch). STRICT by design -- no continue-on-error: the

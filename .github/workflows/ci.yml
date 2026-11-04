@@ -107,6 +107,18 @@ jobs:
           python3 -m pip install --quiet numpy
           python3 -m tests.run_all
 
+      # audit #74 P1-7 (2026-11-05): the NECESSARY m7 governance subset --
+      # the law family whose silent rot the audit just measured (P0 class:
+      # witness-backed anchor laws passed green on a tree that could not
+      # load them). These seven modules read committed evidence only (no
+      # docker, no live run; 81 units ~1 s) -- the CI-lean ruling keeps the
+      # long campaign/driver tests off the runner and keeps exactly this
+      # law class ON it. The full 49-module suite stays hand/local.
+      - name: "M7 governance laws (anchors, witnesses, ledger, seals, pins)"
+        working-directory: bench/m7
+        run: |
+          python3 -m tests.run_all --only test_matrix_governance,test_floor_calibration,test_p6_anchor_registration,test_attestation_law,test_p6_evidence,test_hash_provenance,test_batch_bridge_arm
+
       - name: CI selfcheck (workflow YAML + referenced paths + pins)
         run: python3 tools/ci-selfcheck.py
 
@@ -567,6 +579,7 @@ jobs:
           if-no-files-found: error
 
   rust:
+    timeout-minutes: 15  # audit #74 P2 hardening
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -647,6 +660,7 @@ jobs:
           cargo audit $ignores
 
   msrv:
+    timeout-minutes: 15  # audit #74 P2 hardening
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
     # Linux and Windows (macOS arm64 already proven locally, ADR §4).
     strategy:
