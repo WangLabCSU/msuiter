@@ -229,7 +229,8 @@ pub fn fit_volume_with_init(
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
     let mut objective = Vec::with_capacity(max_iter + 1);
-    objective.push(volume_objective(v, &w, &h, m, n, k, lambda, delta));
+    objective.push(finite_objective(
+        volume_objective(v, &w, &h, m, n, k, lambda, delta), 0, "volume")?);
 
     // Adaptive line-search state, initialized once per fit (mvnmf.py:137,218).
     let mut gamma = 1.0f64;
@@ -271,7 +272,7 @@ pub fn fit_volume_with_init(
         }
         w = wn;
         h = hn;
-        objective.push(of);
+        objective.push(finite_objective(of, iter, "volume")?);
         iterations = iter;
         if tol > 0.0
             && (of - prev).abs() / (prev.abs().max(KL_EPS)) < tol
@@ -324,7 +325,8 @@ pub fn fit_sparse_l1_with_init(
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
     let mut objective = Vec::with_capacity(max_iter + 1);
-    objective.push(l1_objective(v, &w, &h, m, n, k, lambda, mu));
+    objective.push(finite_objective(
+        l1_objective(v, &w, &h, m, n, k, lambda, mu), 0, "l1")?);
     let mut converged = false;
     let mut iterations = 0usize;
     for iter in 1..=max_iter {
@@ -332,7 +334,7 @@ pub fn fit_sparse_l1_with_init(
         l1_w_step(v, &mut w, &h, m, n, k, mu);
         let of = l1_objective(v, &w, &h, m, n, k, lambda, mu);
         let prev = objective[objective.len() - 1];
-        objective.push(of);
+        objective.push(finite_objective(of, iter, "l1")?);
         iterations = iter;
         if tol > 0.0 && (of - prev).abs() / (prev.abs().max(KL_EPS)) < tol {
             converged = true;
@@ -725,6 +727,25 @@ fn validate_shape(v: &[f64], m: usize, n: usize, k: usize) -> Result<(), MsError
 }
 
 #[allow(clippy::too_many_arguments)]
+/// audit #74 P2 (measured: lambda 1e308 records an inf initial objective
+/// and then claims convergence at the stagnation -- the fit verdict must
+/// never be rendered over an objective that cannot speak). A recorded
+/// objective row leaving the finite domain is a structured failure, the
+/// same class as the NB null face's all-zero "na" refusal.
+fn finite_objective(o: f64, t: usize, mode: &str) -> Result<f64, MsError> {
+    if o.is_finite() {
+        Ok(o)
+    } else {
+        Err(MsError::new(
+            "na",
+            format!(
+                "{mode} objective left the finite domain at t={t}; the regime overflows the certifiable range"
+            ),
+        )
+        .with_i(t as i64))
+    }
+}
+
 fn validate(
     v: &[f64],
     m: usize,
@@ -1239,5 +1260,60 @@ mod tests {
         assert_eq!(err.topic(), "na");
         assert_eq!(err.i, Some(1));
         assert_eq!(err.j, Some(2));
+    }
+
+    #[test]
+    fn the_all_zero_catalog_face_never_reports_converged_on_a_nan_objective() {
+        // audit #74 P2 (2026-11-04): the claim was that a degenerate input
+        // yields an all-NaN objective WITH converged = true. Every legal
+        // degenerate face is probed: where the recorded objective cannot
+        // speak (non-finite rows), the convergence verdict must stay false.
+        // The claimed trigger (audit roster line: sparse VOLUME mode,
+        // extreme finite lambda -- validate caps lambda only by
+        // finite/non-negative, so the extreme must be measured here).
+        let v: Vec<f64> = (0..24).map(|i| 1.0 + (i % 7) as f64).collect();
+        // Positive control: the ordinary regime still fits and speaks.
+        let sane = fit_volume(&v, 4, 6, 2, 1.0, 1.0, 50, 1e-9, 7).unwrap();
+        assert!(sane.objective.iter().all(|&o| o.is_finite()));
+        // The overflow regime must be REFUSED, never certified: the
+        // pre-fix face recorded objective[0] = inf at lambda 1e308 and
+        // reported converged = true at the clip-floor stagnation.
+        let over = fit_sparse_l1(&v, 4, 6, 2, 1e308, 1.0, 50, 1e-9, 7);
+        assert!(over.is_err(), "the overflow regime was certified, not refused");
+        assert_eq!(over.unwrap_err().topic, "na");
+        // General invariant over the whole admissible scalar sweep: any
+        // Ok fit's verdict is rendered only on finite rows.
+        for lam in [0.0f64, 1e150, f64::MAX / 4.0] {
+            for fit in [
+                fit_volume(&v, 4, 6, 2, lam, 1.0, 50, 1e-9, 7),
+                fit_sparse_l1(&v, 4, 6, 2, lam, lam.min(1.0), 50, 1e-9, 7),
+            ]
+            .into_iter()
+            .flatten() {
+                let broken = fit.objective.iter().any(|&o| !o.is_finite());
+                assert!(
+                    !broken || !fit.converged,
+                    "lambda {lam}: non-finite objective rows with converged = true"
+                );
+            }
+        }
+        for (mm, nn, kk) in [(4usize, 6usize, 2usize), (3usize, 5usize, 3usize)] {
+            let v = vec![0.0; mm * nn];
+            let vol = fit_volume(&v, mm, nn, kk, 1.0, 1.0, 50, 1e-9, 7).unwrap();
+            let l1 = fit_sparse_l1(&v, mm, nn, kk, 1.0, 1.0, 50, 1e-9, 7).unwrap();
+            for fit in [vol, l1] {
+                let nan_rows: Vec<usize> = fit
+                    .objective
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, &o)| if o.is_finite() { None } else { Some(i) })
+                    .collect();
+                assert!(
+                    nan_rows.is_empty() || !fit.converged,
+                    "objective rows {:?} non-finite with converged = true",
+                    nan_rows
+                );
+            }
+        }
     }
 }
