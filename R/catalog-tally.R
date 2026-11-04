@@ -224,7 +224,10 @@ S7::method(ms_tally, MsVariants) <- function(variants, genome, mode = "SBS96",
     sample = sample_col, strand = strand,
     want_sbs96 = mode == "SBS96", want_sbs192 = mode == "SBS192",
     want_sbs384 = mode == "SBS384", want_sbs1536 = mode == "SBS1536",
-    want_dbs78 = mode == "DBS78"
+    want_dbs78 = mode == "DBS78",
+    # audit #74 P2: this face reads only the mode table below; the
+    # wrapper's default-on id83 cube was computed and dropped every call.
+    want_id83 = FALSE
   )
   counts <- res[[.ms_tally_keys[[tolower(mode)]]]]
 

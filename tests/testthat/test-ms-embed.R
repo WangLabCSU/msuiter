@@ -64,6 +64,14 @@ test_that("error paths are structured", {
   expect_ms_error(ms_embed(expo, seed = -1), "input")
   expect_ms_error(ms_embed(expo, method = "kmeans", clusters = 99),
     "input")
+  # audit #74 P2: the sample axis has its own gate (the fixture above
+  # cannot reach it -- signatures are the binding axis there). Five
+  # signatures, two samples, three clusters: legal per dimension, illegal
+  # per data point -- stats::kmeans would raise a bare simpleError.
+  thin <- matrix(seq_len(10), nrow = 5, ncol = 2,
+    dimnames = list(paste0("S", 1:5), paste0("T", 1:2)))
+  expect_ms_error(ms_embed(thin, method = "kmeans", clusters = 3L),
+    "input", regexp = "sample")
 })
 
 test_that("plot_embedding renders and colours by cluster", {

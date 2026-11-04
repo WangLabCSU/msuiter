@@ -129,6 +129,19 @@ plot_cosmic_scatter <- function(estimated, reference, label = NULL,
   null_family <- match.arg(null_family)
   pe <- .ms_viz_prep_profile(estimated, NULL, "share")
   pr <- .ms_viz_prep_profile(reference, NULL, "share")
+  # audit #74 P2: a multi-column (or MsSignature) input preps to NULL
+  # values; the cosine then rode 0/0 = NaN into the annotation and the
+  # panel rendered empty. The face contract is one column per side --
+  # refuse, never render an unmeasurable comparison.
+  if (is.null(pe$values) || is.null(pr$values)) {
+    msuiter_abort(
+      "input",
+      "the scatter plots exactly one column per side",
+      i = "multi-column inputs carry no single vector to compare",
+      j = sprintf("columns: %d vs %d", ncol(pe$matrix), ncol(pr$matrix)),
+      c = "subset the wanted column (or pass the signature by name) before plotting"
+    )
+  }
   if (!identical(pe$labels, pr$labels)) {
     msuiter_abort(
       "input",
