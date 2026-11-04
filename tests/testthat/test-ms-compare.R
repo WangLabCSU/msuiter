@@ -293,6 +293,36 @@ test_that("error paths are structured msuiter_error_* conditions", {
   )
 })
 
+test_that("audit #74 P2/P1-4: the seed gate speaks and the FFI wrap re-signals", {
+  fx <- .ms_cmp_islam_fixture()
+  expect_ms_error(ms_compare(fx$est, fx$ref, seed = NA_real_), "input",
+    regexp = "seed")
+  expect_ms_error(ms_compare(fx$est, fx$ref, seed = -1), "input",
+    regexp = "seed")
+  # audit #74 P1-1/P1-4: the bounded-draw cap answers from the kernel,
+  # and the msffi law demands the condition ARRIVE SIGNALLED -- never as
+  # a returned value that would flow on as if it were a result.
+  signalled <- FALSE
+  cnd <- tryCatch(
+    msuiter:::.ms_compare_null("catalog", m = 96L, burden = 1e300,
+      n_draws = 2000L, quantiles = 0.95, seed = 1),
+    msuiter_error_rust = function(e) { signalled <<- TRUE; e }
+  )
+  expect_true(isTRUE(signalled),
+    info = "the wrapped face must re-signal the kernel condition")
+  expect_s3_class(cnd, "msuiter_error_rust")
+  # Firing control: the same refusal through the UN-wrapped wire is a
+  # RETURNED condition -- the control proves the wrap, not the kernel,
+  # carries the signalling law (an un-earned green would see signal
+  # here too and pass vacuously).
+  returned <- tryCatch(
+    msuiter:::ms_compare_null_rust(family = "catalog", m = 96L,
+      burden = 1e300, n_draws = 2000L, quantiles = 0.95, seed = 1),
+    error = function(e) e
+  )
+  expect_s3_class(returned, "msuiter_error_rust")
+})
+
 test_that("per-pair null p + BH q ride the metrics list (L-F q-annotation)", {
   labels <- msuiter:::.ms_io_channel_tables()$SBS96
   set.seed(31)
