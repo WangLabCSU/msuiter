@@ -45,10 +45,13 @@ from competitors import p6_arms                      # noqa: E402
 
 ADAPTERS = HERE / "adapters"
 GIT_EXE = "git"
-# The ground-truth sigminer checkout (read-only law: this tool only ever runs
+# The ground-truth sigminer checkout (env overlay MSUITER_SIGMINER_GT for other
+# rigs; the default is the attested local ground, sigminer-local-ground-truth).
+# The tool only ever runs
 # cat-file/archive against it) and the msuiter kernel source pin -- the
 # certified-kernel lineage head whose protocol=1 family the rust face rides.
-SIGMINER_GT = Path("/Users/wsx/Documents/GitHub/sigminer")
+SIGMINER_GT = Path(os.environ.get(
+    "MSUITER_SIGMINER_GT", "/Users/wsx/Documents/GitHub/sigminer"))
 MSUITER_SRC = HERE.parent.parent                      # the msuiter repo root
 MSUITER_SOURCE_SHA = "dbef3a77dce3f7b2bb9405895c426dd6342167c6"
 FULL_SHA40 = re.compile(r"^[0-9a-f]{40}$")
