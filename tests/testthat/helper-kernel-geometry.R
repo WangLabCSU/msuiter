@@ -3,35 +3,135 @@
 # test-kernel-batch-bridge.R).
 #
 # Test-side only: nothing here ships in R/. This helper carries the
-# attested true-geometry bytes (fa2 in/counts.csv) and the VERBATIM
-# sigminer bootstrapped-input replication (best_practice.R:305-315 via the
-# banked 13-census-armC.R census: shared set.seed(152L) freeze, per-boot
-# set.seed(123 + b - 1), channels-side catalogue resample). Every numeric
-# is generated from a seed on the record; no COSMIC bytes anywhere.
+# committed attested-geometry bytes (fixtures/kernel-geometry/fa2/
+# counts.csv, the generator being tools/attest-kernel-geometry.R) and the
+# VERBATIM sigminer bootstrapped-input replication (best_practice.R:
+# 305-315 via the banked 13-census-armC.R census: shared set.seed(152L)
+# freeze, per-boot set.seed(123 + b - 1), channels-side catalogue
+# resample). Every numeric is generated from a seed on the record; no
+# COSMIC bytes anywhere.
 #
-# The local attestation evidence lives in the lane sandbox (/tmp). Its
-# ABSENCE (a CI context) makes the attestation units skip with a spoken
-# reason; its PRESENCE makes any digest drift a gate failure (a stop),
-# never a silent re-read.
+# The bytes live IN THE REPOSITORY (audit #74 P1-6): the original set
+# lived only in a /tmp lane sandbox, was lost, and the law units skipped
+# vacuously. There is no skip path any more -- a missing or drifted
+# evidence file is a gate FAILURE (a stop), never a silent green. The
+# protocol-1 (F1) face is banked from the git-sealed era build named in
+# PROVENANCE.tsv; the law is that the working tree reproduces those
+# bytes, so the bank itself is what the numerics are measured against.
 
-.kbg_paths <- function() {
-  list(
-    before = "/tmp/perf10lane/bin/before/msuiter-kernel",
-    digest = "/tmp/perf10lane/logs/00-before-binary-digest.txt",
-    counts = "/tmp/perf9lane/p9fa2/in/counts.csv",
-    banked = "/tmp/parity-research/forensics-logs/05-fa2-counts-digest.txt"
-  )
+.kbg_iters <- 2000L        # the attested face's iteration scale
+
+# The fixtures root: the testthat path inside a test run, else a walk up
+# from the cwd (the tools/ capture face). NA when neither has it.
+.kbg_root <- local({
+  found <- NA_character_
+  p <- try(testthat::test_path("fixtures", "kernel-geometry"), silent = TRUE)
+  if (!inherits(p, "try-error") && nzchar(p) &&
+      file.exists(file.path(p, "fa2", "counts.csv"))) {
+    found <- normalizePath(p, mustWork = FALSE)
+  }
+  if (is.na(found)) {
+    d <- try(normalizePath(getwd()), silent = TRUE)
+    while (is.na(found) && !inherits(d, "try-error") && nzchar(d)) {
+      cand <- file.path(d, "tests", "testthat", "fixtures", "kernel-geometry")
+      if (file.exists(file.path(cand, "fa2", "counts.csv"))) found <- cand
+      parent <- dirname(d)
+      if (identical(parent, d)) break
+      d <- parent
+    }
+  }
+  found
+})
+
+# The task grid the bank must cover, exactly (the law files share it --
+# one source of truth for which faces are attested).
+.kbg_task_defs <- function() {
+  tasks <- list()
+  for (k in 2:5L) {
+    tasks[[length(tasks) + 1L]] <- list(tag = paste0("fa2-k", k),
+                                         kind = "fa2", boot = NA_integer_,
+                                         k = as.integer(k), seed = 123L)
+  }
+  for (b in 1:4L) {
+    for (k in 2:5L) {
+      tasks[[length(tasks) + 1L]] <- list(tag = paste0("boot", b, "-k", k),
+                                          kind = "boot", boot = as.integer(b),
+                                          k = as.integer(k),
+                                          seed = 123L + b - 1L)
+    }
+  }
+  tasks
 }
 
-# The evidence set, or NULL when the set is incomplete.
+.kbg_required <- function() {
+  req <- c(file.path("fa2", "counts.csv"), file.path("fa2",
+                                                    "COUNTS.sha256"),
+            "PROVENANCE.tsv", file.path("f1", "F1.sha256"))
+  for (t in .kbg_task_defs()) {
+    req <- c(req, file.path("f1", t$tag,
+                            c("W.csv", "H.csv", "trace.csv", "meta.csv")))
+  }
+  req
+}
+
+# The evidence set, verified against its ledgers. Any absence or digest
+# drift STOPS the unit with the spoken offender (no skip lane -- an
+# unattested law is a broken law, not a passing one).
 .kbg_ev <- function() {
-  p <- .kbg_paths()
-  if (!all(file.exists(unlist(p, use.names = FALSE)))) return(NULL)
-  p
-}
-
-.kbg_skip <- function() {
-  skip("local attestation evidence incomplete (lane-sandbox /tmp face)")
+  if (is.na(.kbg_root)) {
+    stop(paste0("attestation fixtures unreachable: the kernel-geometry ",
+                "root was found neither through testthat nor by walking up"),
+         call. = FALSE)
+  }
+  root <- .kbg_root
+  miss <- character()
+  for (f in .kbg_required()) {
+    if (!file.exists(file.path(root, f))) miss <- c(miss, f)
+  }
+  if (length(miss)) {
+    stop("attestation evidence incomplete under ", root, ": missing ",
+         paste(miss, collapse = ", "), call. = FALSE)
+  }
+  # The F1 ledger speaks for every banked byte (the dead-metric control
+  # for the ledger itself lives in test-kernel-bit-identity.R).
+  ledger <- readLines(file.path(root, "f1", "F1.sha256"), warn = FALSE)
+  seen <- character()
+  for (ln in trimws(ledger[nzchar(ledger)])) {
+    want <- sub("[[:space:]].*$", "", ln)
+    rel <- sub("^[^[:space:]]+[[:space:]]+", "", ln)
+    live <- .kbg_sha(file.path(root, rel))
+    if (!identical(live, want)) {
+      stop("banked byte drift: ", rel, " ledger ", want, ", live ", live,
+           call. = FALSE)
+    }
+    seen <- c(seen, rel)
+  }
+  banked <- character()
+  for (t in .kbg_task_defs()) {
+    banked <- c(banked, file.path("f1", t$tag,
+                                  c("W.csv", "H.csv", "trace.csv", "meta.csv")))
+  }
+  if (!all(banked %in% seen)) {
+    stop("F1 ledger does not speak for: ",
+         paste(setdiff(banked, seen), collapse = ", "), call. = FALSE)
+  }
+  prov <- local({
+    lines <- readLines(file.path(root, "PROVENANCE.tsv"), warn = FALSE)
+    fields <- list()
+    for (ln in lines[nzchar(lines) & !startsWith(ln, "#")]) {
+      kv <- strsplit(ln, "\t", fixed = TRUE)[[1L]]
+      if (length(kv) >= 2L) fields[[kv[[1L]]]] <- kv[[2L]]
+    }
+    fields
+  })
+  for (key in c("era_commit", "era_version")) {
+    if (is.null(prov[[key]]) || !nzchar(prov[[key]])) {
+      stop("PROVENANCE.tsv does not speak field ", key, call. = FALSE)
+    }
+  }
+  list(root = root, counts = file.path(root, "fa2", "counts.csv"),
+       banked = file.path(root, "fa2", "COUNTS.sha256"),
+       f1root = file.path(root, "f1"), prov = prov)
 }
 
 # SHA-256 over exact file bytes through the canonical governed digest
@@ -87,8 +187,10 @@
   df <- utils::read.table(ev$counts, sep = ",", header = TRUE,
                           check.names = FALSE, quote = "", comment.char = "")
   ids <- df[[1L]]
+  # unlist(df[-1L]) is column-major blocks of length(ids): the fill must
+  # ride the same order or the grid is shuffled between rows.
   m <- matrix(as.numeric(unlist(df[-1L], use.names = FALSE)),
-              nrow = length(ids), ncol = ncol(df) - 1L, byrow = TRUE)
+              nrow = length(ids), ncol = ncol(df) - 1L)
   rownames(m) <- ids
   x <- t(m)                                     # channels x samples
   if (!identical(dim(x), c(96L, 100L)) || any(x < 0) ||
@@ -100,11 +202,15 @@
   x
 }
 
-# verbatim sigminer R/simulation.R:90-115 (as banked in the PF census):
-# one multinomial redraw of each sample's catalogue at its own total.
+# verbatim sigminer R/simulation.R:86-115 (as banked in the PF census):
+# one multinomial redraw of each sample's catalogue at its own total --
+# the sample()-then-histogram face is the original: the factor levels are
+# the CHANNEL indices, so the histogram keeps the full length and the
+# total exactly. (A count-vector fed through this histogram would
+# histogram the counts instead -- the total law control catches it.)
 .kbg_simulate_catalogue <- function(catalog, total) {
   prob <- catalog / sum(catalog)
-  out <- rmultinom(1L, total, prob)
+  out <- sample(seq_along(prob), size = total, replace = TRUE, prob = prob)
   out <- as.integer(table(factor(out, levels = seq_along(prob))))
   names(out) <- names(prob)
   out
@@ -145,6 +251,11 @@
   }
   .kbg_boot_env$built <- b
   .kbg_boot_env[[as.character(b)]]
+}
+
+# The live V face for one task definition (fa2 raw or bootstrapped).
+.kbg_task_v <- function(ev, t) {
+  if (identical(t$kind, "fa2")) .kbg_X(ev) else .kbg_boot(ev, t$boot)
 }
 
 # Zero-fraction of the bootstrapped face (the PF census measured ~0.987

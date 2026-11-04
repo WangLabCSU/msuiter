@@ -1,0 +1,8 @@
+# kernel-geometry attestation provenance (audit #74 P1-6 re-bank)
+era_commit	43a5db9
+era_version	msuiter-kernel protocol=1 engine="engine: pure numeric kernels, FFI-free" kl_eps=1e-12
+kernel_sha256	d13c674193c22ce3b71f9b92931417952bff3a6f693beadaf3adc6ab03ce3364
+capture_utc	2026-11-04T18:26:43Z
+iters	2000
+geometry	96x100 fa2 (tools/attest-kernel-geometry.R recipe)
+faces	fa2-k2..5 seed 123; boot1..4-k2..5 seed 123+b-1 (shared law helper)

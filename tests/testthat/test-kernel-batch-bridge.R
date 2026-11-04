@@ -7,8 +7,9 @@
 #
 # Units BB1-BB3 are committed procedure (synthetic fixture, seed on the
 # record -- they run wherever the kernel builds). BB4 is the attested
-# cross-route census and rides the local evidence gate (see
-# helper-kernel-geometry.R): absent, it skips with a spoken reason.
+# cross-route census over the committed evidence bank
+# (helper-kernel-geometry.R; audit #74 P1-6: the bank lives in the
+# repository and a missing or drifted byte is a stop, never a skip).
 # Every census reports its inspected-row count; zero is red.
 
 test_that("BB1 the 50-run unit issues exactly one handshake and one batch
@@ -142,8 +143,7 @@ test_that("BB3 every case receipt echoes the frozen per-case seed law
 test_that("BB4 the batch route is bit-identical to the per-run route
            across the 16-task bootstrapped grid, with the census controls
            firing", {
-  ev <- .kbg_ev()
-  if (is.null(ev)) .kbg_skip()
+  ev <- .kbg_ev()                          # stops on absence/drift
   bin <- .kpp_bin()
   inspected <- 0L
   for (b in 1:4L) {
