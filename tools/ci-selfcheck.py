@@ -766,8 +766,13 @@ def main():
           any("upload-pages-artifact@" in u
               for j in pkjobs.values()
               for u in [str(s.get("uses", "")) for s in j.get("steps", [])]))
-    check("pkgdown.yaml: pins the MSRV Rust toolchain (the guides compile the engine)",
-          "rust-toolchain@1.71.0" in pktxt or "rust-toolchain@stable" in pktxt)
+    check("pkgdown.yaml: provisions the MSRV Rust toolchain (the guides compile the engine)",
+          "rustup toolchain install 1.71.0" in pktxt)
+    check("pkgdown.yaml: actions are SHA-pinned (house discipline)",
+          all(len(u.split("@", 1)[1]) >= 40 for u in
+              [str(s.get("uses", "")) for j in pkjobs.values()
+               for s in j.get("steps", [])] if "@" in u and u.count("@") == 1
+              and not str(u).startswith("Rscript")))
 
     # ---- the CRAN-shape monolith the PR gate retired (round 2) --------------
     # Sealed by test-ci-shard-map.R: the full-test-phase monolith must keep
