@@ -225,7 +225,8 @@ pub fn fit_volume_with_init(
     max_iter: usize,
     tol: f64,
 ) -> Result<SparseFit, MsError> {
-    validate(v, m, n, k, w0, h0, tol, lambda, Some(delta))?;
+    validate(v, m, n, k, w0, h0)?;
+    validate_tuning(tol, lambda, Some(delta))?;
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
     let mut objective = Vec::with_capacity(max_iter + 1);
@@ -318,7 +319,8 @@ pub fn fit_sparse_l1_with_init(
     max_iter: usize,
     tol: f64,
 ) -> Result<SparseFit, MsError> {
-    validate(v, m, n, k, w0, h0, tol, lambda, None)?;
+    validate(v, m, n, k, w0, h0)?;
+    validate_tuning(tol, lambda, None)?;
     if !mu.is_finite() || mu < 0.0 {
         return Err(MsError::new("argument", "mu must be finite and non-negative").with_i(1));
     }
@@ -753,9 +755,6 @@ fn validate(
     k: usize,
     w0: &[f64],
     h0: &[f64],
-    tol: f64,
-    lambda: f64,
-    delta: Option<f64>,
 ) -> Result<(), MsError> {
     validate_shape(v, m, n, k)?;
     if w0.len() != m * k {
@@ -782,6 +781,13 @@ fn validate(
             }
         }
     }
+    Ok(())
+}
+
+/// Tuning-coordinate law: the regularization path and stopping tolerance,
+/// validated apart from the structural grid so each face speaks its own
+/// contract (the signature split keeps clippy's argument bound honest).
+fn validate_tuning(tol: f64, lambda: f64, delta: Option<f64>) -> Result<(), MsError> {
     if !tol.is_finite() || tol < 0.0 {
         // tol = 0 is the documented fixed-iteration mode.
         return Err(MsError::new("argument", "tol must be finite and non-negative").with_i(1));
