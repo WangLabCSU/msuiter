@@ -24,7 +24,7 @@ An [MsStratification] object.
 }
 \description{
 Applies the frozen SigProfilerExtractor hypermutant rule
-(`docs/devlog/2026-09-30-GMM-stratify-memo.md`): a k = 2 Gaussian
+(`vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd`): a k = 2 Gaussian
 mixture on the raw per-sample mutation totals (no log transform), an
 iterative majority-cluster prune until the cluster means differ by less
 than 4 standard deviations, then `cutoff = trunc(mean + 2 sd)` of the

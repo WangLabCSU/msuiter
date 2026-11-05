@@ -2,7 +2,7 @@
 #
 # v1 bundles the human COSMIC v3.6 reference matrices from the Alexandrov-lab
 # BSD-2 mirror (SigProfilerSuite/SigProfilerAssignment at a pinned commit;
-# NOT a cancer.sanger.ac.uk download -- docs/research/05 section 1, ADR D3):
+# NOT a cancer.sanger.ac.uk download -- vignettes/articles/research-05-standards-data.qmd section 1, ADR D3):
 # SBS96 and DBS78 for GRCh37 + GRCh38, ID83 for GRCh37. Everything beyond
 # that scope (CN/SV/RNA-SBS, mouse/rat) belongs to the future
 # ms_update_refdb() cache path (tools::R_user_dir), never to the bundle

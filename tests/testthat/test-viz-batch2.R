@@ -1,5 +1,5 @@
 # U-M4-03b: the viz batch 2 -- four promised faces (design memo
-# docs/devlog/2026-10-24-M4-03b-viz-batch2-memo.md):
+# vignettes/articles/devlog-2026-10-24-M4-03b-viz-batch2-memo.qmd):
 #   plot_qc_dashboard, plot_pseudosig_contribution,
 #   plot_hypermutator_burden, plot_opportunity_distribution
 # plus the DBS78/ID83 legend palette freeze against the bundled upstream

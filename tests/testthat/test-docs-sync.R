@@ -10,7 +10,7 @@
 # and asserts both halves report green.
 #
 # These units are REPOSITORY-ONLY by nature: tools/docs-sync.R validates
-# docs/ROADMAP.md, NAMESPACE and _pkgdown.yml against each other -- none of
+# vignettes/articles/roadmap.qmd, NAMESPACE and _pkgdown.yml against each other -- none of
 # which travel in the installed tree. Under R CMD check they therefore skip
 # on an explicit repository-ness gate (.ms_root locatable + the artifact
 # present under it), never on an accidental miss of test_path('../../...')

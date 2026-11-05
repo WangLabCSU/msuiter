@@ -19,7 +19,7 @@ assignees: ""
 
 **Relation to the current state**
 
-<!-- Have you checked docs/CAPABILITY-MATRIX.md and docs/ROADMAP.md? Is this
+<!-- Have you checked vignettes/articles/capability-matrix.qmd and vignettes/articles/roadmap.qmd? Is this
      already scheduled under some milestone (an M-line)? -->
 
 **Additional context**

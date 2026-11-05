@@ -1,5 +1,5 @@
 # test-pkgdown-msu-map.R: DS-2 MSU concept-map governance law (docs/site v1).
-# docs/MSU-MAP.md is the function-to-concept-to-pillar-to-peer bridge the
+# vignettes/articles/msu-map.qmd is the function-to-concept-to-pillar-to-peer bridge the
 # site's reference index links against. Its row set is NOT hand-maintained:
 # this law re-derives it from the NAMESPACE bytes and pins row-set equality
 # (missing, extra and duplicated rows are each named), the three-pillar
@@ -211,7 +211,7 @@
 }
 
 .ds2_shipped <- function() {
-  list(map = readLines(.ds2_repo_file("docs/MSU-MAP.md"), warn = FALSE),
+  list(map = readLines(.ds2_repo_file("vignettes/articles/msu-map.qmd"), warn = FALSE),
        ns = readLines(.ds2_repo_file("NAMESPACE"), warn = FALSE),
        root = .ms_root)
 }
@@ -269,7 +269,7 @@ test_that("DS-2 a foreign pillar word names the row", {
   tampered <- d$map
   cells <- .ds2_cell_split(tampered[hit])
   tampered[hit] <- paste0("| ", cells[1], " | ", cells[2],
-                          " | governance (", "docs/ARCHITECTURE.md", ") | ",
+                          " | governance (", "vignettes/articles/architecture.qmd", ") | ",
                           cells[4], " |")
   r <- .ds2_law(tampered, d$ns, d$root)
   expect_true(any(vapply(r$violations, function(x) {
@@ -285,7 +285,7 @@ test_that("DS-2 a dead anchor file names the row", {
   cells <- .ds2_cell_split(d$map[hit])
   tampered <- d$map
   tampered[hit] <- paste0("| ms_tally | ", cells[2],
-                          " | architecture (docs/NOPE-DOES-NOT-EXIST.md) | ",
+                          " | architecture (vignettes/articles/NOPE-DOES-NOT-EXIST.qmd) | ",
                           cells[4], " |")
   r <- .ds2_law(tampered, d$ns, d$root)
   expect_true(any(grepl("anchor file does not exist: ms_tally",
@@ -299,7 +299,7 @@ test_that("DS-2 a dead anchor slug names the row", {
   cells <- .ds2_cell_split(d$map[hit])
   tampered <- d$map
   tampered[hit] <- paste0("| ms_tally | ", cells[2],
-                          " | architecture (docs/ARCHITECTURE.md#heading-that-cannot-exist) | ",
+                          " | architecture (vignettes/articles/architecture.qmd#heading-that-cannot-exist) | ",
                           cells[4], " |")
   r <- .ds2_law(tampered, d$ns, d$root)
   expect_true(any(grepl("does not resolve to a heading: ms_tally",
@@ -347,7 +347,7 @@ test_that("DS-2 the constructed-perfect rebuild greens the law (live control)", 
             "| function | MSU concept served | paper pillar (anchor) | peer counterpart |",
             "|---|---|---|---|",
             paste0("| ", exports, " | control row face serving governance |",
-                   " architecture (docs/ARCHITECTURE.md#",
+                   " architecture (vignettes/articles/architecture.qmd#",
                    .ds2_slug("## 1. The system-layering overview"),
                    ") | NONE -- governance control row |"),
             "<!-- msu-map:table-end -->")

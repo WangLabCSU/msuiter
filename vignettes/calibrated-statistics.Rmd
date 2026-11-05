@@ -1,0 +1,138 @@
+---
+title: "Calibrated statistics with MSU-Fit"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Calibrated statistics with MSU-Fit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette: the
+# source tree (check and site-build contexts) loads through pkgload; a bare
+# installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+A nominal interval is a promise; a **calibrated** interval is a promise
+with a measured track record. The MSU-Fit family asks, for every
+statistical claim the package makes, "when this procedure says 95%, does
+it cover the truth 95% of the time?" — and measures the answer by Monte
+Carlo. This guide walks the calibration grid, the verdicts, and the
+real-data sanity protocol. The estimands being calibrated come from
+[Fitting known signatures](signature-fitting.html).
+
+## The three estimands
+
+The calibration suite covers the three statistical claims a signature
+analysis makes:
+
+- **presence** — is this reference signature present in this cohort at
+  all? (the LRT behind `ms_test_presence()`)
+- **absolute exposure** — given presence, what is the support-conditional
+  interval on the count-scale exposure?
+- **zeroing** — is a signature truly absent, or just unresolved at this
+  burden? (the compound zeroing claim behind the zero threshold)
+
+For each estimand × generative arm × burden level, the grid simulates
+catalogs under the known truth, applies the procedure, and records
+whether the claim held. Coverage that survives the grid is what the
+verdicts certify.
+
+## The calibration grid
+
+`ms_calibration_grid()` takes the signature dictionary and sweeps a grid
+of per-sample mutation burdens (`n_grid`) and true signature shares
+(`shares`). `m` is the number of Monte-Carlo replicates per cell and
+`n_boot` the bootstrap size behind the intervals. Both are set small
+here to keep the guide fast — production calibrations run far more
+replicates per cell:
+
+```{r grid}
+ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S   <- ref[, c(1, 5, 9)]
+colnames(S) <- paste0("CS", 1:3)
+cal <- ms_calibration_grid(S, n_grid = c(200, 1000),
+                           shares = c(0.05, 0.2),
+                           m = 300, n_boot = 200, seed = 1)
+cal
+```
+
+The `arm` argument switches the generative model between the multinomial
+and the negative-binomial (overdispersed) arm; a calibration claim only
+extends to data the arm actually describes.
+
+## Verdicts
+
+`ms_calibration_verdict()` reads the grid and renders the per-estimand
+verdict against the pre-registered coverage window — whether the
+procedure may be advertised at its nominal level:
+
+```{r verdict}
+ver <- ms_calibration_verdict(cal)
+ver
+```
+
+A verdict outside the window is a finding, not a failure of the call: it
+says the interval family needs recalibration at that operating point, and
+the package will not paper over it.
+
+## The real-data sanity protocol
+
+Calibration on synthetic data raises the obvious question: does the
+procedure behave on *your* catalog? `ms_calibration_sanity()` runs the
+downsampling sanity on a real catalog: it fits the dictionary at full
+depth, then at a ladder of dilution levels, and checks that the
+estimates track the full-depth truth as mutations are removed:
+
+```{r sanity}
+E   <- matrix(c(0.5, 0.3, 0.2), 3, 8,
+              dimnames = list(colnames(S), paste0("S", 1:8)))
+sim <- ms_simulate(S, exposures = E, burden = 2000, seed = 1)
+san <- ms_calibration_sanity(sim, S, n_boot = 100,
+                             dilution_sizes = c(500, 1000),
+                             n_dilutions = 20, seed = 1)
+san
+```
+
+The returned table carries the per-signature point estimates and intervals
+at every dilution level (plus the live/dead sample census) — the
+"estimates should move smoothly with depth" eyeball check, mechanized.
+`ms_downsample()` is the primitive underneath it and is available on its
+own:
+
+```{r downsample}
+ds <- ms_downsample(sim, depth = 1000, seed = 1)
+range(colSums(ds@counts))
+```
+
+## Reading the curves
+
+`plot_calibration_curve()` draws the coverage-vs-burden curves for a
+calibration grid (shown among the statistical figure types in
+[the visualization gallery](visualization-gallery.html)). The
+interpretation rule is the window: inside it the nominal level holds,
+outside it the operating point is flagged by the verdict.
+
+## Where to go next
+
+- [Fitting known signatures](signature-fitting.html): the presence tests
+  and bootstrap intervals these verdicts calibrate.
+- [Quality control](quality-control.html): the burden faces that decide
+  when a sample is informative at all.
+- [Comparing signatures](comparing-signatures.html): the similarity
+  metrics and their null distributions.

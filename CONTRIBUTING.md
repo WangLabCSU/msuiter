@@ -1,6 +1,6 @@
 # Contribution guide (CONTRIBUTING)
 
-> Basis: docs/ARCHITECTURE.md §2/§3.4/§3.5/§9 (the dependency budget, the engine extension contract, errors and lifecycle, TDD/CI), docs/ffi-surface.md (the freeze protocol), docs/adr/0002-vendor-budget.md (the vendor budget and the MSRV pin discipline), docs/ROADMAP.md the M0 governance-files entry.
+> Basis: vignettes/articles/architecture.qmd §2/§3.4/§3.5/§9 (the dependency budget, the engine extension contract, errors and lifecycle, TDD/CI), vignettes/articles/ffi-surface.qmd (the freeze protocol), vignettes/articles/adr-0002-vendor-budget.qmd (the vendor budget and the MSRV pin discipline), vignettes/articles/roadmap.qmd the M0 governance-files entry.
 > Before any PR is submitted, the local acceptance battery of this document must be fully green; the PR template (.github/PULL_REQUEST_TEMPLATE.md) check items must be ticked one by one.
 
 ## 1. The development environment

@@ -1,6 +1,6 @@
 # ms-simulate.R: the catalog scenario simulator, first version
 # (CAPABILITY-MATRIX L-G "ms_simulate() | M7 (kernel M1s)"; design memo
-# docs/devlog/2026-10-05-simulate-memo.md).
+# vignettes/articles/devlog-2026-10-05-simulate-memo.qmd).
 #
 # This face delivers the MUTATION-COUNT layer: a signature dictionary +
 # exposure profile -> a synthetic catalog. The generative laws align

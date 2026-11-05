@@ -1,5 +1,5 @@
 # viz-exposure-similarity.R: exposure + similarity faces of the viz
-# first batch (U-M4-03; design memo docs/devlog/2026-10-04-M4-03-viz-memo.md):
+# first batch (U-M4-03; design memo vignettes/articles/devlog-2026-10-04-M4-03-viz-memo.qmd):
 #   plot_exposure_stacked    -- per-sample stacked exposure bars
 #   plot_exposure_heatmap    -- samples x signatures tile heatmap
 #   plot_similarity_heatmap  -- cosine heatmap (ms_compare metrics face)

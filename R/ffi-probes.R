@@ -1,5 +1,5 @@
 # FFI contract probes: validated R wrappers over the `msffi_*` Rust exports
-# (U-M0-09; docs/ARCHITECTURE.md section 2, docs/ffi-surface.md).
+# (U-M0-09; vignettes/articles/architecture.qmd section 2, vignettes/articles/ffi-surface.qmd).
 #
 # Layering (mirrors the future kernel wrappers):
 #   Rust #[extendr] fn            -> generated passthrough (R/extendr-wrappers.R)
@@ -16,7 +16,7 @@
 #     TOP-LEVEL fields via the `data=` compatibility hatch: the literal
 #     `context` string (rlang reserves `c` for child conditions) and the
 #     integer i/j offender coordinates of the anyNA validator, mirroring
-#     the `msuiter_error_rust` shape (docs/ffi-surface.md, unified
+#     the `msuiter_error_rust` shape (vignettes/articles/ffi-surface.qmd, unified
 #     2026-09-28 -- the interim `rlang::abort(context=)` form is gone).
 
 # ---------------------------------------------------------------------------
@@ -319,7 +319,7 @@
 #' enabled channel tables. `ms_tally_rust` is an FFI-internal name: the
 #' user-facing API is the `ms_tally()` generic (U-M1s-11).
 #'
-#' Policy (M1s, documented in `docs/ffi-surface.md` and the Rust module):
+#' Policy (M1s, documented in `vignettes/articles/ffi-surface.qmd` and the Rust module):
 #' * chromosome matching is EXACT against the 2bit index names — no `chr`
 #'   prefix normalization; unmatched names come back as
 #'   `skipped:unknown_chrom` ledger rows, never an error;

@@ -114,10 +114,19 @@ test_that("URL triangle: DESCRIPTION <-> _pkgdown.yml (repository-only leg)", {
   if (is.na(yfile)) {
     skip("_pkgdown.yml not shipped in the tarball (repository-only site config)")
   }
+  # The site is published to GitHub Pages from the push-built workflow, so
+  # the _pkgdown.yml url: is the PAGES face -- re-derived mechanically from
+  # the DESCRIPTION github URL (owner.github.io/repo) rather than required
+  # to equal it.
   url_d <- .dfield(readLines(dfile, warn = FALSE), "URL")
+  m <- regmatches(url_d,
+                  regexec("^https://github[.]com/([^/]+)/([^/]+)$", url_d))[[1]]
+  expect_length(m, 3L)
+  # GitHub Pages hosts are lowercase: derive the owner part lowercased
+  expected_pages <- sprintf("https://%s.github.io/%s", tolower(m[2L]), m[3L])
   yml <- readLines(yfile, warn = FALSE)
   hit <- grep("^url:", yml)
   expect_length(hit, 1L)
   url_y <- trimws(sub("^url:[[:space:]]*", "", yml[hit[1]]))
-  expect_identical(url_y, url_d)
+  expect_identical(url_y, expected_pages)
 })

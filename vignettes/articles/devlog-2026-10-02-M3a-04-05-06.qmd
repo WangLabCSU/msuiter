@@ -1,0 +1,35 @@
+---
+title: "Devlog · U-M3a-04/05/06 收官批（2026-10-02 凌晨）"
+---
+
+## U-M3a-04 每突变分配 + TSB 检验（assign.rs，1208 行）
+- 比例责任 `c = v·w·h/(WH)`（matmul 复用，D11）；零重构格全质量归 unassigned（对 SPA 裸除法 NaN 静默丢弃的显式偏离——SPA decompose_subroutines.py:1694 源码实证）；unassigned 残差伪签名（STL 语义对齐 research/04 §5）。
+- TSB 三面：精确条件二项/泊松双侧 p（R binom.test 点概率约定）；dyadic golden 精确分数（1/512、352/1024、1）；14 点 brute-force 网格 1e-10；大 n（15500）对数空间 pmf 路径（不完全 beta n≈1020 即下溢——本路径任意 n 精确，数值锚 R binom.test 1.1e-8）；MC 尺寸窗 [0.03,0.075]。
+- 批次 C 终审修复（4 项）：clippy×2、ε-floor 区间守恒不变量门控（(0,KL_EPS) 区间分配+残差曾重复计数——audited P2-1 实测 Σ=2.0 vs v=10）、fp 措辞（结合序下溢非恰零）、大 n 数值锚。
+
+## U-M3a-05 TMB 重标定 + connected 回加（ms_fit 收尾）
+- rescale_to_totals（MuSiCal rescale 语义 research/02 §1:27，逐样本守恒 1e-12）；ConnectedSpec FixAndRefit（connected 固定 + 自由分量残差重解 NNLS；JointRefit 结构化拒绝声明后续，D13 近似声明三处）；FFI/R 双面接线（rescale=TRUE 默认，bootstrap/presence 面继承保跨面契约）。
+
+## U-M3a-06 refdb v1（COSMIC v3.6 捆绑 + 治理）
+- SigProfilerAssignment 镜像 pin ff61b0f/tag v1.1.5 逐字节校验 → COSMIC v3.6 SBS96/DBS78/ID83 × GRCh37/GRCh38（ID 仅 37）捆绑 inst/reference/（376KB，tarball 1.1MB ≪ CRAN 5MB）；schema_version="1" 前向拒绝 fail-closed；逐文件 SHA-256 manifest；SBS96/DBS78 通道序对齐 channel_tables；ID 无 GRCh38 → build_independent=TRUE 如实提示；全离线测试（构建脚本一次性联网已记录）。
+
+## 里程碑：M3a 5/6 单元交付（ms_fit/bootstrap/presence/refdb/assign+TSB/rescale+connected；U-M3a-02 ms_fit 批已审核 PASS）
+ROADMAP M3a 勾选完成。M2 验收门 sigminer 对拍 PASS。**M0-M1-M2 + M3a 功能面完成，v0.1 发布前置 = 用户两项待决（速度口径 + G0 目录文件）。**
+
+## 电池
+Rust 15 套件双工具链（engine 234）/ testthat 2523 / clippy --all-targets -D warnings 零 / deny 四节 / release build / docs-sync / R CMD check 0-0-1NOTE。
+
+
+## 补记：bootstrap CI 标度修正与终审随批（2026-10-02 深夜）
+
+- **批次 C（assign/TSB）终审 REVISE→已修**：clippy identity_op/needless_range_loop ×2、ε-floor 区间 (0,KL_EPS) 内分配+残差加总可达 ~2v（audited P2-1 实测 Σ=2.0 vs v=10——模块文档门控 + 不变量限定 (WH)≥KL_EPS）、fp 措辞（结合序下溢非恰零）、大 n 数值锚升级为精确有理数 0.7540876806589077（1e-9）。
+- **ConnectedSpec P1-1 修复**：validate(&self) 不可排序——归一化移入 fix_and_refit 入口（本地 sort+dedup），乱序 c(2,1) 回归测试（与 c(1,2) identical + 全 finite）。
+- **bootstrap CI 标度（两次修复均未中的，最终修复见 2026-10-03 补记）**：第一版修复（boot 暴露 ×原始 totals 乘法）引入双重缩放（test-fit-bootstrap CI 覆盖 4 失败，515934 vs 真值 709）→ 第二版改为 boot 列归一到原始 totals。~~与点拟合 rescale=TRUE 同标度~~——当时记录的"同标度"判断**是错的**：第二版除数取的是重采样 counts 列和，而多项重采样恰抽 totals[j] 个突变，counts 列和恒等于 totals[j]，归一因子恒为 1——恒等操作，并未改变 boot 标度（欠拟合字典下点估计 6/6 中 4 格仍落 CI 外）。
+- testthat 2525 PASS 终态。
+
+## 补记：终审随批 P1+P2 修复（2026-10-03）
+
+- **P1-B bootstrap CI 与点拟合异尺度（根因与修复）**：/tmp 探针实证——欠拟合字典（真值双签名、字典只给 SIGa）下，NNLS 原始暴露列和 Σ_a h ≠ 样本 totals（24 通道探针：raw 638.2/39.0/1321.6 vs totals 657/1751/1325）。点拟合 rescale=TRUE 的除数是**暴露列和**（h×totals/Σ_a h → 恰为 totals），boot 面的除数却是 counts 列和（≡totals，恒等）——点在 totals 标度、boot 在方法原始标度，两点估计落 CI 外（F02 点 1751 vs boot CI [30.5, 53.6]）。修复：boot 每列过与点拟合**同一个 `rescale_to_totals`**（除数 = boot 暴露列和，零和列 → 0），加在 boot 单元 zeroing 之后；Rust `bootstrap_ci_shares_the_point_fit_scale_under_a_misfit_dictionary`（6/6 点估计入 CI + 列守恒 totals）+ R 欠拟合字典回归（n=6，6/6 入 CI）双测试。n_boot=1 流布局测试的手驱对照同步改用 `fit_with(..., rescale=true)`（位级等价保持）。真值覆盖冒烟（好字典）带 0.2% 容差：rescale 去掉重采样总量噪声后百分位界移动亚百分位量级。
+- **P1-A3 test-fit.R 嵌套 test_that 消除**："connected and rescale gates" 块缺 `})`，order-insensitivity 测试被嵌套、文件尾多一重闭合——:350 前补 `})`、删尾多余 `})`；parse 干净（括号深度 0/最小 0），套件 180 断言绿。
+- **P2 批**：assign.rs 大 n 锚注释勘误（注释曾写 …077、断言常量为 …908——统一为精确有理数 0.754087680658908，1e-9，R binom.test 1 ulp 内）；assign.rs 模块头质量守恒门控改写为 (0,KL_EPS) 开区间三分支（恰零→全 unassigned；带内→ε-guard 欠分配、带上缘分配+残差趋 2v）；cv.rs 模块头编号重排残余（悬挂的第二 "5." → "7."）；sparse.rs min_iterations=500 / engines-ard.R max_iter=2000 vs 上游 2e6 divergence 记录核对在位（ad66da2 已落）；extract.R spec@seed tryCatch fallback（警告 msuiter_warning_registry + seed=1 默认）核对在位——test-extend-contract.R 的 expect_error 改为断言装配警告 + fit@seed==1，夹具 fit_fn 对无 seed 类固定本地种子，extending.Rmd sharp-edge 表述同步改写。
+- 电池：cargo test 双工具链（stable / +1.71.0 SDKROOT=MacOSX26.5.sdk）、clippy -D warnings 零、deny 四节、testthat 全量、R CMD check ≤1 NOTE、docs-sync。

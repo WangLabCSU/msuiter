@@ -3,8 +3,8 @@
 # (src/rust/catalog/src/channels.rs).
 #
 # The two artifacts are generated from the same single source of truth and
-# must stay bit-identical (canonical order, docs/research/04 section 1 and
-# docs/research/05 section 2). Any mismatch fails the suite (D5: channel
+# must stay bit-identical (canonical order, vignettes/articles/research-04-source-audit.qmd section 1 and
+# vignettes/articles/research-05-standards-data.qmd section 2). Any mismatch fails the suite (D5: channel
 # validation is by label, zero magic strings).
 
 .ms_channel_tables <- function() {

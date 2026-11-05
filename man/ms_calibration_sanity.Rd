@@ -79,7 +79,7 @@ A list of class `ms_calibration_sanity` with elements:
 }
 \description{
 `ms_calibration_sanity()` runs the M3b real-data sanity protocol (design
-memo docs/devlog/2026-10-04-M3b-design-memo.md section 4) on a
+memo vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd section 4) on a
 CALLER-SUPPLIED real catalog: the frozen production face fits the full
 catalog (the point estimate is the declared **pseudo-truth**), every
 dilution level \eqn{N \in} `dilution_sizes` down-samples each live

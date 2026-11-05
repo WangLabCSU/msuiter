@@ -41,7 +41,10 @@ An object of class `MsTreatmentReport`. [as.data.frame()][as.data.frame.MsTreatm
   yields the association table (`treatment`, `signature`, `n_exposed`,
   `n_unexposed`, `prevalence_exposed`, `prevalence_unexposed`,
   `mean_exposed`, `mean_unexposed`, `contrast`, `contrast_lower`,
-  `contrast_upper`, `is_associated`). The clonal-timing table (attrs
+  `contrast_upper`, `is_associated`). `is_associated` is an effect-size
+  call: the bootstrap interval must clear zero by the adjudication floor
+  `.MS_TRT_ASSOC_FLOOR` (50 exposure-count units, documented at the
+  constant). The clonal-timing table (attrs
   `timing`: `treatment`, `signature`, `n_exposed`, `exposure_pre`,
   `exposure_post`, `pre_lower`, `pre_upper`, `post_lower`, `post_upper`),
   the degradation ledger (attr `attestation`: `face`, `status`, `detail`)

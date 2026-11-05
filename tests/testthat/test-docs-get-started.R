@@ -73,7 +73,7 @@
   }
   add(file.path(root, "DESCRIPTION"))
   add(file.path(root, "inst", "CITATION"))
-  add(file.path(root, "docs", "paper", "renv.lock"))
+  add(file.path(root, "inst", "repro", "renv.lock"))
   for (f in list.files(file.path(root, "R"), pattern = "[.]R$",
                        full.names = TRUE)) {
     corpus <- c(corpus, readLines(f, warn = FALSE))
@@ -269,7 +269,7 @@ test_that("US-1 the constructed-perfect skeleton greens the laws (live control)"
   # (measured 2026-11-01 check run 20-devtools-check.txt). Construction moves,
   # the law does not.
   root <- tempfile("ctl-perfect-root-")
-  dir.create(file.path(root, "docs", "paper"), recursive = TRUE)
+  dir.create(file.path(root, "inst", "repro"), recursive = TRUE)
   dir.create(file.path(root, "tests", "testthat", "fixtures"),
              recursive = TRUE)
   writeLines(c("Package: msuiter", "Version: 0.0.0",
@@ -278,7 +278,7 @@ test_that("US-1 the constructed-perfect skeleton greens the laws (live control)"
              file.path(root, "DESCRIPTION"))
   writeLines(c("[renv]", "r.version = \"4.3\"",
                "rust.toolchain = \"1.71\""),
-             file.path(root, "docs", "paper", "renv.lock"))
+             file.path(root, "inst", "repro", "renv.lock"))
   writeLines("0\t1\t2", file.path(root, "tests", "testthat", "fixtures",
                                    "sigprofiler_sbs96_specimen.txt"))
   on.exit(unlink(root, recursive = TRUE), add = TRUE)

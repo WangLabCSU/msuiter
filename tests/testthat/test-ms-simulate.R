@@ -1,5 +1,5 @@
 # U-M7-pre: ms_simulate() -- the catalog scenario simulator first
-# version (design memo docs/devlog/2026-10-05-simulate-memo.md).
+# version (design memo vignettes/articles/devlog-2026-10-05-simulate-memo.qmd).
 #
 # Anchors: bitwise seed determinism, exact multinomial burden, the NB
 # per-channel variance law (Var = mu + mu^2/kappa => var/mean =

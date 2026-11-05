@@ -2,7 +2,7 @@
 # decisions A14/A17): registration governance, string sugar resolution,
 # certified three-state treatment and the fit_engine/required_pkgs generics.
 # Everything here is synthetic -- no real engine is registered before M1s
-# (docs/IMPLEMENTATION-PLAN.md U-M0-04).
+# (vignettes/articles/implementation-plan.qmd U-M0-04).
 
 # Synthetic S7 engine class with the property defaults required for string
 # sugar: a registered engine class must build a valid spec from its defaults.

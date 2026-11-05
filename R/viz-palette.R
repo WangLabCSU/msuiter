@@ -1,5 +1,5 @@
 # viz-palette.R: the COSMIC channel palette + shared viz plumbing
-# (U-M4-03; design memo docs/devlog/2026-10-04-M4-03-viz-memo.md).
+# (U-M4-03; design memo vignettes/articles/devlog-2026-10-04-M4-03-viz-memo.qmd).
 #
 # The six substitution-class colors are verified byte-for-byte against
 # the upstream SigProfilerPlotting source (sigProfilerPlotting.py,

@@ -4,7 +4,7 @@
 # cutoff = trunc(mean + 2*sd) of the majority-cluster-pruned sample totals
 # (GaussianMixture(n_components=2) labels; population mean/sd; floor at
 # 100 x channels), classification = total > cutoff. See
-# docs/devlog/2026-09-30-GMM-stratify-memo.md (source line numbers there).
+# vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd (source line numbers there).
 #
 # The FFI is wired (M2 pipeline plan slot, executed early): the MAIN path of
 # ms_stratify_hypermutants() goes through ms_stratify_rust
@@ -585,7 +585,7 @@ msuiter_stratify_twin <- function(totals, manual_cutoff = 0, seed = 1) {
 # parameter discipline (msuiter_error_input), and kernel errors surface as
 # msuiter_error_rust conditions through .msffi_check(). Layout: the m x n
 # counts matrix crosses AS-IS (column-major, no transposition -- the kernel
-# sums columns; see docs/ffi-surface.md, ms_stratify_rust row).
+# sums columns; see vignettes/articles/ffi-surface.qmd, ms_stratify_rust row).
 # ---------------------------------------------------------------------------
 
 #' Stratification decision over the FFI (M2 wiring of U-M1c-02).
@@ -625,7 +625,7 @@ msuiter_stratify_twin <- function(totals, manual_cutoff = 0, seed = 1) {
 #' Stratify hypermutated samples with the SigProfiler GMM cutoff
 #'
 #' Applies the frozen SigProfilerExtractor hypermutant rule
-#' (`docs/devlog/2026-09-30-GMM-stratify-memo.md`): a k = 2 Gaussian
+#' (`vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd`): a k = 2 Gaussian
 #' mixture on the raw per-sample mutation totals (no log transform), an
 #' iterative majority-cluster prune until the cluster means differ by less
 #' than 4 standard deviations, then `cutoff = trunc(mean + 2 sd)` of the

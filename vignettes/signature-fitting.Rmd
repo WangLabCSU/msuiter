@@ -1,0 +1,218 @@
+---
+title: "Fitting known signatures: exposures, presence tests, and bootstrap intervals"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Fitting known signatures and testing presence}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette:
+# the source tree (check and site-build contexts) loads through pkgload; a
+# bare installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+De-novo extraction (`ms_extract()`) discovers signatures; reference fitting answers
+the mirror-image question. Given a trusted signature dictionary, `ms_fit()` estimates
+each sample's exposure to every dictionary signature, `ms_test_presence()` asks which
+signatures the cohort's evidence supports at all, and `ms_fit_bootstrap()` attaches
+bootstrap confidence intervals and support stability to the same fit. This guide walks
+the three faces on one small simulated cohort, then reads the `MsFit` result object and
+the bootstrap plotting faces. The upstream steps (variants, tallying) are covered in
+[get-started.html](get-started.html).
+
+## A simulated cohort against COSMIC signatures
+
+The dictionary is a channels x signatures matrix, or an `MsSignature` whose
+`signatures` matrix is used. The bundled COSMIC reference database ships canonical
+SBS96 matrices whose rows already carry the canonical channel labels, so slicing a few
+columns gives a dictionary that `ms_fit()` can align by label.
+
+```{r dictionary}
+refdb <- ms_refdb_bundled(build = "GRCh38")
+sbs <- refdb[["SBS_GRCh38"]]@matrices[[1]]
+dict <- sbs[, c("SBS1", "SBS5", "SBS13", "SBS4")]
+dim(dict)
+```
+
+A subgroup of samples plants an APOBEC signature on top of the clock-like pair; another
+dictionary signature is planted nowhere, so the presence test below has something to reject.
+
+```{r simulate}
+samples <- paste0("T", 1:12)
+act <- matrix(0, nrow = ncol(dict), ncol = length(samples),
+              dimnames = list(colnames(dict), samples))
+act["SBS1", ] <- 0.45
+act["SBS5", ] <- 0.45
+act["SBS13", samples[1:4]] <- 0.10
+# share exposures: rebalance the clock pair so every column sums to one
+resid <- 1 - colSums(act)
+act["SBS1", ] <- act["SBS1", ] + resid / 2
+act["SBS5", ] <- act["SBS5", ] + resid / 2
+cat <- ms_simulate(dict, act, arm = "multinomial", burden = 600, seed = 11)
+cat
+```
+
+`ms_simulate()` returns an `MsCatalog`, exactly the input `ms_fit()` dispatches on.
+
+## Fitting exposures with ms_fit()
+
+The default method, `"nnls"`, solves the Lawson-Hanson non-negative least squares
+problem per sample: the classical deconstructSigs-style baseline. The other two
+methods start from that solution and refine it on a likelihood scale:
+
+- `"likelihood_bidirectional"` (MuSiCal flavour) alternates backward and forward
+  steps on the per-mutation multinomial log-likelihood: a signature leaves when the
+  cheapest removal costs less than the epsilon threshold and enters when the best
+  gain exceeds it, until both steps decline;
+- `"lrt"` (mSigAct flavour) maximizes the negative-binomial likelihood over the
+  exposures through an internal safeguarded-Newton ascent, warm-started from NNLS.
+
+```{r fit-nnls}
+fit <- ms_fit(cat, dict) # method = "nnls" (default)
+fit
+head(fit@support)
+head(fit@tests)
+```
+
+Two tidy evidence tables ride along. `support` holds one row per signature-sample
+pair with the exposure, its compositional share and the zeroing decision:
+exposures whose share falls below `zero_threshold` are set to exactly zero and
+reported `active = FALSE`. `tests` holds the entry-wise presence LRT statistic and
+raw p-value per pair, plus a Fisher standard error that exists only on the interior
+support -- boundary parameters get tests, not intervals, so boundary rows carry `NA`.
+
+Two further arguments shape the whole fit. `rescale = TRUE` (default) multiplies each
+sample's kept exposures back onto the sample's original mutation total, the MuSiCal
+TMB-rescale semantics: the multiplication leaves zeroed entries at zero, and the
+shares (hence the zeroing decision) and the presence evidence are invariant.
+`connected = NULL` by default; passing distinct dictionary column indices selects a
+connected-signature group -- for example the clock-like background pair -- which is
+fixed at its initial full-NNLS solution after the method refit (`FixAndRefit`) while
+the remaining signatures are re-optimized against the residual. This is a documented
+approximation of the upstream joint-refit strategy, which is declared future work and
+never silently substituted.
+
+## Choosing among the methods
+
+All three methods run through the same kernel, and the `tests` evidence is
+method-independent by construction: the LRT columns are always computed at the
+negative-binomial MLE exposures, so the tables compare fairly across methods. The
+`nb_size` argument is the negative-binomial size of every likelihood-based column;
+larger values sit closer to the Poisson limit.
+
+```{r fit-methods}
+fits <- list(
+  nnls = fit,
+  bidirectional = ms_fit(cat, dict, method = "likelihood_bidirectional"),
+  lrt = ms_fit(cat, dict, method = "lrt")
+)
+round(vapply(fits, function(f) f@exposures[, "T1"], numeric(ncol(dict))), 1)
+```
+
+## Testing cohort presence with ms_test_presence()
+
+`ms_test_presence()` tests, per signature, whether the signature is present in the
+cohort. Per-sample entry-wise LRT statistics are pooled by summation (independent
+likelihoods add), and the raw p-value is the exact pooled-null tail: under the null
+each per-sample statistic follows the Self-Liang boundary law (an equal mixture of a
+point mass at zero and a chi-square), so the pooled statistic over independent
+samples is a Binomial-weighted mixture of chi-squares. Benjamini-Hochberg correction
+runs over the signature family, and `pass_bh` applies the frozen family-wise alpha.
+
+```{r presence}
+ms_test_presence(cat, dict) # kernel face: catalog + dictionary
+ms_test_presence(fit)       # MsFit face: re-aggregates the fit's own evidence
+```
+
+The result is a plain data.frame with one row per dictionary signature, so it drops
+into any downstream filter or report. The two faces agree by construction -- the
+`MsFit` face re-derives its p-values from the fit's stored evidence grid with the
+pure-R twin of the kernel's arithmetic.
+
+## Bootstrap intervals and stability with ms_fit_bootstrap()
+
+The bootstrap resamples each sample's mutations from its empirical channel
+distribution (nonparametric multinomial), refits the selected method per replicate,
+and reports the percentile interval over the replicate exposures plus the support
+stability -- the frequency with which the zeroing rule keeps each exposure active.
+The result is an `MsFit` like `ms_fit()` returns, enriched with attributes on the
+exposures matrix; the `support` table gains a `boot_stability` column. The point
+exposures and tests remain an ordinary point fit: the interval is support-conditional
+evidence alongside the LRT, not a replacement for it. With `return_draws = TRUE` the
+raw per-replicate exposure cube is attached as the `boot_draws` attribute for the
+histogram face below; `bca = TRUE` adds the bias-corrected-and-accelerated interval
+computed from the same replicates. The default replicate count is higher; this guide
+keeps `n_boot` small for rendering speed.
+
+```{r bootstrap}
+boot <- ms_fit_bootstrap(cat, dict, method = "nnls", n_boot = 50, seed = 1,
+                         return_draws = TRUE)
+boot
+head(boot@support)
+names(attributes(boot@exposures))
+dim(attr(boot@exposures, "boot_draws"))
+```
+
+The CI endpoints are labelled matrices with the same shape as the exposures, so the
+interval for one sample reads directly as a table.
+
+```{r boot-ci-table}
+round(cbind(lower = attr(boot@exposures, "ci_lower")[, "T1"],
+            estimate = boot@exposures[, "T1"],
+            upper = attr(boot@exposures, "ci_upper")[, "T1"],
+            stability = attr(boot@exposures, "support_stability")[, "T1"]), 1)
+```
+
+## The MsFit object and the bootstrap plots
+
+The `MsFit` container carries the labelled `exposures` matrix (signatures x
+samples), the `support` and `tests` data.frames, an adhoc `reference_summary`
+snapshot derived from the dictionary's signature labels (a sha256 digest over the
+labels, never an embedded reference database), and the `engine` string recording the
+method. `print` shows one line with dimensions, engine and snapshot version; the
+plotting faces read the bootstrap attributes directly.
+
+```{r plot-ci, fig.width = 7, fig.height = 4}
+plot_boot_ci(boot, sample = "T1")
+```
+
+```{r plot-distribution, fig.width = 7, fig.height = 5}
+plot_boot_distribution(boot, sample = "T1") # requires return_draws = TRUE
+```
+
+```{r plot-stability, fig.width = 7, fig.height = 4}
+plot_boot_stability(boot, sample = "T1")
+```
+
+`plot_boot_ci()` draws the point exposures with their percentile whiskers for one
+sample, ordered by exposure share; `plot_boot_distribution()` shows the raw
+per-replicate exposure histograms with the estimate and both bounds marked;
+`plot_boot_stability()` bars the support stability against the calibration floor.
+Without the draws cube the histogram face raises a structured error that says to
+re-run `ms_fit_bootstrap()` with `return_draws = TRUE`.
+
+## Where to go next
+
+Once signatures are fitted and their presence established, the natural next steps
+are comparing dictionaries and extracted catalogs -- [Comparing
+signatures](comparing-signatures.html) -- and the calibration statistics behind the
+presence and interval machinery -- [Calibrated
+statistics](calibrated-statistics.html). The input path from VCFs to catalogs is in
+[get-started.html](get-started.html).
