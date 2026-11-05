@@ -7,7 +7,7 @@
 # this file first; sourcing is idempotent (the helpers are pure definitions).
 
 .ms_heavy_pkg_root <- function(start = getwd()) {
-  d <- normalizePath(start, mustExist = TRUE)
+  d <- normalizePath(start, mustWork = TRUE)
   while (TRUE) {
     desc <- file.path(d, "DESCRIPTION")
     if (file.exists(desc)) {

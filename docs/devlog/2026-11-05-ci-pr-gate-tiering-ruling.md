@@ -70,6 +70,16 @@ Full attestation sweep banked in the lane evidence
 (/tmp/issue76lane/evidence): generator byte-gate, aggregator/runner/heavy
 self-tests with every new control FIR/GREEN, law units nb/failed/error/
 skipped read from `as.data.frame`, ci-selfcheck PASS.
+The committed battery ran against a fresh INSTALL of this tree:
+`--tier=T0` across all six shards (three attest `status=ok` with
+executed 116/103/452; the T0-empty shards skip LOUD, exit 0) and
+`--tier=T1` likewise (all four deep files attest executed>=1,
+zero fail/error); `tools/test-heavy.R --tier=T2` attests both
+check-layout-sim files `status=ok`, exit 0 -- after the attestation
+itself caught one move artifact: the lane's shared heavy helper had
+passed `mustExist=` to `normalizePath`, which on this base takes
+`mustWork=` (renamed-R face); fixed, re-run green (lane evidence
+`C4-battery.txt`).
 
 ## The second breath: coverage nightly, guards retargeted
 
