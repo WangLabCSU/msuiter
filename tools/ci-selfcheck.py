@@ -14,10 +14,14 @@ contracts it is supposed to implement:
     Linux + Windows (section 4.4/5), and the Cargo.lock pins
     (matrixmultiply 0.3.9, rayon 1.10.x, lock v3) asserted by a CI
     step next to the dependabot ignore rules (belt and braces);
-  * the sharded CI contract (round 2, 2026-10-22) is coherent: ALL eight
-    check arms run the fan-out --no-tests check plus the attested shard
+  * the sharded CI contract (round 2, 2026-10-22; PR-gate slimming
+    issue #76, 2026-11-05) is coherent: the three PR-gate release arms
+    run the fan-out --no-tests check plus the tier-T0 attested shard
     fan-out (roster tools/ci/fanout-configs.tsv) against one shared
-    INSTALL; the full-test-phase CRAN-shape monolith lives on the
+    INSTALL; the five version arms plus the T1 witness ride the nightly
+    R-CMD-check-version-fanout (roster
+    tools/ci/scheduled-fanout-configs.tsv) at --tier=T0,T1; the
+    full-test-phase CRAN-shape monolith lives on the
     scheduled gate (scheduled.yml cran-shape-check); the instruments the
     lanes invoke exist and the attestation gate is wired;
   * every repository path referenced by a workflow actually exists
@@ -249,6 +253,7 @@ def main():
               REPO / "tools/ci/shard-manifest.tsv",
               REPO / "tools/ci/shard-weights.tsv",
               REPO / "tools/ci/fanout-configs.tsv",
+              REPO / "tools/ci/scheduled-fanout-configs.tsv",
               REPO / "tools/ci/pr-gate-budget.tsv",
               REPO / "tools/test-heavy.R",
               REPO / "tests/heavy/helper-msuiter-shared.R",
@@ -307,14 +312,34 @@ def main():
     expected = {
         ("macos-latest", "release"), ("windows-latest", "release"),
         ("ubuntu-latest", "release"),
-        ("macos-latest", "oldrel-1"), ("windows-latest", "oldrel-1"),
-        ("ubuntu-latest", "oldrel-1"),
-        ("ubuntu-latest", "4.3"),      # package floor, Linux
-        ("ubuntu-latest", "devel"),
     }
-    check("fan-out roster (tools/ci/fanout-configs.tsv) = the frozen 3 OS x "
-          "{release, oldrel-1} + {4.3 Linux, devel} census",
+    check("PR-gate fan-out roster (tools/ci/fanout-configs.tsv) = the three "
+          "release-R arms (issue #76 slimming; the version arms ride the "
+          "nightly gate)",
           fan_pairs == expected, f"fanout={sorted(fan_pairs)}")
+    sfan_tsv = REPO / "tools/ci/scheduled-fanout-configs.tsv"
+    sfan_pairs = set()
+    if sfan_tsv.is_file():
+        for line in sfan_tsv.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    sfan_pairs.add((parts[0], parts[1]))
+    check("scheduled version-arm roster = the five moved arms + the ubuntu/release T1 witness",
+          sfan_pairs == {
+              ("macos-latest", "oldrel-1"), ("ubuntu-latest", "4.3"),
+              ("ubuntu-latest", "devel"), ("ubuntu-latest", "release"),
+              ("ubuntu-latest", "oldrel-1"), ("windows-latest", "oldrel-1"),
+          }, f"sched-fanout={sorted(sfan_pairs)}")
+    check("the two rosters union to the historical eight-arm census (schedule moved, "
+          "coverage did not)",
+          fan_pairs | sfan_pairs == {
+              ("macos-latest", "release"), ("macos-latest", "oldrel-1"),
+              ("windows-latest", "release"), ("windows-latest", "oldrel-1"),
+              ("ubuntu-latest", "release"), ("ubuntu-latest", "oldrel-1"),
+              ("ubuntu-latest", "4.3"), ("ubuntu-latest", "devel"),
+          })
     check("fan-out arms are data-driven (committed TSV via guard-prep fromJSON)",
           "fromJSON(needs.guard-prep.outputs.fanout-matrix)" in str(fanout_job)
           and "tools/ci/fanout-configs.tsv" in job_script(ci, "guard-prep"))
@@ -358,26 +383,42 @@ def main():
           and "--mode=installed" in fs)
     check("fan-out arms post the check tree as post-mortem evidence on failure",
           "check-results-" in str(fanout_job) and "failure()" in str(fanout_job))
-    check("devel only on Linux", all(os == "ubuntu-latest"
-                                     for os, r in fan_pairs if r == "devel"))
-    check("R-4.3 only on Linux", all(os == "ubuntu-latest"
-                                     for os, r in fan_pairs if r == "4.3"))
-    check("devel arm allowed to fail (continue-on-error)",
-          "devel" in str(fanout_job.get("continue-on-error", "")))
+    all_pairs = fan_pairs | sfan_pairs
+    check("devel only on Linux (union of the two gates)",
+          all(os == "ubuntu-latest" for os, r in all_pairs if r == "devel"))
+    check("R-4.3 only on Linux (union of the two gates)",
+          all(os == "ubuntu-latest" for os, r in all_pairs if r == "4.3"))
+    check("the PR-gate roster carries no version arm at all (issue #76 slimming)",
+          not any(r in ("devel", "4.3", "oldrel-1") for (_o, r) in fan_pairs))
+    vjob = sched["jobs"].get("R-CMD-check-version-fanout", {})
+    check("the scheduled gate hosts the version fan-out with its own data-driven matrix",
+          bool(vjob) and "vendor-prep" in str(vjob.get("needs"))
+          and "fromJSON(needs.vendor-prep.outputs.version-matrix)" in str(vjob)
+          and "tools/ci/scheduled-fanout-configs.tsv" in job_script(sched, "vendor-prep"))
+    check("devel arm allowed to fail (continue-on-error) -- rides the version fan-out",
+          "devel" in str(vjob.get("continue-on-error", "")))
     check("fail-fast disabled", fanout_job["strategy"].get("fail-fast") is False)
     # The devel user-agent and the 4.3 hard-mode provisioning travel with
     # the arm now that the arm is fan-out: dropping them replays the banked
     # failures (the '"hard"' Suggests skip drops knitr -> loadVignetteBuilder
     # exit 1 at 902 ms, and drops testthat -> the runner's "no package
     # called 'testthat'" hard-fail; CI audit 2026-10-07).
-    check("devel arm carries the compatibility user-agent",
-          "R/4.3.0 (github-actions)" in str(fanout_job))
+    check("devel arm carries the compatibility user-agent (moved verbatim with the arm)",
+          "R/4.3.0 (github-actions)" in str(vjob)
+          and "R/4.3.0 (github-actions)" not in str(fanout_job))
     check("4.3 floor arm ships the vignette builder via extras",
-          "any::knitr" in str(fanout_job))
+          "any::knitr" in str(vjob) and "any::knitr" not in str(fanout_job))
     check("4.3 floor arm ships the testthat runner deps via extras",
-          "any::testthat" in str(fanout_job) and "any::withr" in str(fanout_job))
+          "any::testthat" in str(vjob) and "any::withr" in str(vjob))
     check("4.3 floor arm skips the pandoc probe",
-          "install-pandoc" in str(fanout_job))
+          "install-pandoc" in str(vjob))
+    vs = job_script(sched, "R-CMD-check-version-fanout")
+    check("the version fan-out runs the deep tier and hands the census its roster and budget",
+          "--tier=T0,T1" in vs and "--tier T0,T1" in vs
+          and "--t0-budget tools/ci/pr-gate-budget.tsv" in vs
+          and "scheduled-fanout-configs.tsv" in vs
+          and "--write-exclusion-marker" in vs
+          and "attest-version-fanout" in str(vjob))
 
     # ---- sanctioned-skip ledger (tools/ci/shard-exclusions.tsv) --------------
     # An arm that cannot run a shard must say so from this ledger, and the
@@ -405,8 +446,8 @@ def main():
         roster_shards = {int(sh) for sh, _ in (ln.split("\t")[:2]
                          for ln in txt(excl_tsv.parent / "shard-manifest.tsv").splitlines()
                          if not ln.startswith("#") and not ln.startswith("shard") and ln.strip())}
-        check("ledger arms are fan-out arms",
-              all((o, c) in fan_pairs for (o, c, _s) in rows))
+        check("ledger arms are fan-out arms (PR-gate or scheduled version roster)",
+              all((o, c) in (fan_pairs | sfan_pairs) for (o, c, _s) in rows))
         check("ledger shards exist in the manifest",
               all(int(s) in roster_shards for (_o, _c, s) in rows))
         check("ledger never empties an arm (some shard must always run)",
@@ -418,7 +459,7 @@ def main():
               all(len(c) >= 60 and " " in c for c in rows.values()))
         gutted = dict(rows); gutted[("ghost-latest", "release", "1")] = "ghost"
         check("ledger gate firing control: an off-roster row is caught by the same law",
-              all((o, c) in fan_pairs for (o, c, _s) in gutted) is False)
+              all((o, c) in (fan_pairs | sfan_pairs) for (o, c, _s) in gutted) is False)
     check("fan-out wave renders markers ONLY via the aggregator writer",
           "--write-exclusion-marker" in fs and "shard-exclusions.tsv" in fs)
     check("fan-out census is handed the ledger",
@@ -505,9 +546,10 @@ def main():
 
     # ---- check-run census ([ci-checkrun-level-green] convention) ------------
     # Run-level green can hide a dead arm, so the expected PR-gate check-run
-    # count is pinned: 8 fan-out arms (the TSV is the source) + guard-prep +
-    # guards-shards + guards + coverage + rust + msrv x2 = 15. A family
-    # vanishing from ci.yml reddens here before CI could ever miss it.
+    # count is pinned: 3 fan-out arms (the TSV is the source; issue #76
+    # slimming) + guard-prep + guards-shards + guards + coverage + rust +
+    # msrv x2 = 10. A family vanishing from ci.yml reddens here before CI
+    # could ever miss it.
     def arms(jobname):
         if jobname == "R-CMD-check-fanout":
             return len(fan_pairs)
@@ -518,10 +560,10 @@ def main():
                 n *= len(axis)
         return n
     census = {j: arms(j) for j in ci["jobs"]}
-    check("PR-gate check-run census = 15 arms",
-          sum(census.values()) == 15, str(census))
+    check("PR-gate check-run census = 10 arms",
+          sum(census.values()) == 10, str(census))
     check("check-run census firing control: an amputated family drops the count",
-          sum(c for j, c in census.items() if j != "rust") == 14)
+          sum(c for j, c in census.items() if j != "rust") == 9)
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a
@@ -732,10 +774,14 @@ def main():
     sch = sched.get(True) or sched.get("on") or {}
     check("scheduled: workflow_dispatch available", "workflow_dispatch" in sch)
     crons = sch.get("schedule", [])
-    check("scheduled: weekly cron",
-          bool(crons) and re.fullmatch(r"\S+ \S+ \* \* \S+",
+    check("scheduled: nightly cron (issue #76: day-of-week must be * -- the T1 "
+          "deep battery, the version arms and the covr leg earn a nightly "
+          "cadence, not a weekly one)",
+          bool(crons) and re.fullmatch(r"\S+ \S+ \S+ \S+ \*",
                                        crons[0].get("cron", "")) is not None,
           str(crons))
+    check("nightly-cron law firing control: a weekly schedule is refused",
+          re.fullmatch(r"\S+ \S+ \S+ \S+ \*", "23 4 * * 1") is None)
     # ---- valgrind leg: the loudness-law extension (issue #32, D1 class) ----
     # Law change (this selfcheck moves WITH the contract it governs): the
     # retired valgrind job ran `rcmdcheck(..., error_on="never",

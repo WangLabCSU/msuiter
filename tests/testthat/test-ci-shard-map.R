@@ -136,19 +136,52 @@ test_that("the weights roster keeps lockstep with the test roster", {
                    info = "weights tier drifts from the manifest tier")
 })
 
-test_that("the fan-out roster covers all eight check arms (round-2: tests sharded everywhere)", {
+test_that("the fan-out rosters keep the eight-arm census across the two gates (issue #76)", {
   .ci_require_checkout()
-  lines <- readLines(.ci_ci_locate("fanout-configs.tsv"), warn = FALSE)
-  rows <- strsplit(lines[!grepl("^\\s*(#|$)", lines)], "\t", fixed = TRUE)
-  got <- paste0(vapply(rows, `[`, character(1), 1L), "/",
-                vapply(rows, `[`, character(1), 2L))
-  # Round-1 shipped four non-representative arms; the representative four kept the
-  # monolithic serial test phase and one of them (windows/release) became the whole
-  # run's 4881s critical path. Round-2 shards the tests leg on every arm.
-  expect_identical(sort(got), sort(c("ubuntu-latest/4.3", "ubuntu-latest/release",
-                                     "ubuntu-latest/devel", "ubuntu-latest/oldrel-1",
-                                     "windows-latest/release", "windows-latest/oldrel-1",
-                                     "macos-latest/release", "macos-latest/oldrel-1")))
+  rd_roster <- function(name) {
+    lines <- readLines(.ci_ci_locate(name), warn = FALSE)
+    rows <- strsplit(lines[!grepl("^\\s*(#|$)", lines)], "\t", fixed = TRUE)
+    expect_true(all(lengths(rows) == 2L), info = name)
+    paste0(vapply(rows, `[`, character(1), 1L), "/",
+           vapply(rows, `[`, character(1), 2L))
+  }
+  pr <- rd_roster("fanout-configs.tsv")
+  sv <- rd_roster("scheduled-fanout-configs.tsv")
+  # The PR gate is three release-R arms (issue #76): the wall-clock ruling
+  # moved the five version arms to the nightly version fan-out, where the
+  # tier-T1 deep battery gained a release-R witness -- ubuntu/release rides
+  # both gates. The historical eight-arm census survives exactly as the union
+  # of the two rosters: the schedule moved, the coverage did not.
+  expect_identical(sort(pr), sort(c("macos-latest/release", "ubuntu-latest/release",
+                                    "windows-latest/release")))
+  expect_identical(sort(sv), sort(c("macos-latest/oldrel-1", "ubuntu-latest/4.3",
+                                    "ubuntu-latest/devel", "ubuntu-latest/release",
+                                    "ubuntu-latest/oldrel-1", "windows-latest/oldrel-1")))
+  expect_identical(sort(unique(c(pr, sv))),
+                   sort(c("ubuntu-latest/4.3", "ubuntu-latest/release",
+                          "ubuntu-latest/devel", "ubuntu-latest/oldrel-1",
+                          "windows-latest/release", "windows-latest/oldrel-1",
+                          "macos-latest/release", "macos-latest/oldrel-1")))
+  # A roster with no live face is a silent green: the version fan-out must
+  # ride the scheduled file -- budgeted, deep-tier, and reading its own roster.
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  sched <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"), warn = FALSE)
+  h <- which(sched == "  R-CMD-check-version-fanout:")
+  expect_identical(length(h), 1L, info = "the scheduled version fan-out vanished")
+  win <- sched[seq(from = h + 1L, to = length(sched))]
+  nxt <- which(grepl("^  [A-Za-z0-9_-]+:$", win))
+  if (length(nxt)) win <- win[seq_len(nxt[1L] - 1L)]
+  t <- win[grepl("timeout-minutes:", win, fixed = TRUE)]
+  expect_identical(length(t), 1L, info = "version fan-out without an explicit budget")
+  expect_identical(trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE)), "180",
+                   info = "the uniform hang-detector ceiling is arm-independent")
+  body <- paste0(win, collapse = "\n")
+  expect_true(grepl("--tier=T0,T1", body, fixed = TRUE),
+              info = "the scheduled arms must run the deep tier, not the PR-gate one")
+  expect_true(grepl("scheduled-fanout-configs.tsv", body, fixed = TRUE),
+              info = "the version fan-out is not data-driven off its committed roster")
+  expect_true(grepl("pr-gate-budget.tsv", body, fixed = TRUE),
+              info = "the version census runs without the committed T0 budget")
 })
 
 test_that("the CRAN-shape monolithic check rides the scheduled gate, not the PR gate", {

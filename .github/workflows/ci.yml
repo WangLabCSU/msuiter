@@ -4,14 +4,16 @@
 #   guard-prep  : fast static guards + the single vendor-tarball generation
 #                 point + the shard-manifest byte-gate; emits the check-arm
 #                 matrix from tools/ci/fanout-configs.tsv.
-#   R-CMD-check-fanout : ALL EIGHT check arms (roster:
+#   R-CMD-check-fanout : the THREE PR-gate release arms (roster:
 #                 tools/ci/fanout-configs.tsv, emitted by guard-prep) run
 #                 the fan-out body: rcmdcheck --as-cran --no-manual
 #                 --no-tests plus the sharded repo-layout testthat
 #                 fan-out of the PR-gate tier T0 against one shared R CMD
 #                 INSTALL, so every PR-gate test runs on every platform
-#                 -- K-way parallel, not serial (tier T1 is scheduled,
-#                 tier T2 local-only; issue #76).
+#                 -- K-way parallel, not serial. The version arms (4.3,
+#                 devel, the three oldrel-1) and the T1 deep battery rode
+#                 here until issue #76 (2026-11-05) moved them to the
+#                 nightly R-CMD-check-version-fanout job of scheduled.yml.
 #                 The Rd-examples leg rides the check phase and the
 #                 vignette leg the build phase of that same step. The
 #                 single-process CRAN-shape monolith with the full test
@@ -325,8 +327,10 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  # Every check arm fans out (roster: tools/ci/fanout-configs.tsv, emitted
-  # by guard-prep). The CRAN-shape build+check keeps vignettes, Rd and CRAN
+  # The PR-gate release arms fan out (roster: tools/ci/fanout-configs.tsv,
+  # emitted by guard-prep); the five version arms plus the ubuntu/release
+  # T1 witness ride the nightly R-CMD-check-version-fanout job in
+  # scheduled.yml (issue #76). The CRAN-shape build+check keeps vignettes, Rd and CRAN
   # gates but drops only the serial test phase; the suite then runs on the
   # same platform as K parallel shard processes against one shared INSTALL,
   # and the fan-out attestation census gates the arm. Every test still
@@ -372,9 +376,6 @@ jobs:
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
-    # R devel is informative only (r-lib convention): the law travels with
-    # the arm, verbatim, from the retired monolithic matrix.
-    continue-on-error: ${{ matrix.config.r == 'devel' }}
     strategy:
       fail-fast: false
       matrix:
@@ -405,21 +406,11 @@ jobs:
         if: runner.os == 'Windows'
         run: rustup target add x86_64-pc-windows-gnu
 
-      # The devel arm carries the compatibility user-agent the monolithic
-      # matrix pinned for its informative leg; split like the dependency
-      # steps below so the input is physically absent on every other arm.
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r != 'devel'
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r == 'devel'
-        with:
-          r-version: 'devel'
-          use-public-rspm: true
-          http-user-agent: 'R/4.3.0 (github-actions)'
 
       # Fail-closed R-version attestation (CI warning-zero lane, 2026-10-23):
       # the 4.3 arm's banner was certified this week by five manual greps over
@@ -433,40 +424,14 @@ jobs:
       # Never pass an empty `dependencies` input: the action interpolates it
       # into pak's R call and the empty string yields the broken expression
       # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
-      # resolution, killing all matrix arms (CI audit 2026-10-07). Split
-      # into two guarded steps so the input is physically absent unless set;
-      # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
-      # Bioc Suggests chain, round-3 audit).
+      # resolution, killing all matrix arms (CI audit 2026-10-07). The
+      # release roster never needs the hard-mode floor provisioning; it
+      # travels with the version arms below on the scheduled gate.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r != '4.3'
         with:
           needs: check
           extra-packages: any::rcmdcheck
 
-      # install-pandoc must be explicit on the floor arm: the action's auto
-      # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
-      # dragging in the very Suggests this arm cannot solve -- and dies
-      # resolving BSgenome.Hsapiens.UCSC.hg19 before any install runs (CI
-      # audit 2026-10-07). 'true' skips the probe and ships the pandoc the
-      # knitr vignette needs; the CRAN-only extras keep the Bioc Suggests
-      # chain out of the solve while keeping the vignette build (this arm's
-      # check still builds it) and the sharded tests runnable. sigminer must
-      # NOT join these extras: it imports maftools -> VariantTools/S4Vectors,
-      # which live only in the Bioc 3.18 series that 4.3 needs -- and that
-      # series answers 404 on every canonical mirror (run 39753886611's
-      # solve died exactly there). The xval shard it alone powers is
-      # therefore EXCLUDED BY DECLARATION for this arm
-      # (tools/ci/shard-exclusions.tsv), not silently vacuous.
-      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r == '4.3'
-        with:
-          needs: check
-          dependencies: '"hard"'
-          install-pandoc: true
-          extra-packages: >-
-            any::rcmdcheck, any::knitr, any::rmarkdown,
-            any::testthat, any::withr, any::ggplot2,
-            any::ggalluvial, any::uwot
 
       # The displaced serial test phase returns below as K attested shards;
       # the Rd-examples leg rides the check phase of this call and the

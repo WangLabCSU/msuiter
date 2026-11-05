@@ -1,5 +1,8 @@
 # msuiter scheduled deep checks (U-M0-07) — docs/ARCHITECTURE.md §9:
-# "valgrind + ASAN/UBSAN scheduled job". Weekly. valgrind and sanitizer are
+# "valgrind + ASAN/UBSAN scheduled job". Nightly since issue #76
+# (2026-11-05): this workflow now carries the T1 deep battery, the five
+# version arms and the coverage leg the PR gate retired from its
+# critical path. valgrind and sanitizer are
 # diagnostic tripwires allowed to fail (not merge gates); site is a hard
 # gate (U-M7-04 slice-C, C5): a site that no longer builds must go red.
 #
@@ -22,6 +25,11 @@
 #   vendor-prep : the vendored offline tarball, generated once per run at
 #               the ADR 0002 §2 budget (mirror of ci.yml's guard-prep point;
 #               a run is its own single generation point).
+#   version-fanout : the six scheduled check arms -- the five version
+#               arms plus the ubuntu/release T1 witness -- running the
+#               same fan-out body the PR-gate release arms run, at
+#               --tier=T0,T1, so the deep battery is witnessed nightly
+#               on the wide platform matrix (issue #76).
 #   cran-shape-check : the single-process CRAN-shape monolith the PR gate
 #               retired from its critical path on 2026-10-22 (round-2): one
 #               build+install+check process with the FULL test phase, args
@@ -29,11 +37,14 @@
 #               verbatim from the leg it displaces. The eight fan-out arms
 #               in ci.yml prove the same coverage K-way parallel per PR; this
 #               job keeps the one-process CRAN-fidelity witness on this
-#               workflow's cadence (weekly cron + manual dispatch). The 4.3
-#               floor and devel legs are deliberately NOT duplicated here:
-#               their provisioning law (hard-mode Suggests skip, the devel
-#               user-agent pin) is carried by the fan-out roster in ci.yml,
-#               and a second copy would be budget, not signal.
+#               workflow's cadence (nightly cron + manual dispatch). The
+#               version arms -- 4.3, devel and the three oldrel-1 -- plus an
+#               ubuntu/release witness for the T1 tier ride the
+#               R-CMD-check-version-fanout job below (roster:
+#               tools/ci/scheduled-fanout-configs.tsv), carrying their
+#               provisioning law (hard-mode Suggests skip, the devel
+#               user-agent pin) verbatim from the PR gate they left on
+#               2026-11-05 (issue #76).
 #
 # Sanitizers need -Z flags => nightly toolchain (engine/catalog compile on
 # nightly: no unsafe, budget deps only).
@@ -42,7 +53,9 @@ name: Scheduled deep checks
 
 on:
   schedule:
-    - cron: '23 4 * * 1' # weekly, Monday 04:23 UTC
+    - cron: '23 4 * * *' # nightly 04:23 UTC (issue #76: the T1 deep battery,
+      #                        the version arms and the covr leg earn a
+      #                        nightly cadence, not a weekly one)
   workflow_dispatch:
 
 permissions:
@@ -217,8 +230,21 @@ jobs:
   vendor-prep:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      version-matrix: ${{ steps.version-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # The version-arm roster is data, not YAML (the same law as the
+      # PR-gate fan-out): tools/ci/scheduled-fanout-configs.tsv feeds
+      # the matrix of the R-CMD-check-version-fanout job below.
+      - name: Emit the scheduled version-arm matrix
+        id: version-matrix
+        shell: bash
+        run: |
+          rows=$(awk '!/^#/ && NF { printf "%s{\"os\":\"%s\",\"r\":\"%s\"}", sep, $1, $2; sep="," }' \
+            tools/ci/scheduled-fanout-configs.tsv)
+          echo "matrix={\"config\":[${rows}]}" >> "$GITHUB_OUTPUT"
 
       # Same generation recipe as ci.yml's guard-prep (ADR 0002 §3.3): the
       # tarball is built here once and the monolith never touches the
@@ -236,6 +262,237 @@ jobs:
           name: vendor-tarball
           path: vendor.tar.xz
           retention-days: 14
+          if-no-files-found: error
+
+  R-CMD-check-version-fanout:
+    # Uniform 180: budgets are hang detectors sized to the measured tail, and
+    # the measured tail is RUNNER-random, not arm-random. Witness 1 (run
+    # 39815352743): ubuntu/oldrel-1 ate 19m45s setup-r + 15m25s deps, its
+    # healthy wave severed at the 60 mark. Witness 2 (run 39839340513):
+    # ubuntu/release ate 23m16s + 10m45s of the same slowness and died the
+    # same death -- an arm whitelist is whack-a-mole. Healthy arms measure
+    # 24-41 min; 120 carried a 40-min stalled setup plus wave with headroom
+    # until the 2026-10-30/31 pair on main@a6c5870 (push-run 41082179842):
+    # R devel burned the whole 120 TWICE -- attempt-1 job 124154845151
+    # (2h01m03s) and its targeted rerun-failed attempt-2 job 124412728178
+    # (2h00m31s), both with steps 1-13 completed/success (setup-r, deps,
+    # banner attest, no-test check, shared INSTALL), the fan-out wave
+    # severed mid-flight, post-steps clean, zero hang signatures. Same
+    # co-tenancy straggler family the coverage arm met thrice at 120 and
+    # ratcheted to 180; the deep-check legs' own <=120 bounds are unrelated.
+    # 180 = witnessed >=120m straggler floor + one runner-slowness class.
+    timeout-minutes: 180
+    needs: [vendor-prep]
+    runs-on: ${{ matrix.config.os }}
+    name: R-CMD-check-version-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
+    # R devel is informative only (r-lib convention): the law travels with
+    # the arm, verbatim, from the retired monolithic matrix.
+    continue-on-error: ${{ matrix.config.r == 'devel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config: ${{ fromJSON(needs.vendor-prep.outputs.version-matrix).config }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # CRAN-mode offline build: the vendored tarball generated once by the
+      # vendor-prep job is dropped where Makevars expects it, so R CMD INSTALL
+      # never touches the network (a --as-cran WARNING otherwise, and no
+      # vendor.tar.xz is ever committed -- ADR 0002 §3.3).
+      - name: Fetch vendored offline tarball (built by vendor-prep)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      # src/rust builds during R CMD INSTALL/check; the MSRV from DESCRIPTION
+      # SystemRequirements (rustc >= 1.71) is used so every R job also
+      # exercises the 1.71 toolchain on all three OSes.
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - name: Provision the GNU target for R Makevars.win
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
+
+      # The devel arm carries the compatibility user-agent the monolithic
+      # matrix pinned for its informative leg; split like the dependency
+      # steps below so the input is physically absent on every other arm.
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r != 'devel'
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r == 'devel'
+        with:
+          r-version: 'devel'
+          use-public-rspm: true
+          http-user-agent: 'R/4.3.0 (github-actions)'
+
+      # Fail-closed R-version attestation (CI warning-zero lane, 2026-10-23):
+      # the 4.3 arm's banner was certified this week by five manual greps over
+      # an archived log; the arm now speaks the fact itself -- resolved version,
+      # DESCRIPTION floor, and a numeric matrix label must match what the
+      # resolver actually delivered (a silent fallback reddens the step).
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label='${{ matrix.config.r }}'
+
+      # Never pass an empty `dependencies` input: the action interpolates it
+      # into pak's R call and the empty string yields the broken expression
+      # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
+      # resolution, killing all matrix arms (CI audit 2026-10-07). Split
+      # into two guarded steps so the input is physically absent unless set;
+      # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
+      # Bioc Suggests chain, round-3 audit).
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r != '4.3'
+        with:
+          needs: check
+          extra-packages: any::rcmdcheck
+
+      # install-pandoc must be explicit on the floor arm: the action's auto
+      # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
+      # dragging in the very Suggests this arm cannot solve -- and dies
+      # resolving BSgenome.Hsapiens.UCSC.hg19 before any install runs (CI
+      # audit 2026-10-07). 'true' skips the probe and ships the pandoc the
+      # knitr vignette needs; the CRAN-only extras keep the Bioc Suggests
+      # chain out of the solve while keeping the vignette build (this arm's
+      # check still builds it) and the sharded tests runnable. sigminer must
+      # NOT join these extras: it imports maftools -> VariantTools/S4Vectors,
+      # which live only in the Bioc 3.18 series that 4.3 needs -- and that
+      # series answers 404 on every canonical mirror (run 39753886611's
+      # solve died exactly there). The xval shard it alone powers is
+      # therefore EXCLUDED BY DECLARATION for this arm
+      # (tools/ci/shard-exclusions.tsv), not silently vacuous.
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        if: matrix.config.r == '4.3'
+        with:
+          needs: check
+          dependencies: '"hard"'
+          install-pandoc: true
+          extra-packages: >-
+            any::rcmdcheck, any::knitr, any::rmarkdown,
+            any::testthat, any::withr, any::ggplot2,
+            any::ggalluvial, any::uwot
+
+      # The displaced serial test phase returns below as K attested shards;
+      # the Rd-examples leg rides the check phase of this call and the
+      # vignette leg its build phase (phase-marker probes banked with the
+      # round-2 lane manifest, 2026-10-22). The two env guards and the
+      # error-level gate are the retired wrapper's own verbatim law: CRAN-
+      # shape strictness depends on optional external tools not uniformly
+      # available across runner OSes (checkbashisms is absent on macos/
+      # windows runners and flags every fresh submission), so the PR gate
+      # errors on ERRORs only -- warnings/notes are informational, and the
+      # hard gates live in the guards job and the scheduled deep checks.
+      # The retired wrapper's snapshot upload is not mirrored: under
+      # --no-tests no snaps exist at check time (its own step carried
+      # if-no-files-found: ignore); the test phase's snapshot evidence
+      # travels with the shard transcripts, dumped in full on red by
+      # shard-transcripts.sh below.
+      - name: Check without the test phase (CRAN-shape build+check, error gate)
+        shell: Rscript {0}
+        run: |
+          if (Sys.getenv("_R_CHECK_FORCE_SUGGESTS_", "") == "") Sys.setenv("_R_CHECK_FORCE_SUGGESTS_" = "false")
+          if (Sys.getenv("_R_CHECK_CRAN_INCOMING_", "") == "") Sys.setenv("_R_CHECK_CRAN_INCOMING_" = "false")
+          check_results <- rcmdcheck::rcmdcheck(
+            args = c("--no-manual", "--as-cran", "--no-tests"),
+            build_args = "--no-manual",
+            error_on = "error",
+            check_dir = "check")
+
+      # Failure-only post-mortem evidence (the retired wrapper's upload law:
+      # the whole check tree ships when the leg went red).
+      - name: Upload check results (post-mortem evidence, failure only)
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: check-results-${{ matrix.config.os }}-${{ matrix.config.r }}
+          path: check
+          retention-days: 1
+          if-no-files-found: warn
+
+      # One shared INSTALL of the tree under test; the K shard processes run
+      # it back in parallel, each filtering the manifest to its roster. The
+      # run is from the CHECKOUT with load_package = "installed", so the
+      # helpers' ancestor walk resolves .ms_root and the drift guards and
+      # the check-layout-sim family execute -- a superset of what the old
+      # single process covered, never weaker. Docs/vignettes are not needed
+      # by the shards (Rd examples and vignette execution are gated inside
+      # the check step above, against its own full install).
+      - name: R CMD INSTALL (one build of the tree, shared by all shards)
+        shell: bash
+        run: |
+          # INSTALL's option parser does not know vignette options: this
+          # flag only ever emitted "Warning: unknown option
+          # '--no-build-vignettes'" (push-run 39864490318, every fan-out arm).
+          R CMD INSTALL --no-docs .
+
+      - name: Repo-layout testthat fan-out (K shards, attested)
+        # The version arms are scheduled, not per-push: they carry the
+        # T1 deep battery beside the T0 PR-gate battery (issue #76).
+        shell: bash
+        run: |
+          mkdir -p attest-out shard-logs
+          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          tag="${{ matrix.config.os }}-${{ matrix.config.r }}"
+          pids=""; rc=0
+          for s in $(seq 1 "$k"); do
+            # Sanctioned-skip ledger (tools/ci/shard-exclusions.tsv): a
+            # registered (arm, shard) pair is spoken for by the aggregator's
+            # own --write-exclusion-marker renderer, so the marker bytes can
+            # never drift from the ledger and this script invents nothing.
+            # rc=3 means "not registered: run the shard"; any other nonzero
+            # is a broken ledger and dies the arm loud.
+            exclrc=0
+            python3 tools/ci/ci-shard-aggregate.py --write-exclusion-marker \
+              --exclusions tools/ci/shard-exclusions.tsv \
+              --tag "$tag" --shard "$s" \
+              --out "attest-out/shard-$s-$tag.excl" || exclrc=$?
+            if [ "$exclrc" -eq 0 ]; then
+              echo "shard $s: excluded by the sanctioned-skip ledger for $tag"
+              continue
+            elif [ "$exclrc" -ne 3 ]; then
+              echo "sanctioned-skip ledger lookup failed (rc=$exclrc) for shard $s of $tag"
+              exit 2
+            fi
+            rm -f "attest-out/shard-$s-$tag.excl"
+            Rscript tools/ci/run-testthat-shard.R \
+              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
+              --kind=fanout --mode=installed \
+              --tier=T0,T1 \
+              --attest="attest-out/shard-$s-$tag.attest" \
+              > "shard-logs/shard-$s.log" 2>&1 &
+            pids="$pids $!"
+          done
+          for p in $pids; do wait "$p" || rc=1; done
+          echo "::group::shard transcripts (tail)"
+          for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
+          echo "::endgroup::"
+          [ "$rc" -eq 0 ] || bash tools/ci/shard-transcripts.sh
+          test "$rc" -eq 0 || exit "$rc"
+          python3 tools/ci/ci-shard-aggregate.py \
+            --manifest tools/ci/shard-manifest.tsv \
+            --attest-dir attest-out --kind fanout \
+            --tier T0,T1 \
+            --t0-budget tools/ci/pr-gate-budget.tsv \
+            --fanout-configs tools/ci/scheduled-fanout-configs.tsv \
+            --exclusions tools/ci/shard-exclusions.tsv \
+            --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
+
+      - name: Upload fan-out attestations
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: attest-version-fanout-${{ matrix.config.os }}-${{ matrix.config.r }}
+          path: attest-out
+          retention-days: 1
           if-no-files-found: error
 
   cran-shape-check:
