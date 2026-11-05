@@ -71,7 +71,11 @@ The metrics table carries the cosine per matched pair plus the `p_null`
 and `q_bh` columns; the protocol field names the match protocol family
 applied. `metric` selects the similarity measure (cosine by default), and
 `protocol` switches between the Hungarian assignment, the Islam greedy
-threshold sweep, and the Jiang activity protocol:
+threshold sweep, and the Jiang activity protocol. Two practical notes:
+the Jiang activity face is only defined when **both exposure matrices**
+are supplied, and the default run evaluates the full protocol family —
+so a signatures-only comparison (no exposures) must restrict the
+protocol, e.g. to the Hungarian assignment:
 
 ```{r protocol}
 cmp_isl <- ms_compare(ext@signatures, S, protocol = "islam",
@@ -87,6 +91,13 @@ face). Comparing two *extracted* sets — not one against a reference — uses
 the same call with the second matrix in the `reference` position.
 
 ## Group differences in exposure
+
+```{r minimal-compare}
+cmp_min <- ms_compare(ext@signatures, S, protocol = "hungarian",
+                      null_n = 200, null_n_draws = 500, seed = 1L)
+cmp_min
+```
+
 
 `ms_exposure_test()` asks a per-signature question: does this signature's
 activity differ between two sample groups? It returns a tidy table with a

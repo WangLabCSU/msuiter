@@ -2,6 +2,14 @@
 
 A new development cycle since v0.1.0.
 
+## P8 · Application-scenario case studies (paper pillar 3)
+
+* Three executable case-study scenarios under bench/scenarios/ adjudicated against a-priori planted truth through the public API only, each with its TDD law units and committed evidence tables (commits 6a3554f, e61f183, PR #56; CS-1 CS-2 CS-3 scopes per vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd and the frozen scenario-grid memo vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd; synthetic PCAWG-anchored generator mixtures only, D3 clean, seeds banked).
+* CS-1 atlas mode: five-variant-class symmetric ingestion with exact count contracts (SBS 1720/1720, DBS 240/240), QC gates, mixed de novo/refit with Hungarian-matched recall attestation (1.00 at tau 0.80), common/rare classification, and a clinical-style feature-association leg where the planted arm separates (BH-adjusted p 3.2e-05) while every decoy control stays null (run_atlas.R; tests/testthat/test-scenario-atlas.R).
+* CS-2 HRD scenario: planted pLOH/aneuploidy cohorts adjudicated BYTE-IDENTICAL against the verbatim Cortes-Castro dual oracles (identical() law), seeded reruns bit-reproducible, print faces speaking provenance and ledger, missing-arm-table input degrading to an attested no-arm-table verdict with zero fabrication (run_hrd.R; tests/testthat/test-scenario-hrd.R).
+* CS-3 treatment forensics MVP: the new `ms_treatment_report()` export (R/treatment-report.R) -- treatment-restricted refit against the refdb-governed exposure subset, association table with bootstrap CIs separating planted from non-planted by orders of magnitude, clonal/subclonal timing split additively reproducing the exposed means, and an honest degraded-mode attestation when treatment records are absent (run_treatment.R; tests/testthat/test-treatment-report.R; the differentiation claim per vignettes/articles/research-03-applications.qmd section 3).
+
+
 ## M6s · HRD workflow
 
 * `ms_hrd_report()`: HRD reporting surface -- dual-gate design with bit-exact SigMiner ground-truth replication and composite scoring, delivered TDD end-to-end (U-M6s-01, commit 2fc7e04, PR #6; R/hrd-report.R, R/hrd-reference.R; phase gate vignettes/articles/roadmap.qmd:93).
@@ -51,13 +59,6 @@ A new development cycle since v0.1.0.
 
 The first release: the minimal usable core of the Rust compute kernel + the R/S7 interface (the ROADMAP v0.1 gate = M0 + M1s; the M1c/M2/M3a/M4 calibration and similarity layers were pulled forward into this tree and ship with the release). The sections below are the development-period batch records (promoted from the 0.0.0.9000 development line).
 
-
-## P8 · Application-scenario case studies (paper pillar 3)
-
-* Three executable case-study scenarios under bench/scenarios/ adjudicated against a-priori planted truth through the public API only, each with its TDD law units and committed evidence tables (commits 6a3554f, e61f183, PR #56; CS-1 CS-2 CS-3 scopes per vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd and the frozen scenario-grid memo vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd; synthetic PCAWG-anchored generator mixtures only, D3 clean, seeds banked).
-* CS-1 atlas mode: five-variant-class symmetric ingestion with exact count contracts (SBS 1720/1720, DBS 240/240), QC gates, mixed de novo/refit with Hungarian-matched recall attestation (1.00 at tau 0.80), common/rare classification, and a clinical-style feature-association leg where the planted arm separates (BH-adjusted p 3.2e-05) while every decoy control stays null (run_atlas.R; tests/testthat/test-scenario-atlas.R).
-* CS-2 HRD scenario: planted pLOH/aneuploidy cohorts adjudicated BYTE-IDENTICAL against the verbatim Cortes-Castro dual oracles (identical() law), seeded reruns bit-reproducible, print faces speaking provenance and ledger, missing-arm-table input degrading to an attested no-arm-table verdict with zero fabrication (run_hrd.R; tests/testthat/test-scenario-hrd.R).
-* CS-3 treatment forensics MVP: the new `ms_treatment_report()` export (R/treatment-report.R) -- treatment-restricted refit against the refdb-governed exposure subset, association table with bootstrap CIs separating planted from non-planted by orders of magnitude, clonal/subclonal timing split additively reproducing the exposed means, and an honest degraded-mode attestation when treatment records are absent (run_treatment.R; tests/testthat/test-treatment-report.R; the differentiation claim per vignettes/articles/research-03-applications.qmd section 3).
 
 ## M0 Engineering foundations
 
