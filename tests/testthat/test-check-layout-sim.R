@@ -11,7 +11,10 @@
 # rejection) moved verbatim to test-check-layout-sim-sentry.R and
 # test-check-layout-sim-stale.R in the CI shard restructure (2026-10-21,
 # docs/devlog) so each ~20-minute simulate is an independently schedulable
-# shard; the test_that bodies are byte-unchanged by that move.
+# shard; the test_that bodies are byte-unchanged by that move. They stand
+# outside this directory today: issue #76 (2026-11-05) re-classed them tier
+# T2 under tests/heavy -- the local one-command face tools/test-heavy.R and
+# the nightly scheduled job own them, not the per-push CI battery.
 #
 # The move carried this file's numeric claims with the units (digit-run
 # multiset verified preserved across the 3-way split), so the moved tokens

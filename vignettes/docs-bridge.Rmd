@@ -139,3 +139,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [M4-03b — viz batch 2 design memo](devlog-2026-10-24-M4-03b-viz-batch2-memo.html) | `devlog-2026-10-24-M4-03b-viz-batch2-memo` |
 | [P8-CS-3 — treatment-forensics reporting face design memo](devlog-2026-10-28-p8-treatment-forensics-design.html) | `devlog-2026-10-28-p8-treatment-forensics-design` |
 | [Build-pin drift attestation -- blob-form re-anchor of the arm-recipe digest pins (2026-11-04)](devlog-2026-11-04-m7-build-pin-drift-attestation.html) | `devlog-2026-11-04-m7-build-pin-drift-attestation` |
+| [2026-11-05 -- CI PR-gate tiering ruling: three arms, one tier, nightly depth](devlog-2026-11-05-ci-pr-gate-tiering-ruling.html) | `devlog-2026-11-05-ci-pr-gate-tiering-ruling` |

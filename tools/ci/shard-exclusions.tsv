@@ -19,8 +19,12 @@
 # paths 404, while the live 3.21 series answers 200). Installing a
 # half-resolved reference and calling the shard green is the vacuous-green
 # this census exists to refuse; the xval pillar is carried by every other
-# arm of the fan-out, and that carriage is itself attested: the same census
-# demands shard 3's attestation with executed >= 1 on each of them. Consumed
-# by tools/ci/ci-shard-aggregate.py (--exclusions) and gated for shape by
-# tools/ci-selfcheck.py.
+# arm of the version fan-out that can install the reference, and that
+# carriage is itself attested: the same census demands shard 3's
+# attestation with executed >= 1 on each of them. Since issue #76 the
+# 4.3 arm rides the nightly version fan-out (the PR gate runs tier T0
+# only, where this shard holds no file at all), and the ledger-gate law
+# counts arm membership across the PR-gate and scheduled rosters.
+# Consumed by tools/ci/ci-shard-aggregate.py (--exclusions) and gated
+# for shape by tools/ci-selfcheck.py.
 ubuntu-latest	4.3	3	sigminer 2.3.3/2.4.0 Import maftools -> VariantTools/S4Vectors (Bioconductor 3.18, EOL: posit and bioconductor.org both 404 the 3.18 trees, measured 2026-10-22); reference not installable at R 4.3

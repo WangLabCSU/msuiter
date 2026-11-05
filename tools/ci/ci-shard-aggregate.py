@@ -45,9 +45,11 @@ def parse_manifest(path):
             parts = line.split("\t")
             if parts[0] == "shard":
                 continue
-            if len(parts) != 3:
+            if len(parts) != 4:
                 die2("DEFECT malformed manifest row: %r" % line)
-            rows.append((int(parts[0]), parts[1]))
+            if parts[3] not in ("T0", "T1", "T2"):
+                die2("DEFECT manifest tier outside {T0,T1,T2}: %r" % line)
+            rows.append((int(parts[0]), parts[1], int(parts[2]), parts[3]))
     if k is None or not rows:
         die2("DEFECT manifest unusable: %s" % path)
     return k, rows
@@ -178,11 +180,43 @@ def parse_divergences(path, out):
     return rows
 
 
+def read_t0_budget(path, out):
+    """Read the committed PR-gate T0 budget TSV (issue #76): key/value
+    rows under comment lines. The budget is a MEASURED number committed
+    in the repo -- the census re-prices the manifest against it so a
+    hand-edited manifest or a drifted weights table cannot outrun the
+    hang-budget spirit: drift goes red."""
+    kv = {}
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) < 2:
+                out("DEFECT malformed pr-gate-budget row: %r" % line)
+                return None, None
+            kv[parts[0]] = parts[1]
+    try:
+        return int(kv["t0-measured"]), int(kv["t0-ceiling"])
+    except (KeyError, ValueError):
+        out("DEFECT pr-gate-budget lacks numeric t0-measured/t0-ceiling rows")
+        return None, None
+
+
 def census(manifest, attest_dir, kind, configs, out, exclusions=None,
-           divergences=None):
-    k, rows = parse_manifest(manifest)
+           divergences=None, tiers=None, t0_budget=None):
+    if not os.path.isdir(attest_dir):
+        # A vanished evidence directory is the download-artifact failure mode
+        # of the issue #76 guards gate: it must speak, never crash bare and
+        # never read green.
+        out("DEFECT attest-dir absent: %s -- the lane handed the census no "
+            "evidence directory" % attest_dir)
+        return 1
+    k, rows_all = parse_manifest(manifest)
+    rows = [r for r in rows_all if r[3] in tiers] if tiers is not None else list(rows_all)
     roster = {}
-    for shard, fname in rows:
+    for shard, fname, _sec, _tier in rows:
         roster.setdefault(shard, []).append(fname)
     defects, executed_total, files_total, fails, errs = [], 0, 0, 0, 0
     sanctioned_total = 0
@@ -190,7 +224,7 @@ def census(manifest, attest_dir, kind, configs, out, exclusions=None,
     shards_ok = 0
     excluded_total = 0
     seen = set()
-    for shard in range(1, k + 1):
+    for shard in sorted(roster):
         for name in expected_files(kind, shard, configs):
             path = os.path.join(attest_dir, name)
             excl_name = None
@@ -278,11 +312,44 @@ def census(manifest, attest_dir, kind, configs, out, exclusions=None,
             fails += n_fail; errs += n_err
             if n_exec > 0 and n_fail == 0 and n_err == 0 and fields.get("status") == "ok":
                 shards_ok += 1
+    if kind == "fanout" and exclusions:
+        # A tier-scoped arm never visits a shard whose in-tier roster is
+        # empty, so the roster loop never consumes that shard's ledger
+        # marker -- yet the workflow's pre-launch gate writes it for every
+        # registered (arm, shard), ledger bytes or nothing. Consume those
+        # markers here (byte law still applies) so a registered exclusion
+        # reads lawful off-tier and an unregistered one still reads rogue.
+        for (os_, cfg, sh_str), cause in sorted(exclusions.items()):
+            try:
+                sh = int(sh_str)
+            except ValueError:
+                continue
+            if sh in roster:
+                continue
+            excl_name = "shard-%d-%s-%s.excl" % (sh, os_, cfg)
+            marker_path = os.path.join(attest_dir, excl_name)
+            if os.path.exists(marker_path):
+                with open(marker_path, encoding="utf-8") as fh:
+                    body = fh.read()
+                want = "\n".join(exclusion_marker("%s-%s" % (os_, cfg), sh,
+                                                  cause)) + "\n"
+                if body != want:
+                    defects.append("exclusion marker off the ledger: %s" % excl_name)
+                seen.add(excl_name)
+                excluded_total += 1
     for name in sorted(os.listdir(attest_dir)):
         if name.endswith(".attest") and name not in seen:
             defects.append("unknown attestation (outside manifest): %s" % name)
         if name.endswith(".excl") and name not in seen:
             defects.append("rogue exclusion marker (unregistered): %s" % name)
+    if t0_budget is not None:
+        _measured, ceiling = read_t0_budget(t0_budget, out)
+        if ceiling is not None:
+            t0sum = sum(sec for (_s, _f, sec, tier) in rows_all if tier == "T0")
+            if t0sum > ceiling:
+                defects.append("T0 weight %d s exceeds the committed ceiling %d s "
+                               "(tools/ci/pr-gate-budget.tsv) -- the PR-gate battery "
+                               "may not grow past its measured budget" % (t0sum, ceiling))
     if divergences is not None:
         for shard in sorted(divergences):
             if shard not in used_rows:
@@ -290,8 +357,9 @@ def census(manifest, attest_dir, kind, configs, out, exclusions=None,
                                "(attestation healthy, absent, or off the row's byte "
                                "signature -- ledger is [%s])"
                                % (shard, divergences[shard]["witness"][:60]))
-    out("AGGREGATE kind=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d excluded=%d sanctioned=%d defects=%d"
-        % (kind, shards_ok, k, files_total, len(rows), executed_total, fails, errs,
+    out("AGGREGATE kind=%s tiers=%s shards=%d/%d files=%d/%d executed=%d fails=%d errors=%d excluded=%d sanctioned=%d defects=%d"
+        % (kind, "+".join(tiers) if tiers is not None else "all",
+           shards_ok, len(roster), files_total, len(rows), executed_total, fails, errs,
            excluded_total, sanctioned_total, len(defects)))
     for d in defects:
         out("DEFECT " + d)
@@ -310,7 +378,9 @@ def self_test(out):
     try:
         man = os.path.join(base, "manifest.tsv")
         with open(man, "w") as fh:
-            fh.write("# k=2\nshard\tfile\tseconds\n1\ttest-a.R\t5\n1\ttest-b.R\t5\n2\ttest-c.R\t5\n")
+            fh.write("# k=2\nshard\tfile\tseconds\ttier\n"
+                   "1\ttest-a.R\t5\tT0\n1\ttest-b.R\t5\tT0\n"
+                   "2\ttest-c.R\t5\tT0\n")
         adir = os.path.join(base, "attest"); os.mkdir(adir)
         def write(name, line):
             with open(os.path.join(adir, name), "w") as fh:
@@ -331,6 +401,12 @@ def self_test(out):
         os.remove(os.path.join(adir, "shard-2.attest"))
         fired.append(census_count("missing attestation"))
         out("missing-shard control FIR" if fired[-1] else "SELF-TEST BROKEN: missing-shard control")
+        absent_n = []
+        n_absent = census(man, os.path.join(base, "no-such-attest-dir"), "guards",
+                          None, absent_n.append)
+        out("attest-dir-absent control FIR" if n_absent == 1
+            and any("attest-dir absent" in c for c in absent_n)
+            else "SELF-TEST BROKEN: attest-dir-absent control")
         write("shard-2.attest", attest(2, "guards", 1, 0, status="vacuous"))
         fired.append(census_count("zero executed"))
         out("zero-executed control FIR" if fired[-1] else "SELF-TEST BROKEN: zero-executed control")
@@ -506,6 +582,104 @@ def self_test(out):
         fired.append(n > 0 and any("stale divergences row" in c for c in collected))
         out("covr-stale-row control FIR" if fired[-1]
             else "SELF-TEST BROKEN: stale row rode unseen: %s" % collected)
+        # -- Tier + budget law (issue #76). The manifest is the single
+        # partition; the tier column says what a lane runs. A shard empty
+        # in the tier needs no attestation; a shard WITH tier files that
+        # stays silent dies; the committed T0 budget is re-priced at every
+        # census so drift goes red. --
+        for nm in list(os.listdir(adir)):
+            os.remove(os.path.join(adir, nm))
+        man3 = os.path.join(base, "manifest-tiers.tsv")
+        with open(man3, "w") as fh:
+            fh.write("# k=2\nshard\tfile\tseconds\ttier\n"
+                     "1\ttest-a.R\t5\tT0\n1\ttest-b.R\t600\tT1\n"
+                     "2\ttest-deep.R\t700\tT1\n")
+        with open(os.path.join(adir, "shard-1.attest"), "w") as fh:
+            fh.write(attest(1, "guards", 1, 3) + "\n")   # T0 file only
+        collected = []
+        n = census(man3, adir, "guards", None, collected.append,
+                   tiers=["T0"])
+        fired.append(n == 0 and any("tiers=T0" in c for c in collected))
+        out("tier-empty-shard needs-no-attestation control stays GREEN" if fired[-1]
+            else "SELF-TEST BROKEN: tier-skipped shard went RED: %s" % collected)
+        collected = []
+        n = census(man3, adir, "guards", None, collected.append,
+                   tiers=["T0", "T1"])
+        fired.append(n > 0 and any("missing attestation: shard-2.attest" in c
+                                    for c in collected))
+        out("tier-deepened census control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: T1 file ran unwatched: %s" % collected)
+        with open(os.path.join(adir, "shard-2.attest"), "w") as fh:
+            fh.write(attest(2, "guards", 1, 2) + "\n")
+        collected = []
+        n = census(man3, adir, "guards", None, collected.append,
+                   tiers=["T0"])
+        fired.append(n > 0 and any("unknown attestation" in c for c in collected))
+        out("tier-blind attestation control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: out-of-tier attestation rode unseen: %s" % collected)
+        os.remove(os.path.join(adir, "shard-2.attest"))
+        # -- Out-of-tier marker law (issue #76): shard 2 holds only the
+        # T1 file, so a T0 census never visits it; the registered marker
+        # must ride green, an unregistered one must still die. --
+        for nm in list(os.listdir(adir)):
+            os.remove(os.path.join(adir, nm))
+        with open(os.path.join(adir, "shard-1-linux-latest-release.attest"), "w") as fh:
+            fh.write(attest(1, "fanout", 1, 1) + "\n")   # the T0 file, attested
+        reg2 = os.path.join(base, "exclusions-oott.tsv")
+        with open(reg2, "w") as fh:
+            fh.write("linux-latest\trelease\t2\tfile needs the arm feature the "
+                     "release floor lacks (self-test fixture)\n")
+        oott_rows = parse_exclusions(reg2, out)
+        if oott_rows is None:
+            out("SELF-TEST BROKEN: out-of-tier ledger did not parse")
+            fired.append(False)
+        else:
+            mk2 = os.path.join(adir, "shard-2-linux-latest-release.excl")
+            write_exclusion_marker(reg2, "linux-latest-release", "2", mk2,
+                                   lambda s: None)
+            collected = []
+            n = census(man3, adir, "fanout", [("linux-latest", "release")],
+                       collected.append, exclusions=oott_rows, tiers=["T0"])
+            fired.append(n == 0)
+            out("out-of-tier registered marker control stays GREEN" if fired[-1]
+                else "SELF-TEST BROKEN: off-tier marker reddened the census: %s"
+                    % collected)
+            os.remove(mk2)
+            collected = []
+            with open(mk2, "w") as fh:
+                fh.write("MSUITER-EXCL tag=linux-latest-release shard=2\n"
+                         "cause=planted by the self-test\n")
+            n2 = census(man3, adir, "fanout", [("linux-latest", "release")],
+                         collected.append, tiers=["T0"])
+            fired.append(n2 > 0 and any(
+                "rogue exclusion marker" in c for c in collected))
+            out("out-of-tier rogue marker control FIR" if fired[-1]
+                else "SELF-TEST BROKEN: unregistered off-tier marker rode unseen: %s"
+                    % collected)
+        for nm in list(os.listdir(adir)):
+            os.remove(os.path.join(adir, nm))
+        with open(os.path.join(adir, "shard-1.attest"), "w") as fh:
+            fh.write(attest(1, "guards", 1, 3) + "\n")   # the state the
+        # budget controls below were written against (mirrors the tier law
+        # controls' committed-shape attestation)
+        bud = os.path.join(base, "budget.tsv")
+        with open(bud, "w") as fh:
+            fh.write("# witness\nkey\tvalue\tnote\n"
+                     "t0-measured\t5\tw\nt0-ceiling\t4\tw\n")
+        collected = []
+        n = census(man3, adir, "guards", None, collected.append,
+                   tiers=["T0"], t0_budget=bud)
+        fired.append(n > 0 and any("T0 weight" in c for c in collected))
+        out("T0-budget ceiling control FIR" if fired[-1]
+            else "SELF-TEST BROKEN: over-budget T0 passed: %s" % collected)
+        with open(bud, "w") as fh:
+            fh.write("key\tvalue\tnote\nt0-measured\t5\tw\nt0-ceiling\t999\tw\n")
+        collected = []
+        n = census(man3, adir, "guards", None, collected.append,
+                   tiers=["T0"], t0_budget=bud)
+        fired.append(n == 0)
+        out("T0-budget headroom control stays GREEN" if fired[-1]
+            else "SELF-TEST BROKEN: in-budget set went RED: %s" % collected)
         if not all(fired):
             out("AGGREGATE SELF-TEST FAILED")
             return 1
@@ -523,6 +697,8 @@ def main(argv=None):
     ap.add_argument("--expect-config", help="fan-out: the arm's own OS-RCFG tag; the expected set is scoped to it")
     ap.add_argument("--exclusions", help="fan-out: the sanctioned-skip ledger (shard-exclusions.tsv)")
     ap.add_argument("--ledger", help="coverage: the sanctioned-divergences ledger (covr-divergences.tsv)")
+    ap.add_argument("--tier", help="run only these committed manifest tiers (comma-separated, e.g. T0 or T0,T1)")
+    ap.add_argument("--t0-budget", help="fan-out: path to the committed PR-gate T0 budget TSV (required)")
     ap.add_argument("--write-exclusion-marker", action="store_true",
                     help="render the marker ci.yml must leave for a registered (tag, shard)")
     ap.add_argument("--tag"); ap.add_argument("--shard"); ap.add_argument("--out")
@@ -574,8 +750,19 @@ def main(argv=None):
         divergences = parse_divergences(a.ledger, out)
         if divergences is None:
             return 2
+    tiers = None
+    if a.tier:
+        tiers = [t.strip() for t in a.tier.split(",") if t.strip()]
+        if not tiers or any(t not in ("T0", "T1", "T2") for t in tiers):
+            out("DEFECT --tier outside {T0,T1,T2}: %r" % a.tier)
+            return 2
+    if a.kind == "fanout" and not a.t0_budget:
+        out("DEFECT fan-out census requires --t0-budget (the committed "
+            "PR-gate T0 budget, tools/ci/pr-gate-budget.tsv)")
+        return 2
     n = census(a.manifest, a.attest_dir, a.kind, configs, out,
-               exclusions=exclusions, divergences=divergences)
+               exclusions=exclusions, divergences=divergences,
+               tiers=tiers, t0_budget=a.t0_budget)
     return 1 if n else 0
 
 

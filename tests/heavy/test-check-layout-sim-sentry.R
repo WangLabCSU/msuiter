@@ -1,3 +1,11 @@
+# Tier T2 (issue #76, 2026-11-05): this unit and its stale sibling moved
+# from tests/testthat to tests/heavy -- the PR-gate battery is tier T0, the
+# scheduled deep battery T1, and a ~20-minute provisioning simulation is
+# neither. Their face is tools/test-heavy.R (local + nightly scheduled),
+# never the per-push CI shard fleet; the manifest's tier column is the
+# location law the generator enforces. Comments only: the test_that body is
+# byte-unchanged by this move.
+#
 # CI shard-sentry unit (moved out of test-check-layout-sim.R verbatim,
 # 2026-10-21 shard restructure; docs/devlog). It is the full-simulate half
 # of the GO-04D instrument: build the real check layout from the real

@@ -1,0 +1,19 @@
+# Scheduled check arms of the version fan-out (issue #76, 2026-11-05;
+# vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd). The five version
+# arms the PR gate slimmed out of -- ubuntu 4.3 (package floor), ubuntu
+# devel (informative, continue-on-error), the three oldrel-1 -- plus one
+# ubuntu/release witness: the nightly R-CMD-check-version-fanout job is the
+# only lane that runs tier T1 on the wide platform matrix, and the release
+# Linux arm is where its measurements mean most (the PR gate itself runs
+# tier T0 only). Same fan-out body, the same attestation census, at
+# --tier=T0,T1; the sanctioned-skip ledger's arm-membership law counts these
+# rows beside the PR-gate roster.
+# One 'os<TAB>config' row per arm; the deterministic order law of the
+# PR-gate roster holds here too (os alphabetical; within an os the Linux
+# specials first, oldrel-1 last).
+macos-latest	oldrel-1
+ubuntu-latest	4.3
+ubuntu-latest	devel
+ubuntu-latest	release
+ubuntu-latest	oldrel-1
+windows-latest	oldrel-1
