@@ -38,7 +38,7 @@ the manifest simply never said which tier was whose.
    ubuntu/release witness, because the T1 battery needs a release-R Linux
    measurement). The eight-arm census survives as the union of the two
    committed rosters; check-run census 15 -> 10 with its firing control
-   flipped in the same breath.
+   flipped in the same breath, -> 9 when the coverage leg followed below.
 3. **Depth moved, coverage did not.** The PR-gate fan-out runs
    `--tier=T0` only; the version fan-out runs `--tier=T0,T1`, so every
    test still runs on every platform -- on the cadence that matches its
@@ -46,7 +46,11 @@ the manifest simply never said which tier was whose.
    were the covr ledger's two vacuous rows, and retiring the rows with the
    tier ruling left the ledger legitimately empty -- an empty active
    ledger is lawful exactly while the tier law holds (the R-side unit
-   speaks it, with a ban on the retired names reviving).
+   speaks it, with a ban on the retired names reviving). The covr JOB
+   itself -- the leg that instruments the committed suite and never
+   vetoes a pull request -- moved verbatim from ci.yml to scheduled.yml:
+   its gating census, its zero-fragment merge law, its witnessed 180
+   budget and its codecov upload travelled with it.
 4. **Keep-as-is, audited.** The rust/msrv shape, the vendored cargo
    contract and the concurrency cancel-in-progress law already match the
    proposal's intent; the Swatinem/rust-cache adoption the issue asked to
@@ -67,11 +71,44 @@ Full attestation sweep banked in the lane evidence
 self-tests with every new control FIR/GREEN, law units nb/failed/error/
 skipped read from `as.data.frame`, ci-selfcheck PASS.
 
+## The second breath: coverage nightly, guards retargeted
+
+The PR gate's second full-roster pass was `guards-shards`: its K-shard
+testthat wave duplicated what the three release arms plus the nightly
+T1 lanes now carry, so the wave retired -- the lane keeps the shared
+`R CMD INSTALL` of the tree under test and the fail-closed
+package/namespace declaration census, and its budget came down from the
+witnessed 120 (kept as history in the file, with the two co-tenancy kill
+witnesses) to the 45-minute guard-prep class.
+
+`guards` -- the attestation gate -- retargeted from that wave onto the
+fan-out evidence itself: it downloads the three arms' attestations and
+censuses each arm data-driven off the committed roster (`while
+IFS=$'\t' read` over `fanout-configs.tsv`; `download-artifact` cannot
+loop, so the three download steps are literal while the census is not).
+Every census is tier T0, budget-bearing (`--t0-budget`
+re-prices the committed measurement on every run), per-arm expected via
+`--expect-config`, and `--advisory` stays dead. The retargeted loop is
+attested by executing the committed step verbatim against fabricated
+evidence (lane evidence, `C3-guards-loop.txt`): complete evidence exits
+0; a deleted shard file dies LOUD (`DEFECT missing attestation: ...
+(shard 4)`); a missing arm directory -- the shape a forgotten download
+step leaves -- dies LOUD (`DEFECT attest-dir absent: ...`, the
+aggregator's new attest-dir-absent firing control). Three claims, all
+measured.
+
+Hardening caught on the way (all in the same change set): the
+generator's four fail-closed exit-2 paths were silent and now speak
+(CLI-face law); the census loop's comment guard went from `'\#'` to
+`'#'` so bash 3.2 -- the local re-run face -- matches it too; the covr
+runner's mandatory-`--tier` DEFECT and loud tier-skip were re-smoked.
+
 ## Discrepancies against the issue's 2026-11-04 measurement
 
 The tree drifted since the measurement: 93 test files, not 92; "everything
 else <= ~40 s" no longer holds (ms-qc-report 112 s and the kernel pair
 172 s + 79 s exceed it) -- ms-qc-report stays T0: it is fast-high-signal,
 not named by the proposal, and the ceiling law bounds it anyway. The
-issue's "coverage job in the PR gate" is retired next by item 3 of the
-same ruling; what remains is the fan-out, three arms, one tier.
+issue's "coverage job in the PR gate" is retired by item 3 of the same
+ruling -- the leg rides the nightly gate; what the PR gate keeps is the
+fan-out, three arms, one tier.

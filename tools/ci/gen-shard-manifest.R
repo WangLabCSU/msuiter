@@ -52,18 +52,28 @@ if (is.null(root)) {
     while (TRUE) {
       if (file.exists(file.path(p, "DESCRIPTION"))) break
       up <- dirname(p)
-      if (identical(up, p)) quit(status = 2L)   # fail closed: pass --root=
+      if (identical(up, p)) {
+        cat("gen-shard-manifest: DEFECT: no package DESCRIPTION up from ",
+            getwd(), " -- pass --root=\n", sep = "", file = stderr())
+        quit(status = 2L)
+      }
       p <- up
     }
     p
   })
 }
 if (is.null(weights) || is.null(out) || !file.exists(weights)) {
+  cat("gen-shard-manifest: usage: Rscript tools/ci/gen-shard-manifest.R",
+      " --weights=<tsv> --out=<tsv> [--root=<pkg>]\n", sep = "", file = stderr())
   quit(status = 2L)
 }
 tt.dir <- file.path(root, "tests", "testthat")
 heavy.dir <- file.path(root, "tests", "heavy")
-if (!dir.exists(tt.dir) || !dir.exists(heavy.dir)) quit(status = 2L)
+if (!dir.exists(tt.dir) || !dir.exists(heavy.dir)) {
+  cat("gen-shard-manifest: DEFECT: ", root, " must hold both tests/testthat\n",
+      "and tests/heavy (the tier location law)\n", sep = "", file = stderr())
+  quit(status = 2L)
+}
 tt.roster <- list.files(tt.dir, pattern = "^test-.*[.]R$")
 heavy.roster <- list.files(heavy.dir, pattern = "^test-.*[.]R$")
 
@@ -108,7 +118,11 @@ tiers <- setNames(wtier, wfile)
 # drift goes red). Integers on the manifest's own rounding, so the
 # aggregator's sum and this sum are the same arithmetic.
 budget.path <- .kv("budget", file.path(root, "tools", "ci", "pr-gate-budget.tsv"))
-if (!file.exists(budget.path)) quit(status = 2L)
+if (!file.exists(budget.path)) {
+  cat("gen-shard-manifest: DEFECT: committed T0 budget file missing: ",
+      budget.path, "\n", sep = "", file = stderr())
+  quit(status = 2L)
+}
 budget <- local({
   b <- readLines(budget.path, warn = FALSE)
   b <- b[!grepl("^\\s*(#|$)", b)]

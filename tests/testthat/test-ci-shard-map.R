@@ -1,8 +1,10 @@
 # CI shard-topology unit (wall-clock restructure, 2026-10-21).
 #
 # The committed shard manifest is the single source of truth for how the
-# testthat suite fans out across the guards shards, the coverage shards, and
-# the per-platform check-test fan-outs. This unit is the roster census that
+# testthat suite fans out: the tier-T0 per-platform check fan-out arms
+# per-push (issue #76), and the tier-T0,T1 version fan-out plus the covr
+# leg on the nightly gate; tier T2 lives in tests/heavy behind
+# tools/test-heavy.R. This unit is the roster census that
 # keeps that source honest: exhaustive over the on-disk test roster, disjoint,
 # byte-stable, and its instruments proven to FIRE (cjk-census self-test
 # family: a scanner without a firing positive control is vacuous and
@@ -368,19 +370,21 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   .ci_require_checkout()
   root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
   ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
-  budget_line <- function(key) {
+  sc <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"),
+                   warn = FALSE)
+  budget_line <- function(key, src = ci) {
     hdr <- paste0("  ", key, ":")
-    h <- which(ci == hdr)
+    h <- which(src == hdr)
     expect_identical(length(h), 1L, info = key)
-    win <- ci[(h + 1L):length(ci)]
+    win <- src[(h + 1L):length(src)]
     t <- win[grepl("timeout-minutes:", win, fixed = TRUE)]
     expect_gte(length(t), 1L)   # a job without an explicit budget is a green-hang invitation
     trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE))
   }
   expect_identical(budget_line("guard-prep"), "45")     # hot path 1 min; stall class needs slack (strike-3 witness)
   expect_identical(budget_line("guards"), "15")          # aggregator-only, measured 0 min
-  expect_identical(budget_line("guards-shards"), "120")  # old 60 starved a healthy arm: green witness 57m27s (run 40822738417 attempt-2, 96 % of the line); two kill witnesses -- PR #60 attempt-1 (all 16 steps run, 61-min wall) and push-run 40844971894 job 123350746358 (steps 1-11 green, step 12 in-flight at 57.5m, severed at 60:13) -- zero hang signatures; 120 = witnessed floor + one pool-slowness class, the uniform fan-out ceiling
-  expect_identical(budget_line("coverage"), "180")      # hot 18 min; 90 consumed whole twice by PR #52 (runs 40013789288/40028404425) vs main's 68m53s tail (push-run 39965044133); 120 then consumed whole thrice by PR #56 (run 40667262104 job 122744792649 120m27s; run 40700329158 attempt1 job 122858082848 120m26s + its attempt-2 rerun 120m34s, heartbeat flat 5/6 with live pinned 1/7) -- the straggler-shard class re-created by the manifest re-pack; 180 = witnessed >=118m straggler floor + one runner-slowness class of headroom
+  expect_identical(budget_line("guards-shards"), "45")   # issue #76: the K-shard testthat wave left the lane -- the PR gate's second full-roster pass retired -- and INSTALL + the declaration census budget like the guard-prep class. The 120 this replaces carried the wave: green witness 57m27s (run 40822738417 attempt-2) against two co-tenancy kill witnesses (PR #60 attempt-1, 61-min wall; push-run 40844971894 job 123350746358 severed at 60:13) -- zero hang signatures
+  expect_identical(budget_line("coverage", sc), "180")  # hot 18 min; 90 consumed whole twice by PR #52 (runs 40013789288/40028404425) vs main's 68m53s tail (push-run 39965044133); 120 then consumed whole thrice by PR #56 (run 40667262104 job 122744792649 120m27s; run 40700329158 attempt1 job 122858082848 120m26s + its attempt-2 rerun 120m34s, heartbeat flat 5/6 with live pinned 1/7) -- the straggler-shard class re-created by the manifest re-pack; 180 = witnessed >=118m straggler floor + one runner-slowness class of headroom
   # Second witness (run 39839340513, 2026-10-23): the slow-runner class is a
   # RUNNER property, not an arm property -- the 10-22 strike hit ubuntu/oldrel-1,
   # this one hit ubuntu/release + coverage. An arm whitelist is whack-a-mole;
@@ -390,7 +394,9 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
 
 test_that("the covr coverage aggregate is ledger-gated, never advisory", {
   .ci_require_checkout()
-  ci <- readLines(.ci_ci_locate(file.path("..", "..", ".github", "workflows", "ci.yml")),
+  # The covr leg rides the nightly gate since issue #76; the ledger-gated
+  # law follows the census, not the file that once held it.
+  ci <- readLines(.ci_ci_locate(file.path("..", "..", ".github", "workflows", "scheduled.yml")),
                   warn = FALSE)
   # Shell line continuations belong to their command: fold them before the
   # scan, or a --ledger riding the next physical line hides from a --kind scan.
@@ -476,7 +482,8 @@ test_that("the covr merge gate reddens zero fragments and the extras prefix cann
   .ci_require_checkout()
   root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
   rd <- function(f) paste0(readLines(file.path(root, f), warn = FALSE), collapse = "\n")
-  ci <- rd(".github/workflows/ci.yml")
+  ci <- rd(".github/workflows/scheduled.yml")
+  # (the covr leg moved here with issue #76; the laws travel with the step)
   # The birth defect (attested 2026-10-24): zero fragments echoed and exited
   # 0 -- a vacuous green under the census law of the same day.
   expect_true(any(grepl("no coverage fragments produced.*exit 1", ci)),

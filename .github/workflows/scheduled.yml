@@ -30,6 +30,10 @@
 #               same fan-out body the PR-gate release arms run, at
 #               --tier=T0,T1, so the deep battery is witnessed nightly
 #               on the wide platform matrix (issue #76).
+#   coverage     : R coverage via covr -> codecov upload, sharded at
+#               --tier=T0,T1 (the covr runner refuses an unspoken --tier);
+#               the gating census and the zero-fragment merge law moved with
+#               the job verbatim (issue #76).
 #   cran-shape-check : the single-process CRAN-shape monolith the PR gate
 #               retired from its critical path on 2026-10-22 (round-2): one
 #               build+install+check process with the FULL test phase, args
@@ -495,6 +499,155 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  coverage:
+    # Moved verbatim from ci.yml by issue #76 (2026-11-05): the
+    # coverage leg instruments the committed suite, does not gate
+    # the pull request, and earns its keep nightly.
+    # R-side coverage upload only; no percentage gate here (R >= 85% is a
+    # later target, ARCHITECTURE §9). Rust coverage is not gated (also
+    # ARCHITECTURE §9). The attestation census, however, gates (law of
+    # 2026-10-24): the aggregator's --advisory printed defects and exited
+    # green for a year -- a vacuous green in the gate itself. Shards must
+    # attest executed work; the installed-copy context's structural absences
+    # (checkout-locating files skip there) are sanctioned byte-exactly by
+    # tools/ci/covr-divergences.tsv, reverse-audited -- a ledger row that
+    # sanctions nothing is itself a defect.
+    # Hot path measures 18 min (run 39815352743); witness run 39839340513
+    # ate 40 min of runner-slowness setup before covr even started, and the
+    # 60-minute timer beheaded a healthy shard mid-flight -- 90 carried the
+    # stall class with headroom. The headroom ran out: PR #52 consumed the
+    # full 90 twice (runs 40013789288/40028404425) while main's measured
+    # tail already reached 68m53s (push-run 39965044133); the weights table
+    # prices files in testthat seconds, blind to the covr-instrumented cost
+    # of new files. 120 carried the then-measured tail plus witness excess;
+    # the in-wave heartbeat turns any future timer kill into a measurement
+    # (attest rising = slow-but-live, attest flat + live pinned = hang).
+    # Ratchet 120->180 (PR #56 lineage, triple ceiling witness): run
+    # 40667262104 job 122744792649 ran 120m27s (09:49:35->11:50:02Z), run
+    # 40700329158 attempt 1 job 122858082848 ran 120m26s (13:51:43->
+    # 15:52:09Z), and the same job's targeted rerun attempt 2 ran 120m34s
+    # (15:58:33->17:59:07Z), each heartbeating attest flat 5/6 + live
+    # pinned 1/7 for the final hour -- the straggler-shard class of
+    # the PR #52 record, re-created by the manifest re-pack, not by
+    # content: the 14 content arms stayed green throughout and the
+    # 26m00s clean pass (push-run 40614650936) proves the wave is sound. 180 carries the straggler floor
+    # (>=118m witnessed) with one runner-slowness class of headroom.
+    timeout-minutes: 180
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install Rust toolchain at MSRV
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - name: Provision the GNU target for R Makevars.win
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: coverage
+          extra-packages: any::covr
+
+      # Test-phase coverage, sharded: one instrumented package_coverage
+      # (type="tests") per manifest shard, in parallel. covr's
+      # instrumentation can break individual tests without implying a
+      # package regression (the same suite passes in R-CMD-check-fanout on
+      # the same commit), so each shard is continue-on-error and the merged
+      # artifacts are what the upload consumes.
+      - name: Generate R coverage per shard (covr, attested)
+        continue-on-error: true
+        run: |
+          mkdir -p covr-out covr-srt covr-logs
+          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
+          # The examples/vignettes legs ride the SAME parallel wave as the
+          # test shards (the historical type="all" was tests+examples+
+          # vignettes in one process; here the shards carry the tests leg
+          # and these two instrumented passes carry the rest). They once ran
+          # as an inline heredoc whose covr::to_srt call -- an object covr
+          # does not export -- killed the child unattested behind
+          # continue-on-error (push-run 39864490318: fragments=3 not 5). The
+          # committed runner attests every outcome; pre-clean stays off for
+          # the shared-cargo-target law run-covr-shard.R documents.
+          pids=""
+          for s in $(seq 1 "$k"); do
+            Rscript tools/ci/run-covr-shard.R \
+              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
+              --out-srt="covr-srt/shard-$s.srt" \
+              --tier=T0,T1 \
+              --attest="covr-out/shard-$s.attest" \
+              > "covr-logs/shard-$s.log" 2>&1 &
+            pids="$pids $!"
+          done
+          Rscript tools/ci/run-covr-extras.R --out-srt-prefix=/tmp \
+            > covr-logs/extras.log 2>&1 &
+          pids="$pids $!"
+          rc=0
+          # Heartbeat: attest/live census on the step stream every 120s. The
+          # post-wait transcript echo below never runs when the job timer
+          # fires, so without this a killed wave leaves no progress curve
+          # (PR #52 double-90-min audit: two full-budget deaths, silence as
+          # the only evidence). attest is over the k test shards (extras
+          # attests to its own /tmp prefix); live over the whole wave.
+          total=$((k + 1))
+          t=0
+          while [ "$(jobs -r | wc -l | tr -d ' ')" != "0" ]; do
+            echo "covr-heartbeat t=${t}s attest=$(ls covr-out 2>/dev/null | wc -l | tr -d ' ')/$k live=$(jobs -r | wc -l | tr -d ' ')/$total"
+            t=$((t + 120)); sleep 120
+          done
+          for p in $pids; do wait "$p" || rc=1; done
+          echo "::group::covr transcripts (tail)"
+          for f in covr-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
+          echo "::endgroup::"
+
+      # The census gates (law of 2026-10-24 -- the --advisory non-gate let
+      # a year of broken coverage exit green). It rides its own step, outside
+      # the wave's continue-on-error umbrella, so a missing, vacuous or
+      # off-ledger attestation reddens the job; the diagnosability step below
+      # still fires on the failure.
+      - name: Census the covr attestations (gates)
+        run: |
+          python3 tools/ci/ci-shard-aggregate.py \
+            --manifest tools/ci/shard-manifest.tsv \
+            --attest-dir covr-out --kind coverage \
+            --ledger tools/ci/covr-divergences.tsv \
+            --tier T0,T1
+
+      - name: Echo failed testthat output (diagnosability)
+        if: failure()
+        shell: bash
+        run: |
+          for f in covr-logs/*.log; do echo "-- $f (tail) --"; tail -n 40 "$f"; done
+          FAILFILE=$(find /tmp -name "testthat.Rout.fail" 2>/dev/null | head -1)
+          if [ -n "$FAILFILE" ]; then
+            echo "=== $FAILFILE (tail) ==="
+            tail -80 "$FAILFILE"
+          fi
+
+      - name: Merge coverage fragments (covmerge)
+        run: |
+          fragments=""
+          for f in covr-srt/*.srt /tmp/msuiter-extras-*.srt; do
+            [ -f "$f" ] && fragments="$fragments $f"
+          done
+          test -n "$fragments" || { echo "::error::no coverage fragments produced -- coverage lane vacuous"; exit 1; }
+          # shellcheck-disable-next-line SC2086: fragment paths are CI-owned
+          python3 tools/ci/covmerge.py --fragments $fragments \
+            --out-srt /tmp/msuiter-merged.srt --cobertura cobertura.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        with:
+          files: cobertura.xml
+          flags: r
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
   cran-shape-check:
     needs: [vendor-prep]
     runs-on: ${{ matrix.config.os }}

@@ -206,6 +206,13 @@ def read_t0_budget(path, out):
 
 def census(manifest, attest_dir, kind, configs, out, exclusions=None,
            divergences=None, tiers=None, t0_budget=None):
+    if not os.path.isdir(attest_dir):
+        # A vanished evidence directory is the download-artifact failure mode
+        # of the issue #76 guards gate: it must speak, never crash bare and
+        # never read green.
+        out("DEFECT attest-dir absent: %s -- the lane handed the census no "
+            "evidence directory" % attest_dir)
+        return 1
     k, rows_all = parse_manifest(manifest)
     rows = [r for r in rows_all if r[3] in tiers] if tiers is not None else list(rows_all)
     roster = {}
@@ -394,6 +401,12 @@ def self_test(out):
         os.remove(os.path.join(adir, "shard-2.attest"))
         fired.append(census_count("missing attestation"))
         out("missing-shard control FIR" if fired[-1] else "SELF-TEST BROKEN: missing-shard control")
+        absent_n = []
+        n_absent = census(man, os.path.join(base, "no-such-attest-dir"), "guards",
+                          None, absent_n.append)
+        out("attest-dir-absent control FIR" if n_absent == 1
+            and any("attest-dir absent" in c for c in absent_n)
+            else "SELF-TEST BROKEN: attest-dir-absent control")
         write("shard-2.attest", attest(2, "guards", 1, 0, status="vacuous"))
         fired.append(census_count("zero executed"))
         out("zero-executed control FIR" if fired[-1] else "SELF-TEST BROKEN: zero-executed control")
