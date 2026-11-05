@@ -17,7 +17,7 @@ page on 2026-10-04 and pinned by test literal: the roster the
 artifact-share surfaces count against.
 }
 \references{
-Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 (the live-verified 19-entry enumeration; the page prose said "20
 total" -- the enumeration is the pin); roster constant
 `R/ms-qc-report.R` (.ms_qc_artifact_sbs); literal pin

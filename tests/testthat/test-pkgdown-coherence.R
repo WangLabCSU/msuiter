@@ -168,8 +168,20 @@
 
 test_that("US-3 every vignette is registered, every article owns a vignette, navbar is coherent", {
   if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
-  vignettes <- sub("[.]Rmd$", "", sort(basename(list.files(
-    file.path(.ms_root, "vignettes"), pattern = "[.]Rmd$"))))
+  # the roster covers both article faces: the top-level vignettes/*.Rmd (real
+  # package vignettes, built by R CMD check) and the site-only corpus articles
+  # vignettes/articles/*.qmd (the converted former docs/ tree)
+  top <- list.files(file.path(.ms_root, "vignettes"), pattern = "[.]Rmd$")
+  art_dir <- file.path(.ms_root, "vignettes", "articles")
+  art <- if (dir.exists(art_dir)) {
+    list.files(art_dir, pattern = "[.]qmd$")
+  } else {
+    character(0)
+  }
+  # pkgdown names subdirectory articles with their "articles/" prefix, and
+  # the _pkgdown.yml contents entries must use the same shape
+  vignettes <- sort(c(sub("[.]Rmd$", "", top),
+                      paste0("articles/", sub("[.]qmd$", "", art))))
   yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
   r <- .coh_law(vignettes, .coh_parse_articles(yml), .coh_parse_navbar(yml),
                 .coh_site_dir())

@@ -1,0 +1,129 @@
+---
+title: "Quality control and reporting"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Quality control and reporting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette: the
+# source tree (check and site-build contexts) loads through pkgload; a bare
+# installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+Every downstream claim — an extracted signature, a fitted exposure, a
+presence call — inherits the quality of the catalog it came from. The QC
+faces inspect that inheritance *before* the analysis: mutation burden,
+strand artifacts, flat "pseudosignature" contributions from technical
+processes, and the hypermutant samples that can dominate an ensemble.
+Build catalogs with [Mutation catalogs](mutation-catalogs.html).
+
+## The QC report
+
+`ms_qc_report()` computes the per-sample QC table on a catalog. With a
+signature set attached it also scores the pseudosignature faces; without
+one it reports the burden and strand faces alone:
+
+```{r qc-report}
+ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S   <- ref[, c(1, 5, 9)]
+colnames(S) <- paste0("CS", 1:3)
+E   <- matrix(c(0.5, 0.3, 0.2), 3, 16,
+              dimnames = list(colnames(S), paste0("S", 1:16)))
+sim <- ms_simulate(S, exposures = E, burden = 2000, seed = 2)
+
+qc <- ms_qc_report(sim)
+head(qc)
+```
+
+Each row is a sample: the burden columns (`total`, `log10_total`,
+`burden_class`), the strand-bias faces, and (with signatures attached)
+the artifact share with the specific technical signatures contributing.
+`qc_flag` condenses the table into the per-sample verdict your pipeline
+can filter on.
+
+## The sibling sentries
+
+The report is the composite; the **sentries** are the individual faces,
+exposed so a pipeline can consume exactly one claim without recomputing
+the rest:
+
+```{r sentries}
+qb <- ms_qc_burden(sim)
+qb
+
+qs <- ms_qc_sentries(sim)
+qs
+```
+
+`ms_qc_mechanism_channels()` exposes the channel-level mechanism roster —
+which channels each certified mechanism (APOBEC, tobacco, UV, and the
+rest of the roster) is read from. It is the reference table behind the
+mechanism columns above, and is also useful standalone when you want to
+reason about channel subsets:
+
+```{r mechanism}
+mc <- ms_qc_mechanism_channels()
+head(as.data.frame(mc))
+```
+
+`plot_qc_dashboard()` and `plot_pseudosig_contribution()` render the
+report's faces (shown in
+[the visualization gallery](visualization-gallery.html)).
+
+## Hypermutant stratification
+
+A handful of extreme-burden samples can drive an entire ensemble. The
+stratifier splits the cohort into a hypermutant class and a regular
+class — by a data-driven cutoff or a manual burden threshold — so the two
+arms can be extracted, fitted, and reported separately:
+
+```{r stratify}
+strat <- ms_stratify_hypermutants(sim, manual_cutoff = 3000, seed = 1)
+strat
+```
+
+The result is an `MsStratification` carrying the class assignment and the
+cutoff used; `plot_hypermutator_burden()` draws the burden distribution
+with the cutoff
+([the visualization gallery](visualization-gallery.html)).
+
+## Downsampling
+
+Burden drives most QC verdicts, so a useful question is: how does the
+analysis behave at lower sequencing depth? `ms_downsample()` thins a
+catalog to a target per-sample total — the primitive behind the
+calibration sanity protocol of
+[Calibrated statistics](calibrated-statistics.html), and a useful robustness
+check in its own right:
+
+```{r downsample}
+ds <- ms_downsample(sim, depth = 800, seed = 1)
+range(colSums(ds@counts))
+```
+
+## Where to go next
+
+- [Extracting signatures](signature-extraction.html): the de novo pipeline
+  the QC faces gate.
+- [Calibrated statistics](calibrated-statistics.html): the sanity protocol
+  built on downsampling.
+- [The visualization gallery](visualization-gallery.html): the QC figure
+  types.

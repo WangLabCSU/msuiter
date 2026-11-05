@@ -2,7 +2,7 @@
 # capability-matrix truth: the checkmark is a proof, not a promise
 # (docs-honesty law, 2026-10-23).
 #
-# docs/CAPABILITY-MATRIX.md is the contract a reader trusts at a glance: a
+# vignettes/articles/capability-matrix.qmd is the contract a reader trusts at a glance: a
 # checkmark on a row reads as "this ships". The legend once said otherwise
 # (checkmark = "designed"), and four claims rode that gap -- a phantom engine
 # variant, a never-written epidemiology panel, an M0-skeleton-era refdb
@@ -115,13 +115,13 @@
 # two phantom sets; a dead parser (zero claims across the whole matrix)
 # stops instead of reporting an empty, satisfying diff.
 .ms_cm_audit <- function(root) {
-  matrix <- file.path(root, "docs", "CAPABILITY-MATRIX.md")
-  if (!file.exists(matrix)) stop("docs/CAPABILITY-MATRIX.md missing at ", root)
+  matrix <- file.path(root, "vignettes", "articles", "capability-matrix.qmd")
+  if (!file.exists(matrix)) stop("vignettes/articles/capability-matrix.qmd missing at ", root)
   lines <- readLines(matrix, warn = FALSE)
   rows <- .ms_cm_delivered_rows(lines)
   if (!length(rows)) stop("no delivered rows in the matrix -- glyph parsing died")
   claimed <- unique(unlist(lapply(rows, .ms_cm_claims), use.names = FALSE))
-  # FFI-governed internals are the docs/ffi-surface.md population, not here.
+  # FFI-governed internals are the vignettes/articles/ffi-surface.qmd population, not here.
   claimed <- claimed[!grepl("_rust$", claimed)]
   if (!length(claimed)) stop("delivered rows name no ms_* API -- claim parsing died")
   legal <- .ms_cm_variants(root)

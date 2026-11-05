@@ -1,5 +1,5 @@
 # viz-batch2.R: the four CAPABILITY-MATRIX promised faces (U-M4-03b;
-# design memo docs/devlog/2026-10-24-M4-03b-viz-batch2-memo.md).
+# design memo vignettes/articles/devlog-2026-10-24-M4-03b-viz-batch2-memo.qmd).
 #
 # Every face renders an ALREADY-CERTIFIED result: the plots draw what the
 # backing faces stored (never re-deriving thresholds, ranks or rosters).

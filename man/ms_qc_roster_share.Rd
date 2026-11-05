@@ -35,7 +35,7 @@ share is NA). The computation delegates to the same certified block
 are the only legal matching key, never position).
 }
 \references{
-Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 (roster) and section 3 (share formula and the declared flag);
 computation core `R/ms-qc-report.R` (.ms_qc_roster_block: the
 certified validation face and share loop, and .ms_qc_defaults).

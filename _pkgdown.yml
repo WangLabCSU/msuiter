@@ -1,7 +1,10 @@
-# The pkgdown site face (the M0 governance file, U-M0-08; the full site --
-# the MSU<->function map, the performance anchoring, the docs bridge -- was
-# delivered across the M7 docs/site lanes DS-1/DS-2).
-url: https://github.com/WangLabCSU/msuiter
+# The pkgdown site face. The user-facing learning path lives in the tiered
+# articles (Get started -> Core workflows -> Statistics -> Applications ->
+# Performance -> the governance corpus, research dossiers, reviews and the
+# campaign devlog, all converted from the former docs/ tree). The site is
+# built and published by .github/workflows/pkgdown.yaml (GitHub Actions ->
+# GitHub Pages, build_type: workflow).
+url: https://wanglabcsu.github.io/msuiter
 
 template:
   bootstrap: 5
@@ -11,25 +14,19 @@ development:
 
 navbar:
   structure:
-    left: [intro, get-started, docs-bridge, reference, news, docs]
+    left: [intro, get-started, articles, reference, news]
     right: [github]
   components:
     get-started:
       text: Get started
       href: articles/get-started.html
-    docs-bridge:
-      text: Docs bridge
-      href: articles/docs-bridge.html
     news:
       text: News
       href: news/index.html
-    docs:
-      text: Docs
-      href: https://github.com/WangLabCSU/msuiter/tree/main/docs
 
 reference:
 - title: The object model (S7)
-  desc: The central objects and the construction entry points (developer preview, the API marked experimental). The full function-to-concept-to-pillar map is docs/MSU-MAP.md (https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md).
+  desc: The central objects and the construction entry points (developer preview, the API marked experimental). The full function-to-concept-to-pillar map is the MSU-map article (articles/msu-map.html).
   contents:
   - ms_variants
   - ms_catalog
@@ -163,40 +160,144 @@ reference:
   - print.MsTreatmentReport
   - as.data.frame.MsTreatmentReport
 - title: The benchmark-matrix driver
-  desc: The scenario constructor and the driving loop (the naming ruling is in the 2026-10-10 decision record of docs/devlog).
+  desc: The scenario constructor and the driving loop (the naming ruling is in the 2026-10-10 devlog record, articles/devlog-2026-10-10-m7-benchmark-ergonomics.html).
   contents:
   - ms_benchmark_grid
   - ms_run_benchmark
 
-# articles: the vignette rendering list (pkgdown picks the same-named source
-# files under vignettes/ by name). Section form per pkgdown >= 2.0 (issue #32
-# D3): each entry is a list with a title and a contents list; the bare string
-# list the M0 skeleton carried was rejected by the sitrep articles check
-# ("articles must be a list, not the string"). Every vignette under
-# vignettes/ is named explicitly -- no default-index fallback, the coherence
-# law (test-pkgdown-coherence.R) owns the bijection and stays load-bearing.
 articles:
-- title: "Get started: install, the five-minute path, output anatomy"
+- title: "Get started"
+  desc: "Install, the five-minute path, and the full tour from variants to a reference comparison."
   contents:
   - get-started
-- title: "Tour: from variants to a reference comparison"
-  contents:
   - tour
-- title: "Application scenarios: atlas, HRD and treatment forensics"
+- title: "Core workflows"
+  desc: "The task guides: bring data in, build catalogs, extract de novo, fit and test."
+  contents:
+  - import-data
+  - mutation-catalogs
+  - signature-extraction
+  - signature-fitting
+- title: "Statistics and comparison"
+  desc: "The calibrated-similarity comparison and the MSU-Fit calibration statistics."
+  contents:
+  - comparing-signatures
+  - calibrated-statistics
+- title: "Applications and QC"
+  desc: "The scenario atlas, the QC/reporting faces and the figure-type gallery."
   contents:
   - scenarios
-- title: "Performance anchoring: frozen floors, witnesses and reproduction"
+  - quality-control
+  - visualization-gallery
+- title: "Performance and peer evidence"
+  desc: "Frozen floors, witness censuses and the sealed peer-evidence face."
   contents:
   - performance-anchoring
-- title: "Docs bridge: navigating the repository docs corpus"
-  contents:
-  - docs-bridge
-- title: "Scenario gallery: committed witness census, provenance-stamped"
-  contents:
   - scenarios-gallery
-- title: "Peer evidence: sealed witness-only comparisons"
-  contents:
   - peer-evidence
-- title: Extending msuiter
+- title: "Repository governance corpus"
+  desc: "The converted docs/ tree: architecture, capability matrix, roadmap, performance, the FFI surface, ADRs and the paper lane."
+  contents:
+  - articles/architecture
+  - articles/capability-matrix
+  - articles/ffi-surface
+  - articles/implementation-plan
+  - articles/msu-map
+  - articles/paper-draft
+  - articles/performance
+  - articles/release-v0.1-checklist
+  - articles/reproduction-proof
+  - articles/roadmap
+  - articles/adr-0001-twobit-reader-choice
+  - articles/adr-0002-vendor-budget
+- title: "Research dossiers"
+  desc: "The pre-implementation survey corpus (methods, fitting, applications, source audits, standards)."
+  contents:
+  - articles/research-00-executive-summary
+  - articles/research-01-extraction-methods
+  - articles/research-02-fitting-inference
+  - articles/research-03-applications
+  - articles/research-04-source-audit
+  - articles/research-05-standards-data
+  - articles/research-06-s7-class-system
+  - articles/research-07-algorithm-zoo
+  - articles/research-08-fact-check-audit
+  - articles/research-09-sigminer-v3-parity-plan
+- title: "Independent reviews"
+  desc: "The five-expert adversarial review round and its synthesis."
+  contents:
+  - articles/review-00-synthesis
+  - articles/review-01-computational-biologist
+  - articles/review-02-rust-r-engineer
+  - articles/review-03-ml-statistician
+  - articles/review-04-software-engineer
+  - articles/review-05-nature-editor
+- title: "Extending and navigation"
+  desc: "The engine-extension guide and the corpus navigation page."
   contents:
   - extending
+  - docs-bridge
+- title: "Campaign devlog"
+  desc: "The dated decision and delivery records of the whole campaign, oldest first."
+  contents:
+  - articles/devlog-2026-09-28-G0-pi-adjudication
+  - articles/devlog-2026-09-28-G0-protocol-memo
+  - articles/devlog-2026-09-28-G0-realism-memo
+  - articles/devlog-2026-09-28-G3-cornet-event-review
+  - articles/devlog-2026-09-28-M0-01
+  - articles/devlog-2026-09-28-M0-02
+  - articles/devlog-2026-09-28-M0-03
+  - articles/devlog-2026-09-28-M0-04
+  - articles/devlog-2026-09-28-M0-05
+  - articles/devlog-2026-09-28-M0-06
+  - articles/devlog-2026-09-28-M0-09
+  - articles/devlog-2026-09-28-assumption-audit-memo
+  - articles/devlog-2026-09-29-G0-harness
+  - articles/devlog-2026-09-29-M0-07-08
+  - articles/devlog-2026-09-29-M1s-01
+  - articles/devlog-2026-09-29-M1s-02-03-04
+  - articles/devlog-2026-09-30-GMM-stratify-memo
+  - articles/devlog-2026-09-30-ID83-design-memo
+  - articles/devlog-2026-09-30-M1c-02-03-04
+  - articles/devlog-2026-09-30-M1c-02-GMM-stratify
+  - articles/devlog-2026-09-30-M1c-input-close
+  - articles/devlog-2026-09-30-M1s-05
+  - articles/devlog-2026-09-30-M1s-09-10-11
+  - articles/devlog-2026-09-30-M1s-12-14
+  - articles/devlog-2026-09-30-M1s-13-bench
+  - articles/devlog-2026-09-30-M1s-xval-parallel
+  - articles/devlog-2026-09-30-M2-pipeline-design-memo
+  - articles/devlog-2026-10-01-M1c-M2-M3a-night
+  - articles/devlog-2026-10-02-M3a-04-05-06
+  - articles/devlog-2026-10-03-presence-bootstrap-fix
+  - articles/devlog-2026-10-04-M3b-close
+  - articles/devlog-2026-10-04-M3b-design-close
+  - articles/devlog-2026-10-04-M3b-design-memo
+  - articles/devlog-2026-10-04-M4-01-design-memo
+  - articles/devlog-2026-10-04-M4-02-design-memo
+  - articles/devlog-2026-10-04-M4-02b-qc-memo
+  - articles/devlog-2026-10-04-M4-02c-convert-memo
+  - articles/devlog-2026-10-04-M4-03-viz-memo
+  - articles/devlog-2026-10-05-bench-jiang-memo
+  - articles/devlog-2026-10-05-benchmark-design-memo
+  - articles/devlog-2026-10-05-simulate-memo
+  - articles/devlog-2026-10-07-ci-contract-closure
+  - articles/devlog-2026-10-07-g0-pi-run-cost-memo
+  - articles/devlog-2026-10-07-m6s-hrd-report-design
+  - articles/devlog-2026-10-07-m6s-red-adjudication
+  - articles/devlog-2026-10-08-g0-degraded-closure
+  - articles/devlog-2026-10-08-m7-competitor-harness-design
+  - articles/devlog-2026-10-09-m7-benchmark-matrix
+  - articles/devlog-2026-10-10-m7-benchmark-ergonomics
+  - articles/devlog-2026-10-10-m7-bootstrap-campaign
+  - articles/devlog-2026-10-10-m7-hardware-pin
+  - articles/devlog-2026-10-10-m7-rb11-restoration
+  - articles/devlog-2026-10-11-go05-anchor-gate-amendment
+  - articles/devlog-2026-10-11-go05-tier-oracle-amendment
+  - articles/devlog-2026-10-21-ci-shard-parallel
+  - articles/devlog-2026-10-21-valgrind-trace-children-census
+  - articles/devlog-2026-10-24-M4-03b-viz-batch2-memo
+  - articles/devlog-2026-10-28-p8-treatment-forensics-design
+  - articles/devlog-2026-11-04-m7-build-pin-drift-attestation
+  - articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling
+  - articles/devlog-2026-11-05-p7cap-no-stamp-ruling-archive

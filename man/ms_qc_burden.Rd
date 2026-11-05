@@ -15,7 +15,7 @@ An `MsQcBurden` data.frame, one row per sample, columns in the
 }
 \description{
 The burden block of the certified QC report (design memo
-`docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 3, as implemented in
+`vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 3, as implemented in
 `R/ms-qc-report.R:95-105` at the time this surface was factored out),
 exposed as its own addressable surface: one row per sample with the
 total burden, its base-10 log and the house-declared burden class
@@ -25,7 +25,7 @@ The values delegate to the same computation core as
 implementation.
 }
 \references{
-Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 3
+Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 3
 (burden block, house-declared classes with the divergence note);
 computation core `R/ms-qc-report.R` (.ms_qc_shares, .ms_qc_log10,
 .ms_qc_burden_class, .ms_qc_defaults).

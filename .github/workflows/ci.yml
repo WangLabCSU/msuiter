@@ -1,15 +1,19 @@
-# msuiter CI (U-M0-07) -- docs/ARCHITECTURE.md §9 CI contract.
+# msuiter CI (U-M0-07) -- vignettes/articles/architecture.qmd §9 CI contract.
 #
 # Jobs:
 #   guard-prep  : fast static guards + the single vendor-tarball generation
 #                 point + the shard-manifest byte-gate; emits the check-arm
 #                 matrix from tools/ci/fanout-configs.tsv.
-#   R-CMD-check-fanout : ALL EIGHT check arms (roster:
+#   R-CMD-check-fanout : the THREE PR-gate release arms (roster:
 #                 tools/ci/fanout-configs.tsv, emitted by guard-prep) run
 #                 the fan-out body: rcmdcheck --as-cran --no-manual
 #                 --no-tests plus the sharded repo-layout testthat
-#                 fan-out against one shared R CMD INSTALL, so every test
-#                 runs on every platform -- K-way parallel, not serial.
+#                 fan-out of the PR-gate tier T0 against one shared R CMD
+#                 INSTALL, so every PR-gate test runs on every platform
+#                 -- K-way parallel, not serial. The version arms (4.3,
+#                 devel, the three oldrel-1) and the T1 deep battery rode
+#                 here until issue #76 (2026-11-05) moved them to the
+#                 nightly R-CMD-check-version-fanout job of scheduled.yml.
 #                 The Rd-examples leg rides the check phase and the
 #                 vignette leg the build phase of that same step. The
 #                 single-process CRAN-shape monolith with the full test
@@ -22,34 +26,44 @@
 #                 DESCRIPTION MSRV (rustc >= 1.71) in every R job.
 #   rust        : cargo test --workspace, clippy -D warnings, cargo deny
 #                 (all four sections) and cargo audit (hard-fail findings).
-#   guards      : the attestation gate: it demands one ok MSUITER-ATTEST
-#                 verdict per manifest shard from guards-shards (and,
-#                 structurally, that no arm gated zero executed tests --
-#                 tools/ci/ci-shard-aggregate.py, self-tested). The name
+#   guards      : the attestation gate: it demands, per fan-out arm, the
+#                 manifest's attestation census over that arm's shipped
+#                 evidence -- tier T0, the committed T0 budget re-priced,
+#                 zero-executed deaths and no advisory face (tools/ci/
+#                 ci-shard-aggregate.py, self-tested; issue #76 retargeted
+#                 it from the retired guards-shards wave onto the fan-out).
+#                 The name
 #                 continues to carry the branch-protection semantics; the
 #                 repo-root guard scripts it names run in guard-prep
 #                 (U-M0-01/02/05/06 handoff, see
-#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07), and its
+#                 vignettes/articles/implementation-plan.qmd §3.1 U-M0-07), and its
 #                 Cargo.lock pin assertion (ADR 0002 §4.4) stays as the
 #                 belt-and-braces check beside dependabot.
-#   guards-shards : K parallel repo-layout testthat shard processes against
-#                 one shared R CMD INSTALL of the tree under test; attests
-#                 every file of the committed shard manifest.
+#   guards-shards : the shared R CMD INSTALL of the tree under test plus the
+#                 fail-closed package/namespace declaration census. Its K-
+#                 shard testthat wave was the PR gate's second full-roster
+#                 pass and retired with issue #76; the suite rides the
+#                 fan-out (tier T0) and the nightly lanes (tier T1).
 #   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows
 #                 (formal closure of the ADR 0002 section 5 residual
 #                 "three-platform build proofs"; macos arm64 already proven
 #                 locally in ADR 0002 §4).
-#   coverage    : R coverage via covr -> codecov upload. Sharded for the
-#                 test legs, examples/vignettes as before. Wiring only,
-#                 no percentage gate (R >= 85% is a later milestone target,
-#                 ARCHITECTURE §9); the attestation census gates -- the
-#                 --advisory non-gate was retired 2026-10-24.
+#   coverage    : moved to the nightly gate (scheduled.yml) with issue #76
+#                 -- the covr leg is measurement, not a per-push veto, and
+#                 its gating census and merge law travelled with it verbatim.
 #
 # The shard partition lives once, in tools/ci/shard-manifest.tsv, and is
-# consumed by guards-shards, the check fan-out arms, and coverage; it is
+# consumed by the check fan-out arms (tier T0) and -- on the nightly gate
+# -- the version fan-out and the coverage leg (tier T0,T1); it is
 # machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
 # guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
-# docs/devlog/2026-10-21-ci-shard-parallel.md.
+# vignettes/articles/devlog-2026-10-21-ci-shard-parallel.qmd. The
+# manifest's tier column (issue #76) is a committed location law: the
+# PR-gate fan-out arms run tier T0, the nightly version fan-out and
+# coverage run T0+T1, and the two tier-T2 provisioning simulations live
+# in tests/heavy, run only through tools/test-heavy.R (local, plus the
+# nightly scheduled job). The PR-gate T0 weight is bounded by the
+# committed measurement tools/ci/pr-gate-budget.tsv.
 #
 # This repository currently has remote origin (WangLabCSU/msuiter); these
 # workflows activate on the next push.
@@ -215,31 +229,63 @@ jobs:
   # attest status=ok with executed >= 1 (tools/ci/ci-shard-aggregate.py).
   guards:
     timeout-minutes: 15
-    needs: [guard-prep, guards-shards]
+    needs: [guard-prep, R-CMD-check-fanout]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Download guard attestations
+      # The attestation gate consumes the fan-out evidence, not a second
+      # full-roster pass (issue #76): every arm's attestations are fetched
+      # and censused per arm. The download steps are literal because
+      # download-artifact cannot loop; the census itself is data-driven off
+      # the committed roster, so a roster row added without its download
+      # step fails LOUD on the missing attestation directory, never green.
+      - name: Download fan-out attestations (macos-latest release)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: attest-guards
-          path: attest-guards
+          name: attest-fanout-macos-latest-release
+          path: attest-fanout-macos-latest-release
 
-      - name: Aggregate guard attestations (strict census)
+      - name: Download fan-out attestations (ubuntu-latest release)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: attest-fanout-ubuntu-latest-release
+          path: attest-fanout-ubuntu-latest-release
+
+      - name: Download fan-out attestations (windows-latest release)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: attest-fanout-windows-latest-release
+          path: attest-fanout-windows-latest-release
+
+      - name: Aggregate the fan-out attestations (strict census, per arm)
         run: |
-          python3 tools/ci/ci-shard-aggregate.py \
-            --manifest tools/ci/shard-manifest.tsv \
-            --attest-dir attest-guards --kind guards
+          while IFS=$'\t' read -r os r; do
+            # '\' quoted so bash 3.2 (the local re-run face) matches too --
+            #   on that vintage '\#' is a literal backslash-hash and lets
+            #   comments through; '#' unescaped matches on every vintage.
+            case "$os" in ''|'#'*) continue;; esac
+            tag="$os-$r"
+            python3 tools/ci/ci-shard-aggregate.py \
+              --manifest tools/ci/shard-manifest.tsv \
+              --attest-dir "attest-fanout-$tag" --kind fanout \
+              --fanout-configs tools/ci/fanout-configs.tsv \
+              --exclusions tools/ci/shard-exclusions.tsv \
+              --expect-config "$tag" \
+              --tier T0 --t0-budget tools/ci/pr-gate-budget.tsv
+          done < tools/ci/fanout-configs.tsv
 
   guards-shards:
-    # Budget-line ratchet on two co-tenancy kill witnesses: PR #60 attempt-1
-    # (all 16 steps run at 61-min wall) and push-run 40844971894 (killed at
-    # 60:13 with steps 1-11 green, step 12 in-flight at 57.5 min). The green
-    # witness is 57m27s (run 40822738417 attempt-2) -- 96 % of the old line:
-    # the budget was starving a healthy arm, not detecting a hang. 120 carries
-    # the witnessed floor with one pool-slowness class of headroom.
-    timeout-minutes: 120
+    # Issue #76 (2026-11-05): the K-shard testthat wave left this lane -- it
+    # was the PR gate's SECOND full-roster pass, and the fan-out arms plus
+    # the nightly tier-T1 lanes now carry the suite. What remains is the
+    # shared INSTALL of the tree under test and the fail-closed
+    # package/namespace declaration census it gates. The 120-min line below
+    # it records the wave's history: two co-tenancy kill witnesses (PR #60
+    # attempt-1, push-run 40844971894) against the 57m27s green witness
+    # (run 40822738417 attempt-2). An INSTALL-plus-census lane budgets like
+    # the other short lanes: 45, the guard-prep class.
+    timeout-minutes: 45
     needs: guard-prep
     runs-on: ubuntu-latest
     steps:
@@ -273,15 +319,17 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
-          needs: soft # Suggests (testthat, withr) for the repo-layout suite
+          needs: soft # Suggests; kept verbatim with the unchanged INSTALL
+                      # (issue #76 retired this lane's shard wave, not its build face)
 
-      # One shared INSTALL of the tree under test; the K shard processes run
-      # it back in parallel, each filtering the manifest to its roster. The
-      # run is from the CHECKOUT with load_package="installed", so the
-      # helpers' ancestor walk resolves .ms_root and the drift guards and
-      # the check-layout-sim family execute -- a superset of what the old
-      # single devtools::test() process covered, never weaker.
-      - name: R CMD INSTALL (one build of the tree, shared by all shards)
+      # The shared INSTALL of the tree under test: after issue #76 this is
+      # what the lane exists to produce. The K-shard testthat wave it served
+      # -- the PR gate's SECOND full-roster pass -- retired with the tiering
+      # ruling; the suite rides the tier-T0 fan-out arms (per-push) and the
+      # nightly deep lanes. The build runs from the CHECKOUT, so the tree's
+      # helpers' ancestor walk resolves .ms_root from the installed layout
+      # exactly as the wave era left it -- the build face did not move.
+      - name: R CMD INSTALL (the tree under test -- this lane's artifact)
         shell: bash
         run: |
           # INSTALL's option parser does not know vignette options: this
@@ -297,37 +345,10 @@ jobs:
         shell: bash
         run: Rscript tools/ci/check-dep-declaration.R
 
-      - name: Repo-layout testthat shards (parallel, attested)
-        shell: bash
-        run: |
-          mkdir -p attest-out shard-logs
-          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
-          pids=""; rc=0
-          for s in $(seq 1 "$k"); do
-            Rscript tools/ci/run-testthat-shard.R \
-              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
-              --kind=guards --mode=installed \
-              --attest="attest-out/shard-$s.attest" \
-              > "shard-logs/shard-$s.log" 2>&1 &
-            pids="$pids $!"
-          done
-          for p in $pids; do wait "$p" || rc=1; done
-          echo "::group::shard transcripts (tail)"
-          for f in shard-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
-          echo "::endgroup::"
-          [ "$rc" -eq 0 ] || bash tools/ci/shard-transcripts.sh
-          exit "$rc"
-
-      - name: Upload guard attestations
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: attest-guards
-          path: attest-out
-          retention-days: 1
-          if-no-files-found: error
-
-  # Every check arm fans out (roster: tools/ci/fanout-configs.tsv, emitted
-  # by guard-prep). The CRAN-shape build+check keeps vignettes, Rd and CRAN
+  # The PR-gate release arms fan out (roster: tools/ci/fanout-configs.tsv,
+  # emitted by guard-prep); the five version arms plus the ubuntu/release
+  # T1 witness ride the nightly R-CMD-check-version-fanout job in
+  # scheduled.yml (issue #76). The CRAN-shape build+check keeps vignettes, Rd and CRAN
   # gates but drops only the serial test phase; the suite then runs on the
   # same platform as K parallel shard processes against one shared INSTALL,
   # and the fan-out attestation census gates the arm. Every test still
@@ -373,9 +394,6 @@ jobs:
     needs: [guard-prep]
     runs-on: ${{ matrix.config.os }}
     name: R-CMD-check-fanout (${{ matrix.config.os }} / R ${{ matrix.config.r }})
-    # R devel is informative only (r-lib convention): the law travels with
-    # the arm, verbatim, from the retired monolithic matrix.
-    continue-on-error: ${{ matrix.config.r == 'devel' }}
     strategy:
       fail-fast: false
       matrix:
@@ -406,21 +424,11 @@ jobs:
         if: runner.os == 'Windows'
         run: rustup target add x86_64-pc-windows-gnu
 
-      # The devel arm carries the compatibility user-agent the monolithic
-      # matrix pinned for its informative leg; split like the dependency
-      # steps below so the input is physically absent on every other arm.
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r != 'devel'
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r == 'devel'
-        with:
-          r-version: 'devel'
-          use-public-rspm: true
-          http-user-agent: 'R/4.3.0 (github-actions)'
 
       # Fail-closed R-version attestation (CI warning-zero lane, 2026-10-23):
       # the 4.3 arm's banner was certified this week by five manual greps over
@@ -434,40 +442,14 @@ jobs:
       # Never pass an empty `dependencies` input: the action interpolates it
       # into pak's R call and the empty string yields the broken expression
       # `dependencies = c(needs, ())` -- "unexpected ')'" in Dependency
-      # resolution, killing all matrix arms (CI audit 2026-10-07). Split
-      # into two guarded steps so the input is physically absent unless set;
-      # only the 4.3 floor arm needs it ('"hard"' skips the unsolvable
-      # Bioc Suggests chain, round-3 audit).
+      # resolution, killing all matrix arms (CI audit 2026-10-07). The
+      # release roster never needs the hard-mode floor provisioning; it
+      # travels with the version arms below on the scheduled gate.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r != '4.3'
         with:
           needs: check
           extra-packages: any::rcmdcheck
 
-      # install-pandoc must be explicit on the floor arm: the action's auto
-      # probe calls pkg_deps(".", dependencies = list(direct = "all")) --
-      # dragging in the very Suggests this arm cannot solve -- and dies
-      # resolving BSgenome.Hsapiens.UCSC.hg19 before any install runs (CI
-      # audit 2026-10-07). 'true' skips the probe and ships the pandoc the
-      # knitr vignette needs; the CRAN-only extras keep the Bioc Suggests
-      # chain out of the solve while keeping the vignette build (this arm's
-      # check still builds it) and the sharded tests runnable. sigminer must
-      # NOT join these extras: it imports maftools -> VariantTools/S4Vectors,
-      # which live only in the Bioc 3.18 series that 4.3 needs -- and that
-      # series answers 404 on every canonical mirror (run 39753886611's
-      # solve died exactly there). The xval shard it alone powers is
-      # therefore EXCLUDED BY DECLARATION for this arm
-      # (tools/ci/shard-exclusions.tsv), not silently vacuous.
-      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        if: matrix.config.r == '4.3'
-        with:
-          needs: check
-          dependencies: '"hard"'
-          install-pandoc: true
-          extra-packages: >-
-            any::rcmdcheck, any::knitr, any::rmarkdown,
-            any::testthat, any::withr, any::ggplot2,
-            any::ggalluvial, any::uwot
 
       # The displaced serial test phase returns below as K attested shards;
       # the Rd-examples leg rides the check phase of this call and the
@@ -552,6 +534,7 @@ jobs:
             Rscript tools/ci/run-testthat-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --kind=fanout --mode=installed \
+              --tier=T0 \
               --attest="attest-out/shard-$s-$tag.attest" \
               > "shard-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
@@ -565,6 +548,8 @@ jobs:
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir attest-out --kind fanout \
+            --tier T0 \
+            --t0-budget tools/ci/pr-gate-budget.tsv \
             --fanout-configs tools/ci/fanout-configs.tsv \
             --exclusions tools/ci/shard-exclusions.tsv \
             --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
@@ -624,7 +609,7 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2
+        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
         with:
           tool: cargo-deny
 
@@ -640,7 +625,7 @@ jobs:
       # findings; --deny warnings only by a later controller ruling. The
       # advisory-DB fetch is runner-side network I/O and is permitted here.
       - name: Install cargo-audit
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2
+        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
         with:
           tool: cargo-audit
 
@@ -746,147 +731,3 @@ jobs:
           LD_LIBRARY_PATH: ${{ env.R_HOME }}/lib
         run: cargo +1.71.0 test --workspace
 
-  coverage:
-    # R-side coverage upload only; no percentage gate here (R >= 85% is a
-    # later target, ARCHITECTURE §9). Rust coverage is not gated (also
-    # ARCHITECTURE §9). The attestation census, however, gates (law of
-    # 2026-10-24): the aggregator's --advisory printed defects and exited
-    # green for a year -- a vacuous green in the gate itself. Shards must
-    # attest executed work; the installed-copy context's structural absences
-    # (checkout-locating files skip there) are sanctioned byte-exactly by
-    # tools/ci/covr-divergences.tsv, reverse-audited -- a ledger row that
-    # sanctions nothing is itself a defect.
-    # Hot path measures 18 min (run 39815352743); witness run 39839340513
-    # ate 40 min of runner-slowness setup before covr even started, and the
-    # 60-minute timer beheaded a healthy shard mid-flight -- 90 carried the
-    # stall class with headroom. The headroom ran out: PR #52 consumed the
-    # full 90 twice (runs 40013789288/40028404425) while main's measured
-    # tail already reached 68m53s (push-run 39965044133); the weights table
-    # prices files in testthat seconds, blind to the covr-instrumented cost
-    # of new files. 120 carried the then-measured tail plus witness excess;
-    # the in-wave heartbeat turns any future timer kill into a measurement
-    # (attest rising = slow-but-live, attest flat + live pinned = hang).
-    # Ratchet 120->180 (PR #56 lineage, triple ceiling witness): run
-    # 40667262104 job 122744792649 ran 120m27s (09:49:35->11:50:02Z), run
-    # 40700329158 attempt 1 job 122858082848 ran 120m26s (13:51:43->
-    # 15:52:09Z), and the same job's targeted rerun attempt 2 ran 120m34s
-    # (15:58:33->17:59:07Z), each heartbeating attest flat 5/6 + live
-    # pinned 1/7 for the final hour -- the straggler-shard class of
-    # the PR #52 record, re-created by the manifest re-pack, not by
-    # content: the 14 content arms stayed green throughout and the
-    # 26m00s clean pass (push-run 40614650936) proves the wave is sound. 180 carries the straggler floor
-    # (>=118m witnessed) with one runner-slowness class of headroom.
-    timeout-minutes: 180
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Install Rust toolchain at MSRV
-        run: |
-          rustup toolchain install 1.71.0 --profile minimal
-          rustup default 1.71.0
-
-      - name: Provision the GNU target for R Makevars.win
-        if: runner.os == 'Windows'
-        run: rustup target add x86_64-pc-windows-gnu
-      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          r-version: 'release'
-          use-public-rspm: true
-
-      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
-        with:
-          needs: coverage
-          extra-packages: any::covr
-
-      # Test-phase coverage, sharded: one instrumented package_coverage
-      # (type="tests") per manifest shard, in parallel. covr's
-      # instrumentation can break individual tests without implying a
-      # package regression (the same suite passes in R-CMD-check-fanout on
-      # the same commit), so each shard is continue-on-error and the merged
-      # artifacts are what the upload consumes.
-      - name: Generate R coverage per shard (covr, attested)
-        continue-on-error: true
-        run: |
-          mkdir -p covr-out covr-srt covr-logs
-          k=$(awk '/^#[[:space:]]*k=/{sub(/^#[[:space:]]*k=[[:space:]]*/,"");print;exit}' tools/ci/shard-manifest.tsv)
-          # The examples/vignettes legs ride the SAME parallel wave as the
-          # test shards (the historical type="all" was tests+examples+
-          # vignettes in one process; here the shards carry the tests leg
-          # and these two instrumented passes carry the rest). They once ran
-          # as an inline heredoc whose covr::to_srt call -- an object covr
-          # does not export -- killed the child unattested behind
-          # continue-on-error (push-run 39864490318: fragments=3 not 5). The
-          # committed runner attests every outcome; pre-clean stays off for
-          # the shared-cargo-target law run-covr-shard.R documents.
-          pids=""
-          for s in $(seq 1 "$k"); do
-            Rscript tools/ci/run-covr-shard.R \
-              --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
-              --out-srt="covr-srt/shard-$s.srt" \
-              --attest="covr-out/shard-$s.attest" \
-              > "covr-logs/shard-$s.log" 2>&1 &
-            pids="$pids $!"
-          done
-          Rscript tools/ci/run-covr-extras.R --out-srt-prefix=/tmp \
-            > covr-logs/extras.log 2>&1 &
-          pids="$pids $!"
-          rc=0
-          # Heartbeat: attest/live census on the step stream every 120s. The
-          # post-wait transcript echo below never runs when the job timer
-          # fires, so without this a killed wave leaves no progress curve
-          # (PR #52 double-90-min audit: two full-budget deaths, silence as
-          # the only evidence). attest is over the k test shards (extras
-          # attests to its own /tmp prefix); live over the whole wave.
-          total=$((k + 1))
-          t=0
-          while [ "$(jobs -r | wc -l | tr -d ' ')" != "0" ]; do
-            echo "covr-heartbeat t=${t}s attest=$(ls covr-out 2>/dev/null | wc -l | tr -d ' ')/$k live=$(jobs -r | wc -l | tr -d ' ')/$total"
-            t=$((t + 120)); sleep 120
-          done
-          for p in $pids; do wait "$p" || rc=1; done
-          echo "::group::covr transcripts (tail)"
-          for f in covr-logs/*.log; do echo "-- $f --"; tail -n 25 "$f"; done
-          echo "::endgroup::"
-
-      # The census gates (law of 2026-10-24 -- the --advisory non-gate let
-      # a year of broken coverage exit green). It rides its own step, outside
-      # the wave's continue-on-error umbrella, so a missing, vacuous or
-      # off-ledger attestation reddens the job; the diagnosability step below
-      # still fires on the failure.
-      - name: Census the covr attestations (gates)
-        run: |
-          python3 tools/ci/ci-shard-aggregate.py \
-            --manifest tools/ci/shard-manifest.tsv \
-            --attest-dir covr-out --kind coverage \
-            --ledger tools/ci/covr-divergences.tsv
-
-      - name: Echo failed testthat output (diagnosability)
-        if: failure()
-        shell: bash
-        run: |
-          for f in covr-logs/*.log; do echo "-- $f (tail) --"; tail -n 40 "$f"; done
-          FAILFILE=$(find /tmp -name "testthat.Rout.fail" 2>/dev/null | head -1)
-          if [ -n "$FAILFILE" ]; then
-            echo "=== $FAILFILE (tail) ==="
-            tail -80 "$FAILFILE"
-          fi
-
-      - name: Merge coverage fragments (covmerge)
-        run: |
-          fragments=""
-          for f in covr-srt/*.srt /tmp/msuiter-extras-*.srt; do
-            [ -f "$f" ] && fragments="$fragments $f"
-          done
-          test -n "$fragments" || { echo "::error::no coverage fragments produced -- coverage lane vacuous"; exit 1; }
-          # shellcheck-disable-next-line SC2086: fragment paths are CI-owned
-          python3 tools/ci/covmerge.py --fragments $fragments \
-            --out-srt /tmp/msuiter-merged.srt --cobertura cobertura.xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
-        with:
-          files: cobertura.xml
-          flags: r
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: false

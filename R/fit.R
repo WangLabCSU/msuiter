@@ -748,7 +748,7 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
 
 # ---------------------------------------------------------------------------
 # FFI wrapper over ms_fit_rust (the kernel face of this unit). The layout
-# contract (docs/ffi-surface.md, fit.rs module docs): the Rust kernel
+# contract (vignettes/articles/ffi-surface.qmd, fit.rs module docs): the Rust kernel
 # consumes the row-major m x n counts and the row-major m x k signatures;
 # R stores matrices column-major, so t(counts) (n x m) and t(sigs) (k x m)
 # are passed -- their flat buffers ARE the kernel's row-major matrices. The

@@ -1,5 +1,5 @@
 # test-catalog-currency.R: the P5 catalog-currency instrument (parity plan
-# docs/research/09 section 5, phase P5; refdb governance pattern of
+# vignettes/articles/research-09-sigminer-v3-parity-plan.qmd section 5, phase P5; refdb governance pattern of
 # data-raw/build_refdb.R + R/refdb.R).
 #
 # Contract under test:

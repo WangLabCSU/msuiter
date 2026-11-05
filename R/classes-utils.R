@@ -13,7 +13,7 @@
 # strings (info / location / fix) stored on the condition as the
 # `msuiter_error` payload and rendered as message bullets.
 #
-# `data` is the FFI-layer compatibility hatch (docs/ffi-surface.md): a named
+# `data` is the FFI-layer compatibility hatch (vignettes/articles/ffi-surface.qmd): a named
 # list spliced onto the condition as TOP-LEVEL fields, for callers whose
 # condition shape is pinned downstream -- the ffi validators keep the
 # literal `context` string (rlang reserves `c` for child conditions) and

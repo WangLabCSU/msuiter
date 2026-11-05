@@ -14,10 +14,14 @@ contracts it is supposed to implement:
     Linux + Windows (section 4.4/5), and the Cargo.lock pins
     (matrixmultiply 0.3.9, rayon 1.10.x, lock v3) asserted by a CI
     step next to the dependabot ignore rules (belt and braces);
-  * the sharded CI contract (round 2, 2026-10-22) is coherent: ALL eight
-    check arms run the fan-out --no-tests check plus the attested shard
+  * the sharded CI contract (round 2, 2026-10-22; PR-gate slimming
+    issue #76, 2026-11-05) is coherent: the three PR-gate release arms
+    run the fan-out --no-tests check plus the tier-T0 attested shard
     fan-out (roster tools/ci/fanout-configs.tsv) against one shared
-    INSTALL; the full-test-phase CRAN-shape monolith lives on the
+    INSTALL; the five version arms plus the T1 witness ride the nightly
+    R-CMD-check-version-fanout (roster
+    tools/ci/scheduled-fanout-configs.tsv) at --tier=T0,T1; the
+    full-test-phase CRAN-shape monolith lives on the
     scheduled gate (scheduled.yml cran-shape-check); the instruments the
     lanes invoke exist and the attestation gate is wired;
   * every repository path referenced by a workflow actually exists
@@ -50,6 +54,7 @@ except ImportError:
 REPO = Path(__file__).resolve().parent.parent
 CI = REPO / ".github/workflows/ci.yml"
 SCHED = REPO / ".github/workflows/scheduled.yml"
+PKG = REPO / ".github/workflows/pkgdown.yaml"
 DEP = REPO / ".github/dependabot.yml"
 LOCK = REPO / "src/rust/Cargo.lock"
 
@@ -248,13 +253,20 @@ def main():
               REPO / "src/rust/audit.toml",
               REPO / "tools/ci/shard-manifest.tsv",
               REPO / "tools/ci/shard-weights.tsv",
-              REPO / "tools/ci/fanout-configs.tsv"):
+              REPO / "tools/ci/fanout-configs.tsv",
+              REPO / "tools/ci/scheduled-fanout-configs.tsv",
+              REPO / "tools/ci/pr-gate-budget.tsv",
+              REPO / "tools/test-heavy.R",
+              REPO / "tests/heavy/helper-msuiter-shared.R",
+              REPO / "tests/heavy/test-check-layout-sim-sentry.R",
+              REPO / "tests/heavy/test-check-layout-sim-stale.R"):
         check(f"file exists: {p.relative_to(REPO)}", p.is_file())
 
     try:
         ci = load_yaml(CI)
         sched = load_yaml(SCHED)
         dep = load_yaml(DEP)
+        pkgy = load_yaml(PKG) if PKG.is_file() else None
         check("workflow YAML parses (safe_load)", True)
     except Exception as e:  # noqa: BLE001 - report and stop
         check("workflow YAML parses (safe_load)", False, str(e))
@@ -302,14 +314,34 @@ def main():
     expected = {
         ("macos-latest", "release"), ("windows-latest", "release"),
         ("ubuntu-latest", "release"),
-        ("macos-latest", "oldrel-1"), ("windows-latest", "oldrel-1"),
-        ("ubuntu-latest", "oldrel-1"),
-        ("ubuntu-latest", "4.3"),      # package floor, Linux
-        ("ubuntu-latest", "devel"),
     }
-    check("fan-out roster (tools/ci/fanout-configs.tsv) = the frozen 3 OS x "
-          "{release, oldrel-1} + {4.3 Linux, devel} census",
+    check("PR-gate fan-out roster (tools/ci/fanout-configs.tsv) = the three "
+          "release-R arms (issue #76 slimming; the version arms ride the "
+          "nightly gate)",
           fan_pairs == expected, f"fanout={sorted(fan_pairs)}")
+    sfan_tsv = REPO / "tools/ci/scheduled-fanout-configs.tsv"
+    sfan_pairs = set()
+    if sfan_tsv.is_file():
+        for line in sfan_tsv.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    sfan_pairs.add((parts[0], parts[1]))
+    check("scheduled version-arm roster = the five moved arms + the ubuntu/release T1 witness",
+          sfan_pairs == {
+              ("macos-latest", "oldrel-1"), ("ubuntu-latest", "4.3"),
+              ("ubuntu-latest", "devel"), ("ubuntu-latest", "release"),
+              ("ubuntu-latest", "oldrel-1"), ("windows-latest", "oldrel-1"),
+          }, f"sched-fanout={sorted(sfan_pairs)}")
+    check("the two rosters union to the historical eight-arm census (schedule moved, "
+          "coverage did not)",
+          fan_pairs | sfan_pairs == {
+              ("macos-latest", "release"), ("macos-latest", "oldrel-1"),
+              ("windows-latest", "release"), ("windows-latest", "oldrel-1"),
+              ("ubuntu-latest", "release"), ("ubuntu-latest", "oldrel-1"),
+              ("ubuntu-latest", "4.3"), ("ubuntu-latest", "devel"),
+          })
     check("fan-out arms are data-driven (committed TSV via guard-prep fromJSON)",
           "fromJSON(needs.guard-prep.outputs.fanout-matrix)" in str(fanout_job)
           and "tools/ci/fanout-configs.tsv" in job_script(ci, "guard-prep"))
@@ -353,26 +385,42 @@ def main():
           and "--mode=installed" in fs)
     check("fan-out arms post the check tree as post-mortem evidence on failure",
           "check-results-" in str(fanout_job) and "failure()" in str(fanout_job))
-    check("devel only on Linux", all(os == "ubuntu-latest"
-                                     for os, r in fan_pairs if r == "devel"))
-    check("R-4.3 only on Linux", all(os == "ubuntu-latest"
-                                     for os, r in fan_pairs if r == "4.3"))
-    check("devel arm allowed to fail (continue-on-error)",
-          "devel" in str(fanout_job.get("continue-on-error", "")))
+    all_pairs = fan_pairs | sfan_pairs
+    check("devel only on Linux (union of the two gates)",
+          all(os == "ubuntu-latest" for os, r in all_pairs if r == "devel"))
+    check("R-4.3 only on Linux (union of the two gates)",
+          all(os == "ubuntu-latest" for os, r in all_pairs if r == "4.3"))
+    check("the PR-gate roster carries no version arm at all (issue #76 slimming)",
+          not any(r in ("devel", "4.3", "oldrel-1") for (_o, r) in fan_pairs))
+    vjob = sched["jobs"].get("R-CMD-check-version-fanout", {})
+    check("the scheduled gate hosts the version fan-out with its own data-driven matrix",
+          bool(vjob) and "vendor-prep" in str(vjob.get("needs"))
+          and "fromJSON(needs.vendor-prep.outputs.version-matrix)" in str(vjob)
+          and "tools/ci/scheduled-fanout-configs.tsv" in job_script(sched, "vendor-prep"))
+    check("devel arm allowed to fail (continue-on-error) -- rides the version fan-out",
+          "devel" in str(vjob.get("continue-on-error", "")))
     check("fail-fast disabled", fanout_job["strategy"].get("fail-fast") is False)
     # The devel user-agent and the 4.3 hard-mode provisioning travel with
     # the arm now that the arm is fan-out: dropping them replays the banked
     # failures (the '"hard"' Suggests skip drops knitr -> loadVignetteBuilder
     # exit 1 at 902 ms, and drops testthat -> the runner's "no package
     # called 'testthat'" hard-fail; CI audit 2026-10-07).
-    check("devel arm carries the compatibility user-agent",
-          "R/4.3.0 (github-actions)" in str(fanout_job))
+    check("devel arm carries the compatibility user-agent (moved verbatim with the arm)",
+          "R/4.3.0 (github-actions)" in str(vjob)
+          and "R/4.3.0 (github-actions)" not in str(fanout_job))
     check("4.3 floor arm ships the vignette builder via extras",
-          "any::knitr" in str(fanout_job))
+          "any::knitr" in str(vjob) and "any::knitr" not in str(fanout_job))
     check("4.3 floor arm ships the testthat runner deps via extras",
-          "any::testthat" in str(fanout_job) and "any::withr" in str(fanout_job))
+          "any::testthat" in str(vjob) and "any::withr" in str(vjob))
     check("4.3 floor arm skips the pandoc probe",
-          "install-pandoc" in str(fanout_job))
+          "install-pandoc" in str(vjob))
+    vs = job_script(sched, "R-CMD-check-version-fanout")
+    check("the version fan-out runs the deep tier and hands the census its roster and budget",
+          "--tier=T0,T1" in vs and "--tier T0,T1" in vs
+          and "--t0-budget tools/ci/pr-gate-budget.tsv" in vs
+          and "scheduled-fanout-configs.tsv" in vs
+          and "--write-exclusion-marker" in vs
+          and "attest-version-fanout" in str(vjob))
 
     # ---- sanctioned-skip ledger (tools/ci/shard-exclusions.tsv) --------------
     # An arm that cannot run a shard must say so from this ledger, and the
@@ -400,8 +448,8 @@ def main():
         roster_shards = {int(sh) for sh, _ in (ln.split("\t")[:2]
                          for ln in txt(excl_tsv.parent / "shard-manifest.tsv").splitlines()
                          if not ln.startswith("#") and not ln.startswith("shard") and ln.strip())}
-        check("ledger arms are fan-out arms",
-              all((o, c) in fan_pairs for (o, c, _s) in rows))
+        check("ledger arms are fan-out arms (PR-gate or scheduled version roster)",
+              all((o, c) in (fan_pairs | sfan_pairs) for (o, c, _s) in rows))
         check("ledger shards exist in the manifest",
               all(int(s) in roster_shards for (_o, _c, s) in rows))
         check("ledger never empties an arm (some shard must always run)",
@@ -413,17 +461,113 @@ def main():
               all(len(c) >= 60 and " " in c for c in rows.values()))
         gutted = dict(rows); gutted[("ghost-latest", "release", "1")] = "ghost"
         check("ledger gate firing control: an off-roster row is caught by the same law",
-              all((o, c) in fan_pairs for (o, c, _s) in gutted) is False)
+              all((o, c) in (fan_pairs | sfan_pairs) for (o, c, _s) in gutted) is False)
     check("fan-out wave renders markers ONLY via the aggregator writer",
           "--write-exclusion-marker" in fs and "shard-exclusions.tsv" in fs)
     check("fan-out census is handed the ledger",
           "--exclusions" in fs and "tools/ci/shard-exclusions.tsv" in fs)
 
+    # ---- tier partition + committed PR-gate budget (issue #76) ------------
+    w_tsv = REPO / "tools/ci/shard-weights.tsv"
+    tsv_rows = [ln.split("\t") for ln in txt(w_tsv).splitlines()
+                if ln.strip() and not ln.startswith("#")]
+    check("weights table is the four-column shape (file, seconds, expects, tier)",
+          tsv_rows[0] == ["file", "seconds", "expects", "tier"]
+          and all(len(r) == 4 for r in tsv_rows[1:]), str(tsv_rows[:1]))
+    tiers_of = {r[0]: r[3] for r in tsv_rows[1:]}
+    check("every weights row names a lawful tier",
+          bool(tiers_of) and set(tiers_of.values()) <= {"T0", "T1", "T2"},
+          str(sorted(set(tiers_of.values()))))
+    check("the tier-T2 class is the two provisioning simulations, and they live in tests/heavy",
+          sorted(f for f, t in tiers_of.items() if t == "T2") ==
+          ["test-check-layout-sim-sentry.R", "test-check-layout-sim-stale.R"]
+          and not (REPO / "tests/testthat/test-check-layout-sim-sentry.R").exists()
+          and not (REPO / "tests/testthat/test-check-layout-sim-stale.R").exists())
+    check("the tier-T1 deep battery is the named four (xval, refdb, sentries, driver)",
+          sorted(f for f, t in tiers_of.items() if t == "T1") ==
+          sorted(["test-xval-m2-extract.R", "test-refdb.R",
+                  "test-ms-qc-sentries.R", "test-ms-benchmark-driver.R"]))
+    check("the bit-identity battery stays in the PR-gate tier",
+          all(tiers_of.get(f) == "T0" for f in
+              ("test-kernel-bit-identity.R", "test-kernel-batch-bridge.R")))
+    m_rows = [ln.split("\t") for ln in txt(REPO / "tools/ci/shard-manifest.tsv").splitlines()
+              if ln.strip() and not ln.startswith("#") and not ln.startswith("shard")]
+    check("manifest rows are four-column and tier-lockstep with the weights table",
+          bool(m_rows) and all(len(r) == 4 for r in m_rows)
+          and all(tiers_of.get(r[1]) == r[3] for r in m_rows), "tier lockstep drift")
+    kv = {}
+    bud_tsv = REPO / "tools/ci/pr-gate-budget.tsv"
+    if bud_tsv.is_file():
+        for ln in bud_tsv.read_text(encoding="utf-8").splitlines():
+            if ln.strip() and not ln.startswith("#"):
+                p = ln.split("\t")
+                if len(p) >= 2:
+                    kv[p[0]] = p[1]
+    try:
+        measured, ceiling = int(kv["t0-measured"]), int(kv["t0-ceiling"])
+        numeric = True
+    except (KeyError, ValueError):
+        measured = ceiling = None
+        numeric = False
+    check("pr-gate-budget.tsv carries numeric t0-measured <= t0-ceiling",
+          numeric and measured <= ceiling, str(kv))
+    # seconds may be fractional in the weights table (witness:
+    # test-scenario-atlas.R rides 2.2); the committed law is the rounded
+    # integer sum -- the same arithmetic the generator and aggregator run.
+    t0sum = sum(int(round(float(r[1]))) for r in tsv_rows[1:]
+                if len(r) == 4 and r[3] == "T0")
+    check("the committed T0 weight re-prices to the committed measurement",
+          numeric and t0sum == measured, f"recomputed={t0sum} committed={measured}")
+    check("the PR-gate battery fits its committed ceiling",
+          numeric and t0sum <= ceiling, f"t0sum={t0sum} ceiling={ceiling}")
+    # firing controls (house law: a law that cannot fire is vacuous)
+    gut = dict(tiers_of)
+    gut["test-xval-m2-extract.R"] = "T0"
+    check("tier laws firing control: a demoted deep-battery file is caught",
+          sorted(f for f, t in gut.items() if t == "T1") !=
+          sorted(["test-xval-m2-extract.R", "test-refdb.R",
+                  "test-ms-qc-sentries.R", "test-ms-benchmark-driver.R"]))
+    gut_b = dict(kv); gut_b["t0-measured"] = str(int(kv.get("t0-measured", "0")) + 7)
+    check("budget law firing control: a drifted measurement trips the equality",
+          int(gut_b["t0-measured"]) != t0sum and t0sum == (measured if numeric else t0sum))
+    fs_guards = job_script(ci, "guards")
+    fs_gsh = job_script(ci, "guards-shards")
+    fs_cov = job_script(sched, "coverage")
+    check("fan-out arms run the PR-gate tier and the census carries the committed budget",
+          "--tier=T0" in fs and "--tier T0" in fs
+          and "--t0-budget tools/ci/pr-gate-budget.tsv" in fs)
+    check("guards-shards runs no testthat wave at all (issue #76: the PR gate's "
+          "second full-roster pass retired -- what remains is the build and "
+          "the declaration census)",
+          "--tier" not in fs_gsh and "run-testthat-shard.R" not in fs_gsh
+          and "R CMD INSTALL" in fs_gsh and "check-dep-declaration.R" in fs_gsh)
+    check("the guards attestation gate now censuses the FAN-OUT evidence at the "
+          "PR-gate tier, budget-bearing, per-arm expectations (issue #76 retarget)",
+          "--tier T0" in fs_guards and "--kind fanout" in fs_guards
+          and "--t0-budget tools/ci/pr-gate-budget.tsv" in fs_guards
+          and "--expect-config" in fs_guards and "--advisory" not in fs_guards)
+    check("the guards census is data-driven off the committed roster: one "
+          "per-arm loop, no hand-written per-shard list to forget",
+          "while IFS=$'\\t' read -r os r" in fs_guards
+          and "done < tools/ci/fanout-configs.tsv" in fs_guards)
+    check("guards downloads one attestation bundle per PR-gate arm (roster census, "
+          "literal steps -- download-artifact cannot loop)",
+          all(f"attest-fanout-{os_}-{r}" in str(ci["jobs"]["guards"])
+              for os_, r in sorted(fan_pairs)))
+    check("covr shards and the covr census share one tier window (nightly since #76)",
+          "--tier=T0,T1" in fs_cov and "--tier T0,T1" in fs_cov)
+    check("the heavy face is committed, tier-driven and self-tested",
+          (REPO / "tools/test-heavy.R").is_file()
+          and "--self-test" in txt(REPO / "tools/test-heavy.R")
+          and "--tier" in txt(REPO / "tools/test-heavy.R"))
+
     # ---- check-run census ([ci-checkrun-level-green] convention) ------------
     # Run-level green can hide a dead arm, so the expected PR-gate check-run
-    # count is pinned: 8 fan-out arms (the TSV is the source) + guard-prep +
-    # guards-shards + guards + coverage + rust + msrv x2 = 15. A family
-    # vanishing from ci.yml reddens here before CI could ever miss it.
+    # count is pinned: 3 fan-out arms (the TSV is the source; issue #76
+    # slimming) + guard-prep + guards-shards + guards + rust + msrv x2 = 9
+    # (issue #76 moved the coverage leg to the nightly gate; the nightly job
+    # census below counts it there). A family vanishing from ci.yml reddens
+    # here before CI could ever miss it.
     def arms(jobname):
         if jobname == "R-CMD-check-fanout":
             return len(fan_pairs)
@@ -434,10 +578,13 @@ def main():
                 n *= len(axis)
         return n
     census = {j: arms(j) for j in ci["jobs"]}
-    check("PR-gate check-run census = 15 arms",
-          sum(census.values()) == 15, str(census))
+    check("PR-gate check-run census = 9 arms",
+          sum(census.values()) == 9, str(census))
     check("check-run census firing control: an amputated family drops the count",
-          sum(c for j, c in census.items() if j != "rust") == 14)
+          sum(c for j, c in census.items() if j != "rust") == 8)
+    check("check-run census C3 control: the coverage leg rides the nightly "
+          "file, not this one (a re-smuggled covr veto would double-count)",
+          "coverage" not in ci["jobs"] and "coverage" in sched["jobs"])
 
     # every job that runs R must also set up SOME rust toolchain before
     # src/rust builds (extendr 0.9 needs R_HOME; the compiler needs a
@@ -504,18 +651,25 @@ def main():
                    for j in ci["jobs"].values()
                    if "vendor-tarball" in str(j)))
     g = job_script(ci, "guards")
-    check("guards job is the strict attestation census gate",
-          "ci-shard-aggregate.py" in g and "--kind guards" in g
+    check("guards job is the strict attestation census gate -- over the fan-out "
+          "evidence it now consumes (issue #76; the zero-executed and missing-"
+          "arm deaths it catches are the same class the wave-era gate caught)",
+          "ci-shard-aggregate.py" in g and "--kind fanout" in g
           and "--advisory" not in g)
-    check("guards job needs the shard fleet",
-          set(ci["jobs"]["guards"].get("needs", [])) == {"guard-prep", "guards-shards"})
+    check("guards job needs the evidence it consumes: prep + the fan-out fleet "
+          "(the guards-shards wave it used to read is retired)",
+          set(ci["jobs"]["guards"].get("needs", []))
+          == {"guard-prep", "R-CMD-check-fanout"})
     gs = job_script(ci, "guards-shards")
-    check("guards-shards runs the sharded repo-layout suite (K parallel attested processes)",
-          "run-testthat-shard.R" in gs and "--kind=guards" in gs
-          and "--mode=installed" in gs)
-    check("guards-shards attestation upload cannot be silently empty",
+    check("guards-shards is the shared INSTALL + the fail-closed declaration "
+          "census ONLY -- the K-shard wave is retired, and it may not creep "
+          "back onto this lane (issue #76)",
+          "run-testthat-shard.R" not in gs and "R CMD INSTALL" in gs
+          and "check-dep-declaration.R" in gs)
+    check("the fan-out attestation upload the guards gate consumes cannot be "
+          "silently empty (the law travelled with the evidence)",
           any(s2.get("with", {}).get("if-no-files-found") == "error"
-              for s2 in ci["jobs"]["guards-shards"]["steps"]
+              for s2 in ci["jobs"]["R-CMD-check-fanout"]["steps"]
               if isinstance(s2, dict) and "upload-artifact@" in str(s2.get("uses", ""))))
     check("every manifest file reaches a shard: census unit ships in the suite",
           (REPO / "tests/testthat/test-ci-shard-map.R").is_file()
@@ -532,14 +686,14 @@ def main():
     check("msrv runs cargo +1.71.0 test --workspace",
           "cargo +1.71.0 test --workspace" in m)
 
-    # ---- coverage (wiring + the gating law) --------------------------------
-    cov_job_text = str(ci["jobs"].get("coverage", {}))
+    # ---- coverage (nightly since issue #76; wiring + the gating law) --------
+    cov_job_text = str(sched["jobs"].get("coverage", {}))
     check("coverage job uses covr", "covr::" in cov_job_text)
     check("coverage test leg is sharded through the shared runner",
           "run-covr-shard.R" in cov_job_text)
     check("coverage merges fragments through covmerge (single cobertura contract)",
           "covmerge.py" in cov_job_text and "cobertura.xml" in cov_job_text)
-    coe_steps = [s2 for s2 in ci["jobs"].get("coverage", {}).get("steps", [])
+    coe_steps = [s2 for s2 in sched["jobs"].get("coverage", {}).get("steps", [])
                  if isinstance(s2, dict) and s2.get("continue-on-error") is True]
     # One non-fatal step carries the whole parallel covr wave (test shards +
     # examples/vignettes ride the same background-pid wave). The census that
@@ -551,11 +705,30 @@ def main():
           and any("run-covr-shard.R" in str(s2.get("run", "")) for s2 in coe_steps)
           and any("ci-shard-aggregate.py" in str(s2.get("run", ""))
                   and "--ledger" in str(s2.get("run", ""))
-                  for s2 in ci["jobs"]["coverage"]["steps"]
+                  for s2 in sched["jobs"]["coverage"]["steps"]
                   if isinstance(s2, dict) and not s2.get("continue-on-error") is True),
           f"no-advisory + gated --ledger census + {len(coe_steps)} continue-on-error steps")
+    check("coverage job keeps its rust toolchain face (src/rust build premise "
+          "travelled with the job)",
+          "rustup toolchain install 1.71.0" in job_script(sched, "coverage"))
+    th = sched["jobs"].get("test-heavy", {})
+    check("nightly test-heavy job exists -- the tier-T2 class runs in CI on the "
+          "nightly gate, not nowhere (issue #76 kept the heavy witnesses, it did "
+          "not drop them)",
+          bool(th) and th.get("needs") == ["vendor-prep"]
+          and th.get("timeout-minutes") == 120
+          and "r-lib/actions/setup-r@" in str(uses_list(th))
+          and any("R CMD INSTALL" in str(s2) for s2 in th.get("steps", []))
+          and "attest-r-version.R" in str(th))
+    ths = job_script(sched, "test-heavy")
+    check("the nightly heavy leg invokes the COMMITTED face at the explicit tier "
+          "-- local and nightly are literally one code (issue #76)",
+          "tools/test-heavy.R" in ths and "--tier=T2" in ths)
+    th_gutted = {k: v for k, v in th.items() if k != "steps"}
+    check("test-heavy law firing control: a steps-less job cannot pass for a face",
+          "tools/test-heavy.R" not in str(th_gutted))
     check("codecov upload wired", "codecov/codecov-action@" in cov_job_text)
-    codecov_steps = [s for s in ci["jobs"].get("coverage", {}).get("steps", [])
+    codecov_steps = [s for s in sched["jobs"].get("coverage", {}).get("steps", [])
                      if "codecov/codecov-action@" in str(s.get("uses", ""))]
     check("codecov upload not gated (fail_ci_if_error false)",
           any(s.get("with", {}).get("fail_ci_if_error") is False
@@ -648,10 +821,14 @@ def main():
     sch = sched.get(True) or sched.get("on") or {}
     check("scheduled: workflow_dispatch available", "workflow_dispatch" in sch)
     crons = sch.get("schedule", [])
-    check("scheduled: weekly cron",
-          bool(crons) and re.fullmatch(r"\S+ \S+ \* \* \S+",
+    check("scheduled: nightly cron (issue #76: day-of-week must be * -- the T1 "
+          "deep battery, the version arms and the covr leg earn a nightly "
+          "cadence, not a weekly one)",
+          bool(crons) and re.fullmatch(r"\S+ \S+ \S+ \S+ \*",
                                        crons[0].get("cron", "")) is not None,
           str(crons))
+    check("nightly-cron law firing control: a weekly schedule is refused",
+          re.fullmatch(r"\S+ \S+ \S+ \S+ \*", "23 4 * * 1") is None)
     # ---- valgrind leg: the loudness-law extension (issue #32, D1 class) ----
     # Law change (this selfcheck moves WITH the contract it governs): the
     # retired valgrind job ran `rcmdcheck(..., error_on="never",
@@ -722,10 +899,10 @@ def main():
           f"got {sani.get('timeout-minutes')}")
 
     # ---- scheduled pkgdown site build (U-M7-04 slice-C, C5) ----------------
-    # The per-PR check-run topology is frozen (13 arms through the pre-shard
-    # era; 15 since the 2026-10-21
-    # shard restructure: +guard-prep, +guards-shards), so the site render is pinned
-    # to the weekly deep check -- and it is a HARD gate: no continue-on-error.
+    # The per-PR check-run topology is a moving target (13 arms pre-shard,
+    # 15 after the 2026-10-21 shard restructure, 9 after the issue #76
+    # PR-gate slimming), so the site render stays pinned to the nightly deep
+    # check -- and it is a HARD gate: no continue-on-error.
     site = sched["jobs"].get("site", {})
     check("scheduled: pkgdown site job exists", bool(site))
     check("scheduled: site job is a hard gate (no continue-on-error)",
@@ -737,6 +914,42 @@ def main():
           "reference/index.html" in st and "articles/extending.html" in st)
     check("scheduled: site job uploads the rendered site artifact",
           any("upload-artifact@" in u for u in uses_list(site)))
+
+    # ---- the Pages publishing workflow (push-built pkgdown site) -----------
+    # The site is published on every push to main by .github/workflows/
+    # pkgdown.yaml (repo Pages build_type: workflow). The scheduled site job
+    # above stays the weekly deep check; this one is the publisher.
+    pk = pkgy or {}
+    check("pkgdown.yaml exists and parses", bool(pk))
+    pkjobs = pk.get("jobs") or {}
+    bd = pkjobs.get("build-deploy", {})
+    check("pkgdown.yaml: build-deploy job exists", bool(bd))
+    check("pkgdown.yaml: pushes to main trigger the build",
+          str(pk.get("on", {}).get("push", {}).get("branches", "")).find("main") >= 0
+          or bool(pk.get(True, {}).get("push", {}).get("branches")))
+    check("pkgdown.yaml: job carries a measured timeout (hang-detector law)",
+          isinstance(bd.get("timeout-minutes"), (int, float))
+          and 0 < bd.get("timeout-minutes") <= 120,
+          f"got {bd.get('timeout-minutes')}")
+    pkperm = (bd.get("permissions") or {})
+    check("pkgdown.yaml: Pages write + id-token permissions",
+          pkperm.get("pages") == "write" and pkperm.get("id-token") == "write")
+    pktxt = PKG.read_text() if PKG.is_file() else ""
+    check("pkgdown.yaml: builds the RELEASE face (the Pages artifact root is docs/, not docs/dev)",
+          'development = list(mode = "release")' in pktxt)
+    check("pkgdown.yaml: writes the GitHub-Pages extras (.nojekyll at the docs/ root)",
+          '.nojekyll' in pktxt and "build_github_pages" not in pktxt)
+    check("pkgdown.yaml: deploys via actions/upload-pages-artifact",
+          any("upload-pages-artifact@" in u
+              for j in pkjobs.values()
+              for u in [str(s.get("uses", "")) for s in j.get("steps", [])]))
+    check("pkgdown.yaml: provisions the MSRV Rust toolchain (the guides compile the engine)",
+          "rustup toolchain install 1.71.0" in pktxt)
+    check("pkgdown.yaml: actions are SHA-pinned (house discipline)",
+          all(len(u.split("@", 1)[1]) >= 40 for u in
+              [str(s.get("uses", "")) for j in pkjobs.values()
+               for s in j.get("steps", [])] if "@" in u and u.count("@") == 1
+              and not str(u).startswith("Rscript")))
 
     # ---- the CRAN-shape monolith the PR gate retired (round 2) --------------
     # Sealed by test-ci-shard-map.R: the full-test-phase monolith must keep

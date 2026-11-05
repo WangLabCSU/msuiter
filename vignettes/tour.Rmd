@@ -218,7 +218,7 @@ unlink(bp)
 
 ## Where to go next
 
-The function-to-concept-to-pillar bridge is [docs/MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md);
+The function-to-concept-to-pillar bridge is [vignettes/articles/msu-map.qmd](https://github.com/WangLabCSU/msuiter/blob/main/vignettes/articles/msu-map.qmd);
 one-row-per-export, so any face names the concept it serves and its peer
 counterpart. For extending the engine registry itself see the
 [extending msuiter](articles/extending.html) article.

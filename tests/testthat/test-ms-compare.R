@@ -1,6 +1,6 @@
 # U-M4-01: ms_compare() -- the calibrated similarity/matching library.
 #
-# Design memo docs/devlog/2026-10-04-M4-01-design-memo.md §6 anchors:
+# Design memo vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd §6 anchors:
 #   * [bit-exact/integer] metric twins on independently-computed formulas; the
 #     Islam table re-derived on the test-islam-xval.R designed truth; a
 #     hand-built Jiang fixture with every number pinned; the Hungarian

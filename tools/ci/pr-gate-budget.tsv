@@ -1,0 +1,21 @@
+# PR-gate T0 weight budget (issue #76, 2026-11-05; vignettes/articles/
+# devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd). Hang-budget spirit: the budget
+# is a MEASURED number committed in the repo, and drift goes red. t0-measured
+# is the sum of the integer manifest seconds over tier-T0 rows at sealing
+# (the same arithmetic the generator and the aggregator run); the generator
+# refuses to partition when the recomputed sum moves off this row without a
+# deliberate re-seal, and refuses outright above the ceiling. The fan-out
+# arms enforce the ceiling again at census time (ci-shard-aggregate.py
+# --t0-budget), so a hand-edited manifest cannot outrun the law.
+# Witness: measured from tools/ci/shard-weights.tsv @ the issue #76 lane;
+# today's per-arm testthat wave made that T0 sum (committed-partition LPT
+# makespan 283 s, shard 6 long pole -- independently re-measured; the 172 s
+# repack figure is the largest single T0 file, not the wave)
+# against the retired 93-min full-roster fan-out (run 41788928195 basis).
+# Ceiling = measured + one drift class (~30 %): no single unplanned T0
+# addition (the largest committed T0 file weighs 172 s, the keep-as-is
+# kernel batch bridge) crosses it silently, and any real growth forces a
+# re-measure with a witness before the PR gate pays for it.
+key	value	note
+t0-measured	612	measured 2026-11-05 (integer manifest seconds, tier T0)
+t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

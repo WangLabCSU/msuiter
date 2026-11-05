@@ -1,5 +1,5 @@
 # ms-downsample.R: common-depth downsampling of a catalog (U-M4-02;
-# design memo docs/devlog/2026-10-04-M4-02-design-memo.md §1).
+# design memo vignettes/articles/devlog-2026-10-04-M4-02-design-memo.qmd §1).
 #
 # The semantic anchor is the SHIPPED M3b sanity protocol (R/calibrate-real.R):
 # counts*_j ~ Multinomial(N, counts_j / total_j) drawn through base R's

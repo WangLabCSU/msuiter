@@ -1,5 +1,5 @@
 # ms-benchmark-driver.R: the M7 grid driver first version (design memo
-# docs/devlog/2026-10-05-benchmark-design-memo.md, D1 stage 1 + D2
+# vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd, D1 stage 1 + D2
 # defaults -- PI-confirmed 2026-10-05).
 #
 # Scope (v1, honestly bounded):
@@ -15,7 +15,7 @@
 # keeps three explicit roles -- ms_benchmark_grid() builds the scenario
 # specs, ms_run_benchmark() executes them, ms_benchmark(results, settings)
 # is the S7 container constructor; NO generic merge (YAGNI). Decision
-# record: docs/devlog/2026-10-10-m7-benchmark-ergonomics.md; the three
+# record: vignettes/articles/devlog-2026-10-10-m7-benchmark-ergonomics.qmd; the three
 # help topics cross-link via @family benchmark.
 #
 # The dict comes from the bundled COSMIC v3.6 SBS96 reference (refdb v1
@@ -387,7 +387,7 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
       seed = seed, scenarios = names(grid),
       engines = names(engines),
       defaults = "CONFIRMED: D1 stage 1 + D2 + TP-only (PI 2026-10-05)",
-      memo = "docs/devlog/2026-10-05-benchmark-design-memo.md"
+      memo = "vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd"
     )
   )
 }

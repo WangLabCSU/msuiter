@@ -254,7 +254,7 @@ S7::method(ms_extract, S7::class_any) <- function(catalog, k, method = NULL, ...
 
 # ---------------------------------------------------------------------------
 # FFI wrapper over ms_extract_rust (the kernel face of this unit). The
-# layout contract (docs/ffi-surface.md, extract.rs module docs): the Rust
+# layout contract (vignettes/articles/ffi-surface.qmd, extract.rs module docs): the Rust
 # kernel consumes the row-major m x n count matrix; R storage is
 # column-major, so t(counts) is passed -- an n x m matrix whose flat buffer
 # IS the row-major V. The transposition guard is the asymmetric-golden
@@ -409,7 +409,7 @@ S7::method(ms_extract, S7::class_any) <- function(catalog, k, method = NULL, ...
   k_folds <- .ms_pipeline_check_scalar(k_folds, "k_folds", 2L)
   n_seeds <- .ms_pipeline_check_scalar(n_seeds, "n_seeds", 1L)
   n_threads <- .ms_resolve_threads(threads)
-  # Layout contract (docs/ffi-surface.md, ms_pipeline_rust row): the Rust
+  # Layout contract (vignettes/articles/ffi-surface.qmd, ms_pipeline_rust row): the Rust
   # kernel consumes the row-major m x n counts, so t(counts) is passed --
   # the same identity as .ms_extract_rust().
   .msffi_check(ms_pipeline_rust(

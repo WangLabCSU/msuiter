@@ -3,7 +3,7 @@
 #
 # The reference functions below are byte-for-byte re-implementations of the
 # two Cortes-Castro HRD scores as captured in the design memo
-# docs/devlog/2026-10-07-m6s-hrd-report-design.md, section 1 -- whose single
+# vignettes/articles/devlog-2026-10-07-m6s-hrd-report-design.qmd, section 1 -- whose single
 # ground truth is cran/SigMiner R/get_pLOH_score.R and R/get_Aneuploidy_score.R.
 # They are the oracle the golden tests compare ms_hrd_report() against. When
 # upstream drifts, the verbatim blocks here and the report's own copy

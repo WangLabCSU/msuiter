@@ -1,6 +1,6 @@
 # calibrate.R: the R assembly face of the MSU-Fit calibration experiment
 # (U-M3b-04; ARCHITECTURE section 5 MSU-Fit row, design memo
-# docs/devlog/2026-10-04-M3b-design-memo.md sections 1-3, PI ruling
+# vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd sections 1-3, PI ruling
 # 2026-10-04).
 #
 # `ms_calibration_grid()` drives the Monte Carlo grid measurement behind the
@@ -190,7 +190,7 @@
 #' [ms_fit_bootstrap()] confidence intervals over a grid of catalog sizes
 #' and true signature shares -- the M3b calibration experiment behind the
 #' MSU-Fit estimand-(2) declaration (design memo
-#' docs/devlog/2026-10-04-M3b-design-memo.md, sections 1-3, PI ruling
+#' vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd, sections 1-3, PI ruling
 #' 2026-10-04). Per grid cell (one catalog size N x one true share) the
 #' kernel draws `m` synthetic replicates from the selected generative arm,
 #' fits each with the production face (`"likelihood_bidirectional"`, share

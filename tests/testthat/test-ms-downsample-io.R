@@ -1,5 +1,5 @@
 # U-M4-02: ms_downsample() + COSMIC-format interop (design memo
-# docs/devlog/2026-10-04-M4-02-design-memo.md).
+# vignettes/articles/devlog-2026-10-04-M4-02-design-memo.qmd).
 #
 # Anchors: the sanity-harness multinomial law (bitwise reproducible for a
 # given catalog + seed), the registry canonical label order on both interop

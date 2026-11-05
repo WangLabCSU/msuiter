@@ -1,5 +1,5 @@
 # U-M4-02b: ms_qc_report() -- the sample-level QC report first version
-# (design memo docs/devlog/2026-10-04-M4-02b-qc-memo.md).
+# (design memo vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd).
 #
 # Anchors: the COSMIC artifact roster pinned LITERALLY (20 names, the
 # 2026-10-04 verification); hand-derived burden/sentinel numbers on a

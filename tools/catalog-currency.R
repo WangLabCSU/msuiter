@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # catalog-currency.R -- the operator CLI of the P5 catalog-currency
-# instrument (parity plan docs/research/09 section 5, phase P5).
+# instrument (parity plan vignettes/articles/research-09-sigminer-v3-parity-plan.qmd section 5, phase P5).
 #
 # It answers one operational question at the console: is msuiter's pinned
 # COSMIC catalog snapshot still current against the official COSMIC release

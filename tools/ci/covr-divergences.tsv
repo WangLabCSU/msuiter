@@ -3,5 +3,15 @@
 # Row: shard<TAB>files-csv<TAB>why-or-dash<TAB>witness
 # The covr lane tests the INSTALLED copy; files that locate the checkout
 # observe structural skips there (the repo-mode arms run them in full).
-1	test-check-layout-sim-sentry.R	-	witnessed PR #52 coverage run 40044943832 + local covr probe 2026-10-24: sentry attests status=vacuous executed=0 skip=1 -- tools/ is not shipped in the installed package; the file runs its full battery in the repo-mode testthat arms
-2	test-check-layout-sim-stale.R	-	witnessed local covr probe 2026-10-24: stale-catalog fixture attests status=vacuous executed=0 skip=1 -- provisioning a fresh INSTALL requires the source checkout, absent from the installed copy; the file runs its full battery in the repo-mode testthat arms
+#
+# Retired 2026-11-05 (issue #76, vignettes/articles/
+# devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd): the two rows sanctioning
+# test-check-layout-sim-sentry.R (shard 1) and test-check-layout-sim-stale.R
+# (shard 2) as covr-vacuous were deleted with the T2 re-classification, not
+# left to rot -- the reverse audit makes a row that sanctions no live
+# divergence a defect. Both files now sit in tests/heavy at manifest tier
+# T2; the covr lane's mandatory --tier flag (T0/T1 only) keeps them out of
+# the coverage roster by construction, so there is nothing to sanction. An
+# empty active ledger is lawful while that tier law holds; reviving either
+# file into a covr-instrumented tier without a fresh witness row reddens the
+# census (covr-stale-row / covr-masquerade controls).

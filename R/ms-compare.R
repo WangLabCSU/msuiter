@@ -1,6 +1,6 @@
 # ms-compare.R: the calibrated similarity/matching library ms_compare()
 # (U-M4-01; CAPABILITY-MATRIX L-F, ARCHITECTURE section "The metrics",
-# design memo docs/devlog/2026-10-04-M4-01-design-memo.md).
+# design memo vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd).
 #
 # Four metrics on share-normalized columns (memo §1, frozen definitions):
 #   cosine / correlation (Pearson on shares) / jsd (sqrt, bits) / hellinger.

@@ -20,7 +20,7 @@ of the sentries surface -- which specific channels a per-sample
 sentinel share counts.
 }
 \references{
-Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1 and
+Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1 and
 section 3 (the two mechanism families); computation core
 `R/ms-qc-report.R` (.ms_qc_gt_channels / .ms_qc_ct_channels and their
 header note on the pyrimidine view). oxoG: Costello et al., NAR 2013

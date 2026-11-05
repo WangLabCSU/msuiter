@@ -1,6 +1,6 @@
 # calibrate-real.R: the real-data downsampling sanity harness (U-M3b-06;
 # ARCHITECTURE section 5 MSU-Fit row "the real-data sanity = the high-TMB downsampling
-# coverage test" (English rendering of the roster label), design memo docs/devlog/2026-10-04-M3b-design-memo.md section 4,
+# coverage test" (English rendering of the roster label), design memo vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd section 4,
 # data-source protocol in inst/sanity/README.md).
 #
 # NON-CLAIM DISCIPLINE (memo section 4, frozen wording): this harness is a
@@ -158,7 +158,7 @@
 #' Real-data downsampling sanity harness for exposure confidence intervals
 #'
 #' `ms_calibration_sanity()` runs the M3b real-data sanity protocol (design
-#' memo docs/devlog/2026-10-04-M3b-design-memo.md section 4) on a
+#' memo vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd section 4) on a
 #' CALLER-SUPPLIED real catalog: the frozen production face fits the full
 #' catalog (the point estimate is the declared **pseudo-truth**), every
 #' dilution level \eqn{N \in} `dilution_sizes` down-samples each live

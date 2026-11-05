@@ -1,5 +1,5 @@
 # catalog-currency.R: the P5 catalog-currency instrument (parity plan
-# docs/research/09 section 5, phase P5; governance shape of
+# vignettes/articles/research-09-sigminer-v3-parity-plan.qmd section 5, phase P5; governance shape of
 # data-raw/build_refdb.R + R/refdb.R).
 #
 # msuiter's COSMIC reference snapshot is governed by two committed records:
