@@ -19,12 +19,15 @@
 //! The twin is frozen text: if the certified scalar path is ever
 //! re-derived, this file must be re-derived with it in the same change.
 
+use msuiter_engine::detmath::det_ln;
 use msuiter_engine::nmf::{fit_kl_with_init, fit_kl_with_init_scratch, KlScratch, NmfFit, KL_EPS};
 use msuiter_engine::nndsvd::nndsvd_init;
 use msuiter_engine::rng::{MsRng, StreamId};
 
 // ======================================================================
-// Frozen reference twin: verbatim from engine/src/nmf.rs @ main@1673a7f.
+// Frozen reference twin: verbatim from engine/src/nmf.rs @ main@1673a7f,
+// re-derived with the deterministic math core (the committed scalar path's
+// `ln` calls are `crate::detmath::det_ln`; the twin follows the law above).
 // Do not edit these five bodies; they are the law's fixed side.
 // ======================================================================
 
@@ -96,7 +99,7 @@ fn kl_objective(v: &[f64], w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -
     let wh = matmul(w, h, m, n, k);
     let mut acc = 0.0f64;
     for (&vv, &mm) in v.iter().zip(wh.iter()) {
-        acc += vv * ((KL_EPS + vv).ln() - (KL_EPS + mm).ln()) - vv + mm;
+        acc += vv * (det_ln(KL_EPS + vv) - det_ln(KL_EPS + mm)) - vv + mm;
     }
     acc
 }

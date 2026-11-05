@@ -71,6 +71,7 @@
 //! reuses the audited [`crate::nmf`] KL-MU steps verbatim (fixed order: one H
 //! step then one W step per round, memo §2.4).
 
+use crate::detmath::{det_ln};
 use crate::error::MsError;
 use crate::nmf::{kl_h_step, kl_w_step, matmul};
 use crate::rng::{MsRng, StreamId};
@@ -252,7 +253,7 @@ pub fn poisson_deviance(
         }
         let (x, m) = (v[idx], xhat[idx]);
         if x > 0.0 {
-            acc += x * (x.ln() - m.max(delta_denom).ln()) - x + m;
+            acc += x * (det_ln(x) - det_ln(m.max(delta_denom))) - x + m;
         } else {
             acc += m;
         }
@@ -550,7 +551,7 @@ fn train_monitor(v: &[f64], xhat: &[f64], mask: &[bool], delta: f64) -> f64 {
         }
         let (x, mh) = (v[i], xhat[i]);
         if x > 0.0 {
-            acc += x * (x.ln() - mh.max(delta).ln()) - x + mh;
+            acc += x * (det_ln(x) - det_ln(mh.max(delta))) - x + mh;
         } else {
             acc += mh;
         }

@@ -48,6 +48,7 @@
 //! (frozen mean-log-likelihood tolerance) is a declared implementation
 //! divergence from sklearn's lower-bound tolerance (memo §2.1/§4).
 
+use crate::detmath::{det_exp, det_ln};
 use crate::error::MsError;
 use crate::rng::{MsRng, StreamId};
 
@@ -123,7 +124,7 @@ pub struct CutoffFit {
 /// Natural log of the N(x | mean, var) density. `var > 0` is guaranteed by
 /// the additive [`GMM_VAR_REG`] floor, so no extra guard is needed.
 fn log_normal_pdf(x: f64, mean: f64, var: f64) -> f64 {
-    -0.5 * (std::f64::consts::TAU.ln() + var.ln() + (x - mean) * (x - mean) / var)
+    -0.5 * (det_ln(std::f64::consts::TAU) + det_ln(var) + (x - mean) * (x - mean) / var)
 }
 
 /// Population mean and standard deviation (ddof = 0) over all elements.
@@ -254,14 +255,14 @@ pub fn fit_gmm1d_with_rng(
             // log-sum-exp of the two component densities (weights enter as
             // additive log terms).
             let mix = top
-                + (weights[0] * (l0 - top).exp() + weights[1] * (l1 - top).exp()).ln();
+                + det_ln(weights[0] * det_exp(l0 - top) + weights[1] * det_exp(l1 - top));
             ll_sum += mix;
             // Clamp into [0, 1]: rounding can push the raw responsibility a
             // few ulp past the boundary, and a >1 responsibility makes
             // r1 = 1 - r0 negative, which can drive a collapsed component's
             // variance below zero (log(var) -> NaN). Standard EM hygiene,
             // mirrored exactly by the R protocol twin.
-            let r0 = (weights[0] * (l0 - mix).exp()).clamp(0.0, 1.0);
+            let r0 = (weights[0] * det_exp(l0 - mix)).clamp(0.0, 1.0);
             resp[k] = r0; // r1 = 1 - r0 by the two-component identity
         }
         let ll = ll_sum / n as f64;
@@ -318,9 +319,9 @@ pub fn fit_gmm1d_with_rng(
         let l1 = log_normal_pdf(v, means[1], vars[1]);
         let top = l0.max(l1);
         let mix = top
-            + (weights[0] * (l0 - top).exp() + weights[1] * (l1 - top).exp()).ln();
+            + det_ln(weights[0] * det_exp(l0 - top) + weights[1] * det_exp(l1 - top));
         ll_sum += mix;
-        labels[k] = if weights[0] * (l0 - mix).exp() >= 0.5 { 0 } else { 1 };
+        labels[k] = if weights[0] * det_exp(l0 - mix) >= 0.5 { 0 } else { 1 };
     }
     let mean_loglik = ll_sum / n as f64;
 
