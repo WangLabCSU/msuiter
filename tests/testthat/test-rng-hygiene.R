@@ -82,14 +82,23 @@ test_that("a session that never touched the RNG keeps it untouched", {
     }
     d <- dirname(d)
   }
-  stop("no msuiter package root found above the test path")
+  # The simulated check layout runs the copied tests as a sibling of the
+  # package dir -- no DESCRIPTION ancestry there. Absent root is then the
+  # check-context signal, spoken by the unit's sanctioned skip, not a stop.
+  NA_character_
 }
 
 test_that("every library set.seed site rides the snapshot/restore guard", {
   # Function-level containment: any top-level function in R/ that seeds the
   # base RNG must also carry the snapshot/restore pair -- a 4-line look-behind
   # would miss the driver's loop-seeded face.
-  files <- list.files(file.path(.rh_root(), "R"), pattern = "[.]R$",
+  root <- .rh_root()
+  if (is.na(root)) {
+    skip(paste0("the static scan reads the R/ sources plain text: requires the ",
+                "source checkout, which the check layout does not ship ",
+                "(R CMD check context)"))
+  }
+  files <- list.files(file.path(root, "R"), pattern = "[.]R$",
     full.names = TRUE)
   files <- files[basename(files) != "rng-hygiene.R"]
   offenders <- character()
