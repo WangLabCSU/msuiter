@@ -1,4 +1,8 @@
-# 2026-11-05 -- CI PR-gate tiering ruling: three arms, one tier, nightly depth
+---
+title: "2026-11-05 -- CI PR-gate tiering ruling: three arms, one tier, nightly depth"
+---
+
+# CI PR-gate tiering ruling: three arms, one tier, nightly depth
 
 Lane: ci-issue-76 (branch `ci/issue-76`, base origin/main@32276be).
 Goal: the accepted ruling on issue #76 -- the per-PR battery measured a
