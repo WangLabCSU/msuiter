@@ -8,7 +8,9 @@
 # arms enforce the ceiling again at census time (ci-shard-aggregate.py
 # --t0-budget), so a hand-edited manifest cannot outrun the law.
 # Witness: measured from tools/ci/shard-weights.tsv @ the issue #76 lane;
-# today's per-arm testthat wave made that T0 sum (k=6 LPT makespan 172 s)
+# today's per-arm testthat wave made that T0 sum (committed-partition LPT
+# makespan 283 s, shard 6 long pole -- independently re-measured; the 172 s
+# repack figure is the largest single T0 file, not the wave)
 # against the retired 93-min full-roster fan-out (run 41788928195 basis).
 # Ceiling = measured + one drift class (~30 %): no single unplanned T0
 # addition (the largest committed T0 file weighs 172 s, the keep-as-is
