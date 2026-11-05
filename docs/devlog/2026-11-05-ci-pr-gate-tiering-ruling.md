@@ -97,6 +97,14 @@ step leaves -- dies LOUD (`DEFECT attest-dir absent: ...`, the
 aggregator's new attest-dir-absent firing control). Three claims, all
 measured.
 
+The heavy class also received its committed nightly witness: the
+scheduled gate grew a `test-heavy` job (ubuntu, release-R, vendored
+bootstrap, shared INSTALL, 120-minute budget) that runs the very
+``tools/test-heavy.R`` the local contract speaks -- the move took T2
+out of the per-push path, not out of CI. Its presence, face-invocation
+and budget are lawed in the selfcheck and the map unit with firing
+controls.
+
 Hardening caught on the way (all in the same change set): the
 generator's four fail-closed exit-2 paths were silent and now speak
 (CLI-face law); the census loop's comment guard went from `'\#'` to

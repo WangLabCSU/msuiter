@@ -30,6 +30,11 @@
 #               same fan-out body the PR-gate release arms run, at
 #               --tier=T0,T1, so the deep battery is witnessed nightly
 #               on the wide platform matrix (issue #76).
+#   test-heavy   : the tier-T2 provisioning simulations (two check-layout-sim
+#               files, 2481 s of committed weight) run nightly through the
+#               committed tools/test-heavy.R face -- the local one-command
+#               contract and the nightly witness are literally the same code
+#               (issue #76: moved out of the per-push path, not out of CI).
 #   coverage     : R coverage via covr -> codecov upload, sharded at
 #               --tier=T0,T1 (the covr runner refuses an unspoken --tier);
 #               the gating census and the zero-fragment merge law moved with
@@ -648,6 +653,57 @@ jobs:
           flags: r
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+  test-heavy:
+    # Tier-T2 (issue #76): the two check-layout-sim provisioning simulations
+    # measured 1250 s + 1231 s on the 2026-11-04 witness table -- no pull
+    # request needs them, no release may silently stop running them. Single
+    # Linux release-R arm; the committed face is both the local contract and
+    # this witness (one code, two cadences). The 120-minute line: 2481 s of
+    # committed T2 weight + the setup/build class + one runner-slowness
+    # class of headroom -- hang detector, not starvation engine (the
+    # 2026-10-22 budget law).
+    timeout-minutes: 120
+    needs: [vendor-prep]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Fetch vendored offline tarball (built by vendor-prep)
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: vendor-tarball
+          path: src/rust
+
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        shell: bash
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: soft # Suggests (testthat, withr): the heavy face runs testthat
+
+      - name: Attest the R version banner (fail-closed)
+        shell: bash
+        run: Rscript tools/ci/attest-r-version.R --label=heavy-nightly
+
+      - name: R CMD INSTALL (the tree under test)
+        shell: bash
+        run: R CMD INSTALL --no-docs .
+
+      - name: Tier-T2 heavy battery through the committed face
+        # The face is its own gate: zero-executed deaths and loud failures
+        # reddened its exit (self-tested controls), so no separate census
+        # consumer is needed for kind=heavy evidence.
+        shell: bash
+        run: Rscript tools/test-heavy.R --root=. --tier=T2
+
   cran-shape-check:
     needs: [vendor-prep]
     runs-on: ${{ matrix.config.os }}

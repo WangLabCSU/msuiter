@@ -709,6 +709,22 @@ def main():
     check("coverage job keeps its rust toolchain face (src/rust build premise "
           "travelled with the job)",
           "rustup toolchain install 1.71.0" in job_script(sched, "coverage"))
+    th = sched["jobs"].get("test-heavy", {})
+    check("nightly test-heavy job exists -- the tier-T2 class runs in CI on the "
+          "nightly gate, not nowhere (issue #76 kept the heavy witnesses, it did "
+          "not drop them)",
+          bool(th) and th.get("needs") == ["vendor-prep"]
+          and th.get("timeout-minutes") == 120
+          and "r-lib/actions/setup-r@" in str(uses_list(th))
+          and any("R CMD INSTALL" in str(s2) for s2 in th.get("steps", []))
+          and "attest-r-version.R" in str(th))
+    ths = job_script(sched, "test-heavy")
+    check("the nightly heavy leg invokes the COMMITTED face at the explicit tier "
+          "-- local and nightly are literally one code (issue #76)",
+          "tools/test-heavy.R" in ths and "--tier=T2" in ths)
+    th_gutted = {k: v for k, v in th.items() if k != "steps"}
+    check("test-heavy law firing control: a steps-less job cannot pass for a face",
+          "tools/test-heavy.R" not in str(th_gutted))
     check("codecov upload wired", "codecov/codecov-action@" in cov_job_text)
     codecov_steps = [s for s in sched["jobs"].get("coverage", {}).get("steps", [])
                      if "codecov/codecov-action@" in str(s.get("uses", ""))]

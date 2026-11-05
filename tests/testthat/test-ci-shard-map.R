@@ -392,6 +392,36 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   expect_identical(budget_line("R-CMD-check-fanout"), "180")  # 120 consumed whole twice by push-run 41082179842 on main@a6c5870 (attempt-1 job 124154845151 2h01m03s; targeted rerun-failed attempt-2 job 124412728178 2h00m31s -- both: steps 1-13 completed/success, fan-out wave severed mid-flight, post-steps clean, zero hang signatures); 180 = witnessed >=120m straggler floor + one runner-slowness class, the uniform line the coverage arm already carries
 })
 
+test_that("the tier-T2 heavy class keeps a committed nightly face (issue #76)", {
+  # The move-to-nightly contract: T2 left the per-push path but did not
+  # leave CI -- the scheduled gate is its home, and it runs the very face
+  # the local one-command contract speaks. A missing leg here would mean
+  # 41 minutes of committed provisioning physics silently running nowhere.
+  .ci_require_checkout()
+  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
+  sc <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"), warn = FALSE)
+  h <- which(sc == "  test-heavy:")
+  expect_identical(length(h), 1L, info = "the nightly heavy leg vanished -- T2 would run nowhere in CI")
+  win <- sc[seq(from = h + 1L, to = length(sc))]
+  nxt <- which(grepl("^  [A-Za-z0-9_-]+:$", win))
+  if (length(nxt)) win <- win[seq_len(nxt[1L] - 1L)]
+  body <- paste0(win, collapse = "\n")
+  expect_true(grepl("tools/test-heavy.R", body, fixed = TRUE),
+              info = "the nightly leg re-types the face instead of invoking the committed one")
+  expect_true(grepl("--tier=T2", body, fixed = TRUE),
+              info = "the heavy leg must speak its tier explicitly")
+  expect_true(grepl("R CMD INSTALL", body, fixed = TRUE),
+              info = "the face loads the installed tree; the leg must build it")
+  t <- win[grepl("timeout-minutes:", win, fixed = TRUE)]
+  expect_identical(length(t), 1L, info = "no explicit budget is a hang-detector invitation")
+  expect_identical(trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE)), "120",
+                   info = "T2 rides the measured 2481 s weight + the setup class + one slowness class")
+  # Firing control: the presence needle must target real bytes -- amputate
+  # the leg header and the roster census must go blind.
+  gone <- sc[-h]
+  expect_identical(length(which(gone == "  test-heavy:")), 0L)
+})
+
 test_that("the covr coverage aggregate is ledger-gated, never advisory", {
   .ci_require_checkout()
   # The covr leg rides the nightly gate since issue #76; the ledger-gated
