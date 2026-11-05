@@ -1,5 +1,5 @@
 ---
-title: "Docs bridge: navigating the repository docs corpus"
+title: "Docs bridge: the governance & technical corpus"
 output: rmarkdown::html_document
 vignette: >
   %\VignetteIndexEntry{Docs bridge}
@@ -7,35 +7,135 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This page navigates the repository `docs/` corpus. It links, never copies:
-every row's right-hand column is the canonical location, and the governance
-test behind this page re-derives the row set from the repository bytes
-itself -- a corpus document added or renamed without a bridge row reddens
-the suite.
+This page navigates the repository's governance and technical corpus, which
+lives on this site as the articles listed below (converted from the former
+`docs/` tree; a handful of cross-references in older records still cite the
+historical paths). It links, never copies: the roster is re-derived from the
+repository bytes by the governing test, so an article added or renamed
+without a bridge row reddens the suite.
 
-## The corpus
+For the user-facing learning path (install, first analysis, and the task
+guides), start at [Get started](get-started.html) and the [tour](tour.html).
 
-| Document | What it answers | Canonical location |
-|---|---|---|
-| ARCHITECTURE.md | the layer diagram, the error contract, the named-methods claim table (G0-gated) | [ARCHITECTURE.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ARCHITECTURE.md) |
-| CAPABILITY-MATRIX.md | "what does msuiter cover" -- the authoritative capability checklist | [CAPABILITY-MATRIX.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/CAPABILITY-MATRIX.md) |
-| MSU-MAP.md | function-to-concept-to-pillar bridge, one row per export | [MSU-MAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/MSU-MAP.md) |
-| PERFORMANCE.md | the frozen floors, the witnesses behind them, how to reproduce a cell | [PERFORMANCE.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/PERFORMANCE.md) |
-| IMPLEMENTATION-PLAN.md | the engineering plan behind the current tree | [IMPLEMENTATION-PLAN.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/IMPLEMENTATION-PLAN.md) |
-| ROADMAP.md | milestone definitions and the delivery ladder | [ROADMAP.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ROADMAP.md) |
-| ffi-surface.md | the R↔Rust boundary inventory | [ffi-surface.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/ffi-surface.md) |
-| adr/ | the architecture decision records (one file per accepted decision) | [docs/adr/](https://github.com/WangLabCSU/msuiter/tree/main/docs/adr) |
-| ADR 0001 | why the twoBit reader rides the byte-string path | [0001-twobit-reader-choice.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/adr/0001-twobit-reader-choice.md) |
-| ADR 0002 | the vendor budget and the offline build posture | [0002-vendor-budget.md](https://github.com/WangLabCSU/msuiter/blob/main/docs/adr/0002-vendor-budget.md) |
-| devlog/ | the dated decision and delivery log of the campaign | [docs/devlog/](https://github.com/WangLabCSU/msuiter/tree/main/docs/devlog) |
 
-## In this site
+## Architecture & governance
 
-Start at [Get started](get-started.html) for the install floors and the
-five-minute path, read the [tour](tour.html) for the working grammar, the
-[scenarios atlas](scenarios.html) for the applied faces, and
-[performance anchoring](performance-anchoring.html) for how every quoted
-number routes to a committed witness. To extend the engine registry see
-[extending msuiter](extending.html). Every exported face is documented in
-the [reference index](../reference/index.html); release notes ride the
-[news index](../news/index.html).
+| Article | What it is |
+|---|---|
+| [msuiter architecture design (ARCHITECTURE)](architecture.html) | `architecture` |
+| [msuiter capability coverage matrix (CAPABILITY-MATRIX)](capability-matrix.html) | `capability-matrix` |
+| [The FFI export surface (ffi-surface) review artifact](ffi-surface.html) | `ffi-surface` |
+| [msuiter implementation plan (IMPLEMENTATION-PLAN) -- the executable decomposition of ROADMAP v3](implementation-plan.html) | `implementation-plan` |
+| [The MSU concept map (MSU-MAP)](msu-map.html) | `msu-map` |
+| [msuiter performance anchoring](performance.html) | `performance` |
+| [msuiter roadmap (ROADMAP) -- v3 (dual-track versioning + organizational action gates)](roadmap.html) | `roadmap` |
+
+## Architecture decision records (ADRs)
+
+| Article | What it is |
+|---|---|
+| [ADR 0001: the 2bit reader selection — adopting the `twobit` crate (over `Cursor<Mmap>`)](adr-0001-twobit-reader-choice.html) | `adr-0001-twobit-reader-choice` |
+| [ADR 0002: the vendor size budget and the MSRV build proof (the U-M0-02 spike)](adr-0002-vendor-budget.html) | `adr-0002-vendor-budget` |
+
+## Research dossiers (the pre-implementation survey corpus)
+
+| Article | What it is |
+|---|---|
+| [msuiter research executive summary (Executive Summary)](research-00-executive-summary.html) | `research-00-executive-summary` |
+| [Research report 01: the de novo signature-extraction method panorama and the NMF compute engines](research-01-extraction-methods.html) | `research-01-extraction-methods` |
+| [Research report 02: fitting/attribution, exposure statistical inference and post-processing analysis](research-02-fitting-inference.html) | `research-02-fitting-inference` |
+| [Research report 03: the application literature and the application-scenario panorama (2012–2026)](research-03-applications.html) | `research-03-applications` |
+| [Research report 04: the per-repository deep source audit](research-04-source-audit.html) | `research-04-source-audit` |
+| [Research report 05: the data standards, the licenses, the genome readers, the visualization, the benchmarks and the engineering practice](research-05-standards-data.html) | `research-05-standards-data` |
+| [Research report 06: the state of play of the S7 class system, the design patterns and the method-framework blueprint](research-06-s7-class-system.html) | `research-06-s7-class-system` |
+| [Research report 07: the complete algorithm-zoo inventory and the self-development opportunity list](research-07-algorithm-zoo.html) | `research-07-algorithm-zoo` |
+| [Research report 08: the fact-check audit report of the existing research documents](research-08-fact-check-audit.html) | `research-08-fact-check-audit` |
+| [09 · sigminer v3 parity plan — closing the SigProfiler result-performance gap via msuiter asset integration](research-09-sigminer-v3-parity-plan.html) | `research-09-sigminer-v3-parity-plan` |
+
+## Independent reviews (the five-expert adversarial round)
+
+| Article | What it is |
+|---|---|
+| [The five-expert review synthesis adjudication (Synthesis, 2026-09-28)](review-00-synthesis.html) | `review-00-synthesis` |
+| [The review 01: the computational biologist (an independent review, 2026-09-28)](review-01-computational-biologist.html) | `review-01-computational-biologist` |
+| [The review 02: the Rust/R systems-development expert (an independent review, 2026-09-28)](review-02-rust-r-engineer.html) | `review-02-rust-r-engineer` |
+| [The review 03: the machine-learning/statistics expert (an independent review, 2026-09-28)](review-03-ml-statistician.html) | `review-03-ml-statistician` |
+| [The review 04: the software-development expert (an independent review, 2026-09-28)](review-04-software-engineer.html) | `review-04-software-engineer` |
+| [The review 05: the Nature journal-editor perspective (an independent assessment, 2026-09-28)](review-05-nature-editor.html) | `review-05-nature-editor` |
+
+## Paper lane
+
+| Article | What it is |
+|---|---|
+| [msuiter — manuscript spine (PP-1 draft)](paper-draft.html) | `paper-draft` |
+| [Reproduction proof — msuiter paper lane (PP-1)](reproduction-proof.html) | `reproduction-proof` |
+
+## Release engineering
+
+| Article | What it is |
+|---|---|
+| [v0.1 release-engineering preparation checklist (the non-blocking preparation batch)](release-v0.1-checklist.html) | `release-v0.1-checklist` |
+
+## Campaign devlog (the dated decision & delivery records)
+
+| Article | What it is |
+|---|---|
+| [Devlog · G0 先导覆盖实验——PI 裁决与待冻结项（2026-09-28）](devlog-2026-09-28-G0-pi-adjudication.html) | `devlog-2026-09-28-G0-pi-adjudication` |
+| [G0 先导覆盖实验协议设计备忘（冻结前草案 v0.1，2026-09-28）](devlog-2026-09-28-G0-protocol-memo.html) | `devlog-2026-09-28-G0-protocol-memo` |
+| [G0 先导覆盖实验——生物学与数据现实性备忘](devlog-2026-09-28-G0-realism-memo.html) | `devlog-2026-09-28-G0-realism-memo` |
+| [Devlog · G3 事件驱动竞争复核：Cornet 预印本正式发表（2026-09-28）](devlog-2026-09-28-G3-cornet-event-review.html) | `devlog-2026-09-28-G3-cornet-event-review` |
+| [Devlog · U-M0-01 rextendr 脚手架 + Cargo workspace（2026-09-28）](devlog-2026-09-28-M0-01.html) | `devlog-2026-09-28-M0-01` |
+| [Devlog · U-M0-02 M0 spike（2026-09-28）](devlog-2026-09-28-M0-02.html) | `devlog-2026-09-28-M0-02` |
+| [Devlog · U-M0-03 S7 类骨架（2026-09-28，W2 轮）](devlog-2026-09-28-M0-03.html) | `devlog-2026-09-28-M0-03` |
+| [Devlog · U-M0-04 引擎注册表 + 契约测试套件（2026-09-28，W3 轮）](devlog-2026-09-28-M0-04.html) | `devlog-2026-09-28-M0-04` |
+| [Devlog · U-M0-05 通道注册表单一事实来源 + docs-sync（2026-09-28，W2 轮）](devlog-2026-09-28-M0-05.html) | `devlog-2026-09-28-M0-05` |
+| [Devlog · U-M0-06 自研 RNG 模块（2026-09-28，W2 轮）](devlog-2026-09-28-M0-06.html) | `devlog-2026-09-28-M0-06` |
+| [Devlog · U-M0-09 FFI 硬契约落地 + ms_sitrep()（2026-09-28，W3 轮）](devlog-2026-09-28-M0-09.html) | `devlog-2026-09-28-M0-09` |
+| [Devlog · 假设审计备忘：Cornet 之后的领域共同假设地图（2026-09-28）](devlog-2026-09-28-assumption-audit-memo.html) | `devlog-2026-09-28-assumption-audit-memo` |
+| [Devlog · G0 harness 开建与修复（2026-09-29）](devlog-2026-09-29-G0-harness.html) | `devlog-2026-09-29-G0-harness` |
+| [Devlog · U-M0-07 CI + U-M0-08 治理文件（2026-09-29，W4 轮，联合）](devlog-2026-09-29-M0-07-08.html) | `devlog-2026-09-29-M0-07-08` |
+| [Devlog · U-M1s-01 linalg + Lawson–Hanson NNLS（2026-09-29，W4 轮，M1s 轨道开闸）](devlog-2026-09-29-M1s-01.html) | `devlog-2026-09-29-M1s-01` |
+| [Devlog · U-M1s-02 修复 + U-M1s-03 green pass + U-M1s-04（2026-09-29）](devlog-2026-09-29-M1s-02-03-04.html) | `devlog-2026-09-29-M1s-02-03-04` |
+| [GMM 超突变分层语义设计备忘（U-M1c-02·先设计后实现）](devlog-2026-09-30-GMM-stratify-memo.html) | `devlog-2026-09-30-GMM-stratify-memo` |
+| [ID83 语义设计备忘（M1c 头号单元·先设计后实现）](devlog-2026-09-30-ID83-design-memo.html) | `devlog-2026-09-30-ID83-design-memo` |
+| [Devlog · U-M1c-02/03/04 GMM 分层器 + CN48/SV32（2026-09-30）](devlog-2026-09-30-M1c-02-03-04.html) | `devlog-2026-09-30-M1c-02-03-04` |
+| [Devlog · U-M1c-02 GMM 超突变分层器（2026-09-30）](devlog-2026-09-30-M1c-02-GMM-stratify.html) | `devlog-2026-09-30-M1c-02-GMM-stratify` |
+| [Devlog · M1c 输入层收尾（2026-09-30）——M1c 里程碑 4/4 关闭](devlog-2026-09-30-M1c-input-close.html) | `devlog-2026-09-30-M1c-input-close` |
+| [Devlog · U-M1s-05 线程不变性接线 + 审核轮（2026-09-30）](devlog-2026-09-30-M1s-05.html) | `devlog-2026-09-30-M1s-05` |
+| [Devlog · U-M1s-09/10/11 组装层 + 审计修复（2026-09-30）](devlog-2026-09-30-M1s-09-10-11.html) | `devlog-2026-09-30-M1s-09-10-11` |
+| [Devlog · U-M1s-12/14 收尾批次 + 审核轮（2026-09-30）](devlog-2026-09-30-M1s-12-14.html) | `devlog-2026-09-30-M1s-12-14` |
+| [Devlog · U-M1s-12 审核 + U-M1s-13 正式化 + M1s 验收门 bench（2026-09-30）](devlog-2026-09-30-M1s-13-bench.html) | `devlog-2026-09-30-M1s-13-bench` |
+| [Devlog · 并行 tally 优化 + sigminer/MP 交叉验证（2026-09-30）](devlog-2026-09-30-M1s-xval-parallel.html) | `devlog-2026-09-30-M1s-xval-parallel` |
+| [设计备忘 · M2 统一提取流水线（共识 Hungarian 语义 + SUITOR CV 语义 + K 仲裁规则）](devlog-2026-09-30-M2-pipeline-design-memo.html) | `devlog-2026-09-30-M2-pipeline-design-memo` |
+| [Devlog · M1c/M2/M3a 联合批次（2026-10-01 夜间）](devlog-2026-10-01-M1c-M2-M3a-night.html) | `devlog-2026-10-01-M1c-M2-M3a-night` |
+| [Devlog · U-M3a-04/05/06 收官批（2026-10-02 凌晨）](devlog-2026-10-02-M3a-04-05-06.html) | `devlog-2026-10-02-M3a-04-05-06` |
+| [Devlog · U-M3a-03 presence P0 + bootstrap CI P1 修复记录（2026-10-03）](devlog-2026-10-03-presence-bootstrap-fix.html) | `devlog-2026-10-03-presence-bootstrap-fix` |
+| [Devlog · M3b 收官三件：U-M3b-04 / 05 / 06（2026-10-04）](devlog-2026-10-04-M3b-close.html) | `devlog-2026-10-04-M3b-close` |
+| [Devlog · M3b 设计备忘 + M3a 关闭确认轮（2026-10-04）](devlog-2026-10-04-M3b-design-close.html) | `devlog-2026-10-04-M3b-design-close` |
+| [设计备忘 · M3b MSU-Fit 校准统计（2026-10-04）](devlog-2026-10-04-M3b-design-memo.html) | `devlog-2026-10-04-M3b-design-memo` |
+| [U-M4-01 设计备忘：ms_compare() 校准相似度库](devlog-2026-10-04-M4-01-design-memo.html) | `devlog-2026-10-04-M4-01-design-memo` |
+| [U-M4-02 设计备忘：ms_downsample() + 格式互操作首批](devlog-2026-10-04-M4-02-design-memo.html) | `devlog-2026-10-04-M4-02-design-memo` |
+| [U-M4-02b 设计备忘：ms_qc_report() 初版（样本 QC 报告）](devlog-2026-10-04-M4-02b-qc-memo.html) | `devlog-2026-10-04-M4-02b-qc-memo` |
+| [U-M4-02c 设计备忘：ms_convert() 机会转换（exome↔genome）](devlog-2026-10-04-M4-02c-convert-memo.html) | `devlog-2026-10-04-M4-02c-convert-memo` |
+| [U-M4-03 设计备忘：viz 首批 8 图型](devlog-2026-10-04-M4-03-viz-memo.html) | `devlog-2026-10-04-M4-03-viz-memo` |
+| [bench/jiang 设计备忘：Jiang 2025 拟合协议对标（v0.2 验收门证据）](devlog-2026-10-05-bench-jiang-memo.html) | `devlog-2026-10-05-bench-jiang-memo` |
+| [M7 前置设计备忘：ms_benchmark() 网格驱动器](devlog-2026-10-05-benchmark-design-memo.html) | `devlog-2026-10-05-benchmark-design-memo` |
+| [U-M7 前置设计备忘：ms_simulate() 第一版（场景目录模拟器）](devlog-2026-10-05-simulate-memo.html) | `devlog-2026-10-05-simulate-memo` |
+| [CI contract closure (round-7, 2026-10-07)](devlog-2026-10-07-ci-contract-closure.html) | `devlog-2026-10-07-ci-contract-closure` |
+| [G0 authoritative run — measured cost basis for the PI go/no-go (2026-10-07)](devlog-2026-10-07-g0-pi-run-cost-memo.html) | `devlog-2026-10-07-g0-pi-run-cost-memo` |
+| [M6s · ms_hrd_report() — ground-truth anchoring & design (U-M6s-01, A12)](devlog-2026-10-07-m6s-hrd-report-design.html) | `devlog-2026-10-07-m6s-hrd-report-design` |
+| [U-M6s-01 RED batch adjudications (T1 → T2 GREEN handoff)](devlog-2026-10-07-m6s-red-adjudication.html) | `devlog-2026-10-07-m6s-red-adjudication` |
+| [G0 degraded authoritative run — PI-gate closure (2026-10-08)](devlog-2026-10-08-g0-degraded-closure.html) | `devlog-2026-10-08-g0-degraded-closure` |
+| [U-M7-02 competitor benchmark harness — design memo (2026-10-08)](devlog-2026-10-08-m7-competitor-harness-design.html) | `devlog-2026-10-08-m7-competitor-harness-design` |
+| [U-M7-03 benchmark matrix — Phase-A pilot, projection, and the sigminer interpreter catch (2026-10-09)](devlog-2026-10-09-m7-benchmark-matrix.html) | `devlog-2026-10-09-m7-benchmark-matrix` |
+| [M7 benchmark ergonomics — the three-function trio stays three](devlog-2026-10-10-m7-benchmark-ergonomics.html) | `devlog-2026-10-10-m7-benchmark-ergonomics` |
+| [GO-05 bootstrap-vs-sigminer campaign — pre-registered protocol (2026-10-10)](devlog-2026-10-10-m7-bootstrap-campaign.html) | `devlog-2026-10-10-m7-bootstrap-campaign` |
+| [GO-05 hardware-pin completeness — the authoritative table must attest its machine (2026-10-10)](devlog-2026-10-10-m7-hardware-pin.html) | `devlog-2026-10-10-m7-hardware-pin` |
+| [RB-11 restoration — instrument liveness attestation and evidence-snapshot laws (2026-10-10)](devlog-2026-10-10-m7-rb11-restoration.html) | `devlog-2026-10-10-m7-rb11-restoration` |
+| [GO-05 anchor-gate amendment — the median clause moves to the CI-noise envelope](devlog-2026-10-11-go05-anchor-gate-amendment.html) | `devlog-2026-10-11-go05-anchor-gate-amendment` |
+| [GO-05 tier-oracle amendment — consumed vs report-only fits, the floor-gate](devlog-2026-10-11-go05-tier-oracle-amendment.html) | `devlog-2026-10-11-go05-tier-oracle-amendment` |
+| [2026-10-21 -- CI wall-clock restructure: shard-parallel attested arms](devlog-2026-10-21-ci-shard-parallel.html) | `devlog-2026-10-21-ci-shard-parallel` |
+| [Valgrind leg, child instrumentation: the execve escape, the last-writer](devlog-2026-10-21-valgrind-trace-children-census.html) | `devlog-2026-10-21-valgrind-trace-children-census` |
+| [M4-03b — viz batch 2 design memo](devlog-2026-10-24-M4-03b-viz-batch2-memo.html) | `devlog-2026-10-24-M4-03b-viz-batch2-memo` |
+| [P8-CS-3 — treatment-forensics reporting face design memo](devlog-2026-10-28-p8-treatment-forensics-design.html) | `devlog-2026-10-28-p8-treatment-forensics-design` |
+| [Build-pin drift attestation -- blob-form re-anchor of the arm-recipe digest pins (2026-11-04)](devlog-2026-11-04-m7-build-pin-drift-attestation.html) | `devlog-2026-11-04-m7-build-pin-drift-attestation` |

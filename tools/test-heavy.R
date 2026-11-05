@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # tools/test-heavy.R -- the one-command local face of the tier-T2 heavy
-# battery (issue #76, 2026-11-05; docs/devlog/
-# 2026-11-05-ci-pr-gate-tiering-ruling.md).
+# battery (issue #76, 2026-11-05;
+# vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd).
 #
 # The two check-layout-sim provisioning simulations weigh ~41 minutes
 # measured (1250 s + 1231 s in tools/ci/shard-weights.tsv) and belong to

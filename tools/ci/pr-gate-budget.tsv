@@ -1,5 +1,5 @@
-# PR-gate T0 weight budget (issue #76, 2026-11-05; docs/devlog/
-# 2026-11-05-ci-pr-gate-tiering-ruling.md). Hang-budget spirit: the budget
+# PR-gate T0 weight budget (issue #76, 2026-11-05; vignettes/articles/
+# devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd). Hang-budget spirit: the budget
 # is a MEASURED number committed in the repo, and drift goes red. t0-measured
 # is the sum of the integer manifest seconds over tier-T0 rows at sealing
 # (the same arithmetic the generator and the aggregator run); the generator

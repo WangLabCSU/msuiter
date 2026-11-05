@@ -1,7 +1,7 @@
 # U-M6s-01 -- the HRD reference layer for ms_hrd_report().
 #
 # Verbatim ground-truth copy (design memo
-# docs/devlog/2026-10-07-m6s-hrd-report-design.md section 1). The single
+# vignettes/articles/devlog-2026-10-07-m6s-hrd-report-design.qmd section 1). The single
 # ground truth is cran/SigMiner R/get_pLOH_score.R and
 # R/get_Aneuploidy_score.R -- the Cortes-Castro et al. HRD implementation
 # carried by the SigProfiler-suite SigMiner tool (there is no *hrd* file;

@@ -26,7 +26,7 @@ watch clause), "na" for zero-total samples whose shares are NA. The
 overall `qc_flag` column is the certified report verdict itself.
 }
 \references{
-Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 (mechanism labels, verified against the Excerno/FFPEsig records) and
 section 3 (frozen shares and the declared flag constants). oxoG:
 Costello et al., NAR 2013 (doi:10.1093/nar/gks1443); FFPE deamination:

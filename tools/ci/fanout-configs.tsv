@@ -13,7 +13,7 @@
 # One 'os<TAB>config' row per arm; order is part of the committed witness
 # (deterministic: os alphabetical, config in the retired matrix's order
 # within an os -- release first, then the Linux specials, oldrel-1 last).
-# Issue #76 (2026-11-05, docs/devlog/2026-11-05-ci-pr-gate-tiering-
+# Issue #76 (2026-11-05, vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-
 # ruling.md): the PR gate keeps the three release-R arms -- every other
 # per-push check arm was measurement, not signal, next to them. The five
 # version arms moved verbatim to the nightly R-CMD-check-version-fanout

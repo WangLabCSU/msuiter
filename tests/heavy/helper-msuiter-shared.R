@@ -1,5 +1,5 @@
 # Shared resources for the tier-T2 heavy battery under tests/heavy (issue
-# #76, 2026-11-05; docs/devlog/2026-11-05-ci-pr-gate-tiering-ruling.md).
+# #76, 2026-11-05; vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd).
 # The two check-layout-sim provisioning simulations moved out of
 # tests/testthat: they still resolve the repository through the sanctioned
 # check-layout-safe helpers, which live beside the repo-mode battery. The

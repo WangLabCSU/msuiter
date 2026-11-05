@@ -1,6 +1,6 @@
 # kselect-select.R: the default K-arbitration surface ms_select_k()
 # (U-M2-03; ARCHITECTURE.md sections 3.1/5, design memo
-# docs/devlog/2026-09-30-M2-pipeline-design-memo.md section 3).
+# vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd section 3).
 #
 # Three-layer arbitration over a rank grid, evaluated on pipeline evidence
 # (one ms_pipeline_rust call per rank: consensus stability at that rank +

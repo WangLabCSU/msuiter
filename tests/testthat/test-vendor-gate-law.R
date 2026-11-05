@@ -1,5 +1,5 @@
 # test-vendor-gate-law.R: the discrimination unit for the vendor-budget gate
-# law (tools/vendor.sh --check; law text docs/adr/0002-vendor-budget.md).
+# law (tools/vendor.sh --check; law text vignettes/articles/adr-0002-vendor-budget.qmd).
 #
 # Why this exists (measured): main push-run 39289131194 (2026-10-19T16:53:28Z)
 # failed the guards arm with BOTH byte-exact laws matching exactly

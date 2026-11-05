@@ -1,8 +1,8 @@
-# msuiter scheduled deep checks (U-M0-07) — docs/ARCHITECTURE.md §9:
-# "valgrind + ASAN/UBSAN scheduled job". Nightly since issue #76
+# msuiter scheduled deep checks (U-M0-07) — vignettes/articles/architecture.qmd
+# §9: "valgrind + ASAN/UBSAN scheduled job". Nightly since issue #76
 # (2026-11-05): this workflow now carries the T1 deep battery, the five
-# version arms and the coverage leg the PR gate retired from its
-# critical path. valgrind and sanitizer are
+# version arms and the coverage leg the PR gate retired from its critical
+# path. valgrind and sanitizer are
 # diagnostic tripwires allowed to fail (not merge gates); site is a hard
 # gate (U-M7-04 slice-C, C5): a site that no longer builds must go red.
 #

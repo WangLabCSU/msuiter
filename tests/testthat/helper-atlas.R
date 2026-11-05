@@ -1,4 +1,4 @@
-# Atlas-mode synthetic cohort (Phase-8 CS-1; docs/research/03-applications.md
+# Atlas-mode synthetic cohort (Phase-8 CS-1; vignettes/articles/research-03-applications.qmd
 # section 1). Three-layer generator isolation: (1) TRUTH -- planted signature
 # identities and per-sample activities; (2) PLAN -- integer channel counts
 # derived from the truth by largest-remainder rounding; (3) EMIT -- canonical

@@ -1,5 +1,5 @@
 # Scheduled check arms of the version fan-out (issue #76, 2026-11-05;
-# docs/devlog/2026-11-05-ci-pr-gate-tiering-ruling.md). The five version
+# vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd). The five version
 # arms the PR gate slimmed out of -- ubuntu 4.3 (package floor), ubuntu
 # devel (informative, continue-on-error), the three oldrel-1 -- plus one
 # ubuntu/release witness: the nightly R-CMD-check-version-fanout job is the

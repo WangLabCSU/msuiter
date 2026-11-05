@@ -1,11 +1,11 @@
 # R/treatment-report.R -- the treatment-forensics reporting face (Phase-8 CS-3)
-# Design memo: docs/devlog/2026-10-28-p8-treatment-forensics-design.md.
+# Design memo: vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd.
 # Signature identities resolve through the sealed bundled refdb roster only;
 # this file ships no reference numerics and fabricates no degraded-face rows.
 
 # Governed default exposure map: therapy class bound to its officially
 # recognised signature identities (COSMIC v3.6 labels, served from the refdb).
-# Recognition anchors (docs/research/03-applications.md section 3):
+# Recognition anchors (vignettes/articles/research-03-applications.qmd section 3):
 # temozolomide SBS11 (PMID 39656916), platinum SBS31 + SBS35 (PMID 32366847),
 # thiopurine SBS32 (PMID 31697823).
 .ms_treatment_exposure_map <- list(

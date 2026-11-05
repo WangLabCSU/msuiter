@@ -1,5 +1,5 @@
 # io-catalog.R: catalog/signature file interop, first format (U-M4-02;
-# design memo docs/devlog/2026-10-04-M4-02-design-memo.md section 2).
+# design memo vignettes/articles/devlog-2026-10-04-M4-02-design-memo.qmd section 2).
 #
 # COSMIC txt --  the layout of the bundled upstream reference files
 # (inst/reference/refdb/COSMIC_v3.6/*.txt): TSV, first header column
@@ -103,7 +103,7 @@ ms_export <- function(x, format = "cosmic", file = NULL) {
       i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
       j = paste0("received: ", msuiter_quote_trunc(format),
                  "; verified: ", paste(.ms_io_formats, collapse = ", ")),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md sections 2/4"
+      c = "see vignettes/articles/devlog-2026-10-04-M4-02-design-memo.qmd sections 2/4"
     )
   }
   if (S7::S7_inherits(x, MsCatalog)) {
@@ -175,7 +175,7 @@ ms_import <- function(file, format = "cosmic",
       i = "WTSI long format is deferred pending an upstream specimen ([V] discipline)",
       j = paste0("received: ", msuiter_quote_trunc(format),
                  "; verified: ", paste(.ms_io_formats, collapse = ", ")),
-      c = "see docs/devlog/2026-10-04-M4-02-design-memo.md sections 2/4"
+      c = "see vignettes/articles/devlog-2026-10-04-M4-02-design-memo.qmd sections 2/4"
     )
   }
   kind <- match.arg(kind)

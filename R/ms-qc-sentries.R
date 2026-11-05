@@ -1,5 +1,5 @@
 # ms-qc-sentries.R: the P4 QC sentries sibling surfaces (parity plan
-# docs/research/09-sigminer-v3-parity-plan.md §5 row P4: burden
+# vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P4: burden
 # distribution, gt/ct mechanism sentries, artifact-roster exposure share,
 # plus the provenance checklist carried by ms_qc_report()).
 #
@@ -8,7 +8,7 @@
 # or from the frozen house constants it owns; no threshold, share
 # definition or mechanism reading is added by this file. The certified
 # backing per surface is cited in the @references blocks below (design
-# memo docs/devlog/2026-10-04-M4-02b-qc-memo.md sections 1, 3 and 4).
+# memo vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd sections 1, 3 and 4).
 #
 # Declined for lack of certified backing (recorded in the lane report):
 # the "garbage-tracking / cellular-toxicity" reading of gt/ct (no such
@@ -47,7 +47,7 @@
 #' Per-sample burden distribution table
 #'
 #' The burden block of the certified QC report (design memo
-#' `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 3, as implemented in
+#' `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 3, as implemented in
 #' `R/ms-qc-report.R:95-105` at the time this surface was factored out),
 #' exposed as its own addressable surface: one row per sample with the
 #' total burden, its base-10 log and the house-declared burden class
@@ -62,7 +62,7 @@
 #'   frozen order `sample`, `total`, `log10_total`, `burden_class`.
 #'
 #' @references
-#' Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 3
+#' Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 3
 #' (burden block, house-declared classes with the divergence note);
 #' computation core `R/ms-qc-report.R` (.ms_qc_shares, .ms_qc_log10,
 #' .ms_qc_burden_class, .ms_qc_defaults).
@@ -114,7 +114,7 @@ print.MsQcBurden <- function(x, ...) {
 #'   `ct_verdict`, `qc_flag`.
 #'
 #' @references
-#' Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+#' Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 #' (mechanism labels, verified against the Excerno/FFPEsig records) and
 #' section 3 (frozen shares and the declared flag constants). oxoG:
 #' Costello et al., NAR 2013 (doi:10.1093/nar/gks1443); FFPE deamination:
@@ -173,7 +173,7 @@ print.MsQcSentries <- function(x, ...) {
 #'   ("oxoG" / "ffpe"), `citation`.
 #'
 #' @references
-#' Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1 and
+#' Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1 and
 #' section 3 (the two mechanism families); computation core
 #' `R/ms-qc-report.R` (.ms_qc_gt_channels / .ms_qc_ct_channels and their
 #' header note on the pyrimidine view). oxoG: Costello et al., NAR 2013
@@ -226,7 +226,7 @@ print.MsQcMechanismChannels <- function(x, ...) {
 #'   enumeration order, one column `name`.
 #'
 #' @references
-#' Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+#' Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 #' (the live-verified 19-entry enumeration; the page prose said "20
 #' total" -- the enumeration is the pin); roster constant
 #' `R/ms-qc-report.R` (.ms_qc_artifact_sbs); literal pin
@@ -280,7 +280,7 @@ print.MsQcArtifactRoster <- function(x, ...) {
 #'   `artifact_sigs`, `artifact_flag`.
 #'
 #' @references
-#' Design memo `docs/devlog/2026-10-04-M4-02b-qc-memo.md` section 1
+#' Design memo `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` section 1
 #' (roster) and section 3 (share formula and the declared flag);
 #' computation core `R/ms-qc-report.R` (.ms_qc_roster_block: the
 #' certified validation face and share loop, and .ms_qc_defaults).

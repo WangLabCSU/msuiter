@@ -1,6 +1,6 @@
 # test-hrd-report.R -- U-M6s-01 RED batch: the ms_hrd_report() API surface and
 # its two hard gates. Public API and gate/error classes are the design memo's
-# (docs/devlog/2026-10-07-m6s-hrd-report-design.md section 2), the ground truth
+# (vignettes/articles/devlog-2026-10-07-m6s-hrd-report-design.qmd section 2), the ground truth
 # for the two scores being cran/SigMiner get_pLOH_score.R / get_Aneuploidy_score.R.
 #
 # This is a RED batch: ms_hrd_report() is not yet implemented, so every test_that

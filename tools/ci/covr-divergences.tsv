@@ -4,8 +4,8 @@
 # The covr lane tests the INSTALLED copy; files that locate the checkout
 # observe structural skips there (the repo-mode arms run them in full).
 #
-# Retired 2026-11-05 (issue #76, docs/devlog/
-# 2026-11-05-ci-pr-gate-tiering-ruling.md): the two rows sanctioning
+# Retired 2026-11-05 (issue #76, vignettes/articles/
+# devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd): the two rows sanctioning
 # test-check-layout-sim-sentry.R (shard 1) and test-check-layout-sim-stale.R
 # (shard 2) as covr-vacuous were deleted with the T2 re-classification, not
 # left to rot -- the reverse audit makes a row that sanctions no live

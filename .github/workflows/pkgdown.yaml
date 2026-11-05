@@ -1,0 +1,61 @@
+# Build and deploy the pkgdown site to GitHub Pages on every push to main
+# (the repo Pages setting is build_type: workflow; the site URL is
+# https://wanglabcsu.github.io/msuiter/). Mirrors the scheduled site job's
+# provisioning shape: the Rust toolchain is installed BEFORE the R
+# dependency installation because the local::. face compiles src/rust, and
+# every action is SHA-pinned per the house discipline.
+name: pkgdown
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    # house hang-detector law: every job declares a measured budget
+    timeout-minutes: 60
+    concurrency:
+      group: pkgdown-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: "Install Rust toolchain at MSRV (DESCRIPTION: rustc >= 1.71)"
+        run: |
+          rustup toolchain install 1.71.0 --profile minimal
+          rustup default 1.71.0
+
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          needs: check          # Suggests ride in: the guides render ggplot faces
+          extra-packages: any::pkgdown, any::pkgload, any::quarto, local::.
+
+      - name: Build site (release face, lands at the docs/ root)
+        run: |
+          pkgdown::build_site(override = list(development = list(mode = "release")),
+                              new_process = FALSE, install = FALSE, quiet = TRUE)
+          pkgdown::build_github_pages(pkgdown::as_pkgdown("."))
+        shell: Rscript {0}
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: "docs"

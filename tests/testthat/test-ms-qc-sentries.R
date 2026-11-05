@@ -3,7 +3,7 @@
 # Exposure, not invention: every surface here must agree with the certified
 # ms_qc_report() computation column-for-column (delegation identity checks),
 # the verdicts are the frozen .ms_qc_defaults clauses spoken per-mechanism
-# (docs/devlog/2026-10-04-M4-02b-qc-memo.md section 3-4), and the artifact
+# (vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd section 3-4), and the artifact
 # roster is the 19-entry COSMIC enumeration pinned by test literal. Fixtures
 # are synthetic only (D3): hand-built catalogs and the house ms_simulate()
 # with pinned seeds; injections spike known artifact-roster channels and

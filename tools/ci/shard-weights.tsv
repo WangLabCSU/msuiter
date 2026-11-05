@@ -3,7 +3,7 @@
 # (banked: /tmp/ciopt/logs/run39536641469/10_guards.txt; the split sim files carry the
 # apportionment recorded in docs/devlog/2026-10-21-ci-shard-parallel.md).
 # Weights steer balance only -- test-ci-shard-map.R keeps this roster lockstep with disk.
-# Tier contract (issue #76, 2026-11-05; docs/devlog/2026-11-05-ci-pr-gate-tiering-ruling.md): tier T0 is the PR-gate
+# Tier contract (issue #76, 2026-11-05; vignettes/articles/devlog-2026-11-05-ci-pr-gate-tiering-ruling.qmd): tier T0 is the PR-gate
 # battery (fast, deterministic, high-signal), T1 is the scheduled deep
 # battery (xval campaign, refdb, ms-qc sentries, benchmark driver --
 # nightly in the version arms, the monolith and the covr lane), T2 is

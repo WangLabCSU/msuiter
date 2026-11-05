@@ -1,4 +1,4 @@
-# msuiter CI (U-M0-07) -- docs/ARCHITECTURE.md §9 CI contract.
+# msuiter CI (U-M0-07) -- vignettes/articles/architecture.qmd §9 CI contract.
 #
 # Jobs:
 #   guard-prep  : fast static guards + the single vendor-tarball generation
@@ -36,7 +36,7 @@
 #                 continues to carry the branch-protection semantics; the
 #                 repo-root guard scripts it names run in guard-prep
 #                 (U-M0-01/02/05/06 handoff, see
-#                 docs/IMPLEMENTATION-PLAN.md §3.1 U-M0-07), and its
+#                 vignettes/articles/implementation-plan.qmd §3.1 U-M0-07), and its
 #                 Cargo.lock pin assertion (ADR 0002 §4.4) stays as the
 #                 belt-and-braces check beside dependabot.
 #   guards-shards : the shared R CMD INSTALL of the tree under test plus the
@@ -57,13 +57,13 @@
 # -- the version fan-out and the coverage leg (tier T0,T1); it is
 # machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
 # guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
-# docs/devlog/2026-10-21-ci-shard-parallel.md. The manifest's tier column
-# (issue #76) is a committed location law: the PR-gate fan-out arms run
-# tier T0, the nightly version fan-out and coverage run T0+T1, and the
-# two tier-T2 provisioning
-# simulations live in tests/heavy, run only through tools/test-heavy.R
-# (local, plus the nightly scheduled job). The PR-gate T0 weight is
-# bounded by the committed measurement tools/ci/pr-gate-budget.tsv.
+# vignettes/articles/devlog-2026-10-21-ci-shard-parallel.qmd. The
+# manifest's tier column (issue #76) is a committed location law: the
+# PR-gate fan-out arms run tier T0, the nightly version fan-out and
+# coverage run T0+T1, and the two tier-T2 provisioning simulations live
+# in tests/heavy, run only through tools/test-heavy.R (local, plus the
+# nightly scheduled job). The PR-gate T0 weight is bounded by the
+# committed measurement tools/ci/pr-gate-budget.tsv.
 #
 # This repository currently has remote origin (WangLabCSU/msuiter); these
 # workflows activate on the next push.
@@ -596,7 +596,7 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2
+        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
         with:
           tool: cargo-deny
 
@@ -612,7 +612,7 @@ jobs:
       # findings; --deny warnings only by a later controller ruling. The
       # advisory-DB fetch is runner-side network I/O and is permitted here.
       - name: Install cargo-audit
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2
+        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
         with:
           tool: cargo-audit
 

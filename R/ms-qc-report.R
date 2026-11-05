@@ -1,5 +1,5 @@
 # ms-qc-report.R: the sample-level QC report (U-M4-02b; design memo
-# docs/devlog/2026-10-04-M4-02b-qc-memo.md).
+# vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd).
 #
 # This is the M4 first version: burden distribution + mechanism-level
 # artifact sentinels + (with exposures) the COSMIC artifact-signature
@@ -9,7 +9,7 @@
 # §1). The qc_flag constants below are OUR initial defaults, declared as
 # a divergence, not upstream reproductions.
 #
-# P4 (parity plan docs/research/09-sigminer-v3-parity-plan.md §5 row P4):
+# P4 (parity plan vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P4):
 # the computation core is factored into the .ms_qc_* private helpers here
 # so the sibling surfaces in R/ms-qc-sentries.R EXPRESS the certified
 # numbers by delegation -- one implementation, never a second opinion --
@@ -328,7 +328,7 @@
 #' (SBS27, SBS43, SBS45–60, SBS95). oxoG sentinel: Costello et al., NAR
 #' 2013 (doi:10.1093/nar/gks1443). FFPE sentinel: Guo et al., Nat Commun
 #' 2022 (doi:10.1038/s41467-022-32041-5). Design memo:
-#' `docs/devlog/2026-10-04-M4-02b-qc-memo.md` sections 1, 3 and 4.
+#' `vignettes/articles/devlog-2026-10-04-M4-02b-qc-memo.qmd` sections 1, 3 and 4.
 #'
 #' @export
 ms_qc_report <- function(catalog, signatures = NULL, exposures = NULL) {

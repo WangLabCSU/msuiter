@@ -1,0 +1,143 @@
+---
+title: "Extracting signatures de novo"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Extracting signatures de novo}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Root locator + dual-load idiom shared with the get-started vignette: the
+# source tree (check and site-build contexts) loads through pkgload; a bare
+# installed package (reader-side) loads through library().
+.pkg_root <- function() {
+  for (dd in c(".", "..", "../..")) {
+    if (file.exists(file.path(dd, "DESCRIPTION")) &&
+        file.exists(file.path(dd, "R", "treatment-report.R"))) return(normalizePath(dd))
+  }
+  NA_character_
+}
+PKG <- .pkg_root()
+if (!is.na(PKG) && requireNamespace("pkgload", quietly = TRUE)) {
+  suppressWarnings(suppressMessages(pkgload::load_all(PKG, quiet = TRUE,
+                                                      export_all = TRUE)))
+} else {
+  library(msuiter)
+}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`ms_extract()` discovers signatures **de novo** from a catalog. This guide
+covers the K-selection evidence, the default consensus pipeline, and
+swapping extraction engines through the registry. Building the catalog is
+the subject of [Mutation catalogs](mutation-catalogs.html); using a known
+reference instead is the subject of
+[Fitting known signatures](signature-fitting.html).
+
+## A catalog to work against
+
+A small synthetic cohort seeded with three well-separated bundled COSMIC
+signatures keeps the guide offline and fast:
+
+```{r cohort}
+ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S   <- ref[, c(1, 5, 9)]
+colnames(S) <- paste0("CS", 1:3)
+E   <- matrix(rep(c(0.5, 0.3, 0.2), each = 24), 3, 24)
+sim <- ms_simulate(S, exposures = E, burden = 4000, seed = 7)
+sim
+```
+
+## K-selection evidence
+
+`ms_select_k()` gathers two evidence layers over a rank grid: a
+cross-validation reconstruction curve and a stability panel (multiple
+replicates per rank, clustered and matched). The **arbitration rule** is a
+hard gate: a rank is only selected if it passes the stability veto, and an
+undecidable grid raises a structured error carrying the full evidence
+table rather than silently picking a winner.
+
+```{r select-k, error = TRUE, purl = FALSE}
+err <- tryCatch(
+  ms_select_k(sim, k_grid = 2:5, replicates = 4, max_iter = 80,
+              seed = 1, k_folds = 3, n_seeds = 3),
+  error = function(e) e)
+class(err)[1]
+```
+
+The tiny synthetic grid above is undecidable — the veto rejects every rank,
+and the error says exactly why each candidate failed. The evidence table
+rides on the condition:
+
+```{r evidence}
+ev <- err$k_evidence
+head(ev[, c("k", "cv_test_deviance", "avg_stability", "passes_veto",
+            "veto_reason")])
+```
+
+This is deliberate: on a small or noisy cohort, K is genuinely undecidable
+and the package refuses to pretend otherwise. In production analyses the
+fix is exactly what the error message says — widen the rank grid, raise
+the replicate count, and read
+`plot_k_cv_curve()` / `plot_k_stability()` / `plot_reconstruction_panel()`
+(see [The visualization gallery](visualization-gallery.html)).
+
+## The default pipeline
+
+`ms_extract()` with no `method` runs the consensus pipeline: an ensemble
+of NMF replicates, Hungarian-matched consensus clustering, and a refit of
+the consensus matrix. Pass the K you adjudicated (here the generative
+truth, since the grid above was refused):
+
+```{r pipeline, warning = FALSE}
+ext <- ms_extract(sim, k = 3)
+ext
+```
+
+The result is an `MsSignature` whose slots carry the extracted matrix, the
+per-sample exposures, the pipeline stability evidence, and a summary of
+the catalog it was extracted from (channel name and hash — the provenance
+pin used by export and comparison):
+
+```{r slots}
+dim(ext@signatures)
+head(ext@exposures[, 1L:4L])
+ext@catalog_summary$channel_name
+```
+
+The reconstruction quality of the extraction can be eyeballed against the
+input catalog with `plot_catalog_profile()`
+([the visualization gallery](visualization-gallery.html) shows it).
+
+## Swapping engines
+
+Extraction methods are engines registered in the package registry. The
+default pipeline is consensus-based; a single-method extraction passes a
+spec — for example the NMF engine with its update rule and iteration
+budget:
+
+```{r engine}
+ext_nmf <- ms_extract(sim, k = 3, method = ms_nmf(engine = "kl",
+                                                  max_iter = 80,
+                                                  seed = 1))
+dim(ext_nmf@signatures)
+```
+
+The registry also carries the ARD and sparse engines (`ms_ard()`,
+`ms_sparse()`), and third-party packages can register their own — the
+contract and the onboarding checklist live in the extending guide
+([Extending msuiter](extending.html)). Because every engine speaks the
+same `MsSignature` output contract, comparing engines is a one-line swap,
+and the results can be compared against each other or against a reference
+with `ms_compare()`
+([Comparing signatures](comparing-signatures.html)).
+
+## Where to go next
+
+- [Fitting known signatures](signature-fitting.html): exposures against a
+  reference set, presence testing, bootstrap intervals.
+- [Comparing signatures](comparing-signatures.html): calibrated similarity
+  between extracted signatures and references.
+- [The visualization gallery](visualization-gallery.html): the K-evidence
+  and profile figure types.

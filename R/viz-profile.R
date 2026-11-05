@@ -1,5 +1,5 @@
 # viz-profile.R: the profile faces of the viz first batch (U-M4-03;
-# design memo docs/devlog/2026-10-04-M4-03-viz-memo.md):
+# design memo vignettes/articles/devlog-2026-10-04-M4-03-viz-memo.qmd):
 #   plot_catalog_profile      -- one column, channel bars, class colors
 #   plot_signature_catalog    -- multi-signature facet grid
 #   plot_reference_comparison -- estimate vs reference side-by-side bars

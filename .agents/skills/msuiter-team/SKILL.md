@@ -23,7 +23,7 @@ description: Orchestrate the msuiter development agent team (PI + Rust engineer 
 ## 工作流（每个工作单元一轮）
 
 ### 第 0 步：读状态
-开始任何团队工作前，按序读：`docs/ROADMAP.md`（当前版本轨道与下一个未完成工作单元）、`docs/ARCHITECTURE.md` §0 的 D1–D16 决策、`docs/devlog/` 最新一条（若有）、`git status`。若用户给了明确任务，以用户任务为准并核对它与 ROADMAP 的一致性（冲突则先问用户）。
+开始任何团队工作前，按序读：`vignettes/articles/roadmap.qmd`（当前版本轨道与下一个未完成工作单元）、`vignettes/articles/architecture.qmd` §0 的 D1–D16 决策、`docs/devlog/` 最新一条（若有）、`git status`。若用户给了明确任务，以用户任务为准并核对它与 ROADMAP 的一致性（冲突则先问用户）。
 
 ### 第 1 步：PI 分解（不写代码）
 - 把任务切成 ≤3 个可并行/串行的工作片，每片定义：交付物（文件路径）、验收标准（可执行/可检验）、涉及契约（引用 ARCHITECTURE 具体条款编号）。
