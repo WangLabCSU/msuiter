@@ -16,7 +16,12 @@
 # here hides them.
 #
 # usage: run-covr-shard.R --manifest=<tsv> --shard=<n> --out-srt=<file>
-#                         [--attest=<file>] [--root=<dir>]
+#                         --tier=<T0,T1> [--attest=<file>] [--root=<dir>]
+# The tier roster is MANDATORY (issue #76): covr never instruments the
+# tier-T2 provisioning simulations (the heavy class belongs to
+# tools/test-heavy.R; the former installed-copy vacuities were the
+# covr ledger rows this ruling retired), and an omitted --tier is a
+# usage DEFECT, never a silent full-roster default.
 
 .args <- local({
   ca <- try(commandArgs(trailingOnly = TRUE), silent = TRUE)
@@ -56,6 +61,26 @@ attest <- .kv("attest", file.path(tempdir(), paste0("covr-shard-", shard, ".atte
 if (is.na(shard)) quit(status = 2L)
 m <- .ci_parse_manifest(manifest)
 if (shard < 1L || shard > m$k) quit(status = 2L)
+.tier.req <- .kv("tier", NULL)
+if (is.null(.tier.req)) {
+  cat(paste0("run-covr-shard: DEFECT --tier is mandatory (issue #76): the covr ",
+               "lane never instruments tier T2 and the roster must be spoken",
+               "\n"), sep = "", file = stderr())
+  quit(status = 2L)
+}
+.tiers <- trimws(strsplit(.tier.req, ",", fixed = TRUE)[[1L]])
+if (!length(.tiers) || !all(.tiers %in% c("T0", "T1"))) {
+  cat(paste0("run-covr-shard: DEFECT covr tiers must be a non-empty T0/T1 ",
+               "subset, got ", .tier.req, "\n"), sep = "", file = stderr())
+  quit(status = 2L)
+}
+.covr.files <- m$rows$file[m$rows$shard == shard & m$rows$tier %in% .tiers]
+if (!length(.covr.files)) {
+  # Speak the skip (CLI-face law); the census expects no attestation here.
+  cat(paste0("run-covr-shard: shard ", shard, " holds no ",
+             paste0(.tiers, collapse = "/"), " file -- tier skip\n"), sep = "")
+  quit(status = 0L)
+}
 dir.create(dirname(out.srt), recursive = TRUE, showWarnings = FALSE)
 dir.create(dirname(attest), recursive = TRUE, showWarnings = FALSE)
 unlink(c(out.srt, attest))
@@ -72,7 +97,7 @@ attest.vacuous <- function(why) {
 if (!requireNamespace("covr", quietly = TRUE)) attest.vacuous("covr-uninstalled")
 old <- getwd(); setwd(root); on.exit(setwd(old))
 child.attest <- tempfile("covr-child-attest-")
-Sys.setenv(MSUITER_TESTTHAT_FILTER = .ci_shard_filter(m$rows, shard),
+Sys.setenv(MSUITER_TESTTHAT_FILTER = .ci_roster_filter(.covr.files),
            MSUITER_CENSUS_ATTEST = child.attest,
            MSUITER_CENSUS_SHARD = as.character(shard))
 on.exit(Sys.unsetenv(c("MSUITER_TESTTHAT_FILTER", "MSUITER_CENSUS_ATTEST",

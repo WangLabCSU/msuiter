@@ -8,8 +8,10 @@
 #                 tools/ci/fanout-configs.tsv, emitted by guard-prep) run
 #                 the fan-out body: rcmdcheck --as-cran --no-manual
 #                 --no-tests plus the sharded repo-layout testthat
-#                 fan-out against one shared R CMD INSTALL, so every test
-#                 runs on every platform -- K-way parallel, not serial.
+#                 fan-out of the PR-gate tier T0 against one shared R CMD
+#                 INSTALL, so every PR-gate test runs on every platform
+#                 -- K-way parallel, not serial (tier T1 is scheduled,
+#                 tier T2 local-only; issue #76).
 #                 The Rd-examples leg rides the check phase and the
 #                 vignette leg the build phase of that same step. The
 #                 single-process CRAN-shape monolith with the full test
@@ -34,13 +36,15 @@
 #                 belt-and-braces check beside dependabot.
 #   guards-shards : K parallel repo-layout testthat shard processes against
 #                 one shared R CMD INSTALL of the tree under test; attests
-#                 every file of the committed shard manifest.
+#                 every tier-T0/T1 file of the committed shard manifest
+#                 (tier T2 is tools/test-heavy.R's face, issue #76).
 #   msrv        : cargo +1.71.0 build/test --workspace on Linux AND Windows
 #                 (formal closure of the ADR 0002 section 5 residual
 #                 "three-platform build proofs"; macos arm64 already proven
 #                 locally in ADR 0002 §4).
-#   coverage    : R coverage via covr -> codecov upload. Sharded for the
-#                 test legs, examples/vignettes as before. Wiring only,
+#   coverage    : R coverage via covr -> codecov upload. Sharded (tier
+#                 T0/T1 -- the covr runner refuses an unspoken --tier) for
+#                 the test legs, examples/vignettes as before. Wiring only,
 #                 no percentage gate (R >= 85% is a later milestone target,
 #                 ARCHITECTURE §9); the attestation census gates -- the
 #                 --advisory non-gate was retired 2026-10-24.
@@ -49,7 +53,12 @@
 # consumed by guards-shards, the check fan-out arms, and coverage; it is
 # machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
 # guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
-# docs/devlog/2026-10-21-ci-shard-parallel.md.
+# docs/devlog/2026-10-21-ci-shard-parallel.md. The manifest's tier column
+# (issue #76) is a committed location law: the fan-out arms run tier T0,
+# guards-shards and coverage run T0+T1, and the two tier-T2 provisioning
+# simulations live in tests/heavy, run only through tools/test-heavy.R
+# (local, plus the nightly scheduled job). The PR-gate T0 weight is
+# bounded by the committed measurement tools/ci/pr-gate-budget.tsv.
 #
 # This repository currently has remote origin (WangLabCSU/msuiter); these
 # workflows activate on the next push.
@@ -218,7 +227,8 @@ jobs:
         run: |
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
-            --attest-dir attest-guards --kind guards
+            --attest-dir attest-guards --kind guards \
+            --tier T0,T1
 
   guards-shards:
     # Budget-line ratchet on two co-tenancy kill witnesses: PR #60 attempt-1
@@ -295,6 +305,7 @@ jobs:
             Rscript tools/ci/run-testthat-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --kind=guards --mode=installed \
+              --tier=T0,T1 \
               --attest="attest-out/shard-$s.attest" \
               > "shard-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
@@ -540,6 +551,7 @@ jobs:
             Rscript tools/ci/run-testthat-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --kind=fanout --mode=installed \
+              --tier=T0 \
               --attest="attest-out/shard-$s-$tag.attest" \
               > "shard-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
@@ -553,6 +565,8 @@ jobs:
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir attest-out --kind fanout \
+            --tier T0 \
+            --t0-budget tools/ci/pr-gate-budget.tsv \
             --fanout-configs tools/ci/fanout-configs.tsv \
             --exclusions tools/ci/shard-exclusions.tsv \
             --expect-config "${{ matrix.config.os }}-${{ matrix.config.r }}"
@@ -810,6 +824,7 @@ jobs:
             Rscript tools/ci/run-covr-shard.R \
               --manifest=tools/ci/shard-manifest.tsv --shard="$s" \
               --out-srt="covr-srt/shard-$s.srt" \
+              --tier=T0,T1 \
               --attest="covr-out/shard-$s.attest" \
               > "covr-logs/shard-$s.log" 2>&1 &
             pids="$pids $!"
@@ -845,7 +860,8 @@ jobs:
           python3 tools/ci/ci-shard-aggregate.py \
             --manifest tools/ci/shard-manifest.tsv \
             --attest-dir covr-out --kind coverage \
-            --ledger tools/ci/covr-divergences.tsv
+            --ledger tools/ci/covr-divergences.tsv \
+            --tier T0,T1
 
       - name: Echo failed testthat output (diagnosability)
         if: failure()

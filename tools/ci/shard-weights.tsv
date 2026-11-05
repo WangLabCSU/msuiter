@@ -3,97 +3,107 @@
 # (banked: /tmp/ciopt/logs/run39536641469/10_guards.txt; the split sim files carry the
 # apportionment recorded in docs/devlog/2026-10-21-ci-shard-parallel.md).
 # Weights steer balance only -- test-ci-shard-map.R keeps this roster lockstep with disk.
-file	seconds	expects
-test-calibrate-plot.R	1	53
-test-calibrate-real.R	1	133
-test-calibrate.R	0	174
-test-capability-matrix-truth.R	0	9
-test-catalog-currency.R	1	0
-test-catalog-tally.R	0	125
-test-channels-reference.R	0	4
-test-channels-structure.R	0	35
-test-channels-sync.R	0	43
-test-check-layout-sim-gen.R	0	8
-test-check-layout-sim-sdkroot.R	0	10
-test-check-layout-sim-sentry.R	1250	2
-test-check-layout-sim-stale.R	1231	4
-test-check-layout-sim.R	15	6
-test-ci-shard-map.R	8	11
-test-cjk-census.R	9	23
-test-classes-benchmark.R	0	23
-test-classes-catalog.R	0	69
-test-classes-engines.R	0	30
-test-classes-fit.R	0	41
-test-classes-refdb.R	0	85
-test-classes-roundtrip.R	0	68
-test-classes-signature.R	0	76
-test-classes-utils.R	0	16
-test-classes-variants.R	0	74
-test-docs-sync.R	0	10
-test-engines-registry.R	0	120
-test-extend-contract.R	0	31
-test-extract.R	16	163
-test-ffi-probes.R	0	69
-test-ffi-surface-drift.R	0	3
-test-ffi-tally.R	0	96
-test-fit-bootstrap.R	3	204
-test-fit.R	0	180
-test-gitignore-hygiene.R	0	14
-test-hrd-reference.R	0	51
-test-hrd-report.R	0	67
-test-io-segments.R	0	223
-test-io-sv.R	0	105
-test-io-variants.R	0	226
-test-islam-xval.R	0	12
-test-kernel-attest-route.R	1	20
-test-kernel-cli.R	0	42
-test-kernel-gate-evidence.R	0	44
-test-kernel-pipeline-batch.R	0	177
-test-kernel-pipeline-farm.R	5	117
-test-kernel-pipeline-parse.R	0	57
-test-kernel-pipeline-status.R	0	37
-test-kselect.R	28	147
-test-m2-e2e.R	2	13
-test-ms-benchmark-driver.R	208	72
-test-ms-cluster.R	0	46
-test-ms-compare-boundary.R	2	15
-test-ms-compare.R	9	167
-test-ms-convert.R	0	45
-test-ms-downsample-io.R	36	83
-test-ms-embed.R	2	28
-test-ms-exposure-test.R	0	30
-test-ms-qc-report.R	112	42
-test-ms-qc-sentries.R	280	114
-test-ms-simulate.R	0	42
-test-pkgdown-citation.R	0	23
-test-pkgdown-msu-map.R	1	23
-test-pkgdown-reference-map.R	0	17
-test-r-floor-ops.R	0	1
-test-refdb.R	373	138
-test-release-materials.R	0	12
-test-sitrep.R	0	13
-test-stratify.R	0	132
-test-vendor-gate-law.R	0	33
-test-viz-bootstrap.R	0	39
-test-viz-batch2.R	2	179
-test-viz-first-batch.R	11	74
-test-viz-kselect.R	0	24
-test-xval-m2-extract.R	948	7
-test-xval-sigminer.R	10	12
-test-scenario-atlas.R	2.2	41
-test-scenario-hrd.R	0.4	28
-test-treatment-report.R	13.1	87
-test-kernel-trace-shape.R	1	40
-test-kernel-bit-identity.R	79	476
-test-kernel-batch-bridge.R	172	346
-test-docs-get-started.R	7	14
-test-docs-bridge.R	1	16
-test-pkgdown-coherence.R	1	14
-test-site-claim-gate.R	42	15
-test-site-deploy-bundle.R	3	31
-test-scenarios-gallery.R	1	80
-test-peer-evidence.R	3	1611
-test-reproduce-link.R	0	18
-test-docs-tour-executable.R	10	28
-test-docs-scenarios-prose.R	1	19
-test-docs-extending-surface.R	1	20
+# Tier contract (issue #76, 2026-11-05; docs/devlog/2026-11-05-ci-pr-gate-tiering-ruling.md): tier T0 is the PR-gate
+# battery (fast, deterministic, high-signal), T1 is the scheduled deep
+# battery (xval campaign, refdb, ms-qc sentries, benchmark driver --
+# nightly in the version arms, the monolith and the covr lane), T2 is
+# the local-only heavyweight class: the two check-layout-sim
+# provisioning simulations live in tests/heavy and run on the committed
+# one-command face tools/test-heavy.R (plus the nightly scheduled job).
+# The tier column is a LOCATION law, enforced by the generator: T2 rows
+# must name files under tests/heavy, T0/T1 rows under tests/testthat.
+# The PR-gate weight budget rides tools/ci/pr-gate-budget.tsv.
+file	seconds	expects	tier
+test-calibrate-plot.R	1	53	T0
+test-calibrate-real.R	1	133	T0
+test-calibrate.R	0	174	T0
+test-capability-matrix-truth.R	0	9	T0
+test-catalog-currency.R	1	0	T0
+test-catalog-tally.R	0	125	T0
+test-channels-reference.R	0	4	T0
+test-channels-structure.R	0	35	T0
+test-channels-sync.R	0	43	T0
+test-check-layout-sim-gen.R	0	8	T0
+test-check-layout-sim-sdkroot.R	0	10	T0
+test-check-layout-sim-sentry.R	1250	2	T2
+test-check-layout-sim-stale.R	1231	4	T2
+test-check-layout-sim.R	15	6	T0
+test-ci-shard-map.R	8	11	T0
+test-cjk-census.R	9	23	T0
+test-classes-benchmark.R	0	23	T0
+test-classes-catalog.R	0	69	T0
+test-classes-engines.R	0	30	T0
+test-classes-fit.R	0	41	T0
+test-classes-refdb.R	0	85	T0
+test-classes-roundtrip.R	0	68	T0
+test-classes-signature.R	0	76	T0
+test-classes-utils.R	0	16	T0
+test-classes-variants.R	0	74	T0
+test-docs-sync.R	0	10	T0
+test-engines-registry.R	0	120	T0
+test-extend-contract.R	0	31	T0
+test-extract.R	16	163	T0
+test-ffi-probes.R	0	69	T0
+test-ffi-surface-drift.R	0	3	T0
+test-ffi-tally.R	0	96	T0
+test-fit-bootstrap.R	3	204	T0
+test-fit.R	0	180	T0
+test-gitignore-hygiene.R	0	14	T0
+test-hrd-reference.R	0	51	T0
+test-hrd-report.R	0	67	T0
+test-io-segments.R	0	223	T0
+test-io-sv.R	0	105	T0
+test-io-variants.R	0	226	T0
+test-islam-xval.R	0	12	T0
+test-kernel-attest-route.R	1	20	T0
+test-kernel-cli.R	0	42	T0
+test-kernel-gate-evidence.R	0	44	T0
+test-kernel-pipeline-batch.R	0	177	T0
+test-kernel-pipeline-farm.R	5	117	T0
+test-kernel-pipeline-parse.R	0	57	T0
+test-kernel-pipeline-status.R	0	37	T0
+test-kselect.R	28	147	T0
+test-m2-e2e.R	2	13	T0
+test-ms-benchmark-driver.R	208	72	T1
+test-ms-cluster.R	0	46	T0
+test-ms-compare-boundary.R	2	15	T0
+test-ms-compare.R	9	167	T0
+test-ms-convert.R	0	45	T0
+test-ms-downsample-io.R	36	83	T0
+test-ms-embed.R	2	28	T0
+test-ms-exposure-test.R	0	30	T0
+test-ms-qc-report.R	112	42	T0
+test-ms-qc-sentries.R	280	114	T1
+test-ms-simulate.R	0	42	T0
+test-pkgdown-citation.R	0	23	T0
+test-pkgdown-msu-map.R	1	23	T0
+test-pkgdown-reference-map.R	0	17	T0
+test-r-floor-ops.R	0	1	T0
+test-refdb.R	373	138	T1
+test-release-materials.R	0	12	T0
+test-sitrep.R	0	13	T0
+test-stratify.R	0	132	T0
+test-vendor-gate-law.R	0	33	T0
+test-viz-bootstrap.R	0	39	T0
+test-viz-batch2.R	2	179	T0
+test-viz-first-batch.R	11	74	T0
+test-viz-kselect.R	0	24	T0
+test-xval-m2-extract.R	948	7	T1
+test-xval-sigminer.R	10	12	T0
+test-scenario-atlas.R	2.2	41	T0
+test-scenario-hrd.R	0.4	28	T0
+test-treatment-report.R	13.1	87	T0
+test-kernel-trace-shape.R	1	40	T0
+test-kernel-bit-identity.R	79	476	T0
+test-kernel-batch-bridge.R	172	346	T0
+test-docs-get-started.R	7	14	T0
+test-docs-bridge.R	1	16	T0
+test-pkgdown-coherence.R	1	14	T0
+test-site-claim-gate.R	42	15	T0
+test-site-deploy-bundle.R	3	31	T0
+test-scenarios-gallery.R	1	80	T0
+test-peer-evidence.R	3	1611	T0
+test-reproduce-link.R	0	18	T0
+test-docs-tour-executable.R	10	28	T0
+test-docs-scenarios-prose.R	1	19	T0
+test-docs-extending-surface.R	1	20	T0

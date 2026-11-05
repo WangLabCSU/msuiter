@@ -248,7 +248,12 @@ def main():
               REPO / "src/rust/audit.toml",
               REPO / "tools/ci/shard-manifest.tsv",
               REPO / "tools/ci/shard-weights.tsv",
-              REPO / "tools/ci/fanout-configs.tsv"):
+              REPO / "tools/ci/fanout-configs.tsv",
+              REPO / "tools/ci/pr-gate-budget.tsv",
+              REPO / "tools/test-heavy.R",
+              REPO / "tests/heavy/helper-msuiter-shared.R",
+              REPO / "tests/heavy/test-check-layout-sim-sentry.R",
+              REPO / "tests/heavy/test-check-layout-sim-stale.R"):
         check(f"file exists: {p.relative_to(REPO)}", p.is_file())
 
     try:
@@ -418,6 +423,85 @@ def main():
           "--write-exclusion-marker" in fs and "shard-exclusions.tsv" in fs)
     check("fan-out census is handed the ledger",
           "--exclusions" in fs and "tools/ci/shard-exclusions.tsv" in fs)
+
+    # ---- tier partition + committed PR-gate budget (issue #76) ------------
+    w_tsv = REPO / "tools/ci/shard-weights.tsv"
+    tsv_rows = [ln.split("\t") for ln in txt(w_tsv).splitlines()
+                if ln.strip() and not ln.startswith("#")]
+    check("weights table is the four-column shape (file, seconds, expects, tier)",
+          tsv_rows[0] == ["file", "seconds", "expects", "tier"]
+          and all(len(r) == 4 for r in tsv_rows[1:]), str(tsv_rows[:1]))
+    tiers_of = {r[0]: r[3] for r in tsv_rows[1:]}
+    check("every weights row names a lawful tier",
+          bool(tiers_of) and set(tiers_of.values()) <= {"T0", "T1", "T2"},
+          str(sorted(set(tiers_of.values()))))
+    check("the tier-T2 class is the two provisioning simulations, and they live in tests/heavy",
+          sorted(f for f, t in tiers_of.items() if t == "T2") ==
+          ["test-check-layout-sim-sentry.R", "test-check-layout-sim-stale.R"]
+          and not (REPO / "tests/testthat/test-check-layout-sim-sentry.R").exists()
+          and not (REPO / "tests/testthat/test-check-layout-sim-stale.R").exists())
+    check("the tier-T1 deep battery is the named four (xval, refdb, sentries, driver)",
+          sorted(f for f, t in tiers_of.items() if t == "T1") ==
+          sorted(["test-xval-m2-extract.R", "test-refdb.R",
+                  "test-ms-qc-sentries.R", "test-ms-benchmark-driver.R"]))
+    check("the bit-identity battery stays in the PR-gate tier",
+          all(tiers_of.get(f) == "T0" for f in
+              ("test-kernel-bit-identity.R", "test-kernel-batch-bridge.R")))
+    m_rows = [ln.split("\t") for ln in txt(REPO / "tools/ci/shard-manifest.tsv").splitlines()
+              if ln.strip() and not ln.startswith("#") and not ln.startswith("shard")]
+    check("manifest rows are four-column and tier-lockstep with the weights table",
+          bool(m_rows) and all(len(r) == 4 for r in m_rows)
+          and all(tiers_of.get(r[1]) == r[3] for r in m_rows), "tier lockstep drift")
+    kv = {}
+    bud_tsv = REPO / "tools/ci/pr-gate-budget.tsv"
+    if bud_tsv.is_file():
+        for ln in bud_tsv.read_text(encoding="utf-8").splitlines():
+            if ln.strip() and not ln.startswith("#"):
+                p = ln.split("\t")
+                if len(p) >= 2:
+                    kv[p[0]] = p[1]
+    try:
+        measured, ceiling = int(kv["t0-measured"]), int(kv["t0-ceiling"])
+        numeric = True
+    except (KeyError, ValueError):
+        measured = ceiling = None
+        numeric = False
+    check("pr-gate-budget.tsv carries numeric t0-measured <= t0-ceiling",
+          numeric and measured <= ceiling, str(kv))
+    # seconds may be fractional in the weights table (witness:
+    # test-scenario-atlas.R rides 2.2); the committed law is the rounded
+    # integer sum -- the same arithmetic the generator and aggregator run.
+    t0sum = sum(int(round(float(r[1]))) for r in tsv_rows[1:]
+                if len(r) == 4 and r[3] == "T0")
+    check("the committed T0 weight re-prices to the committed measurement",
+          numeric and t0sum == measured, f"recomputed={t0sum} committed={measured}")
+    check("the PR-gate battery fits its committed ceiling",
+          numeric and t0sum <= ceiling, f"t0sum={t0sum} ceiling={ceiling}")
+    # firing controls (house law: a law that cannot fire is vacuous)
+    gut = dict(tiers_of)
+    gut["test-xval-m2-extract.R"] = "T0"
+    check("tier laws firing control: a demoted deep-battery file is caught",
+          sorted(f for f, t in gut.items() if t == "T1") !=
+          sorted(["test-xval-m2-extract.R", "test-refdb.R",
+                  "test-ms-qc-sentries.R", "test-ms-benchmark-driver.R"]))
+    gut_b = dict(kv); gut_b["t0-measured"] = str(int(kv.get("t0-measured", "0")) + 7)
+    check("budget law firing control: a drifted measurement trips the equality",
+          int(gut_b["t0-measured"]) != t0sum and t0sum == (measured if numeric else t0sum))
+    fs_guards = job_script(ci, "guards")
+    fs_gsh = job_script(ci, "guards-shards")
+    fs_cov = job_script(ci, "coverage")
+    check("fan-out arms run the PR-gate tier and the census carries the committed budget",
+          "--tier=T0" in fs and "--tier T0" in fs
+          and "--t0-budget tools/ci/pr-gate-budget.tsv" in fs)
+    check("guards-shards runs the committed T0+T1 window", "--tier=T0,T1" in fs_gsh)
+    check("the guards attestation gate is tier-scoped the same way",
+          "--tier T0,T1" in fs_guards)
+    check("covr shards and the covr census share one tier window",
+          "--tier=T0,T1" in fs_cov and "--tier T0,T1" in fs_cov)
+    check("the heavy face is committed, tier-driven and self-tested",
+          (REPO / "tools/test-heavy.R").is_file()
+          and "--self-test" in txt(REPO / "tools/test-heavy.R")
+          and "--tier" in txt(REPO / "tools/test-heavy.R"))
 
     # ---- check-run census ([ci-checkrun-level-green] convention) ------------
     # Run-level green can hide a dead arm, so the expected PR-gate check-run
