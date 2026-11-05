@@ -158,6 +158,6 @@ fn decode_fresh(
     k: usize,
 ) -> Result<Vec<f64>, String> {
     let v = read_certified_csv(path, want, "V.csv")?;
-    let (): () = validate_shape(&v, m, n, k).map_err(|e: MsError| format!("{e}"))?;
+    validate_shape(&v, m, n, k).map_err(|e: MsError| format!("{e}"))?;
     Ok(v)
 }

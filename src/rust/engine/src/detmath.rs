@@ -836,15 +836,12 @@ mod tests {
             .map(|&x| (det_ln(x).to_bits(), det_exp(x).to_bits(), det_sin(x).to_bits(), det_cos(x).to_bits()))
             .collect();
         let mut handles = Vec::new();
-        for chunk in g.chunks(g.len().div_ceil(4)) {
+        for chunk in g.chunks((g.len() + 3) / 4) {
             let c: Vec<f64> = chunk.to_vec();
-            let r: Vec<(u64, u64, u64, u64)> = {
-                let off = chunk.as_ptr() as usize - g.as_ptr() as usize;
-                let _ = off;
-                c.iter()
-                    .map(|&x| (det_ln(x).to_bits(), det_exp(x).to_bits(), det_sin(x).to_bits(), det_cos(x).to_bits()))
-                    .collect()
-            };
+            let r: Vec<(u64, u64, u64, u64)> = c
+                .iter()
+                .map(|&x| (det_ln(x).to_bits(), det_exp(x).to_bits(), det_sin(x).to_bits(), det_cos(x).to_bits()))
+                .collect();
             handles.push(std::thread::spawn(move || {
                 let c2: Vec<(u64, u64, u64, u64)> = c
                     .iter()
