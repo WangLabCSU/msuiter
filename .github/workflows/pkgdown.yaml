@@ -51,7 +51,9 @@ jobs:
         run: |
           pkgdown::build_site(override = list(development = list(mode = "release")),
                               new_process = FALSE, install = FALSE, quiet = TRUE)
-          pkgdown::build_github_pages(pkgdown::as_pkgdown("."))
+          # write: Jekyll must pass the docs/ tree byte-unchanged.
+          # one explicit extra: Pages must pass the docs/ tree byte-unchanged
+          writeLines(character(), file.path("docs", ".nojekyll"))
         shell: Rscript {0}
 
       - name: Deploy to GitHub Pages
