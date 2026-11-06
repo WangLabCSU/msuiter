@@ -400,7 +400,15 @@ jobs:
         config: ${{ fromJSON(needs.guard-prep.outputs.fanout-matrix).config }}
 
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6. This arm is the PR gate's only test
+      # executor (rcmdcheck runs --no-tests), and P10-A's era gate resolves the
+      # PROVENANCE era commit with `git cat-file -t <sha>^{commit}`. The default
+      # depth-1 checkout makes that ancestor unreachable (measured locally: rc
+      # 128, "Not a valid object name"), so the gate reds on every arm. The law
+      # admits no skip path, so the fix is history, not an exemption.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # guard-prep job is dropped where Makevars expects it, so R CMD INSTALL

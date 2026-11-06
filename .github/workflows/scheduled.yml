@@ -304,7 +304,13 @@ jobs:
         config: ${{ fromJSON(needs.vendor-prep.outputs.version-matrix).config }}
 
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6, same era-gate reachability defect the
+      # PR fanout carries: the P10-A law resolves PROVENANCE's era commit with
+      # `git cat-file -t <sha>^{commit}` and depth-1 makes that ancestor
+      # unreachable.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # vendor-prep job is dropped where Makevars expects it, so R CMD INSTALL
@@ -541,7 +547,11 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6: the covr wave instruments and runs the
+      # same T0 roster, so the P10-A era gate resolves history here too.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain at MSRV
         run: |
