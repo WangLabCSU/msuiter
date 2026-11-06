@@ -23,7 +23,12 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # bench/m7
+HERE = Path(__file__).resolve().parents[1]                    # bench/m7
+# the g0 read-only import seam is self-registered: these units must not
+# depend on another module having run first.
+for _p in (str(HERE), str(HERE.parent / "g0")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 import tools.matrix_governance as gov                           # noqa: E402
 
 SWEEP_N = (100, 1000, 10000)

@@ -120,6 +120,7 @@
 //! volume regularization / consensus / NNDSVD are later units and are
 //! deliberately absent.
 
+use crate::detmath::{det_ln};
 use crate::error::MsError;
 use crate::rng::{MsRng, StreamId};
 
@@ -328,7 +329,7 @@ pub fn fit_kl_with_init_terminals(
 /// real certified shapes and length, bit for bit, before this file may move.
 ///
 /// The scratch carries no fit values across calls: the loop-invariant
-/// `lnv[i] = ln(KL_EPS + V[i])` is recomputed at every entry (same libm
+/// `lnv[i] = ln(KL_EPS + V[i])` is recomputed at every entry (same `crate::detmath::det_ln`
 /// call, same argument bits, hence the same returned bits — the memoization
 /// removes recomputation, never re-derives a value by another route), and
 /// every other buffer is fully written before it is read.
@@ -386,7 +387,7 @@ fn fit_kl_core(
     validate(v, m, n, k, w0, h0)?;
     s.ensure(m, n, k);
     for (slot, &vv) in s.lnv.iter_mut().zip(v.iter()) {
-        *slot = (KL_EPS + vv).ln();
+        *slot = det_ln(KL_EPS + vv);
     }
     let mut w = w0.to_vec();
     let mut h = h0.to_vec();
@@ -673,8 +674,7 @@ fn matmul_body(w: &[f64], h: &[f64], m: usize, n: usize, k: usize, out: &mut [f6
 /// Generalized KL divergence `D(V‖WH) = Σ [V·ln(V/(WH)) − V + WH]`, with
 /// the `log(ε + ·)` evaluation path (module docs, ε policy): finite for all
 /// non-negative inputs, and exactly `WH[i,j]` at `V[i,j] = 0`. `lnv` must be
-/// the elementwise `ln(KL_EPS + V[i])` produced by the fit face (same libm
-/// call on the same argument bits); the shared product `WH` is written into
+/// the elementwise `ln(KL_EPS + V[i])` produced by the fit face (same `crate::detmath::det_ln` call on the same argument bits); the shared product `WH` is written into
 /// `wh` by this call.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_objective_core(
@@ -692,7 +692,7 @@ fn kl_objective_core(
     for i in 0..m * n {
         let vv = v[i];
         let mm = wh[i];
-        acc += vv * (lnv[i] - (KL_EPS + mm).ln()) - vv + mm;
+        acc += vv * (lnv[i] - det_ln(KL_EPS + mm)) - vv + mm;
     }
     acc
 }

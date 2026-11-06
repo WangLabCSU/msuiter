@@ -245,6 +245,8 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
   sigmat <- refdb$SBS_GRCh37@matrices[[1]]
 
   rows <- list()
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   for (sc_name in names(grid)) {
     sc <- grid[[sc_name]]
     k <- sc$k_active
@@ -299,11 +301,11 @@ ms_run_benchmark <- function(grid, engines = NULL, seed = 1) {
         # signatures (ms_compare's protocol semantics, direct face).
         est_shares <- sweep(est_sigs, 2L, colSums(est_sigs), "/")
         truth_shares <- sweep(dict, 2L, colSums(dict), "/")
-        sweep_res <- ms_match_solutions_rust(
+        sweep_res <- .msffi_check(ms_match_solutions_rust(
           estimated = as.numeric(t(est_shares)),
           reference = as.numeric(t(truth_shares)),
           dim = nrow(est_sigs), thresholds = 0.90
-        )
+        ))
         # No NA ever reaches the container (the audited v1 emitted an
         # NA f1 when no pair crossed 0.90, which aborted the WHOLE run
         # at assembly): zero-TP cells score 0, degenerate empty cells

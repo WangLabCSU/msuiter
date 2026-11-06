@@ -110,6 +110,20 @@ ms_embed <- function(exposures, method = c("umap", "kmeans"),
         c = "kmeans needs at most one cluster per signature dimension"
       )
     }
+    # audit #74 P2: stats::kmeans errors "cannot set number of clusters
+    # larger than number of observations" as a bare simpleError -- the
+    # sample axis gate belongs here, structured, before the call.
+    if (clusters <= 1L || clusters >= nrow(X)) {
+      msuiter_abort(
+        "input",
+        "kmeans needs the cluster count strictly between 1 and the sample count",
+        i = "stats::kmeans refuses one centre and centre-per-sample counts alike",
+        j = paste0("clusters: ", clusters, "; samples: ", nrow(X)),
+        c = "lower clusters or carry more samples"
+      )
+    }
+    saved <- .ms_rng_snapshot()
+    on.exit(.ms_rng_restore(saved), add = TRUE)
     set.seed(seed)
     km <- stats::kmeans(X, centers = clusters, nstart = 10L)
     centers_order <- order(km$centers[, 1])

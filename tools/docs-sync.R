@@ -12,6 +12,8 @@
 # The CI wiring lands in U-M0-07; this script is the check itself.
 #
 # Run:  Rscript tools/docs-sync.R          (exit 0 = in sync, exit 1 = drift)
+#       --roadmap= / --namespace= / --pkgdown= retarget one half at an
+#       alternate file (red-state units in tests/testthat/test-docs-sync.R).
 
 options(warn = 1)
 
@@ -22,6 +24,16 @@ options(warn = 1)
 })
 
 .rd <- function(...) file.path(.repo_root, "vignettes", "articles", ...)
+
+# `--<key>=<value>` retargets a half at an alternate file, so the red-state
+# units in tests/testthat/test-docs-sync.R can point the checker at a tampered
+# copy without touching committed files. The script rides the --file= element
+# of this base's full R invocation vector (cf. check-capability-matrix.R).
+.arg_of <- function(key, default) {
+  a <- commandArgs(FALSE)
+  hit <- grep(paste0("^--", key, "="), a)
+  if (length(hit) == 0L) default else sub(paste0("^--", key, "="), "", a[hit[1]])
+}
 
 # Token regex: `ms_` preceded by a non-identifier character (so
 # `register_ms_engine` does not match), lowercase snake_case body.
@@ -106,18 +118,35 @@ cat("docs-sync: OK -- no API-surface drift\n")
 
 # ---------------------------------------------------------------------------
 # Half two: ROADMAP checkbox-truth (U-M7-04 slice-A; controller ruling
-# 2026-10-10). A box flipped to [x] in the M6s / M7 / G sections is a
-# completion claim, and a completion claim must be auditable: each such line
-# must carry a parenthetical evidence citation containing a path:line
-# reference or a commit-hash token (>= 7 hex chars).
+# 2026-10-10; audit #74 hash-resolvability hardening). A box flipped to [x] in
+# the M6s / M7 / G sections is a completion claim, and a completion claim must
+# be auditable: each such line must carry a parenthetical evidence citation
+# containing a path:line reference or a commit-hash token (>= 7 hex chars)
+# that RESOLVES in this repository.
 # ---------------------------------------------------------------------------
 
 .checkbox_line  <- "^\\s*- \\[[xX]\\]"
 .section_head   <- "^#{2,4} "
+.hex_token      <- "(?<![0-9a-f])[0-9a-f]{7,40}(?![0-9a-f])"
 
-# True iff some parenthetical segment of the line cites path:line or a commit.
-# Capture-group extraction follows the proven house idiom (gregexec matcher,
-# cf. test-channels-sync.R): regmatches rows are [full match, group 1...].
+# Does `tok` name an object that still exists? A history rewrite leaves
+# dangling refs that a shape test accepts happily, and ISO date stamps, data
+# seals and DOI article numbers all share the hex shape -- so resolution, not
+# spelling, is the test. system2 returns the process exit status (0 alive,
+# 128 dead), never 0/1.
+.commit_resolves <- function(tok) {
+  status <- suppressWarnings(system2(
+    "git", c("-C", .repo_root, "cat-file", "-e", paste0(tok, "^{commit}")),
+    stdout = FALSE, stderr = FALSE))
+  identical(as.integer(status), 0L)
+}
+
+# True iff some parenthetical segment of the line cites path:line or a
+# resolvable commit. Capture-group extraction follows the proven house idiom
+# (gregexec matcher, cf. test-channels-sync.R): regmatches rows are [full
+# match, group 1...]. The two branches short-circuit: a line that already
+# carries a path:line citation is audited by it, so its hex-shaped
+# directory-date tokens are never asked to resolve.
 .checkbox_citation_ok <- function(line) {
   rl <- regmatches(line, gregexec("\\(([^()]*)\\)", line, perl = TRUE))
   if (!length(rl)) {
@@ -125,12 +154,15 @@ cat("docs-sync: OK -- no API-surface drift\n")
   }
   hits <- rl[[1]]
   segs <- hits[seq(2L, length(hits))]  # drop the full-match row, keep groups
-  any(grepl("[A-Za-z0-9._/-]+\\.[A-Za-z0-9]+:[0-9]+", segs, perl = TRUE)) ||
-  any(grepl("(?<![0-9a-f])[0-9a-f]{7,40}(?![0-9a-f])", segs, perl = TRUE))
+  if (any(grepl("[A-Za-z0-9._/-]+\\.[A-Za-z0-9]+:[0-9]+", segs, perl = TRUE))) {
+    return(TRUE)
+  }
+  tok <- unlist(regmatches(segs, gregexpr(.hex_token, segs, perl = TRUE)))
+  any(vapply(unique(tok), .commit_resolves, logical(1L)))
 }
 
-.roadmap_checkbox_check <- function() {
-  lines <- readLines(.rd("roadmap.qmd"), warn = FALSE)
+.roadmap_checkbox_check <- function(roadmap) {
+  lines <- readLines(roadmap, warn = FALSE)
   heads <- grep(.section_head, lines, perl = TRUE)
   if (!length(heads)) {
     stop("docs-sync: ROADMAP.md exposes no section headings", call. = FALSE)
@@ -154,12 +186,12 @@ cat("docs-sync: OK -- no API-surface drift\n")
   list(n = n, bad = bad)
 }
 
-ct <- .roadmap_checkbox_check()
+ct <- .roadmap_checkbox_check(.arg_of("roadmap", .rd("roadmap.qmd")))
 cat(sprintf("docs-sync: checkbox-truth: %d checked box(es) in M6s/M7/G sections\n",
             ct$n))
 if (length(ct$bad)) {
   cat("docs-sync: checkbox-truth: DRIFT -- checked boxes without a",
-      "parenthetical evidence citation (need path:line or commit token):\n")
+      "parenthetical evidence citation (need path:line or a resolving commit token):\n")
   for (b in ct$bad) cat("  ", b, "\n", sep = "")
   cat("docs-sync: checkbox-truth: cite the committing evidence on these lines",
       "(or uncheck them). Exiting 1.\n")
@@ -174,16 +206,11 @@ cat("docs-sync: checkbox-truth: OK -- every in-scope checked box cites its",
 #     "the drift goes red", extended): every symbol NAMESPACE exports must
 # appear in the _pkgdown.yml reference index -- pkgdown only publishes what
 # the index names, so an unlisted export is an invisible API that no site
-# build would ever flag. --namespace= / --pkgdown= override the targets so
-# the red-state units in tests/testthat/test-docs-sync.R can point the
-# checker at a tampered copy without touching committed files.
+# build would ever flag.
 # ---------------------------------------------------------------------------
 
-.pkgdown.args <- commandArgs(FALSE)
-.pkgdown.arg <- function(key, default) {
-  hit <- grep(paste0("^--", key, "="), .pkgdown.args)
-  if (length(hit) == 0L) default else sub(paste0("^--", key, "="), "", .pkgdown.args[hit[1]])
-}
+.pkgdown_ns <- .arg_of("namespace", file.path(.repo_root, "NAMESPACE"))
+.pkgdown_yml <- .arg_of("pkgdown", file.path(.repo_root, "_pkgdown.yml"))
 
 .exported_symbols <- function(namespace) {
   lines <- readLines(namespace, warn = FALSE)
@@ -216,8 +243,6 @@ cat("docs-sync: checkbox-truth: OK -- every in-scope checked box cites its",
   unique(tok)
 }
 
-.pkgdown_ns <- .pkgdown.arg("namespace", file.path(.repo_root, "NAMESPACE"))
-.pkgdown_yml <- .pkgdown.arg("pkgdown", file.path(.repo_root, "_pkgdown.yml"))
 exports <- .exported_symbols(.pkgdown_ns)
 indexed <- .pkgdown_indexed(.pkgdown_yml)
 missing <- setdiff(exports, indexed)

@@ -139,6 +139,14 @@ jobs:
         run: sh tools/deep-checks/run_sanitizer_leg.sh leg "${{ matrix.sanitizer }}"
 
   site:
+    # Same runner-slowness class as the cargo arms: the render itself is
+    # ~1-6 min but provisioning is not. The only GREEN witness (job
+    # 121515467347, run 40306103047) consumed 14m02s of the 15 on offer,
+    # 10m44s of it in setup-r-dependencies -- green by luck, not margin.
+    # (Its red sibling job 125279815359 was a real assertion failure at
+    # step 8 in 8m37s, not a timer kill.)
+    # 30 = witnessed >=14m tail + one runner-slowness class.
+    timeout-minutes: 30  # audit #74 P2 hardening
     # pkgdown site-build tripwire (U-M7-04 slice-C, C5). The per-PR 13-check
     # topology is frozen, so the site render rides the weekly deep check (and
     # manual dispatch). STRICT by design -- no continue-on-error: the
@@ -303,7 +311,13 @@ jobs:
         config: ${{ fromJSON(needs.vendor-prep.outputs.version-matrix).config }}
 
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6, same era-gate reachability defect the
+      # PR fanout carries: the P10-A law resolves PROVENANCE's era commit with
+      # `git cat-file -t <sha>^{commit}` and depth-1 makes that ancestor
+      # unreachable.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # vendor-prep job is dropped where Makevars expects it, so R CMD INSTALL
@@ -540,7 +554,11 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6: the covr wave instruments and runs the
+      # same T0 roster, so the P10-A era gate resolves history here too.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain at MSRV
         run: |

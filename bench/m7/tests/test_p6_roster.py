@@ -1,7 +1,8 @@
 """Group (Y) test_p6_roster — the P6 arm roster is registry DATA, not folklore.
 
 Pre-registration law (lane manifest /tmp/p6lane/logs/00-manifest-preregistration.md,
-SS1/SS3): the six new sigminer-arm registry keys, their frozen 40-hex tree SHAs,
+SS1/SS3): the six P6 sigminer-arm registry keys (and the seventh, dated
+2026-11-04 below), their frozen 40-hex tree SHAs,
 their version pins and their backend face were banked BEFORE any image build; this
 unit is the mechanical echo of that bank. A drift between the frozen roster here
 and competitors.p6_arms is a broken promise to the pre-registration, not a typo
@@ -11,6 +12,14 @@ RED-by-absence: competitors.p6_arms was introduced by the GREEN slice; the
 same module is what competitors/registry.py consumes to mint the six rows
 (SS1: digests arrive only via the SS3 inspect ceremony, so until the flip
 every P6 row is pending-verify and compose-time refused by the image gate).
+
+R1-PARITY Phase-B dated manifest amendment (controller ruling (ii),
+2026-11-04): the roster carries a SEVENTH key, sigminer_post_v3_rust_batch --
+the batch-bridge transport face. Its tree/ns bytes below are the rev-parse and
+git-archive attestations of the anchored seam ref
+refs/heads/codex/r1-batch-bridge-seam, whose PARENT is the attested
+post_v3_rust tip: a descent, not a re-pin, which is why the six sealed rows
+keep their bytes untouched and this row enters with its own dated witness.
 
 2026-10-15 A2 (trees attestation log /tmp/p6lane/logs/03b-trees-attestation-):
 the banked pre_v3 full SHA was a shaped mistranscription (valid 40-hex, non-
@@ -46,6 +55,11 @@ FROZEN_TREES = {
     "sigminer_post_p2":      "37fc92a872720f947b5e2ac92d7de0fb96f2b092",
     "sigminer_post_v3":      "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
     "sigminer_post_v3_rust": "a8b8825be0c0768580c85b7e749b7b9088d8d9d7",
+    # the batch face descends from that tip by the one documented seam commit
+    # (rev-parse-witnessed, R1-PARITY Phase-B); it is deliberately NOT the
+    # same tree -- the batch route is new code, and the (AK) battery refuses a
+    # row that would launder its base's bytes.
+    "sigminer_post_v3_rust_batch": "15b827981dd1a4be28207eb084f78140b70f8f09",
 }
 # shasum over each frozen tree's NAMESPACE bytes (git archive | tar -x | shasum
 # — attestation log SS "Per-tree DESCRIPTION/NAMESPACE facts"). The arm
@@ -58,18 +72,22 @@ FROZEN_NS_HASHES = {
     "sigminer_post_p2":      "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
     "sigminer_post_v3":      "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
     "sigminer_post_v3_rust": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
+    # the seam commit touches no export surface, so its NAMESPACE is the
+    # v3-tip bytes -- witnessed by git-archive over that commit, not inferred
+    "sigminer_post_v3_rust_batch": "7d72444f8498635fb3e92b4bc3c29146c2c26b08577567417973832ffc68fea1",
 }
 NS64 = re.compile(r"^[0-9a-f]{64}$")
 FROZEN_VERSIONS = {
     "sigminer_pre_v3": "2.3.3", "sigminer_post_p1": "2.3.3",
     "sigminer_post_p1_rust": "2.3.3", "sigminer_post_p2": "2.3.3",
     "sigminer_post_v3": "2.3.3", "sigminer_post_v3_rust": "2.3.3",
+    "sigminer_post_v3_rust_batch": "2.3.3",
 }
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
-def test_roster_is_exactly_the_six_frozen_keys():
+def test_roster_is_exactly_the_seven_frozen_keys():
     assert set(p6_arms.P6_ARM_SPECS) == set(FROZEN_TREES), (
         f"P6 roster keys drifted from the pre-registration: "
         f"{set(p6_arms.P6_ARM_SPECS) ^ set(FROZEN_TREES)}")
@@ -130,7 +148,13 @@ def test_p6_flip_is_pairwise_and_never_face_laundering():
     reg = registry.load()
     p1, p1r = reg["sigminer_post_p1"], reg["sigminer_post_p1_rust"]
     v3, v3r = reg["sigminer_post_v3"], reg["sigminer_post_v3_rust"]
-    for plain, rust in ((p1, p1r), (v3, v3r)):
+    # the third face of the v3 tip: three execution paths, three artifacts. The
+    # batch face shares its base's TREE (through the seam commit's parent) and
+    # its package bytes, and may still never share an image -- the whole point
+    # of the face is a different transport, so the parity predicate must be able
+    # to tell the rows apart by artifact identity.
+    v3b = reg["sigminer_post_v3_rust_batch"]
+    for plain, rust in ((p1, p1r), (v3, v3r), (v3r, v3b), (v3, v3b)):
         if plain.status == rust.status == "ready":
             assert plain.image_digest != rust.image_digest, (
                 f"{rust.name}: shares the plain image — the rust face must "

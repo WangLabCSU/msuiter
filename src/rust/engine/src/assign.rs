@@ -143,6 +143,7 @@
 //! entry point returns `Result<_, MsError>` (FFI contract 5). The R/VCF
 //! wiring (joining assignments back to mutation rows) is a later unit.
 
+use crate::detmath::{det_exp, det_ln};
 use crate::error::MsError;
 use crate::likelihood::ln_gamma;
 use crate::nmf::{matmul, KL_EPS};
@@ -537,19 +538,19 @@ fn tsb_tail_lower(lo: f64, n: f64) -> f64 {
         if ln_pmf < PMF_UNDERFLOW_LN {
             break;
         }
-        acc += ln_pmf.exp();
+        acc += det_exp(ln_pmf);
         if k == 0.0 {
             break;
         }
         // pmf(k−1)/pmf(k) = k/(n−k+1); denominator > 0 since k ≤ m ≤ n/2.
-        ln_pmf += (k / (n - k + 1.0)).ln();
+        ln_pmf += det_ln(k / (n - k + 1.0));
         k -= 1.0;
     }
     // Fractional boundary: P(X ≤ lo) ≔ P(X ≤ m) + (lo − m)·pmf(m+1) — at
     // integer lo the weight is 0 and the exact tail falls out.
     let frac = lo - m;
     if frac > 0.0 {
-        acc += frac * binom_pmf_ln(m + 1.0, n).exp();
+        acc += frac * det_exp(binom_pmf_ln(m + 1.0, n));
     }
     acc
 }
@@ -560,17 +561,17 @@ fn tsb_tail_upper(hi: f64, n: f64) -> f64 {
     let m = hi.floor(); // hi ≤ n ⇒ m ≤ n
     // Boundary interpolation: P(X ≥ hi) ≔ P(X ≥ m+1) + (m+1−hi)·pmf(m); at
     // integer hi the weight is exactly 1 and the exact tail falls out.
-    let mut acc = (m + 1.0 - hi) * binom_pmf_ln(m, n).exp();
+    let mut acc = (m + 1.0 - hi) * det_exp(binom_pmf_ln(m, n));
     // Walk k = m+1, m+2, …: terms decrease monotonically (above the mode).
     let mut ln_pmf = binom_pmf_ln(m, n);
     let mut k = m + 1.0;
     while k <= n {
         // pmf(k)/pmf(k−1) = (n−k+1)/k; numerator > 0 since k−1 < k ≤ n.
-        ln_pmf += ((n - (k - 1.0)) / k).ln();
+        ln_pmf += det_ln((n - (k - 1.0)) / k);
         if ln_pmf < PMF_UNDERFLOW_LN {
             break;
         }
-        acc += ln_pmf.exp();
+        acc += det_exp(ln_pmf);
         k += 1.0;
     }
     acc

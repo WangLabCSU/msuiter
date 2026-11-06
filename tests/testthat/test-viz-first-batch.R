@@ -243,6 +243,18 @@ test_that("the null p-value annotation carries the add-one floor and off state",
   expect_identical(pmin, 1 / 501)
 })
 
+test_that("audit #74 P2: a multi-column scatter input refuses, never renders", {
+  skip_if_not_installed("ggplot2")
+  sig <- .ms_viz_sig3()
+  # The audited first draft rode the 0/0 cosine of a NULL prep into the
+  # annotation and painted an empty panel; the face contract is one
+  # column per side, so the refusal is the only legal output.
+  expect_ms_error(plot_cosmic_scatter(sig, sig[, 1]), "input",
+    regexp = "one column")
+  expect_ms_error(plot_cosmic_scatter(sig[, 1], sig), "input",
+    regexp = "one column")
+})
+
 test_that("real COSMIC signatures render and ggsave writes a non-empty PNG", {
   skip_if_no_ggplot()
   path <- system.file("reference/refdb/COSMIC_v3.6/COSMIC_v3.6_SBS_GRCh37.txt",

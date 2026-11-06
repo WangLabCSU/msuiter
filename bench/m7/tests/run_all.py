@@ -144,6 +144,21 @@ P6 evidence loop (pre-registration manifest SS1-SS6, sigminer v3 release table):
       on-disk FLAT_INPUTS bytes and the last-touch lineage head; missing
       seals, unpinned copies, orphan digest literals and any unattested
       fourth launcher move all redden the suite
+  (AL) test_batch_bridge_arm the R1-PARITY batch-bridge transport face: the
+      seventh roster key's identity quintuple plus lineage, its own runner
+      fork and trust guard (with the frozen pair's byte tripwires), the
+      roster-driven child argv, the pre-flip-safe registry row, the bit-
+      identity comparator's surface and its biting, the 21-class anchor
+      completeness law, and three firing controls over the existing gate
+      machinery so no green in this file can be vacuous
+  (B) test_null_face_route the Phase-D sanctioned no-stamp route: the
+      attestation-mode routing law at the probe's mint face (live mints
+      lv1, sanctioned-null mints the labelled explicit null, garbage and
+      unsanctioned keys DEFECT), the null face's reportability-equality to
+      the pre-law face, the minter's pre-daemon validation matrix, the
+      ledger's attestation-mode declaration law, and the data-gated
+      sanction registry with its dual-face law — every refusal paired
+      with a seen-to-fire control
 """
 
 from __future__ import annotations
@@ -216,13 +231,25 @@ MODULES = ["test_registry", "test_adapters", "test_timings_schema",
            # PERF PHASE-9 O3: co-tenancy attestation law — mint-side stamps,
            # report-side refusal with a firing control, epoch stamp on rows:
            "test_attestation_law",
+           # PHASE-D (controller ruling 2026-11-04): the flatness law's
+           # producer — rig emit, teeth T1-T6, double-entry ledger, pre-law
+           # parity keeper:
+           "test_coex_producer_law",
            # SIGNER-c lane (memo §2c/§10.2, PI identity ruling 2026-11-02):
            # auxilary Bioconductor row promotion laws + skip-not-skip controls:
            "test_signer_row",
            # DEBT-BUILD-PIN-DRIFT tooling lane (controller ruling 2026-11-04,
            # remedy (b)): the arm-recipe digest pins speak blob digests at named
            # seal commits and every one of them is read on every suite run:
-           "test_recipe_blob_pins"]
+           "test_recipe_blob_pins",
+           # R1-PARITY Phase-B: the batch-bridge face battery (its own
+           # registration is the ordered-green evidence: absence-FAILs flip to
+           # PASS as each face lands, the firing controls never stop biting)
+           "test_batch_bridge_arm",
+           # PHASE-D Instrument B (controller ruling 2026-11-04 (2)): the
+           # sanctioned no-stamp route — routing law, data-gated sanction
+           # registry, dual-face law, ledger mode declaration:
+           "test_null_face_route"]
 
 
 def _collect(mod_name):
@@ -243,9 +270,23 @@ def _collect(mod_name):
             if name.startswith("test_") and callable(fn)]
 
 
-def main() -> int:
+def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    modules = MODULES
+    if "--only" in argv:
+        i = argv.index("--only")
+        if i + 1 >= len(argv):
+            print("--only needs a comma-separated module list")
+            return 2
+        wanted = [m for m in argv[i + 1].split(",") if m]
+        unknown = [m for m in wanted if m not in MODULES]
+        if unknown:
+            print(f"--only names not in MODULES: {', '.join(unknown)}")
+            return 2
+        # Preserve the registered order (the full-run order law).
+        modules = [m for m in MODULES if m in wanted]
     units, failures = [], []
-    for mod_name in MODULES:
+    for mod_name in modules:
         units += _collect(mod_name)
     for label, fn in units:
         t0 = time.time()

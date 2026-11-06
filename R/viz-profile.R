@@ -7,18 +7,20 @@
 #
 # Shared semantics (memo §2): canonical-order inputs enforced, share or
 # count mode, class separation lines for SBS96, simplified mono for
-# DBS78/ID83 (palette freeze deferred to M7).
+# DBS78 (palette freeze deferred to M7). ID83 joins when the registry
+# unit ships its label table (audit #74 P2: no registry table exists
+# today, so ID83 inputs are refused, not rendered).
 
 #' Plot one profile column in COSMIC style
 #'
 #' Channel-level bar profile of one catalog sample or one signature:
 #' substitution-class colors (the verified COSMIC SBS palette), class
-#' separation lines, 5'-flank labels rotated vertical. DBS78/ID83 inputs
+#' separation lines, 5'-flank labels rotated vertical. DBS78 inputs
 #' render in a simplified single-color style (their palettes are frozen
 #' at M7).
 #'
 #' @param matrix An m x 1 numeric matrix (or a named numeric vector) in a
-#'   supported canonical channel order (SBS96, DBS78, ID83), or an
+#'   supported canonical channel order (SBS96, DBS78), or an
 #'   [MsSignature] (uses its first signature).
 #' @param column Column name or index when `matrix` has several columns.
 #' @param mode "share" (normalize the column to 1) or "count" (raw

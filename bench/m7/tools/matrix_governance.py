@@ -803,6 +803,90 @@ _FLOOR_ANCHORS = {
         'witness': ('m7_floor_calibration_p7cap_20261025-125823', 'witnesses', 'sigminer_post_v3_rust__sparse__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 573.133317, 'wall_seconds': 573.618,
     },
+    ('sigminer_post_v3_rust_batch', 'clock', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 369.834497, 'wall_seconds': 370.245,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_clock_only', 100): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 645.4458249999999, 'wall_seconds': 646.276,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_clock_only', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 364.961585, 'wall_seconds': 365.398,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_clock_only', 10000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 370.678194, 'wall_seconds': 371.115,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 100): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 367.31861399999997, 'wall_seconds': 367.716,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 368.400612, 'wall_seconds': 368.8,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 10000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 371.27529699999997, 'wall_seconds': 371.677,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_mmr', 100): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 375.787984, 'wall_seconds': 376.176,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_mmr', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 380.039486, 'wall_seconds': 380.459,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_mmr', 10000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 379.14343399999996, 'wall_seconds': 379.581,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_pole', 100000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 376.878073, 'wall_seconds': 377.263,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_pole', 300000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 404.214087, 'wall_seconds': 404.621,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_pole', 1000000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 480.12189900000004, 'wall_seconds': 480.533,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 100): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 381.573231, 'wall_seconds': 381.952,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 381.36852, 'wall_seconds': 381.787,
+    },
+    ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 10000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 381.447061, 'wall_seconds': 381.842,
+    },
+    ('sigminer_post_v3_rust_batch', 'main', 100): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 655.316243, 'wall_seconds': 656.468,
+    },
+    ('sigminer_post_v3_rust_batch', 'main', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 683.533189, 'wall_seconds': 684.33,
+    },
+    ('sigminer_post_v3_rust_batch', 'main', 10000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 664.263713, 'wall_seconds': 664.982,
+    },
+    ('sigminer_post_v3_rust_batch', 'nb', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 359.29830100000004, 'wall_seconds': 359.701,
+    },
+    ('sigminer_post_v3_rust_batch', 'sparse', 1000): {
+        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 375.29180199999996, 'wall_seconds': 375.679,
+    },
     ('sigminer_pre_v3', 'clock', 1000): {
         'witness': ('m7_floor_calibration_p7cap_20261025-125823', 'witnesses', 'sigminer_pre_v3__clock__N1000__rep100.json'),
         'reps': 100, 'cpu_seconds': 1842.9869270000002, 'wall_seconds': 1843.82,

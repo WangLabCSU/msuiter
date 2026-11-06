@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Resumable P6 floor-calibration batch: REP-100 witnesses for the six arms.
+"""Resumable P6 floor-calibration batch: REP-100 witnesses for every arm.
 
 The RB-09 floor law is all-or-nothing per tool: a tool that arrives in
 _MEASURED_TOOLS must carry one OK, reps-matched witness for EVERY protocol
 class it will run, or floor_for KeyErrors mid-campaign after hours of
-measurement. This tool mints exactly those bytes -- 6 arms x the 21 frozen
-degraded-grid classes = 126 witnesses -- through the SAME probe that sealed
+measurement. This tool mints exactly those bytes -- every arm on the roster x
+the 21 frozen degraded-grid classes (147 with the R1-PARITY batch face, 126
+for the sealed six) -- through the SAME probe that sealed
 the legacy table (tools/probe_sigminer_cell_argv.run_probe), so the witness
 schema, the freshness law and the --floor-gate off posture (a probe measures,
 it never self-adjudicates) are inherited, not re-implemented.
@@ -48,6 +49,7 @@ if str(HERE) not in sys.path:
 
 from competitors import p6_arms                      # noqa: E402
 from tools import probe_sigminer_cell_argv as probe  # noqa: E402
+from tools import attestation_sanctions              # noqa: E402
 
 RESULTS = HERE.parent / "results"
 REPS = 100                                          # the gated protocol scale
@@ -100,7 +102,17 @@ def _validate_declared_probes(ledger: Path, caldir: str, declared: int) -> int:
 def mint(wdir: Path, *, only: list[str] | None,
          probes_declared: int | None = None,
          campaign_note: str | None = None,
-         budget_ledger: Path | None = None) -> int:
+         budget_ledger: Path | None = None,
+         attestation_mode: str = "live",
+         null_face_reason: str | None = None) -> int:
+    """Measure the grid into wdir and book the ledger.
+
+    Phase-D (controller ruling 2026-11-04 (2)): the mint declares its
+    attestation face to the probe legs and books it into the ledger --
+    live stamps every witness, none-with-reason mints the sanctioned
+    labelled null (the CLI validates the sanction pre-daemon; the probe
+    routing re-checks it at the mint face, so a caller that bypassed the
+    CLI still cannot forge the opt-out)."""
     classes = grid_classes()
     if len(classes) != 21:
         print(f"[FATAL] degraded grid shape drifted: {len(classes)} classes",
@@ -119,7 +131,10 @@ def mint(wdir: Path, *, only: list[str] | None,
             if target.exists() and witness_doc_ok(target):
                 continue
             rc = probe.run_probe(tool, arm=arm, n=n, reps=REPS,
-                                json_path=str(target), work=str(scratch))
+                                json_path=str(target), work=str(scratch),
+                                campaign=wdir.name,
+                                attestation=attestation_mode,
+                                null_face_reason=null_face_reason)
             probes_run += 1
             if rc != 0 or not witness_doc_ok(target):
                 doc = json.loads(target.read_text(encoding="utf-8")) \
@@ -163,6 +178,12 @@ def mint(wdir: Path, *, only: list[str] | None,
                          "the platform shasum default)",
         "registry_sha256_at_mint": hashlib.sha256(registry_bytes).hexdigest(),
         "probes": probes,
+        "attestation_mode": attestation_mode,
+        "attestation_sanction": (
+            {"key": null_face_reason,
+             "ruling": attestation_sanctions.sanction_ok(
+                 null_face_reason or "")["ruling"]}
+            if attestation_mode == "none-with-reason" else None),
         "law": {
             "reps": f"all witnesses measured at REP-{REPS} (protocol scale)",
             "freshness": "fresh per-cell cachedir per probe; a 'cached' replay "
@@ -215,15 +236,43 @@ def main(argv=None) -> int:
     ap.add_argument("--campaign-note", default=None,
                     help="honest provenance sentence for THIS campaign's ledger "
                          "(default: the frozen P6 SS4 note)")
+    ap.add_argument("--attestation", choices=("live", "none-with-reason"),
+                    default="live",
+                    help="mint face (Phase-D ruling 2026-11-04 (2)): live stamps "
+                         "every witness; none-with-reason mints the sanctioned "
+                         "labelled null -- it is a ruled opt-out, never a default")
+    ap.add_argument("--null-face-reason", default=None,
+                    help="SANCTIONED_NULL_FACES key authorising the null face "
+                         "(mandatory with --attestation=none-with-reason, "
+                         "forbidden without it)")
     args = ap.parse_args(argv)
     if args.only:
         for t in args.only:
             if t not in p6_arms.P6_ARM_SPECS:
                 print(f"[FATAL] unknown arm {t}", file=sys.stderr)
                 return 2
+    # Phase-D pre-daemon validation matrix: the attestation face is decided
+    # before any container exists -- an illegal face never reaches a mint.
+    if args.attestation == "none-with-reason":
+        if not args.null_face_reason:
+            print("[FATAL] --attestation=none-with-reason requires "
+                  "--null-face-reason: the null face is never spoken without "
+                  "its ruling", file=sys.stderr)
+            return 2
+        if attestation_sanctions.sanction_ok(args.null_face_reason) is None:
+            print(f"[FATAL] null-face reason {args.null_face_reason!r} is not a "
+                  "SANCTIONED_NULL_FACES key -- the opt-out is controller "
+                  "ruling data, not a lane option", file=sys.stderr)
+            return 2
+    elif args.null_face_reason:
+        print("[FATAL] --null-face-reason without --attestation=none-with-"
+              "reason: a live mint has nothing to decline", file=sys.stderr)
+        return 2
     wdir = RESULTS / (args.dir or f"m7_floor_calibration_p6_{_utc_stamp()}")
     return mint(wdir, only=args.only, probes_declared=args.probes_declared,
-                campaign_note=args.campaign_note, budget_ledger=args.budget_ledger)
+                campaign_note=args.campaign_note, budget_ledger=args.budget_ledger,
+                attestation_mode=args.attestation,
+                null_face_reason=args.null_face_reason)
 
 
 if __name__ == "__main__":

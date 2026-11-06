@@ -148,7 +148,7 @@ for _tool, _arm in _p6_arms.P6_ARM_SPECS.items():
         image_digest=_attested if _ready else PENDING_VERIFY,
         status=STATUS_READY if _ready else STATUS_PENDING_VERIFY,
         entrypoint="python3",             # m7_entry.py measures the Rscript child
-        runner_script=_p6_arms.ARM_RUNNER,
+        runner_script=_p6_arms.runner_script(_arm),
         tree_sha=_arm["tree_sha"],
         face=_arm["face"],
         provenance=(

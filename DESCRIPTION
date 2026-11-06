@@ -32,6 +32,7 @@ Suggests: BSgenome.Hsapiens.UCSC.hg19,
     xml2
 VignetteBuilder: knitr
 Collate:
+    'rng-hygiene.R'
     'classes-utils.R'
     'classes-variants.R'
     'io-variants.R'

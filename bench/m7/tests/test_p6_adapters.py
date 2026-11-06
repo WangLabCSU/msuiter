@@ -49,9 +49,17 @@ def test_child_argv_shape_and_backend_passthrough():
         argv = _adapter(tool)._child_argv(None)
         argv_mounted = _adapter(tool)._child_argv("/mnt/cat/catalog.csv")
         assert argv[0] == "Rscript", f"{tool}: child argv must start with Rscript"
-        assert ARM_RUNNER in argv, (
-            f"{tool}: the arm runner must be {ARM_RUNNER} (the 2.3.1 runner is "
-            f"byte-frozen; reusing its path would fight the Dockerfile tripwire)")
+        # an arm speaks ITS OWN roster-named runner: the sealed six name no
+        # fork and so must speak the byte-frozen path (the 2.3.1 runner is
+        # byte-frozen; reusing its path would fight the Dockerfile tripwire),
+        # while an arm that registers a fork must ride that fork and never the
+        # frozen script it was derived from.
+        want_runner = str(Path(ARM_RUNNER).parent / p6_arms.runner_script(arm))
+        assert want_runner in argv, (
+            f"{tool}: the arm runner must be {want_runner}, got {argv[1]!r}")
+        if want_runner != ARM_RUNNER:
+            assert ARM_RUNNER not in argv, (
+                f"{tool}: a forked arm must not also speak the frozen runner")
         assert "--backend" in argv, f"{tool}: missing --backend passthrough"
         want = arm["face"]
         assert argv[argv.index("--backend") + 1] == want, (

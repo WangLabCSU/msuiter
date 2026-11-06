@@ -30,7 +30,9 @@ EXPECTED_NAMES = {"sigminer", "sigprofiler", "signeR",
                   # frozen SHAs are policed by test_p6_roster):
                   "sigminer_pre_v3", "sigminer_post_p1",
                   "sigminer_post_p1_rust", "sigminer_post_p2",
-                  "sigminer_post_v3", "sigminer_post_v3_rust"}
+                  "sigminer_post_v3", "sigminer_post_v3_rust",
+                  # the seventh key, dated manifest amendment 2026-11-04
+                  "sigminer_post_v3_rust_batch"}
 VALID_STATUSES = {"ready", "pending-verify"}
 
 # RB-05(6) flip witnesses 2026-10-09, data-only. The single authorized

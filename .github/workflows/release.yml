@@ -38,6 +38,7 @@ permissions:
 
 jobs:
   build-source:
+    timeout-minutes: 30  # audit #74 P2 hardening
     runs-on: ubuntu-latest
     outputs:
       tarball: ${{ steps.name.outputs.tarball }}
@@ -78,6 +79,7 @@ jobs:
           if-no-files-found: error
 
   build-binaries:
+    timeout-minutes: 30  # audit #74 P2 hardening
     needs: build-source
     strategy:
       fail-fast: false
@@ -150,6 +152,7 @@ jobs:
           if-no-files-found: error
 
   github-release:
+    timeout-minutes: 15  # audit #74 P2 hardening
     needs: [build-source, build-binaries]
     runs-on: ubuntu-latest
     steps:

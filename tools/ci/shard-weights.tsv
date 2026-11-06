@@ -107,3 +107,4 @@ test-reproduce-link.R	0	18	T0
 test-docs-tour-executable.R	10	28	T0
 test-docs-scenarios-prose.R	1	19	T0
 test-docs-extending-surface.R	1	20	T0
+test-rng-hygiene.R	0	13	T0

@@ -27,6 +27,7 @@ if str(HERE) not in sys.path:
 
 from competitors import p6_arms, registry           # noqa: E402  (RED seam)
 import tools.matrix_governance as gov               # noqa: E402
+import tools.attestation_sanctions as attestation_sanctions  # noqa: E402
 
 RESULTS = HERE.parent / "results"
 
@@ -48,9 +49,12 @@ def _grid_classes():
     return out
 
 
-def test_all_six_p6_tools_are_measured_tools():
+def test_all_p6_tools_are_measured_tools():
     """An arm absent from _MEASURED_TOOLS rides the campaign ungated — the
-    silent-skip class task law 3 forbids. RED until SS4 anchors land."""
+    silent-skip class task law 3 forbids. The census is roster-derived, so
+    the seventh arm (the R1-PARITY batch face, controller ruling (ii)
+    2026-11-04) is gated by it on the same terms: RED until its SS4 anchors
+    land."""
     missing = [t for t in p6_arms.P6_ARM_SPECS if t not in gov._MEASURED_TOOLS]
     assert not missing, f"P6 campaign tools without floor anchors: {missing}"
 
@@ -107,7 +111,14 @@ def test_calibration_ledger_declares_provenance_fields():
     """CALIBRATION.json (schema m7-floor-calibration-1) must exist beside the
     witnesses and carry the explicit-algorithm recorder + registry sha at mint.
     probes > 0 is the RB-10 (AC) edge: a resume pass that verified bytes without
-    declaring its mint's probes speaks probes=0 and must not pass the ledger."""
+    declaring its mint's probes speaks probes=0 and must not pass the ledger.
+
+    Phase-D addendum (controller ruling 2026-11-04 (2)): from the ruling
+    forward every ledger also declares its attestation face -- live, or
+    none-with-reason with its sanction booked in tools/attestation_sanctions.
+    Committed ledgers predate the law date and stay exempt: bytes cannot be
+    retroactively demanded of the past (the same law that keeps the 375
+    quotable)."""
     dirs = _p6_calibration_dirs()
     if not dirs:
         raise AssertionError(
@@ -118,6 +129,8 @@ def test_calibration_ledger_declares_provenance_fields():
         assert led["hash_recorder"].startswith("python3 hashlib.sha256"), led
         assert led.get("registry_sha256_at_mint"), "registry sha at mint missing"
         assert isinstance(led.get("probes"), int) and led["probes"] > 0
+        why = attestation_sanctions.ledger_post_law_ok(led)
+        assert why is None, f"{d}: {why}"
 
 
 def test_measurement_images_cover_every_ready_p6_arm():
@@ -153,7 +166,7 @@ def test_census_counts_p6_containers_as_ours():
 # attestation land, and they keep biting afterwards (counterfactual-tested).
 
 PRECAP_SEALED_EPOCH = "6b3a66bc9d0224eb"      # measured before the flip
-POST_CAP_EPOCH_PIN = "f3e894a6933a2ffb"   # measured; set at the ADJ-O3 GREEN commit
+POST_CAP_EPOCH_PIN = "888ce0d4eb7c9635"   # measured; set at the ADJ-O3 GREEN commit
 
 
 def _authority_dirs(*, legacy: bool) -> list[Path]:
@@ -170,7 +183,8 @@ def _authority_dirs(*, legacy: bool) -> list[Path]:
 
 def test_post_cap_authority_dirs_are_committed():
     """Both authority halves must exist as committed dirs: the campaign mint
-    (6 tools x 21 classes) and the legacy re-mint (60 classes). RED until
+    (one set per roster tool x 21 classes) and the legacy re-mint (60
+    classes). RED until
     the RB-10 mints complete."""
     assert _authority_dirs(legacy=False), (
         "no m7_floor_calibration_p7cap_<stamp> campaign authority dir")
@@ -261,15 +275,17 @@ def test_post_cap_witnesses_speak_the_serial_chain_profile():
 
 
 def test_post_cap_authority_covers_the_full_registry_domain():
-    """Every governed class needs post-cap bytes: the 126 campaign stems
-    (6 tools x the frozen 21-class grid) in the campaign authority, the 60
+    """Every governed class needs post-cap bytes: the campaign stems (one
+    roster tool x the frozen 21-class grid: 147 since the R1-PARITY batch
+    face joined the roster on 2026-11-04 by controller ruling (ii), 126 for
+    the sealed six) in the campaign authority, the 60
     legacy stems (defined by the frozen 20261009 dir: 42 grid + 18 ladder)
     in the legacy authority. A missing stem is an unmeasured class riding
     stale bytes; a stray stem is bytes nobody governed."""
     expected_main = {
         f"{t}__{arm}__N{n}__rep{gov.PROTOCOL_REPS}.json"
         for t in p6_arms.P6_ARM_SPECS for arm, n in _grid_classes()}
-    assert len(expected_main) == 126, f"campaign domain drifted: {len(expected_main)}"
+    assert len(expected_main) == 147, f"campaign domain drifted: {len(expected_main)}"
     present_main: set[str] = set()
     for d in _authority_dirs(legacy=False):
         present_main |= {w.name for w in (d / "witnesses").glob("*.json")}

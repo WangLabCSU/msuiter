@@ -98,7 +98,15 @@ jobs:
     outputs:
       fanout-matrix: ${{ steps.fanout-matrix.outputs.matrix }}
     steps:
+      # fetch-depth: 0 -- audit #74 P1 hash-resolvability. The docs-sync
+      # checkbox-truth half resolves each completion claim's evidence citation
+      # with a git cat-file existence probe, and a depth-1 checkout leaves
+      # every rewritten-away ancestor unreachable, so a dead citation reads as
+      # unreachable history rather than as drift. Measured: a full clone costs
+      # 12.44 MiB of pack over an 89-object, 472 KiB worktree.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
       # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
@@ -120,6 +128,18 @@ jobs:
         run: |
           python3 -m pip install --quiet numpy
           python3 -m tests.run_all
+
+      # audit #74 P1-7 (2026-11-05): the NECESSARY m7 governance subset --
+      # the law family whose silent rot the audit just measured (P0 class:
+      # witness-backed anchor laws passed green on a tree that could not
+      # load them). These seven modules read committed evidence only (no
+      # docker, no live run; 81 units ~1 s) -- the CI-lean ruling keeps the
+      # long campaign/driver tests off the runner and keeps exactly this
+      # law class ON it. The full 49-module suite stays hand/local.
+      - name: "M7 governance laws (anchors, witnesses, ledger, seals, pins)"
+        working-directory: bench/m7
+        run: |
+          python3 -m tests.run_all --only test_matrix_governance,test_floor_calibration,test_p6_anchor_registration,test_attestation_law,test_p6_evidence,test_hash_provenance,test_batch_bridge_arm
 
       - name: CI selfcheck (workflow YAML + referenced paths + pins)
         run: python3 tools/ci-selfcheck.py
@@ -388,7 +408,15 @@ jobs:
         config: ${{ fromJSON(needs.guard-prep.outputs.fanout-matrix).config }}
 
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6. This arm is the PR gate's only test
+      # executor (rcmdcheck runs --no-tests), and P10-A's era gate resolves the
+      # PROVENANCE era commit with `git cat-file -t <sha>^{commit}`. The default
+      # depth-1 checkout makes that ancestor unreachable (measured locally: rc
+      # 128, "Not a valid object name"), so the gate reds on every arm. The law
+      # admits no skip path, so the fix is history, not an exemption.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # CRAN-mode offline build: the vendored tarball generated once by the
       # guard-prep job is dropped where Makevars expects it, so R CMD INSTALL
@@ -552,6 +580,15 @@ jobs:
           if-no-files-found: error
 
   rust:
+    # Hang-detector law: the budget must exceed the measured tail with
+    # headroom. The 15 this replaces (#74 P2) was met twice by runner
+    # slowness alone -- msrv (ubuntu) job 127724431550 spent 11m41s in
+    # setup-r and was severed 3m12s into `cargo +1.71.0 test --workspace`
+    # with the platform verdict "The job has exceeded the maximum execution
+    # time of 15m0s"; this arm measured ~14m52s itself (job 126953359694,
+    # 11m51s of it setup-r) -- a near-miss, not a margin.
+    # 30 = witnessed >=15m tail + one runner-slowness class.
+    timeout-minutes: 30  # audit #74 P2 hardening
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -632,6 +669,12 @@ jobs:
           cargo audit $ignores
 
   msrv:
+    # Same class as `rust` above: the cargo work is seconds-to-minutes, but
+    # the runner's setup-r is not. Job 127724431550 (msrv ubuntu) burned
+    # 11m41s in setup-r and died 3m12s into its test wave against the 15m
+    # mark; the same arm ran green in 52s--3m48s of setup-r on other
+    # runners. Same runner-random tail, same ceiling.
+    timeout-minutes: 30  # audit #74 P2 hardening
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
     # Linux and Windows (macOS arm64 already proven locally, ADR §4).
     strategy:

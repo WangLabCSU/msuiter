@@ -353,15 +353,8 @@ ms_calibration_sanity <- function(catalog_real, sigs_real, n_boot = 200,
       c = "lower the seed or the dilution budget"
     )
   }
-  had_seed <- exists(".Random.seed", envir = .GlobalEnv)
-  if (had_seed) old_seed <- get(".Random.seed", envir = .GlobalEnv)
-  on.exit({
-    if (had_seed) {
-      assign(".Random.seed", old_seed, envir = .GlobalEnv)
-    } else {
-      rm(list = ".Random.seed", envir = .GlobalEnv)
-    }
-  }, add = TRUE)
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   set.seed(as.integer(seed))
 
   tallies <- integer(length(dilution_sizes))

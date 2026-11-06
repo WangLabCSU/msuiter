@@ -184,6 +184,8 @@
 # and burden?" Add-one rule, the audited R-twin convention.
 .ms_null_emp_pvalue_conditional <- function(observed, profile, burden,
                                             n_draws = 5000L, seed = 1) {
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   set.seed(seed)
   total <- sum(profile)
   u <- profile / total
@@ -207,12 +209,12 @@
 # the tidy sweep table + the per-signature classification table. The
 # engine's assignment/TP semantics are untouched (U-M2-01 audited).
 .ms_compare_hungarian <- function(P, Q, taus) {
-  raw <- ms_match_solutions_rust(
+  raw <- .msffi_check(ms_match_solutions_rust(
     estimated = as.numeric(t(P)),
     reference = as.numeric(t(Q)),
     dim = nrow(P),
     thresholds = as.numeric(taus)
-  )
+  ))
   k_est <- ncol(P)
   rows <- vector("list", length(raw$threshold))
   classes <- vector("list", length(raw$threshold))
@@ -389,6 +391,8 @@
       c = "the add-one tail estimate needs a usable denominator"
     )
   }
+  saved <- .ms_rng_snapshot()
+  on.exit(.ms_rng_restore(saved), add = TRUE)
   set.seed(seed)
   # 2 draws per replicate: one pair per row.
   x <- matrix(stats::rgamma(2 * n_draws * m, shape = 1), nrow = n_draws,
@@ -520,6 +524,19 @@ ms_compare <- S7::new_generic(
       i = paste0("received: ", msuiter_quote_trunc(thresholds)),
       j = "the sweep thresholds are match lines on the cosine scale",
       c = "use e.g. the default seq(0.80, 0.90, by = 0.01)"
+    )
+  }
+  # audit #74 P2: ms_compare was the one FFI-facing face without the house
+  # seed gate -- an NA/non-finite seed reached the wire coercion or the
+  # RNG instead of a structured refusal (cf. the ms_simulate/ms_embed form).
+  if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
+      !is.finite(seed) || seed < 0) {
+    msuiter_abort(
+      "input",
+      "seed must be a single non-negative finite number",
+      i = "the seed derives every null Monte Carlo stream",
+      j = paste0("received: ", msuiter_quote_trunc(seed)),
+      c = "record the integer seed used for the nulls"
     )
   }
 

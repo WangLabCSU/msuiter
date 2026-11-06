@@ -47,15 +47,15 @@ The original ≥50×/≥100×/≥10× rhetoric was written against baselines
 that were never themselves measured — `brunet` already ships a C
 kernel, and SPMG on clean input is vectorised. The PI ruling of
 2026-10-05 recalibrated acceptance to the MEASURED C-class baselines,
-and moved the original rhetoric to a naive-R/Python framing (`vignettes/articles/roadmap.qmd:116`, verbatim; the blockquote spans `vignettes/articles/roadmap.qmd:115-116`):
+and moved the original rhetoric to a naive-R/Python framing (`vignettes/articles/roadmap.qmd:118`, verbatim; the blockquote spans `vignettes/articles/roadmap.qmd:117-118`):
 
 > [English twin of the retired ruling original; CJK corpus] phase-2, issue #25, 2026-10-19; the Chinese original lives in git blob sha256 8b905eb8151cde0c75dee4b3d3b61f5efb72cffa0e38729b6119d74615718a91). **Acceptance (v0.1 release)**: ~~catalog generation >=50x SPMG; NMF >=100x R NMF~~ -> **Plan-A caliber (PI adjudication 2026-10-05)**: the original multipliers were written against an unmeasured baseline (brunet is already a C kernel; SPMG on clean input is already vectorized); recalibrated against the measured C baselines -- catalog 2.6x SPMG (3.73s, <5s OK), NMF 2.3x R NMF brunet (C core), NNLS 1.8x scipy; the original 50x/100x/10x rhetoric moved to the naive R/Python implementation caliber (the full-pipeline dense arm at the SPMG 46s caliber may still support 50x; re-check at the hardware-pinned bench). All fixtures green; installable from r-universe. **M1s 14/14 closed.**
 
 ## Targets table (ARCHITECTURE cross-reference)
 
-The canonical class targets, verbatim from `vignettes/articles/architecture.qmd:315-321`:
+The canonical class targets, verbatim from `vignettes/articles/architecture.qmd:316-323`:
 
-<!-- census-exempt tokens: 51 260 266 (the ROADMAP/ARCHITECTURE line pins in this file were re-anchored from the baseline line numbers 51, 260-266, 266 to the translated files' 116, 315-321, 321; the old pins are named here for the numeric-preservation guard) -->
+<!-- census-exempt tokens: 51 260 266 (the ROADMAP/ARCHITECTURE line pins in this file were re-anchored from the baseline line numbers 51, 260-266, 266 to the translated files' 118, 316-323, 323; the old pins are named here for the numeric-preservation guard) -->
 
 ```
 | Kernel | Baseline | Target |
@@ -69,7 +69,7 @@ The canonical class targets, verbatim from `vignettes/articles/architecture.qmd:
 
 ## MEASURED: bootstrap vs sigminer -- the >=100x target measured FALSE
 
-The targets table's final row (`vignettes/articles/architecture.qmd:321`) sets the bootstrap
+The targets table's final row (`vignettes/articles/architecture.qmd:323`) sets the bootstrap
 benchmark against sigminer's serial bootstrapper at >=100x:
 
 ```
@@ -124,11 +124,11 @@ reports below stay byte-frozen CJK originals (translation only on user demand,
 charter class "reference"), so each line is a labeled English rendering, not a
 verbatim quote:
 
-- `bench/m1s/sbs/result.md:14` (rendering of the CJK original)
+- `bench/m1s/sbs/result.md:18` (rendering of the CJK original)
   > - host: aarch64-apple-darwin20 (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
-- `bench/m1s/nmf/result.md:14` (rendering of the CJK original)
+- `bench/m1s/nmf/result.md:18` (rendering of the CJK original)
   > - host: aarch64-apple-darwin20 (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
-- `bench/m1s/nnls/result.md:8` (rendering of the CJK original)
+- `bench/m1s/nnls/result.md:12` (rendering of the CJK original)
   > - python 3.13.9 | numpy 2.3.5 | scipy 1.17.0 | darwin (Apple Silicon; the power status not controllable -- the numbers are for this pinned-hardware caliber)
 
 Consequences, all by reference: these values are acceptance-gate
@@ -141,15 +141,15 @@ checkable from the table alone:
 
 ```
 $ git log --oneline -1 -- bench/m7/competitors/timings.py
-cfef27c feat(m7): timings writer emits optional trailing hardware pins host+hw_profile; pinned reader with 7-col legacy back-compat branch
+bc3e8ca feat(m7): U-M7-04 M7 closeout — governance truth, hardware-pin machine-checkability, performance anchoring, release material (#14)
 ```
 
 ## Re-extraction commands (same window as this file's creation)
 
 ```
 $ sed -n '11p;13p;14p' bench/m1s/result.md
-$ grep -n 'Plan-A calibration' vignettes/articles/roadmap.qmd       # -> line 105
-$ sed -n '315,321p' vignettes/articles/architecture.qmd        # targets table incl. bootstrap row 321
+$ grep -n 'Plan-A calibration' vignettes/articles/roadmap.qmd       # -> line 107
+$ sed -n '316,323p' vignettes/articles/architecture.qmd        # targets table incl. bootstrap row 323
 $ grep -n 'power status not controllable' bench/m1s/result.md; grep -n 'Apple Silicon' bench/m1s/*/result.md   # parent (translated) + the three CJK reference reports
 ```
 
@@ -160,15 +160,15 @@ in-window; the `abc` control vector hashed to the same value under
 hashlib, `openssl dgst -sha256 -r`, `node crypto.createHash` and
 Apple CommonCrypto `shasum -a 256`:
 
-<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b e2f6707915d6002ebf00b2e79b7fec9e5f8333459914243089a1ff0c259b73e3 (the vignettes/articles/architecture.qmd and vignettes/articles/roadmap.qmd seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard; e215d681.../e2f67079... were superseded again at the CJK corpus phase-2 pass (issue #25): the bench/m1s/result.md drift came from the #21 translation commit and the vignettes/articles/roadmap.qmd seal tracks the phase-2 retirement of the ruling blockquote's CJK twin) -->
+<!-- census-exempt digests: e8c50f7b123ed92be6ba84b0409d095d748bb5beee19b0af25b3d292f86ed258 cbc77d2005586d8410a4ceaacf67254cc34e956753e6a8f7b8dae2fff7f52a80 e215d681c2455c5ae85c99a8dd6f60db2bfd4dc17e9289a1c56728514db2d08b e2f6707915d6002ebf00b2e79b7fec9e5f8333459914243089a1ff0c259b73e3 (the vignettes/articles/architecture.qmd and vignettes/articles/roadmap.qmd seals below were re-pinned at the English corpus pass to the translated blobs; the superseded digests of the baseline Chinese blobs are named here for the numeric-preservation guard; e215d681.../e2f67079... were superseded again at the CJK corpus phase-2 pass (issue #25): the bench/m1s/result.md drift came from the #21 translation commit and the vignettes/articles/roadmap.qmd seal tracks the phase-2 retirement of the ruling blockquote's CJK twin); be6649d50124fe62f639852edb3bd6a4afb964fc8136dbf02b99178c7f62f2cd and 4b2bcca5e28ed1679bada42f2c7e5769ef64c76853870e773ae7fc622e8cb90d were superseded a third time by the #75 site-corpus pass, and 6c40eb9940c1fccbf39e9a987714da13b124feb895a691eb32f02bb1058a37ca, 80a84a7fc4f8fd9a9a94fa467fad639bc524cd26d9f324c212b57420da7220d0 and ee32eb3f697f791b5d481dd94cac13fdafd2b6cfd1f27995e00221fc8a8341c0 by the #32 m1s result-recording pass, and 75b5aac3b9f23fb2bfab5f8d26ba364d960f5b1e946c5b1985ab4f987bd14a26 by the audit-#74 hash-resolvability pass (the ROADMAP.md:232 completion claim gained a path:line citation, which moved the blob) -->
 
 ```
 0baf0f93cba179c068f53fc4899773b00b775349bcb54ed624e0b51d276231c9  bench/m1s/result.md
-be6649d50124fe62f639852edb3bd6a4afb964fc8136dbf02b99178c7f62f2cd  vignettes/articles/architecture.qmd
-4b2bcca5e28ed1679bada42f2c7e5769ef64c76853870e773ae7fc622e8cb90d  vignettes/articles/roadmap.qmd
-6c40eb9940c1fccbf39e9a987714da13b124feb895a691eb32f02bb1058a37ca  bench/m1s/sbs/result.md
-80a84a7fc4f8fd9a9a94fa467fad639bc524cd26d9f324c212b57420da7220d0  bench/m1s/nmf/result.md
-ee32eb3f697f791b5d481dd94cac13fdafd2b6cfd1f27995e00221fc8a8341c0  bench/m1s/nnls/result.md
+cbb69dd16cde97956eeb85e6ea68a26afdea5900a426c4acdb27493f3593ab04  vignettes/articles/architecture.qmd
+4c38215c6838bcb5be2fbaf3e926ad1d1c485116f3de02522e80dd63544c4b45  vignettes/articles/roadmap.qmd
+26974f0b28e440e874b00e3b1ad5500bb6001b2e1a227fbf87923720c6037715  bench/m1s/sbs/result.md
+9e95633451308d8198b3b57cdb0a4b890da491b8c3922612b125e3d86dd74a7b  bench/m1s/nmf/result.md
+275ba5541d276cf7ca31bb70a44a6fba8d1657a334b439a9ece37e533389cc91  bench/m1s/nnls/result.md
 ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  (control: sha256 of 'abc')
 ```
 

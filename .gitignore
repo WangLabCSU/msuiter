@@ -41,6 +41,15 @@ target/
 /bench/cache/
 /bench/results/*.csv
 
+# Calibrator probe working dirs (audit #74 P0, 2026-11-04): the p7cap
+# campaigns write per-probe probe_cache trees under <campaign>/_scratch/
+# (4.3M in the 20261104T093543Z face). They are the re-derivable working
+# class -- the committed face of a campaign is CALIBRATION.json +
+# anchors_fragment.json + witnesses/ only; the (AC)-law tests read the
+# witnesses, never _scratch (proven: clean checkouts without _scratch
+# run the full suite green once the witnesses are tracked).
+/bench/results/**/_scratch/
+
 # G0 harness: heavy intermediates stay out of git (results/ is tracked)
 /bench/g0/cache/
 /bench/**/__pycache__/

@@ -132,13 +132,18 @@ def write_exclusion_marker(registry, tag, shard, out_path, out):
 
     ci.yml asks for markers instead of synthesizing them: the only way a
     marker can exist is by being read out of the committed ledger, so a
-    marker that drifts from the ledger cannot be produced by accident."""
+    marker that drifts from the ledger cannot be produced by accident.
+
+    Returns 0 (marker written), 2 (ledger malformed -- parse_exclusions has
+    already spoken its DEFECT), or 3 (the pair is simply not registered, so
+    the caller runs the shard). 3 is a sentinel, not a defect: it must not
+    borrow the DEFECT token the arms' logs are read for."""
     rows = parse_exclusions(registry, out)
     if rows is None:
         return 2
     hits = [k for k in rows if "%s-%s" % (k[0], k[1]) == tag and k[2] == str(shard)]
     if not hits:
-        out("DEFECT exclusion not registered: tag=%s shard=%s" % (tag, shard))
+        out("EXCL-UNREGISTERED tag=%s shard=%s (run the shard)" % (tag, shard))
         return 3
     os_, cfg, sh = hits[0]
     with open(out_path, "w") as fh:
