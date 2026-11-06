@@ -11,6 +11,7 @@ pub mod ard;
 pub mod linalg;
 pub mod consensus;
 pub mod cv;
+pub mod detmath;
 pub mod nmf;
 pub mod nndsvd;
 pub mod nnls;

@@ -9,7 +9,7 @@ k,3
 iters,2000
 iterations,2000
 trace_len,2001
-obj_init,9.43251851480264158e4
-obj_final,6.69286761382350087e4
+obj_init,9.43251851480264304e4
+obj_final,6.69286761382350232e4
 eps,1e-12
 engine_crate,engine: pure numeric kernels, FFI-free

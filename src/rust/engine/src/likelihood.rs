@@ -89,13 +89,15 @@
 //! # Determinism
 //!
 //! Pure sequential kernels, fixed reduction order, single-threaded, no
-//! hashing: identical inputs give bit-identical outputs on a given
-//! toolchain (golden values are asserted under relative tolerances so libm
-//! ulp drift across platforms cannot flip a pin; repeated same-process
-//! calls are asserted bit-identical). Simulation-based size/power tests use
+//! hashing: identical inputs give bit-identical outputs on every
+//! toolchain and platform -- the transcendentals come from
+//! `crate::detmath` (pure IEEE-754 plus committed tables), never libm
+//! (golden values are asserted under relative tolerances to the external
+//! anchors; repeated same-process calls are asserted bit-identical). Simulation-based size/power tests use
 //! canonical [`MsRng`] streams with fixed master seeds (ARCH §2 stream
 //! layout v1).
 
+use crate::detmath::{det_exp, det_ln, det_sin};
 use crate::error::MsError;
 use crate::linalg::gram_factor;
 
@@ -146,7 +148,7 @@ pub fn ln_gamma(x: f64) -> f64 {
     }
     if x < 0.5 {
         // Reflection: ln Γ(x) = ln(π/sin(πx)) − ln Γ(1−x).
-        (std::f64::consts::PI / (std::f64::consts::PI * x).sin()).ln() - ln_gamma(1.0 - x)
+        det_ln(std::f64::consts::PI / det_sin(std::f64::consts::PI * x)) - ln_gamma(1.0 - x)
     } else {
         let z = x - 1.0;
         // a = c₀ + Σ cᵢ/(z+i); t = z + g + 1/2 = z + 7.5.
@@ -155,8 +157,8 @@ pub fn ln_gamma(x: f64) -> f64 {
             a += c / (z + i as f64);
         }
         let t = z + LANCZOS_G_HALF;
-        std::f64::consts::LN_2 * 0.5 + std::f64::consts::PI.ln() * 0.5 + (z + 0.5) * t.ln() - t
-            + a.ln()
+        std::f64::consts::LN_2 * 0.5 + det_ln(std::f64::consts::PI) * 0.5 + (z + 0.5) * det_ln(t) - t
+            + det_ln(a)
     }
 }
 
@@ -207,8 +209,8 @@ fn gamma_p_series(a: f64, x: f64) -> f64 {
             break;
         }
     }
-    let log_prefactor = -x + a * x.ln() - ln_gamma(a);
-    log_prefactor.exp() * sum
+    let log_prefactor = -x + a * det_ln(x) - ln_gamma(a);
+    det_exp(log_prefactor) * sum
 }
 
 /// Upper regularized incomplete gamma `Q(a, x) = Γ(a,x)/Γ(a)` by the
@@ -238,8 +240,8 @@ fn gamma_q_cf(a: f64, x: f64) -> f64 {
             break;
         }
     }
-    let log_prefactor = -x + a * x.ln() - ln_gamma(a);
-    log_prefactor.exp() * h
+    let log_prefactor = -x + a * det_ln(x) - ln_gamma(a);
+    det_exp(log_prefactor) * h
 }
 
 // ---------------------------------------------------------------------------
@@ -341,7 +343,7 @@ pub fn multinomial_ll(counts: &[f64], probs: &[f64]) -> Result<f64, MsError> {
         ll -= ln_gamma(c + 1.0);
         if c > 0.0 {
             // log(eps + p) guard; the eps never touches the counts.
-            ll += c * (LL_EPS + p).ln();
+            ll += c * det_ln(LL_EPS + p);
         }
     }
     Ok(ll)
@@ -406,9 +408,9 @@ pub fn nb_ll_one(count: f64, mean: f64, size: f64) -> Result<f64, MsError> {
     }
 
     let mut ll = ln_gamma(count + size) - ln_gamma(size) - ln_gamma(count + 1.0);
-    ll += size * (size.ln() - (size + mean).ln());
+    ll += size * (det_ln(size) - det_ln(size + mean));
     if count > 0.0 {
-        ll += count * ((LL_EPS + mean).ln() - (size + mean).ln());
+        ll += count * (det_ln(LL_EPS + mean) - det_ln(size + mean));
     }
     Ok(ll)
 }

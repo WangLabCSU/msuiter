@@ -151,6 +151,7 @@
 //! Pure engine kernel: no FFI face, no `unsafe`, no dependencies; every
 //! entry point returns `Result<_, MsError>` (FFI contract 5).
 
+use crate::detmath::{det_ln};
 use crate::error::MsError;
 use crate::nmf::{kl_h_step, kl_w_step, matmul, KL_EPS};
 use crate::rng::{MsRng, StreamId};
@@ -533,7 +534,7 @@ fn kl_objective(v: &[f64], w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -
     let wh = matmul(w, h, m, n, k);
     let mut acc = 0.0f64;
     for (&vv, &mm) in v.iter().zip(wh.iter()) {
-        acc += vv * ((KL_EPS + vv).ln() - (KL_EPS + mm).ln()) - vv + mm;
+        acc += vv * (det_ln(KL_EPS + vv) - det_ln(KL_EPS + mm)) - vv + mm;
     }
     acc
 }
@@ -603,7 +604,7 @@ fn logdet_gram(w: &[f64], m: usize, k: usize, delta: f64) -> Option<f64> {
     let l = cholesky(&a, k)?;
     let mut acc = 0.0f64;
     for s in 0..k {
-        acc += l[s * k + s].ln();
+        acc += det_ln(l[s * k + s]);
     }
     Some(2.0 * acc)
 }

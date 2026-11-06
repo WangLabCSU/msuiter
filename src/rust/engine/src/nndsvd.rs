@@ -3,6 +3,7 @@
 //! `engine/nndsvd.rs`, decision D6). GREEN pass: kernels implemented against
 //! the frozen property/golden suite below.
 
+use crate::detmath::{det_cos, det_ln, det_sin};
 use crate::error::MsError;
 use crate::rng::{MsRng, StreamId};
 
@@ -558,12 +559,12 @@ fn fill_gaussians(rng: &mut MsRng, out: &mut [f64]) {
     while i < out.len() {
         let u1 = open_unit(rng);
         let u2 = open_unit(rng);
-        let radius = (-2.0 * u1.ln()).sqrt();
+        let radius = (-2.0 * det_ln(u1)).sqrt();
         let theta = std::f64::consts::TAU * u2;
-        out[i] = radius * theta.cos();
+        out[i] = radius * det_cos(theta);
         i += 1;
         if i < out.len() {
-            out[i] = radius * theta.sin();
+            out[i] = radius * det_sin(theta);
             i += 1;
         }
     }

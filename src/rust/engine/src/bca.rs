@@ -108,6 +108,7 @@
 //! Pure sequential kernels over fixed-order reductions: identical inputs
 //! give bit-identical outputs on a given toolchain.
 
+use crate::detmath::{det_exp, det_ln};
 use crate::error::MsError;
 use crate::likelihood::erfc;
 use crate::linalg::Ldlt;
@@ -179,7 +180,7 @@ fn phi_inv_acklam(p: f64) -> f64 {
     const P_LOW: f64 = 0.024_25;
     if p < P_LOW {
         // Lower tail: q = √(−2 ln p).
-        let q = (-2.0 * p.ln()).sqrt();
+        let q = (-2.0 * det_ln(p)).sqrt();
         (((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
             / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0)
     } else if p <= 1.0 - P_LOW {
@@ -190,7 +191,7 @@ fn phi_inv_acklam(p: f64) -> f64 {
             / (((((B[0] * r + B[1]) * r + B[2]) * r + B[3]) * r + B[4]) * r + 1.0)
     } else {
         // Upper tail via the Φ⁻¹(p) = −Φ⁻¹(1−p) symmetry.
-        let q = (-2.0 * (1.0 - p).ln()).sqrt();
+        let q = (-2.0 * det_ln(1.0 - p)).sqrt();
         -(((((C[0] * q + C[1]) * q + C[2]) * q + C[3]) * q + C[4]) * q + C[5])
             / ((((D[0] * q + D[1]) * q + D[2]) * q + D[3]) * q + 1.0)
     }
@@ -213,7 +214,7 @@ pub fn phi_inv(p: f64) -> f64 {
     // Halley refinement (the cubic Newton): with e = Φ(z) − q, the update
     // u = e·√(2π)·exp(z²/2) cancels φ(z)'s exponential.
     let e = phi(z) - q;
-    let u = e * (2.0 * std::f64::consts::PI).sqrt() * (z * z / 2.0).exp();
+    let u = e * (2.0 * std::f64::consts::PI).sqrt() * det_exp(z * z / 2.0);
     z -= u / (1.0 + z * u / 2.0);
     if mirror {
         -z

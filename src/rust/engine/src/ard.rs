@@ -114,6 +114,7 @@
 //! kernels (tested): with `β ≡ 0` the steps reduce exactly to
 //! [`crate::nmf::kl_h_step`] / [`crate::nmf::kl_w_step`].
 
+use crate::detmath::{det_ln};
 use crate::error::MsError;
 use crate::nmf::{matmul, KL_EPS};
 use crate::rng::{MsRng, StreamId};
@@ -386,7 +387,7 @@ fn ard_evidence(
         }
         acc += 0.5 * sq;
         acc += b0;
-        evid += acc * beta[s] - c * beta[s].ln();
+        evid += acc * beta[s] - c * det_ln(beta[s]);
     }
     evid
 }
@@ -398,7 +399,7 @@ fn kl_objective(v: &[f64], w: &[f64], h: &[f64], m: usize, n: usize, k: usize) -
     let wh = matmul(w, h, m, n, k);
     let mut acc = 0.0f64;
     for (&vv, &mm) in v.iter().zip(wh.iter()) {
-        acc += vv * ((KL_EPS + vv).ln() - (KL_EPS + mm).ln()) - vv + mm;
+        acc += vv * (det_ln(KL_EPS + vv) - det_ln(KL_EPS + mm)) - vv + mm;
     }
     acc
 }

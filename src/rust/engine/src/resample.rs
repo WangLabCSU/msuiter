@@ -150,9 +150,10 @@
 //!
 //! Pure sequential function of the stream words and `(mean, size, n)`, no
 //! hashing, no parallelism. The goldens pin the algorithm *including* the
-//! host libm `ln`/`exp`/`cos`/`powf` values used inside the acceptance
-//! tests; they must hold identically on stable and on the 1.71 MSRV
-//! toolchain of this repo's platforms (same-host libm), and any diff
+//! deterministic `crate::detmath` `ln`/`exp`/`cos`/`powf` values used
+//! inside the acceptance tests; the transcendentals are pure IEEE-754 plus
+//! committed tables, so the goldens hold identically on every toolchain and
+//! platform (P10 deterministic-math-core law), and any diff
 //! requires an explicit spec bump with regenerated goldens — the same
 //! discipline as the multinomial goldens above.
 //!
@@ -181,6 +182,7 @@
 //!   machinery. The negative-binomial calibration face (Jiang protocol)
 //!   has lived in this module since U-M3b-01 — sections below.
 
+use crate::detmath::{det_cos, det_exp, det_ln, det_powf};
 use crate::error::MsError;
 use crate::likelihood::ln_gamma;
 use crate::rng::{MsRng, StreamId};
@@ -548,9 +550,9 @@ fn standard_normal(rng: &mut MsRng) -> f64 {
             continue;
         }
         let u2 = unit_interval(rng);
-        let r = (-2.0 * u1.ln()).sqrt();
+        let r = (-2.0 * det_ln(u1)).sqrt();
         let theta = std::f64::consts::TAU * u2;
-        return r * theta.cos();
+        return r * det_cos(theta);
     }
 }
 
@@ -563,7 +565,7 @@ fn gamma_variate(rng: &mut MsRng, shape: f64) -> f64 {
         // Stuart boost: Gamma(k) = Gamma(k+1) · U^{1/k}, exact. U = 0
         // (the 2⁻⁵³ grid point) underflows the power to the degenerate
         // variate 0, propagated honestly (rate 0 → Poisson 0).
-        let boost = unit_interval(rng).powf(1.0 / shape);
+        let boost = det_powf(unit_interval(rng), 1.0 / shape);
         return boost * gamma_variate(rng, shape + 1.0);
     }
     let d = shape - 1.0 / 3.0;
@@ -583,7 +585,7 @@ fn gamma_variate(rng: &mut MsRng, shape: f64) -> f64 {
         if u < 1.0 - 0.0331 * x2 * x2 {
             return d * v;
         }
-        if u.ln() < 0.5 * x2 + d - d * v + d * v.ln() {
+        if det_ln(u) < 0.5 * x2 + d - d * v + d * det_ln(v) {
             return d * v;
         }
     }
@@ -609,7 +611,7 @@ fn poisson_variate(rng: &mut MsRng, rate: f64) -> u64 {
         "poisson_variate: internal rate {rate} exceeds the supported regime (>{NB_RATE_MAX})"
     );
     let mode = rate.floor();
-    let p_mode = (mode * rate.ln() - rate - ln_gamma(mode + 1.0)).exp();
+    let p_mode = det_exp(mode * det_ln(rate) - rate - ln_gamma(mode + 1.0));
     let mut cum = p_mode;
     if u < cum {
         return mode as u64;
@@ -1103,9 +1105,10 @@ mod tests {
     // inversion visit order, or the consumption layout drifted — which
     // requires an explicit spec bump and regenerated goldens (module docs;
     // same discipline as the multinomial goldens above). The NB goldens
-    // additionally pin the host libm transcendental outputs inside the
-    // acceptance tests: they must hold identically on stable and on the
-    // 1.71 MSRV toolchain (same-host libm), D6/A6.
+    // additionally pin the deterministic transcendentals
+    // (`crate::detmath`) used inside the acceptance tests: pure IEEE-754
+    // plus committed tables, identical on every toolchain and platform,
+    // D6/A6 (P10 deterministic-math-core law).
     // ==================================================================
 
     /// Sample mean/variance of a u64 draw vector (test-side MC machinery).

@@ -85,11 +85,27 @@ for (t in .kbg_task_defs()) {
   V <- .kbg_task_v(ev0, t)
   in.dir <- .kbg_stage_single(tempfile("f1cap-in-"), V)
   out.dir <- tempfile("f1cap-out-")
-  res <- .kpp_exec_real(kernel, .kbg_single_argv(in.dir, out.dir, 96L, 100L,
-                                                 t$k, .kbg_iters, t$seed))
+  # The banked face is the FULL-TRACE face: the bit-identity law reads the
+  # bank's meta trace_len as ITERS+1 and compares trace bytes against the
+  # working-tree --full-trace face. The era binary emitted the full trace
+  # by default; since the opt-in flip (the batch-bridge lane) the face is
+  # selected by the flag, so the capture must speak it -- the same argv
+  # the law's F2 face runs.
+  res <- .kpp_exec_real(kernel, c(.kbg_single_argv(in.dir, out.dir, 96L, 100L,
+                                                   t$k, .kbg_iters, t$seed),
+                                  "--full-trace"))
   if (!identical(res$rc, 0L)) {
     stop("era fit died: ", t$tag, " rc=", res$rc, ": ",
          paste(res$stderr, collapse = " | "), call. = FALSE)
+  }
+  # The capture refuses to bank a face the law could not consume: the
+  # trace must be self-describing at the attested iteration count.
+  meta.text <- readLines(file.path(out.dir, "meta.csv"), warn = FALSE)
+  trace.len <- sub("^trace_len,", "",
+                   meta.text[grepl(pattern = "^trace_len,", x = meta.text)][1L])
+  if (!identical(trimws(trace.len), as.character(.kbg_iters + 1L))) {
+    stop("capture face is not the full-trace face for ", t$tag, ": meta trace_len=",
+         trace.len, " (expected ", .kbg_iters + 1L, ")", call. = FALSE)
   }
   dst <- file.path(f1.root, t$tag)
   dir.create(dst, recursive = TRUE, showWarnings = FALSE)
