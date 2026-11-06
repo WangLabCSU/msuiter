@@ -372,6 +372,8 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
   sc <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"),
                    warn = FALSE)
+  rl <- readLines(file.path(root, ".github", "workflows", "release.yml"),
+                   warn = FALSE)
   budget_line <- function(key, src = ci) {
     hdr <- paste0("  ", key, ":")
     h <- which(src == hdr)
@@ -379,7 +381,7 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
     win <- src[(h + 1L):length(src)]
     t <- win[grepl("timeout-minutes:", win, fixed = TRUE)]
     expect_gte(length(t), 1L)   # a job without an explicit budget is a green-hang invitation
-    trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE))
+    trimws(sub("\\s*#.*$", "", trimws(sub("timeout-minutes:", "", t[1L], fixed = TRUE))))
   }
   expect_identical(budget_line("guard-prep"), "45")     # hot path 1 min; stall class needs slack (strike-3 witness)
   expect_identical(budget_line("guards"), "15")          # aggregator-only, measured 0 min
@@ -390,6 +392,29 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   # this one hit ubuntu/release + coverage. An arm whitelist is whack-a-mole;
   # every fan-out arm rides the uniform hang-detector ceiling.
   expect_identical(budget_line("R-CMD-check-fanout"), "180")  # 120 consumed whole twice by push-run 41082179842 on main@a6c5870 (attempt-1 job 124154845151 2h01m03s; targeted rerun-failed attempt-2 job 124412728178 2h00m31s -- both: steps 1-13 completed/success, fan-out wave severed mid-flight, post-steps clean, zero hang signatures); 180 = witnessed >=120m straggler floor + one runner-slowness class, the uniform line the coverage arm already carries
+  # audit #74 P2 hardening (commit 3e48d7f) added caps exactly where the audit
+  # found them missing -- release.yml all, ci.yml rust+msrv, scheduled.yml
+  # site -- sized at 15/30 on the assumption that the cargo and render legs
+  # are cheap. The cargo work IS cheap; the runner's setup-r is not, and the
+  # caps were then met by that tail: job 127724431550 (msrv ubuntu) spent
+  # 11m41s in setup-r of a 15m18s life and its cargo test wave was severed
+  # 3m12s later, the platform's own verdict reading
+  #   "The job has exceeded the maximum execution time of 15m0s".
+  # Measured tails: the rust arm itself at ~14m52s (job 126953359694, 11m51s
+  # of it setup-r); the site job at 14m02s of its 15 on the only green
+  # witness it has ever produced (job 121515467347, 10m44s of it
+  # setup-r-dependencies). This is the strike-3 class verbatim -- a budget
+  # that starves rather than detects -- so the three cargo/site arms move to
+  # the 30 the release builders already carry. release.yml's own caps are
+  # re-attested here rather than only commented: every dispatch run measures
+  # 2m02s-3m23s of real build against its 30, and github-release is a
+  # 10-second job standing behind two builds.
+  expect_identical(budget_line("rust"), "30")
+  expect_identical(budget_line("msrv"), "30")
+  expect_identical(budget_line("site", sc), "30")
+  expect_identical(budget_line("build-source", rl), "30")
+  expect_identical(budget_line("build-binaries", rl), "30")
+  expect_identical(budget_line("github-release", rl), "15")
 })
 
 test_that("the tier-T2 heavy class keeps a committed nightly face (issue #76)", {
@@ -556,7 +581,7 @@ test_that("a cached R path cannot survive into the cargo jobs", {
   for (key in c("rust", "msrv")) {
     win <- job_window(key)
     cache_i <- which(grepl("Swatinem/rust-cache@", win, fixed = TRUE))
-    cargo_i <- which(grepl("cargo [^\\n]*--workspace", win))
+    cargo_i <- which(grepl("^\\s*(- name:|run:).*cargo [^\\n]*--workspace", win))
     clean_i <- which(grepl("clean -p extendr-ffi", win, fixed = TRUE))
     # The patterns must speak on the committed bytes before the ordering
     # assertions mean anything (vacuous-green ban).

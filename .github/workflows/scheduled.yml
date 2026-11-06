@@ -139,7 +139,14 @@ jobs:
         run: sh tools/deep-checks/run_sanitizer_leg.sh leg "${{ matrix.sanitizer }}"
 
   site:
-    timeout-minutes: 15  # audit #74 P2 hardening
+    # Same runner-slowness class as the cargo arms: the render itself is
+    # ~1-6 min but provisioning is not. The only GREEN witness (job
+    # 121515467347, run 40306103047) consumed 14m02s of the 15 on offer,
+    # 10m44s of it in setup-r-dependencies -- green by luck, not margin.
+    # (Its red sibling job 125279815359 was a real assertion failure at
+    # step 8 in 8m37s, not a timer kill.)
+    # 30 = witnessed >=14m tail + one runner-slowness class.
+    timeout-minutes: 30  # audit #74 P2 hardening
     # pkgdown site-build tripwire (U-M7-04 slice-C, C5). The per-PR 13-check
     # topology is frozen, so the site render rides the weekly deep check (and
     # manual dispatch). STRICT by design -- no continue-on-error: the

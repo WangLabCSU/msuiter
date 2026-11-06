@@ -572,7 +572,15 @@ jobs:
           if-no-files-found: error
 
   rust:
-    timeout-minutes: 15  # audit #74 P2 hardening
+    # Hang-detector law: the budget must exceed the measured tail with
+    # headroom. The 15 this replaces (#74 P2) was met twice by runner
+    # slowness alone -- msrv (ubuntu) job 127724431550 spent 11m41s in
+    # setup-r and was severed 3m12s into `cargo +1.71.0 test --workspace`
+    # with the platform verdict "The job has exceeded the maximum execution
+    # time of 15m0s"; this arm measured ~14m52s itself (job 126953359694,
+    # 11m51s of it setup-r) -- a near-miss, not a margin.
+    # 30 = witnessed >=15m tail + one runner-slowness class.
+    timeout-minutes: 30  # audit #74 P2 hardening
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -653,7 +661,12 @@ jobs:
           cargo audit $ignores
 
   msrv:
-    timeout-minutes: 15  # audit #74 P2 hardening
+    # Same class as `rust` above: the cargo work is seconds-to-minutes, but
+    # the runner's setup-r is not. Job 127724431550 (msrv ubuntu) burned
+    # 11m41s in setup-r and died 3m12s into its test wave against the 15m
+    # mark; the same arm ran green in 52s--3m48s of setup-r on other
+    # runners. Same runner-random tail, same ceiling.
+    timeout-minutes: 30  # audit #74 P2 hardening
     # ADR 0002 §5 residual closure: rustc 1.71.0 build+test proof on
     # Linux and Windows (macOS arm64 already proven locally, ADR §4).
     strategy:
