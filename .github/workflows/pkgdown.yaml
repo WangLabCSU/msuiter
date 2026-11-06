@@ -21,7 +21,14 @@ jobs:
     timeout-minutes: 60
     concurrency:
       group: pkgdown-${{ github.ref }}
-      cancel-in-progress: true
+      # a cancelled build is a wasted one, but a cancelled DEPLOY can leave
+      # the Pages deployment half-written -- let the running one finish.
+      cancel-in-progress: false
+    # Pages deployments are gated on a GitHub environment; the job must
+    # declare it or deploy-pages refuses (and the URL never resolves).
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
@@ -56,8 +63,14 @@ jobs:
           writeLines(character(), file.path("docs", ".nojekyll"))
         shell: Rscript {0}
 
-      - name: Deploy to GitHub Pages
-        if: github.event_name != 'pull_request'
+      - name: Upload the Pages artifact (the docs/ tree, .nojekyll written)
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: "docs"
+
+      # The publisher. Without this step the artifact is merely stored and
+      # https://wanglabcsu.github.io/msuiter/ stays 404 -- the defect this
+      # workflow carried from its first commit until 2026-11-06.
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
