@@ -939,10 +939,20 @@ def main():
           'development = list(mode = "release")' in pktxt)
     check("pkgdown.yaml: writes the GitHub-Pages extras (.nojekyll at the docs/ root)",
           '.nojekyll' in pktxt and "build_github_pages" not in pktxt)
-    check("pkgdown.yaml: deploys via actions/upload-pages-artifact",
+    check("pkgdown.yaml: uploads the Pages artifact via actions/upload-pages-artifact",
           any("upload-pages-artifact@" in u
               for j in pkjobs.values()
               for u in [str(s.get("uses", "")) for s in j.get("steps", [])]))
+    # Uploading alone stores the artifact and publishes nothing -- the site
+    # stayed 404 until the publisher step and its environment gate landed.
+    check("pkgdown.yaml: publishes via actions/deploy-pages (the upload alone is not a deploy)",
+          any("deploy-pages@" in u
+              for j in pkjobs.values()
+              for u in [str(s.get("uses", "")) for s in j.get("steps", [])]))
+    pkenv = bd.get("environment") or {}
+    pkenv_name = pkenv.get("name") if isinstance(pkenv, dict) else pkenv
+    check("pkgdown.yaml: the job declares the github-pages environment (deploy-pages requires it)",
+          pkenv_name == "github-pages", f"got {pkenv_name!r}")
     check("pkgdown.yaml: provisions the MSRV Rust toolchain (the guides compile the engine)",
           "rustup toolchain install 1.71.0" in pktxt)
     check("pkgdown.yaml: actions are SHA-pinned (house discipline)",
