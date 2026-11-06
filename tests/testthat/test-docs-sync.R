@@ -39,6 +39,36 @@ test_that("docs-sync enforces ROADMAP checkbox evidence citations", {
   expect_identical(rc, 0L)
 })
 
+# Red half: the same probe against a TEMPORARY tampered copy (--roadmap=
+# override), so the drift detection is proven without ever committing a
+# citation-less completion claim. A checked box whose evidence parenthetical
+# carries neither a path:line reference nor a resolving commit token must red.
+
+.roadmap_copy <- function(pattern) {
+  src <- .docs_repo_file("vignettes/articles/roadmap.qmd")
+  dst <- tempfile(pattern = pattern)
+  writeLines(readLines(src, warn = FALSE), dst)
+  dst
+}
+
+test_that("checkbox-truth half catches a checked box with no evidence citation", {
+  script <- .docs_repo_file("tools/docs-sync.R")
+  tf <- .roadmap_copy("roadmap-tamper-")
+  lines <- readLines(tf, warn = FALSE)
+  hit <- grep("ms_hrd_report", lines)
+  expect_length(hit, 1L)
+  lines[hit] <- sub("\\(evidence:.*\\)", "(evidence pending)", lines[hit])
+  expect_match(lines[hit], "evidence pending", fixed = TRUE)
+  writeLines(lines, tf)
+  out <- tempfile("docs-sync-roadmap-tamper-")
+  rc <- system2(.ms_rscript(), c(script, paste0("--roadmap=", tf)),
+                stdout = out, stderr = FALSE)
+  msgs <- paste(readLines(out, warn = FALSE), collapse = "\n")
+  expect_identical(rc, 1L)
+  expect_match(msgs, "checkbox-truth: DRIFT")
+  expect_match(msgs, "ms_hrd_report")
+})
+
 # --- half three: _pkgdown.yml reference-index completeness (U-M7-04 slice-C) -
 #
 # Green half: every NAMESPACE export carries a reference-index entry. The

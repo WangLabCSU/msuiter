@@ -98,7 +98,15 @@ jobs:
     outputs:
       fanout-matrix: ${{ steps.fanout-matrix.outputs.matrix }}
     steps:
+      # fetch-depth: 0 -- audit #74 P1 hash-resolvability. The docs-sync
+      # checkbox-truth half resolves each completion claim's evidence citation
+      # with a git cat-file existence probe, and a depth-1 checkout leaves
+      # every rewritten-away ancestor unreachable, so a dead citation reads as
+      # unreachable history rather than as drift. Measured: a full clone costs
+      # 12.44 MiB of pack over an 89-object, 472 KiB worktree.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       # ADR 0002 §4.4 double-check beside dependabot: the lockfile must keep
       # the MSRV pins (matrixmultiply 0.3.9, rayon 1.10.x) and stay lock v3.
