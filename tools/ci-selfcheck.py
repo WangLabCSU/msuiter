@@ -120,6 +120,22 @@ def job_script(doc, job):
     return "\n".join(run_blocks(doc.get("jobs", {}).get(job, {})))
 
 
+def bare_rhome_hits(text):
+    """Offsets where the `R.home` closure is read without its call parens.
+
+    Literal substring scan, never a regex: in a regex `R.home` would also
+    match the correct `R.home()` (`.` is any char), which is exactly the
+    vacuous form this law must not degrade into.
+    """
+    out = []
+    i = text.find("R.home")
+    while i >= 0:
+        if text[i + len("R.home"):i + len("R.home") + 2] != "()":
+            out.append(i)
+        i = text.find("R.home", i + 1)
+    return out
+
+
 # The instruments that make the sanitizer legs LOUD (issue #32 D1): without
 # any one of them an instrument could be dead while the leg still reports
 # green/red by accident. Pinned by name so gutting the harness is a guards
@@ -914,6 +930,31 @@ def main():
           "reference/index.html" in st and "articles/extending.html" in st)
     check("scheduled: site job uploads the rendered site artifact",
           any("upload-artifact@" in u for u in uses_list(site)))
+
+    # ---- R.home must be CALLED, in every workflow ---------------------------
+    # Measured defect (2026-11-07): the site job's two `shell: Rscript {0}`
+    # steps read `file.path(R.home, "Rscript")`. `R.home` alone is the base
+    # closure, not the path; file.path() coerces it, system2() forces the
+    # argument inside its own body, and the Rscript aborts with "cannot
+    # coerce type 'closure' to vector of type 'character'" BEFORE either
+    # step's own `st <- attr(res, "status")` guard is computed -- so the
+    # step's stop() never runs and the hard gate fails as a bare error.
+    # `.github` is in .Rbuildignore, so no local R CMD check can see this.
+    wfdir = REPO / ".github/workflows"
+    wf_bare = {}
+    for wf in sorted(wfdir.glob("*.yml")):
+        body = txt(wf)
+        for h in bare_rhome_hits(body):
+            wf_bare.setdefault(wf.name, []).append(body[h:h + 34])
+    check("every workflow calls R.home(), never the bare closure",
+          not wf_bare, str(wf_bare))
+    # Firing control (house law: a law that cannot fire is vacuous): the
+    # measured typo shape must be caught, and the correct form -- which a
+    # naive `R.home` regex would wrongly flag -- must pass.
+    check("R.home-call law firing control: the bare closure is caught, "
+          "the called form passes",
+          bool(bare_rhome_hits('system2(file.path(R.home, "Rscript"), a)'))
+          and not bare_rhome_hits("cat(R.home())"))
 
     # ---- the Pages publishing workflow (push-built pkgdown site) -----------
     # The site is published on every push to main by .github/workflows/
