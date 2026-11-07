@@ -64,9 +64,12 @@ jobs:
         shell: Rscript {0}
 
       - name: Upload the Pages artifact (the docs/ tree, .nojekyll written)
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: "docs"
+          # v4+ drops dotfiles unless this is set, and the build step above
+          # writes docs/.nojekyll for the Pages deploy.
+          include-hidden-files: true
 
       # The publisher. Without this step the artifact is merely stored and
       # https://wanglabcsu.github.io/msuiter/ stays 404 -- the defect this
