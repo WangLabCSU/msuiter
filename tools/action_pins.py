@@ -4,20 +4,22 @@ Two pinning forms are admissible, and the law is the same strictness for both:
 
   1. major-version tag ref:      owner/repo@vN
   2. commit-SHA pin:             owner/repo@<40hex>  — admissible only when the
-                                 workflow line carries its major-version note
-                                 as a trailing comment `# vN`, so the pin stays
-                                 auditable against the repo's declared majors.
+                                 workflow line carries its version note as a
+                                 trailing comment `# vN` or `# vN.N[.N]`, so the
+                                 pin stays auditable against the repo's majors.
 
 Mutable refs (branches, patch-level tags, latest) and short SHAs are rejected:
 a floating tag resolves in the COMMIT namespace at run time and can move under
 the workflow. The SHA form additionally survives annotated-tag retargeting.
+The comment note may name a patch release (`# v5.0.1`): it is only an audit
+annotation -- immutability comes from the SHA, never from the note.
 """
 
 import re
 
 _FULL_SHA = re.compile(r"[0-9a-f]{40}\Z")
 _TAG_MAJOR = re.compile(r"@v(\d+)\Z")
-_COMMENT_MAJOR = re.compile(r"\Av(\d+)\Z")
+_COMMENT_MAJOR = re.compile(r"\Av(\d+)(?:\.\d+)*\Z")
 _USES_LINE = re.compile(r"uses:\s*([^\s#]+)(?:\s*#\s*([^\s#]+))?")
 
 
@@ -45,6 +47,7 @@ def major_of(target, comment):
     if _FULL_SHA.match(sha or "") is None:
         return None
     note = _COMMENT_MAJOR.match((comment or "").strip())
+    # int() on the major group: a `# v5.0.1` note declares major 5.
     return None if note is None else int(note.group(1))
 
 

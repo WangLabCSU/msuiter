@@ -55,6 +55,7 @@ REPO = Path(__file__).resolve().parent.parent
 CI = REPO / ".github/workflows/ci.yml"
 SCHED = REPO / ".github/workflows/scheduled.yml"
 PKG = REPO / ".github/workflows/pkgdown.yaml"
+REL = REPO / ".github/workflows/release.yml"
 DEP = REPO / ".github/dependabot.yml"
 LOCK = REPO / "src/rust/Cargo.lock"
 
@@ -823,8 +824,14 @@ def main():
           "check-dep-declaration.R" in gs_text and "--selftest" not in gs_text.split("check-dep-declaration.R")[1][:60])
 
     # ---- action pinning (major version) -----------------------------------
+    # All four workflows, not just the two the PR gate runs: pkgdown.yaml and
+    # release.yml carried pins nothing here ever inspected, which is how a
+    # dependabot bump of the Pages uploads slipped past every check in this
+    # file (the pkgdown pin check below was length-only).
     pairs = (action_pins.uses_pairs(ci_text)
-             + action_pins.uses_pairs(txt(SCHED)))
+             + action_pins.uses_pairs(txt(SCHED))
+             + action_pins.uses_pairs(txt(PKG))
+             + action_pins.uses_pairs(txt(REL)))
     bad = [f"{u} #{c}" for u, c in pairs
            if not action_pins.is_acceptably_pinned(u, c)]
     check("all actions pinned (major tag or attested SHA)", not bad, str(bad))
@@ -1018,6 +1025,41 @@ def main():
               [str(s.get("uses", "")) for j in pkjobs.values()
                for s in j.get("steps", [])] if "@" in u and u.count("@") == 1
               and not str(u).startswith("Rscript")))
+
+    # ---- Pages artifact dotfile containment (upload-pages-artifact >= v4) --
+    # v4.0.0's action.yml tars with an UNCONDITIONAL `--exclude=.[^/]*`, so
+    # every dotfile at the artifact root -- including the `.nojekyll` the
+    # build step above writes -- is dropped from the artifact; v5.0.0 keeps
+    # that exclude behind the `include-hidden-files` input, whose declared
+    # default is "false", so the drop is the DEFAULT there too. Either major
+    # silently un-writes the `.nojekyll` law two checks up, and nothing else
+    # here would notice: the upload/deploy checks above are name-only and the
+    # pin check is length-only. Require the explicit opt-in with any such pin.
+    def pages_dotfile_ok(major, include_hidden):
+        """True iff a Pages upload pin at `major` keeps the root dotfiles."""
+        return major < 4 or include_hidden in (True, "true")
+
+    def pages_upload_steps(doc):
+        return [s for j in (doc.get("jobs") or {}).values()
+                for s in j.get("steps", [])
+                if str(s.get("uses", "")).startswith(
+                    "actions/upload-pages-artifact@")]
+
+    def pages_hidden_opted_in(doc):
+        return all((s.get("with") or {}).get("include-hidden-files")
+                   in (True, "true") for s in pages_upload_steps(doc))
+
+    pages_major = max([action_pins.major_of(u, c) or 0 for u, c in
+                       action_pins.uses_pairs(pktxt)
+                       if u.startswith("actions/upload-pages-artifact@")] or [0])
+    check("pkgdown.yaml: an upload-pages-artifact pin >= v4 opts hidden files "
+          "back in (v4+ drops dotfiles, so docs/.nojekyll would vanish silently)",
+          pages_dotfile_ok(pages_major, pages_hidden_opted_in(pk)),
+          f"declared major {pages_major}, with.include-hidden-files absent")
+    check("Pages dotfile law firing control: a v4+ pin without the opt-in is refused",
+          not pages_dotfile_ok(4, False) and not pages_dotfile_ok(5, None)
+          and pages_dotfile_ok(3, False) and pages_dotfile_ok(4, True)
+          and pages_dotfile_ok(5, "true"))
 
     # ---- the CRAN-shape monolith the PR gate retired (round 2) --------------
     # Sealed by test-ci-shard-map.R: the full-test-phase monolith must keep
