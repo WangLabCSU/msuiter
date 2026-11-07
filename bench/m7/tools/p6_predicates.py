@@ -6,7 +6,7 @@ non-regression (frozen metric floors + the PI-ruling-D2 matched-status surface),
 P-3 the attribution split (mechanical ratios, no hand-typed figures), and the
 yardstick two-state law (MEASURED or LEDGERED-PENDING, no third state).
 
-Law encoded here, restated from the zero-fabrication law (docs/PERFORMANCE.md
+Law encoded here, restated from the zero-fabrication law (vignettes/articles/performance.qmd
 and the RB-10 MEASURED-false precedent): an adjudication DISCOVERS an outcome.
 Missing data or a non-ok row is REFUSE, never a silent PASS; a failing cell is
 NAMED, never averaged away; the boundary of the 2x gate is inclusive exactly at

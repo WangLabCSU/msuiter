@@ -2,7 +2,7 @@
 title: "Devlog · G0 harness 开建与修复（2026-09-29）"
 ---
 
-> G0 为组织行动门（作者裁决）；本 devlog 记录团队代办部分——harness 的建造与一轮独立审核修复。协议冻结记录见 [2026-09-28-G0-pi-adjudication.md](2026-09-28-G0-pi-adjudication.md)。
+> G0 为组织行动门（作者裁决）；本 devlog 记录团队代办部分——harness 的建造与一轮独立审核修复。协议冻结记录见 [devlog-2026-09-28-G0-pi-adjudication.qmd](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G0-pi-adjudication.html)。
 
 ## 建造（冻结协议 → 可运行代码）
 - `bench/g0/`：模拟（多项主臂 + NB size=8/clock purity 0.4/稀疏臂）、SplitMix64 种子派生 + Seeds.txt（含 commit SHA）、CP 区间 + **冻结判定规则逐字实现**、自有 χ²₁ LRT（Self–Liang 边界，零 scipy）、19 点几何网格（30→10⁶，悬崖区 9 点）、6 组真值组合（realism memo §3，文献内注）、adapters（sigfit v2.2.0 / STL v2.5.2 的 Dockerfile + R runner + mock 往返协议）、降级档（3 点/reps=100）。

@@ -1,5 +1,5 @@
 //! Lawson–Hanson active-set NNLS on the precomputed Gram matrix
-//! (U-M1s-01; `docs/ARCHITECTURE.md` §2 `engine/nnls.rs`).
+//! (U-M1s-01; `vignettes/articles/architecture.qmd` §2 `engine/nnls.rs`).
 //!
 //! # Interface: the K-format
 //!

@@ -37,7 +37,7 @@ trajectories of NMF), fix the budget caliber (see below), or demote the acceptan
 1. **SPMG 1.3.6 counts the DBS pair members into the SBS96 as well** (and does not produce the DBS78; the minimal probe:
    1 adjacent pair + 1 isolated → SPMG SBS96=3). We implement per the U-M1s-09 audit semantics (the dinuc_sub==1
    excluded from every SBS matrix). **The upstream behavior the audit relied on does not match the 1.3.6 measurement** —
-   the PI needs to re-check the upstream version/code path that docs/research/04 anchors, and the M1c DBS78 unit adjudication.
+   the PI needs to re-check the upstream version/code path that vignettes/articles/research-04-source-audit.qmd anchors, and the M1c DBS78 unit adjudication.
 2. **SPMG 1.3.6 wholly drops exact duplicate records** (sample blind, whole-row comparison; this bench's fixture
    has been deduplicated and aligned by (chrom,pos,sample)) — our tally has no deduplication semantics for duplicate records,
    the M1c needs an explicit policy (the ledger already shows the per-record deduplication hook slot).

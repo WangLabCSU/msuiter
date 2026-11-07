@@ -38,7 +38,7 @@
 //!      the caller asked for.
 //! 4. **Classify indels**: every `RoutedEvent::Indel` goes through
 //!    `indel83::assign_indel83_genome` (SPMG `catalogue_generator_INDEL_single`
-//!    semantics, memo `docs/devlog/2026-09-30-ID83-design-memo.md`):
+//!    semantics, memo `vignettes/articles/devlog-2026-09-30-ID83-design-memo.qmd`):
 //!    * a classified ID83 channel => destination `id83` (counted when the
 //!      ID83 table switch is on);
 //!    * an `N:Ins:M:x` microhomology-mediated insertion (SPMG computes the

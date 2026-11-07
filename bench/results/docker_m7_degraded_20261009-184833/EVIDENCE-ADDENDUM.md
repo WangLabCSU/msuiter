@@ -102,3 +102,22 @@ cfef27c feat(m7): timings writer emits optional trailing hardware pins host+hw_p
 so future authoritative runs attest their machine from the table alone
 and no prose addendum is needed.
 
+## 5. Carrier movement (PR #75)
+
+PR #75 (`b6a3fe2`) converted the `docs/` prose corpus to site articles and
+deleted the retired `docs/devlog/2026-10-09-m7-benchmark-matrix.md`. Its
+successor is `vignettes/articles/devlog-2026-10-09-m7-benchmark-matrix.qmd`:
+the same body under three lines of YAML front matter in place of the H1, so
+every cited line shifts by +2 — §1's pins `:30` and `:401` read at `:32` and
+`:403` there. The same redirect applies to the trailing
+`See … docs/devlog/2026-10-09-m7-benchmark-matrix.md.` in
+`judgment_m7_degraded_20261010-024833.md:26`. The §3 seal `bba05bd9…` stays
+the correct digest of the retired `.md` blob, reproducible with
+`git show f90ea1d:docs/devlog/2026-10-09-m7-benchmark-matrix.md`.
+
+Sections 1–4 above — tables, quotes, transcripts and seals alike — stand
+exactly as recorded, which is why the judgment and this addendum are not
+rewritten: editing a sealed file would invalidate its own §3 digest and
+re-pin a value nothing can re-derive. This section carries the successor
+pointer only.
+

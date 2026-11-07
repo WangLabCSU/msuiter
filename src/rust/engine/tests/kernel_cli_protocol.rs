@@ -20,7 +20,7 @@
 //! and the seeded/stream path against the in-process `fit_kl_on_stream`,
 //! the strict-positivity of the NNDSVDa arm, and clean structured failures.
 //!
-//! P1 context: docs/research/09-sigminer-v3-parity-plan.md §5 row P1 and
+//! P1 context: vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P1 and
 //! §7 P1-kickoff resolution; the sigminer-side Suggests-gated consumption
 //! is the follow-on PR and must speak exactly this protocol.
 

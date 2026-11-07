@@ -1,0 +1,77 @@
+---
+title: "2026-11-07 -- Generator-emitted artifacts: dead `docs/` citation sweep"
+---
+
+# Generator-emitted artifacts: dead `docs/` citation sweep
+
+Date of this record: 2026-11-07. This is the stated upstream reason for the
+regeneration of the generator-emitted artifacts required by the fixture
+protocol in `tools/refresh-fixtures.sh` and `CONTRIBUTING.md` section 5
+("after a regeneration, a non-empty git diff means STOP and write the devlog
+first").
+
+## What moved
+
+The provenance citations carried by two generators named a tree that no longer
+exists. `docs/` was converted into site articles by PR #75 and has zero tracked
+files; the surviving carriers of the same text are
+`vignettes/articles/research-04-source-audit.qmd` and
+`vignettes/articles/research-05-standards-data.qmd`. Each generator re-emits its
+citation into the artifact it writes, so the citation conversion propagates:
+
+    data-raw/build_channels.R            11 citations, 10 lines
+      -> R/sysdata.rda                   2764 -> 2796 bytes
+      -> src/rust/catalog/src/channels.rs   4 header lines
+    data-raw/build_refdb.R                2 citations, 2 lines
+      -> inst/reference/refdb/refdb_manifest.rds   2376 -> 2399 bytes
+
+`data-raw/build_channels.R` is the single source of truth for the channel
+registry: its header block, the `semantics =` provenance field, and the
+`license_note` provenance field all carried `docs/research/04` /
+`docs/research/05`. Running the generator re-emits
+`attr(channel_tables, "provenance")` into `R/sysdata.rda` and the `//!`
+provenance header of `src/rust/catalog/src/channels.rs`.
+`data-raw/build_refdb.R` is the single source of truth for the bundled
+reference manifest: its header comment and the `license_note` field both
+carried `docs/research/05`, and running the generator re-emits the manifest.
+
+## What did not move
+
+The channel registry's canonical order, its labels, its dimnames, and its
+element values are exactly as committed. Loading `HEAD:R/sysdata.rda` and the
+working-tree copy side by side gives `names identical: TRUE`,
+`attrs o/provenance only diff: TRUE`, and the only differing provenance fields
+are `semantics` and `license_note`; the `generator` and `rule` fields are
+unchanged. The five `pub static ..._CHANNELS` array bodies and every `///` doc
+line are also generator-emitted and are byte-unchanged.
+
+The reference manifest moved in exactly one field. Comparing `HEAD:` against
+the working tree gives `names identical: TRUE` with eight of nine fields
+identical — `schema_version`, `name`, `version`, `classes`, `upstream`,
+`license`, `citations` and `files` are all `identical=TRUE` — and only
+`license_note` differs. The `BSD-2-Clause` substring that
+`tests/testthat/test-refdb.R` pins survives the rewrite; the manifest's pinned
+upstream commit, SHA-256 digest list, and file roster are untouched, so no
+upstream pin or digest moved.
+
+## Verification recipe (auditor, read-only)
+
+1. `Rscript data-raw/build_channels.R`, then
+   `Rscript -e 'devtools::load_all("."); testthat::test_file("tests/testthat/test-channels-sync.R")'`
+   -- the structural guard extracts the four `_CHANNELS` constants from
+   `src/rust/catalog/src/channels.rs` by regex on the array declarations, so
+   the header rewrite cannot move a label. Run green at 43 assertions,
+   0 failures.
+2. `load("R/sysdata.rda"); attr(channel_tables, "provenance")` -- `semantics`
+   and `license_note` now name `vignettes/articles/research-0N-*.qmd`;
+   `generator` and `rule` are unchanged; no `docs/research` substring
+   survives in any field.
+3. `Rscript data-raw/build_refdb.R` -- runs against the staged mirror, re-verifies
+   all five files against the pinned SHA-256 digests, and prints
+   `bundled COSMIC v3.6 at commit ff61b0f56d43 -- 5 files, 376234 bytes,
+   digests verified`. Regeneration is fail-closed on upstream drift.
+4. `readRDS("inst/reference/refdb/refdb_manifest.rds")$license_note` -- names
+   `vignettes/articles/research-05-standards-data.qmd`; the `BSD-2-Clause`
+   substring is intact; `identical(a$files, b$files)` against `HEAD:` is `TRUE`.
+5. `git grep -n 'docs/research' -- data-raw/build_channels.R
+   data-raw/build_refdb.R src/rust/catalog/src/channels.rs` -- empty.

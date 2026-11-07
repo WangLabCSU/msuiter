@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# msuiter paper reproduction face (PP-1 lane; docs/paper/reproduction-proof.md).
+# msuiter paper reproduction face (PP-1 lane; vignettes/articles/reproduction-proof.qmd).
 #
 #   --verify  (default) dry-run verification of every sealed number quoted in
-#             docs/paper/paper-draft.md against committed bytes: no container,
+#             vignettes/articles/paper-draft.qmd against committed bytes: no container,
 #             no network, no long campaign. Each face prints FACE <name> rc=<n>;
 #             any FAIL exits non-zero.
 #   --full    additionally prints the operator-side regeneration recipes (and
@@ -83,7 +83,7 @@ expectface bootstrap-campaign '"ok": true'
 expectface bootstrap-campaign "claimed 15.36600758177 vs recomputed 15.36600758176629"
 expect sealed-ratio   "$BOOTDIR/result.md" "1.536600758177e+01"
 expect sealed-verdict "$BOOTDIR/result.md" "MEASURED-false 15.37x"
-expect sealed-secondary docs/PERFORMANCE.md "14.2209x"
+expect sealed-secondary vignettes/articles/performance.qmd "14.2209x"
 
 #--- Face 4: yardstick pins (fixture digest + claimed field bytes) -----------
 runface yardstick-pins bench/m7 python3 tools/verify_yardstick_pins.py
@@ -129,11 +129,11 @@ if [ "$MODE" = "--full" ]; then
   say "docker build -f bench/m7/adapters/Dockerfile.sigprofiler  bench/m7/adapters"
   say "docker build -f bench/m7/adapters/Dockerfile.sigminer     bench/m7/adapters"
   say "docker build -f bench/m7/adapters/Dockerfile.nmf_yardstick bench/m7/adapters"
-  say "# R-side dependency freeze (docs/paper/renv.lock, Posit renv JSON; 111"
+  say "# R-side dependency freeze (inst/repro/renv.lock, Posit renv JSON; 111"
   say "#   pinned packages, R 4.5.2 stamp; readback: lockfile_read attestations"
   say "#   banked in the lane manifest):"
-  say "Rscript -e 'lf <- renv::lockfile_read(file = \"docs/paper/renv.lock\", project = NULL); print(lf\$R\$Version); print(length(lf\$Packages))'"
-  say "# replay into a clean library: renv::restore(lockfile = \"docs/paper/renv.lock\", library = <dir>, prompt = FALSE)"
+  say "Rscript -e 'lf <- renv::lockfile_read(file = \"inst/repro/renv.lock\", project = NULL); print(lf\$R\$Version); print(length(lf\$Packages))'"
+  say "# replay into a clean library: renv::restore(lockfile = \"inst/repro/renv.lock\", library = <dir>, prompt = FALSE)"
 fi
 
 say "== reproduce: FAILURES=$FAILURES =="

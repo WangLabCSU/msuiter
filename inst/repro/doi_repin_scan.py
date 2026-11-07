@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """PP-1 DOI re-pin pass (deliverable 3).
 
-Collects every DOI mentioned in docs/research/*.md and (optionally, via --extra)
-the manuscript bibliography source files, and re-verifies each against
+Collects every DOI mentioned in the retired `docs/research/*.md` corpus and
+(optionally, via --extra) the manuscript bibliography source files, and
+re-verifies each against
 publisher metadata via Crossref (primary) and OpenAlex (fallback). A planted
 fabrication control MUST be refused by the same code path -- if the control
 does not trip, the scan exits 2 (a non-firing control is a dead metric; DS-1
@@ -128,6 +129,15 @@ def harvest(paths: list[Path]) -> dict[str, str]:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
+    # Corpus provenance. `docs/research/*.md` was the pre-PR-#75 corpus; that tree
+    # became `vignettes/articles/research-0N-*.qmd` and now has zero tracked files,
+    # so this default resolves to an empty glob: the controls still fire, but a live
+    # pass must be driven with an explicit --roots or --extra. The committed census
+    # (inst/repro/doi-repin-census.tsv) is therefore an imported artifact of the
+    # retired `docs/paper` lane, kept as the provenance of the 54 re-pinned records
+    # tabulated in `vignettes/articles/paper-draft.qmd` section 9. Re-pointing the
+    # root at the surviving carriers is deferred to the paper-readiness pass; the two
+    # trees do not share a file extension, so the harvest glob must move with it.
     ap.add_argument("--roots", default="docs/research")
     ap.add_argument("--extra", action="append", default=[])
     ap.add_argument("--out", default="/tmp/doi-repin-census.tsv")

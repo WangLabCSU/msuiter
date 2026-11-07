@@ -4,7 +4,7 @@ title: "G0 先导覆盖实验协议设计备忘（冻结前草案 v0.1，2026-09
 
 > **状态**：草案。作者拿到后按本备忘逐节执行即可；**最终冻结（阈值数字、工具对、开放问题 Q1–Q4）由作者裁决**。冻结后本备忘即预注册式协议，实验开始后不再改动判定规则；只允许追加（如敏感性臂），不允许替换。
 > **角色**：mutational signature 方法学专家起草。**不写任何代码**。
-> **地位**：G0 = kill-criterion 门（[ROADMAP.md](../ROADMAP.md)「组织行动门」；[ARCHITECTURE.md](../ARCHITECTURE.md) §8 末段、§10 D14）。结果决定论文 headline 走 Framing A（"Calibrated inference of mutational signature exposures"）还是 Framing B（生态），**先于一切论文叙事写作**（reviews/05 §6 表第 7 条、§9.2）。统计声明纪律按 D13 四件套成文。
+> **地位**：G0 = kill-criterion 门（[roadmap.qmd](https://wanglabcsu.github.io/msuiter/articles/roadmap.html)「组织行动门」；[architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §8 末段、§10 D14）。结果决定论文 headline 走 Framing A（"Calibrated inference of mutational signature exposures"）还是 Framing B（生态），**先于一切论文叙事写作**（reviews/05 §6 表第 7 条、§9.2）。统计声明纪律按 D13 四件套成文。
 > **事实核实日期**：2026-09-28（工具版本经 PyPI/GitHub API 实查；算法语义引自 vignettes/articles/research-02-fitting-inference.qmd 源码级审计 [V] 与 vignettes/articles/research-05-standards-data.qmd §5）。
 
 ---

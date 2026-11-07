@@ -1,7 +1,7 @@
 # Real-data sanity protocol (MSU-Fit, M3b U-M3b-06)
 
 > Status: **frozen protocol** (PI ruling 2026-10-04). Source spec:
-> `docs/devlog/2026-10-04-M3b-design-memo.md` section 4 and §7 ruling 3.
+> `vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd` section 4 and §7 ruling 3.
 > Harness entry point: `ms_calibration_sanity()` (R/calibrate-real.R).
 >
 > **Non-claim discipline (frozen wording).** This protocol produces

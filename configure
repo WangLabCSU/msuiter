@@ -6,11 +6,11 @@
 # Pattern: string2path / rextendr — `configure` delegates to tools/config.R,
 # which fills the @VARIABLES@ in src/Makevars.in (and src/Makevars.win.in).
 #
-# Build contract (docs/ARCHITECTURE.md §2, FFI contract 8 "build"):
+# Build contract (vignettes/articles/architecture.qmd §2, FFI contract 8 "build"):
 #  1. Toolchain: cargo/rustc resolved on PATH with a $HOME/.cargo/bin
 #     fallback; the MSRV comes from DESCRIPTION `SystemRequirements:
 #     cargo, rustc (>= 1.71)`; the 1.71 build proof lives in
-#     docs/adr/0002-vendor-budget.md §4 (matrixmultiply pinned to 0.3.9).
+#     vignettes/articles/adr-0002-vendor-budget.qmd §4 (matrixmultiply pinned to 0.3.9).
 #  2. Offline discipline: if src/rust/vendor.tar.xz exists (or an already
 #     extracted src/vendor directory), it is unpacked/used as a cargo
 #     source replacement via src/rust/vendor-config.toml and the build

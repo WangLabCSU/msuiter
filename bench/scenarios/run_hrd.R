@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # bench/scenarios/run_hrd.R -- the executable HRD scoring scenario
-# (Phase-8 CS-2; docs/research/03-applications.md section 4). Synthetic
+# (Phase-8 CS-2; vignettes/articles/research-03-applications.qmd section 4). Synthetic
 # cohorts carry PLANTED pLOH/aneuploidy truth adjudicated byte-exact against
 # the verbatim Cortes-Castro dual oracles (helper-hrd.R is the authority).
 # The scenario adds no scoring semantics of its own.

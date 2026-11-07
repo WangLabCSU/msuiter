@@ -1,5 +1,5 @@
 //! Likelihood kernels and calibration primitives for exposure fitting and
-//! signature-presence testing (U-M3a-01; `docs/ARCHITECTURE.md` §2
+//! signature-presence testing (U-M3a-01; `vignettes/articles/architecture.qmd` §2
 //! `engine/likelihood.rs`, §5 MSU-Fit estimand table). This module ships the
 //! *statistical primitives only*: likelihood evaluation, the boundary
 //! likelihood-ratio test, interior-support Fisher standard errors, and the

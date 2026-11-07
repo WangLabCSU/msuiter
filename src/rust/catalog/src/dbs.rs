@@ -1,7 +1,7 @@
 //! DBS78 doublet-substitution channel arithmetic (U-M1s-07).
 //!
 //! Semantic source of truth: SigProfilerMatrixGenerator (SPMG), audited at
-//! `docs/research/04` section 1 and pinned label-for-label by
+//! `vignettes/articles/research-04-source-audit.qmd` section 1 and pinned label-for-label by
 //! `data-raw/build_channels.R` (`.dbs_refs` / `.dbs_fold_keep`) into the
 //! generated `DBS78_CHANNELS` table:
 //!

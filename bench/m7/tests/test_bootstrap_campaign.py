@@ -1,7 +1,7 @@
 """(T) bootstrap-vs-sigminer campaign instrument (U-M7-04 GO-05, charter SCOPE B).
 
 Seals the campaign harness BEFORE the campaign runs (pre-registration law:
-docs/devlog/2026-10-10-m7-bootstrap-campaign.md is committed first; every
+vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd is committed first; every
 reported number must trace to a witness this protocol names). The reader-side
 verifier (tools/verify_campaign.py) is the independent re-adjudicator: it
 verdicts the committed campaign from witness bytes alone — R is not trusted
@@ -180,7 +180,7 @@ def test_generator_seal_matches_data_bytes():
 
 
 # -- 2. the tier ladder (pure, decisive) ----------------------------------------------
-# Protocol projection (docs/devlog/2026-10-10-m7-bootstrap-campaign.md §2):
+# Protocol projection (vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd §2):
 #   wall(S, R) = S * (p + rate * R)   — p per-sample point cost, rate per-replicate
 # decided against the six-hour cap; tiers are the frozen R ladder {A:1000, B:200}.
 def _fit(p: float, rate: float) -> dict:

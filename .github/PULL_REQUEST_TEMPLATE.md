@@ -22,14 +22,14 @@
     gets `lifecycle::deprecate_warn`.
 - [ ] **fixture / golden refresh**: no golden fixture was updated; or it was
       updated WITH its upstream reason stated in a devlog
-      (`docs/devlog/`: upstream version/commit/protocol change or the
+      (`vignettes/articles/devlog-*.qmd`: upstream version/commit/protocol change or the
       correction basis) -- link: <!-- devlog path -->. An RNG-golden
       regeneration requires a fresh `LAYOUT_ID`.
 - [ ] **MSRV pins held**: `matrixmultiply = 0.3.9` and `rayon = 1.10.x`
       did not drift with `cargo update`; `Cargo.lock` is still version 3
-      (docs/adr/0002 section 4.4).
+      (vignettes/articles/adr-0002-vendor-budget.qmd section 4.4).
 - [ ] **Dependency discipline**: no new dependency; or one added WITH an ADR +
-      a docs/adr/0002 section 2 vendor-baseline increment +
+      a vignettes/articles/adr-0002-vendor-budget.qmd section 2 vendor-baseline increment +
       `tools/vendor.sh --check` green; the rand family is still at zero.
 - [ ] **docs-sync green**: `Rscript tools/docs-sync.R` passes (no drift
       between the ARCH/ROADMAP `ms_*` API and the CAPABILITY-MATRIX L-H

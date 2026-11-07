@@ -33,7 +33,7 @@ SPMG = SigProfilerMatrixGenerator 1.3.6 标准调用（自定义基因组 instal
 ## 语义探针（sanity 100 变异，含 2 对同样本相邻 + 1 对跨样本相邻）
 
 - 双侧路由一致：同样本相邻对均判为 DBS 类（我方 ledger 4 条 `dbs`；SPMG stdout 报 2 DINUCs）；跨样本相邻对双侧均保持 SBS。
-- **SBS96 计入策略不一致（P0 发现）**：SPMG 1.3.6 把 DBS 对成员一并计入 SBS96（sanity sum=100 vs 我方 96，差和恰 = 4 个 DBS 成员；最小探针：1 对相邻 + 1 孤立 → SPMG SBS96=3 且不产出 DBS78）。我方按 U-M1s-09 审计语义（dinuc_sub==1 排除出全部 SBS 矩阵）实现。**审计所依据的上游行为与1.3.6 实测不符**——需 PI 复核 docs/research/04 所锚定的上游版本/代码路径，并在 M1c 的 DBS78 单元裁决取舍（本 bench 不改包代码）。
+- **SBS96 计入策略不一致（P0 发现）**：SPMG 1.3.6 把 DBS 对成员一并计入 SBS96（sanity sum=100 vs 我方 96，差和恰 = 4 个 DBS 成员；最小探针：1 对相邻 + 1 孤立 → SPMG SBS96=3 且不产出 DBS78）。我方按 U-M1s-09 审计语义（dinuc_sub==1 排除出全部 SBS 矩阵）实现。**审计所依据的上游行为与1.3.6 实测不符**——需 PI 复核 vignettes/articles/research-04-source-audit.qmd 所锚定的上游版本/代码路径，并在 M1c 的 DBS78 单元裁决取舍（本 bench 不改包代码）。
 
 ## 口径注记（如实）
 

@@ -1,7 +1,7 @@
 //! SBS channel arithmetic: SBS96 / SBS192 / SBS384 / SBS1536 (U-M1s-06).
 //!
 //! Semantic source of truth: SigProfilerMatrixGenerator (SPMG), audited at
-//! `docs/research/04` section 1 and re-verified line-by-line against the
+//! `vignettes/articles/research-04-source-audit.qmd` section 1 and re-verified line-by-line against the
 //! upstream source (`SigProfilerMatrixGenerator/scripts/`):
 //!   * five-base +/-2 window and REF-vs-genome skip
 //!     (`MutationMatrixGenerator.py:778-808`);

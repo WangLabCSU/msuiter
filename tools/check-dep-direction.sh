@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Dependency-direction guard (docs/ARCHITECTURE.md §2): ffi (workspace root)
+# Dependency-direction guard (vignettes/articles/architecture.qmd §2): ffi (workspace root)
 # → catalog → engine, never back; extendr-api stays in the FFI shell only.
 #
 # cargo-deny has no per-edge bans (crate X must not depend on crate Y), so the

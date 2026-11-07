@@ -1,6 +1,6 @@
 //! P1 kernel-extension face (c): thread-count invariance `identical()` suite.
 //!
-//! The ARCH §2.6 contract (docs/ARCHITECTURE.md §2, the report-checklist
+//! The ARCH §2.6 contract (vignettes/articles/architecture.qmd §2, the report-checklist
 //! promise "the thread count [promised not to affect the result]") states
 //! that the engine kernels are pure functions of their explicit inputs: the
 //! FFI shell pins this at the driver level with
@@ -15,7 +15,7 @@
 //! `fit_kl`/`fit_eu` (seeded init) and for the stream-addressed face
 //! `fit_kl_on_stream` used by the parallel replicate drivers.
 //!
-//! P1 context: docs/research/09-sigminer-v3-parity-plan.md §5 row P1
+//! P1 context: vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P1
 //! ("thread-count invariance `identical()`"). This file is the
 //! msuiter-side kernel-extension face of that gate; the sigminer-side
 //! isolated-process wiring is the follow-on PR.

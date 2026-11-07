@@ -84,10 +84,10 @@ directory's files for the output contract.
 
 ## Governance records (do not re-explain here)
 
-- `docs/devlog/2026-10-08-m7-competitor-harness-design.md` — harness design memo
-- `docs/devlog/2026-10-09-m7-benchmark-matrix.md` — matrix run + floor-table governance
-- `docs/devlog/2026-10-10-m7-hardware-pin.md` — hardware-pin authority law and reader verifier
-- `docs/devlog/2026-10-10-m7-benchmark-ergonomics.md` — benchmark trio naming ruling
-- `docs/devlog/2026-10-10-m7-rb11-restoration.md` — RB-11 restoration record
-- `docs/devlog/2026-10-10-m7-bootstrap-campaign.md` — GO-05 campaign pre-registration (protocol)
-- `docs/devlog/2026-11-04-m7-build-pin-drift-attestation.md` — arm-recipe digest-pin drift attestation and blob-seal law
+- `vignettes/articles/devlog-2026-10-08-m7-competitor-harness-design.qmd` — harness design memo
+- `vignettes/articles/devlog-2026-10-09-m7-benchmark-matrix.qmd` — matrix run + floor-table governance
+- `vignettes/articles/devlog-2026-10-10-m7-hardware-pin.qmd` — hardware-pin authority law and reader verifier
+- `vignettes/articles/devlog-2026-10-10-m7-benchmark-ergonomics.qmd` — benchmark trio naming ruling
+- `vignettes/articles/devlog-2026-10-10-m7-rb11-restoration.qmd` — RB-11 restoration record
+- `vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd` — GO-05 campaign pre-registration (protocol)
+- `vignettes/articles/devlog-2026-11-04-m7-build-pin-drift-attestation.qmd` — arm-recipe digest-pin drift attestation and blob-seal law

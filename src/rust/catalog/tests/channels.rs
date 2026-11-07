@@ -4,8 +4,8 @@
 //! and must stay bit-identical to `R/sysdata.rda` (`channel_tables`); that R/Rust
 //! sync is enforced by `tests/testthat/test-channels-sync.R`. These tests pin the
 //! structural contract of the generated constants themselves: canonical lengths
-//! and anchor labels. Canonical-order provenance: `docs/research/04` section 1
-//! (SPMG semantics) and `docs/research/05` section 2 (canonical label lists).
+//! and anchor labels. Canonical-order provenance: `vignettes/articles/research-04-source-audit.qmd` section 1
+//! (SPMG semantics) and `vignettes/articles/research-05-standards-data.qmd` section 2 (canonical label lists).
 
 use std::collections::HashSet;
 

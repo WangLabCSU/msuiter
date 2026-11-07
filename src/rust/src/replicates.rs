@@ -2,7 +2,7 @@
 //! extended in U-M2-03 with the factor-pair ensemble).
 //!
 //! This is the first **real-kernel** application of the FFI concurrency
-//! contract (`docs/ARCHITECTURE.md` §2, contracts 6 + 7): `replicates`
+//! contract (`vignettes/articles/architecture.qmd` §2, contracts 6 + 7): `replicates`
 //! independent KL-NMF fits of one catalog run in parallel **between**
 //! units, while every unit stays single-threaded with the kernel's own
 //! fixed reduction order. Each replicate `r` draws its seeded initializer
@@ -17,7 +17,7 @@
 //!   replicate (the final KL objective). Semantics frozen since U-M1s-05.
 //! * [`nmf_ensemble`] — the U-M2-03 face: one `(W, H)` factor pair per
 //!   replicate, the multi-initialization axis of the consensus pipeline
-//!   (design memo `docs/devlog/2026-09-30-M2-pipeline-design-memo.md`
+//!   (design memo `vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd`
 //!   §1.1, PI ruling: ensemble = initialization seeds only, no bootstrap).
 //!   Same streams, same scheduling, same interrupt protocol — the ONLY
 //!   delta is what each unit returns.

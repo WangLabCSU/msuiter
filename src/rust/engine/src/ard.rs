@@ -1,6 +1,6 @@
 //! Automatic Relevance Determination NMF (KL likelihood) — the
 //! SignatureAnalyzer automatic rank-determination kernel (U-M2-04;
-//! `docs/CAPABILITY-MATRIX.md` L-C `ms_ard` row, `docs/research/01` §2).
+//! `vignettes/articles/capability-matrix.qmd` L-C `ms_ard` row, `vignettes/articles/research-01-extraction-methods.qmd` §2).
 //!
 //! # Upstream semantics (pinned to source, D11/D13)
 //!
@@ -16,7 +16,7 @@
 //! This module implements the **default variant `BayesNMF.L1W.L2H`**
 //! (L52–92): KL likelihood with an exponential (L1) prior on each W column
 //! and a half-normal (L2) prior on each H row, sharing one ARD precision
-//! `beta_k` per component. This is the variant `docs/research/01` §2
+//! `beta_k` per component. This is the variant `vignettes/articles/research-01-extraction-methods.qmd` §2
 //! documents as the SignatureAnalyzer default; the `L1KL` / `L2KL` variants
 //! (L95–186) are deliberately not ported (documented scope cut, see
 //! "Deviations" below).
@@ -62,7 +62,7 @@
 //! (L66–67) `β_cut = (C / b0) / 1.25`. A component is **dead** when
 //! `β_k > β_cut` **or** its W column sum ≤ 1e-5 (L85 prints the two survival
 //! counts `sum(colSums(W) > 1e-5)` and `sum(beta <= beta.cut)`; the audit
-//! `docs/research/01` §2 fixes the death rule as the OR of the two failures).
+//! `vignettes/articles/research-01-extraction-methods.qmd` §2 fixes the death rule as the OR of the two failures).
 //! Upstream only monitors these counts; this port additionally prunes at
 //! output: [`ArdFit`] carries the full factors plus the `active` mask, the
 //! pruned copies (`w_active` / `h_active`, original component order

@@ -2,10 +2,10 @@
 # Run from src/rust/ with: cargo deny check   (U-M0-07 CI runs all sections;
 # locally `cargo deny check bans` is the fast gate, full check must stay green).
 #
-# Frozen dependency budget (docs/ARCHITECTURE.md §2, D2/D4):
+# Frozen dependency budget (vignettes/articles/architecture.qmd §2, D2/D4):
 #   extendr-api (default-features = false, features = ["ndarray"]) — FFI shell only
 #   ndarray, rayon, memmap2 — numeric / IO budget
-#   twobit 0.2.2 — unlocked by docs/adr/0001-twobit-reader-choice.md (U-M0-02 spike)
+#   twobit 0.2.2 — unlocked by vignettes/articles/adr-0001-twobit-reader-choice.qmd (U-M0-02 spike)
 #   NO `rand` anywhere: randomness is in-house PCG64 + SplitMix64 (engine/rng.rs).
 #
 # Direction contract: ffi (workspace root) → catalog → engine, never back,

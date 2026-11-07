@@ -2,7 +2,7 @@
 //! (U-M1s-06; D11 "semantic bit" acceptance: integer + label goldens).
 //!
 //! Golden vectors below are hand-derived from the SPMG rules audited in
-//! `docs/research/04` section 1 and re-verified against the upstream source:
+//! `vignettes/articles/research-04-source-audit.qmd` section 1 and re-verified against the upstream source:
 //!   * pyrimidine orientation: REF in {A,G} => complement REF/ALT, reverse-
 //!     complement the context window, flip the strand bias T<->U (B and N
 //!     unchanged) -- `MutationMatrixGenerator.py:815-824` with `revcompl` /

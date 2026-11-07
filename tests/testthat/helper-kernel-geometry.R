@@ -43,6 +43,25 @@
   found
 })
 
+# The checkout root that owns the fixtures: the nearest ancestor carrying
+# both the repository marker (.git -- a directory in a clone, a file in a
+# linked worktree) and this package's DESCRIPTION, so a stray enclosing
+# repository can never answer for these bytes. NA when no checkout is
+# reachable (the extracted R CMD check tree carries no .git: .Rbuildignore).
+.kbg_git_root <- function(fixtures_root) {
+  d <- try(normalizePath(fixtures_root), silent = TRUE)
+  while (!inherits(d, "try-error") && nzchar(d)) {
+    if (file.exists(file.path(d, ".git")) &&
+        file.exists(file.path(d, "DESCRIPTION"))) {
+      return(d)
+    }
+    parent <- dirname(d)
+    if (identical(parent, d)) break
+    d <- parent
+  }
+  NA_character_
+}
+
 # The task grid the bank must cover, exactly (the law files share it --
 # one source of truth for which faces are attested).
 .kbg_task_defs <- function() {

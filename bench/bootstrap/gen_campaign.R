@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # GO-05 campaign generator — the SOLE data source for the bootstrap-vs-sigminer
 # campaign (U-M7-04 GO-05; pre-registration:
-# docs/devlog/2026-10-10-m7-bootstrap-campaign.md). Deterministic under the
+# vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd). Deterministic under the
 # frozen SEED; TDD unit test_generator_double_run_is_byte_identical pins that.
 #
 # Usage (shape args are the TDD small-shape knobs; the campaign passes the

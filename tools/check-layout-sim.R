@@ -327,7 +327,7 @@ if (!file.exists(file.path(.tests, "testthat.R"))) {
   cat("check-layout-sim: ERROR tests/testthat.R runner missing\n")
   quit(status = 2L)
 }
-for (absent in c("_pkgdown.yml", "docs", "bench")) {
+for (absent in c("_pkgdown.yml", "docs", "bench", ".claude")) {
   if (file.exists(file.path(.exx, absent))) {
     cat("check-layout-sim: ERROR ", absent, " leaked into the tarball -- .Rbuildignore drift\n",
         sep = "")

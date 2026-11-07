@@ -2,7 +2,7 @@
 //!
 //! A read-only, random-access view over a memory-resident UCSC 2bit file,
 //! wrapping `twobit::TwoBitFile` in the shape adjudicated by
-//! `docs/adr/0001-twobit-reader-choice.md`: the buffer is mapped or loaded
+//! `vignettes/articles/adr-0001-twobit-reader-choice.qmd`: the buffer is mapped or loaded
 //! by the CALLER and handed over as a byte slice (ADR 0001 §6: input is an
 //! `AsRef<[u8]>` buffer). The production shape is a read-only
 //! `memmap2::Mmap` built per top-level call and dropped with it (FFI
@@ -261,7 +261,7 @@ fn bounds_error(i: i64, j: i64, message: String) -> MsError {
 }
 
 /// Map a `twobit` error onto the workspace `MsError` topic vocabulary
-/// (`docs/ARCHITECTURE.md` §3.5: `msuiter_error_<topic>` payloads).
+/// (`vignettes/articles/architecture.qmd` §3.5: `msuiter_error_<topic>` payloads).
 fn map_twobit_error(err: twobit::Error) -> MsError {
     match err {
         twobit::Error::IO(e) => MsError::new("io", e.to_string()),

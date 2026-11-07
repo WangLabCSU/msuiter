@@ -214,7 +214,7 @@ The committed tables for this leg:
 `treatment_timing.csv`. The recognition anchors and the adjudication-floor
 rationale are documented at the face's manual page
 (`?ms_treatment_report`) and in the Phase-8 design memo under
-`docs/devlog/`.
+`vignettes/articles/devlog-*.qmd`.
 
 ## Reproducing the full verdicts
 

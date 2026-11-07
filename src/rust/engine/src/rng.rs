@@ -1,6 +1,6 @@
 //! In-house PCG64 random number generator with a frozen master-seed → stream
-//! layout (U-M0-06; `docs/ARCHITECTURE.md` §2 `engine/rng.rs`, decision A6 in
-//! `docs/reviews/00-synthesis.md`).
+//! layout (U-M0-06; `vignettes/articles/architecture.qmd` §2 `engine/rng.rs`, decision A6 in
+//! `vignettes/articles/review-00-synthesis.qmd`).
 //!
 //! # Why in-house?
 //!
@@ -41,7 +41,7 @@
 //! `LAYOUT_ID = 0x4D53_5552_4E47_5631` ("MSURNGV1"). Given
 //! `master_seed: u64` and `stream = StreamId { replicate, rank, fold }` (the
 //! per-replicate / per-rank / per-fold counter axes of
-//! `docs/ARCHITECTURE.md` §2), the PCG64 state is derived as follows:
+//! `vignettes/articles/architecture.qmd` §2), the PCG64 state is derived as follows:
 //!
 //! ```text
 //! h0 = mix64(LAYOUT_ID)
@@ -94,7 +94,7 @@
 //!    across master seeds, and (c) determinism; the golden set must hold
 //!    identically on stable and on the 1.71 MSRV toolchain (D6/A6).
 //!
-//! # Contract notes (`docs/ARCHITECTURE.md` §2)
+//! # Contract notes (`vignettes/articles/architecture.qmd` §2)
 //!
 //! * No dependencies, no `rand` face (banned in `deny.toml`), and no
 //!   `unsafe` (crate-level `#![forbid(unsafe_code)]`).

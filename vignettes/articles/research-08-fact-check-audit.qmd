@@ -2,7 +2,7 @@
 title: "Research report 08: the fact-check audit report of the existing research documents"
 ---
 
-> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [ARCHITECTURE.md](../ARCHITECTURE.md) §0 (D1–D16) and [reviews/00-synthesis.md](../reviews/00-synthesis.md); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [CAPABILITY-MATRIX.md](../CAPABILITY-MATRIX.md) and ARCHITECTURE §8.
+> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 (D1–D16) and [review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) and ARCHITECTURE §8.
 
 
 > Audit date: 2026-09-28. Every load-bearing claim of docs/ was checked against Crossref, PubMed E-utilities, GitHub raw/API (the current HEAD), crates.io, CRAN, PMC, Europe PMC and the local R/rustc. The auditor may not modify the files — this report is the basis of correction (the corresponding fixes were executed by the mainline).

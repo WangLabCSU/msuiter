@@ -1,6 +1,6 @@
 //! KL (β=1) and EU (β=2) non-negative matrix factorization via multiplicative
 //! updates (MM-MU) — the SigProfiler/MutationalPatterns gold-standard
-//! extraction kernel (U-M1s-02; `docs/ARCHITECTURE.md` §2 `engine/nmf.rs`,
+//! extraction kernel (U-M1s-02; `vignettes/articles/architecture.qmd` §2 `engine/nmf.rs`,
 //! decision D6).
 //!
 //! # Model and notation
@@ -10,7 +10,7 @@
 //! exposure matrix. All matrices are plain `Vec<f64>` in **row-major**
 //! order: `V[i*n + j]`, `W[i*k + s]`, `H[s*n + j]`.
 //!
-//! # Update equations (audit semantics, `docs/research/01` §10 a/f)
+//! # Update equations (audit semantics, `vignettes/articles/research-01-extraction-methods.qmd` §10 a/f)
 //!
 //! Both kernels are block-coordinate **majorization–minimization** (MM):
 //! each step replaces one factor by an elementwise multiplicative update
@@ -33,7 +33,7 @@
 //! ```
 //!
 //! Each iteration is one H step followed by one W step (the order listed in
-//! `docs/research/01` §10; fixed for the whole run). Cost per iteration is a
+//! `vignettes/articles/research-01-extraction-methods.qmd` §10; fixed for the whole run). Cost per iteration is a
 //! small constant number of dense `m·n·k` passes; nothing else is
 //! materialized.
 //!

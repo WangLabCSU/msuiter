@@ -477,7 +477,7 @@ def main(argv=None) -> int:
         + "; ".join(f"{k} ({len(v)} cells)" for k, v in tables.items() if k != "absolute"),
         "",
         "Note: this file is harness output. Formal G0 judgments may issue only from the frozen protocol"
-        "(docs/devlog/2026-09-28-G0-pi-adjudication.md §PI ruling 5)"
+        "(vignettes/articles/devlog-2026-09-28-G0-pi-adjudication.qmd §PI ruling 5)"
         "under the real adapter (docker) + the cosmic-file provider, in a primary/degraded run;"
         "smoke/mock results prove only pipeline connectivity.",
     ]

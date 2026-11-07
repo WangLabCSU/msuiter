@@ -1,6 +1,6 @@
 //! Multinomial resampling and negative-binomial calibration sampling over
 //! the canonical PCG64 streams (U-M1s-04, U-M3b-01;
-//! `docs/ARCHITECTURE.md` §2 `engine/resample.rs`).
+//! `vignettes/articles/architecture.qmd` §2 `engine/resample.rs`).
 //!
 //! This is the bootstrap workhorse of the stability pipeline: given a
 //! per-channel weight vector `p` (e.g. a signature profile over SBS96/1536
@@ -169,7 +169,7 @@
 //! is redrawn (`ln 0` has no finite role); `u = 0` at an acceptance test
 //! accepts — the honest IEEE limit of `ln 0 = −inf`.
 //!
-//! # Contract notes (`docs/ARCHITECTURE.md` §2)
+//! # Contract notes (`vignettes/articles/architecture.qmd` §2)
 //!
 //! * Pure numeric kernel: no dependencies, no `rand` face, no `unsafe`, no
 //!   FFI (D2/D4/A6).

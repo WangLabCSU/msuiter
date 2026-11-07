@@ -1,11 +1,11 @@
 //! msuiter FFI shell.
 //!
 //! The only crate allowed to contain `unsafe` and the only one depending
-//! on `extendr-api` (`docs/ARCHITECTURE.md` §2). Stateless per D12: no
+//! on `extendr-api` (`vignettes/articles/architecture.qmd` §2). Stateless per D12: no
 //! handles, no `.state`, one call in/out.
 //!
 //! U-M0-09: this unit lands the eight FFI hard contracts as **testable
-//! probes** (`msffi_*`, documented and frozen in `docs/ffi-surface.md`)
+//! probes** (`msffi_*`, documented and frozen in `vignettes/articles/ffi-surface.qmd`)
 //! plus the structured `MsError` → R-condition mapping. It deliberately
 //! contains NO algorithm kernel: NMF/NNLS & co. are M1s work.
 //!
@@ -68,7 +68,7 @@ fn with_matrix_f64<T>(
 
 // No doc comments on the #[extendr] functions: the generated
 // R/extendr-wrappers.R must stay roxygen-neutral; the frozen surface lives
-// in docs/ffi-surface.md and the validated R wrappers in R/ffi-probes.R.
+// in vignettes/articles/ffi-surface.qmd and the validated R wrappers in R/ffi-probes.R.
 
 #[extendr]
 fn msffi_column_major_probe(x: Robj) -> Robj {
@@ -419,7 +419,7 @@ fn ms_tally_rust(
         // and statelessness (D12) are unaffected. The C-trampoline
         // hardening (run the kernel under an unwind/longjmp-safe trampoline
         // so the mapping is released on interrupt) is deferred to M8/CI —
-        // out of scope for this unit; see docs/ffi-surface.md, the
+        // out of scope for this unit; see vignettes/articles/ffi-surface.qmd, the
         // ms_tally_rust row.
         let file = File::open(&genome_path).map_err(|e| {
             MsError::new("io", format!("cannot open genome file \"{genome_path}\": {e}"))
@@ -1192,7 +1192,7 @@ fn ms_stratify_rust(counts: Robj, manual_cutoff: f64, seed: f64, n_threads: i32)
         )?;
 
         // Wire shape: cutoff as an integer-valued double, 0-based
-        // hypermutant indices (documented decision, docs/ffi-surface.md),
+        // hypermutant indices (documented decision, vignettes/articles/ffi-surface.qmd),
         // and the retained-bulk cluster stats.
         let pairs = vec![
             ("cutoff", Robj::from(decision.cutoff as f64)),
@@ -1630,7 +1630,7 @@ fn ms_match_solutions_rust(estimated: Robj, reference: Robj, dim: i32, threshold
 // ---------------------------------------------------------------------------
 // U-M4-01 null-distribution face: the memo §5 `ms_compare_null_rust` —
 // the frozen null families behind `ms_compare()`'s zero-calibrated cosine
-// (docs/devlog/2026-10-04-M4-01-design-memo.md §2/§5). The kernel
+// (vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd §2/§5). The kernel
 // (compare.rs) reports mean/sd/mc_se/quantiles; the frozen MC-SE
 // tolerance is enforced at the R face.
 // ---------------------------------------------------------------------------

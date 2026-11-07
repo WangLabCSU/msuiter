@@ -1,7 +1,7 @@
 //! Calibration Monte Carlo driver (U-M3b-03): the pure (R-type-free) heart
 //! of `ms_calibration_grid_rust` — the grid simulation behind the M3b
 //! empirical-coverage measurement (design memo
-//! `docs/devlog/2026-10-04-M3b-design-memo.md` §1–§3, PI ruling 2026-10-04).
+//! `vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd` §1–§3, PI ruling 2026-10-04).
 //!
 //! # What one grid cell measures (estimand ②)
 //!

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # =============================================================================
-# bench/m1s/nmf · M1s acceptance-gate NMF bench(docs/ARCHITECTURE.md §8 budget row:
+# bench/m1s/nmf · M1s acceptance-gate NMF bench(vignettes/articles/architecture.qmd §8 budget row:
 #   NMF KL(96×1000, k=10, 100 iter)vs R NMF ≥100×. CI only ships sanity bound)
 #
 # Caliber: the same V/W0/H0(CSV byte-for-byte exchange, integer counts + k/1024 binary-grid init,

@@ -1,6 +1,7 @@
 # ms_treatment_report() -- the treatment-forensics reporting module
-# (Phase-8 CS-3; design memo docs/devlog/2026-10-28-p8-treatment-forensics-
-# design.md). Law units: governed dictionary, planted-fidelity association
+# (Phase-8 CS-3; design memo
+# vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd).
+# Law units: governed dictionary, planted-fidelity association
 # with bootstrap CIs, delegation-truthful point columns, clonal/subclonal
 # timing split, honest degraded attestation, determinism, error paths.
 

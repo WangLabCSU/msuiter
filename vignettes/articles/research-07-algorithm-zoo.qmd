@@ -2,7 +2,7 @@
 title: "Research report 07: the complete algorithm-zoo inventory and the self-development opportunity list"
 ---
 
-> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [ARCHITECTURE.md](../ARCHITECTURE.md) §0 (D1–D16) and [reviews/00-synthesis.md](../reviews/00-synthesis.md); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [CAPABILITY-MATRIX.md](../CAPABILITY-MATRIX.md) and ARCHITECTURE §8.
+> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 (D1–D16) and [review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) and ARCHITECTURE §8.
 
 
 > Research date: 2026-09-28. Filling the coverage gaps of the first five reports (20 items verified one by one), and producing the tiered algorithm-zoo master table (driving the implementation scope) plus the self-developed integrated-method shortlist. The verification means: Europe PMC/NCBI eutils/OpenAlex, the GitHub sources, direct readings of the normative documents. The **[unverified]** items are marked.

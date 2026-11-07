@@ -5,7 +5,7 @@ title: "The MSU concept map (MSU-MAP)"
 One row per exported function in NAMESPACE. Columns: the exported face,
 the concept it serves on the msuiter platform, the paper pillar it carries
 (p1 architecture, p2 performance, p3 application scenarios -- the D14
-positioning in [ARCHITECTURE.md](vignettes/articles/architecture.qmd#10-the-paper-positioning-d14), and its
+positioning in [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html#the-paper-positioning-d14), and its
 peer counterpart: a real sigminer (CRAN) or sigprofiler function name, or
 NONE with the reason none exists.
 

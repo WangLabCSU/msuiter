@@ -10,7 +10,8 @@
 # The two heavy full-simulate units (full-suite green + stale-candidate
 # rejection) moved verbatim to test-check-layout-sim-sentry.R and
 # test-check-layout-sim-stale.R in the CI shard restructure (2026-10-21,
-# docs/devlog) so each ~20-minute simulate is an independently schedulable
+# the campaign devlog under `vignettes/articles/devlog-*.qmd`) so each
+# ~20-minute simulate is an independently schedulable
 # shard; the test_that bodies are byte-unchanged by that move. They stand
 # outside this directory today: issue #76 (2026-11-05) re-classed them tier
 # T2 under tests/heavy -- the local one-command face tools/test-heavy.R and

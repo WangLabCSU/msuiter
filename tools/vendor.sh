@@ -1,15 +1,17 @@
 #!/usr/bin/env sh
 # Regenerate the offline vendor tarball and report its byte budget.
-# Baseline: docs/adr/0002-vendor-budget.md §2 (33 crates current; effective baseline
+# Baseline: vignettes/articles/adr-0002-vendor-budget.qmd §2 (33 crates current; effective baseline
 # = 2026-10-31 memmap2 0.9.12 patch bump row).
 #
 # The tarball is NOT committed: CRAN submission (U-M8-01) attaches a freshly
 # generated one to the source package. CI (U-M0-07) runs `--check` to catch
-# vendor drift (dependency budget discipline, ARCHITECTURE.md §2 / D4).
+# vendor drift (dependency budget discipline,
+# vignettes/articles/architecture.qmd §2 / D4).
 #
 # Determinism note (xz size band REFUTED and retired 2026-10-20; measured
-# basis main push-run 39289131194, 2026-10-19T16:53:28Z, and docs/adr/
-# 0002-vendor-budget.md): the uncompressed byte count is an exact invariant
+# basis main push-run 39289131194, 2026-10-19T16:53:28Z, and
+# vignettes/articles/adr-0002-vendor-budget.qmd): the uncompressed byte
+# count is an exact invariant
 # of the Cargo.lock dependency set (file contents are OS-independent) and is
 # checked exactly. The tar count is checked exactly on the Linux release-gate
 # platform (GNU tar). The xz count is RUNNER-ENVIRONMENT-DETERMINED (xz

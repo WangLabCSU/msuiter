@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # GO-05 campaign harness — the single launcher for the bootstrap-vs-sigminer
 # measurement (U-M7-04 GO-05 SCOPE B; protocol:
-# docs/devlog/2026-10-10-m7-bootstrap-campaign.md). The harness MEASURES and
+# vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd). The harness MEASURES and
 # RECORDS; every decision (tier, floor gate, anchor gates, reader verdict) is
 # adjudicated by bench/m7/tools/verify_campaign.py — one source of laws, so
 # the writing side and the reading side can never drift apart.

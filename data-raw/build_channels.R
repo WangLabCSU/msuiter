@@ -16,8 +16,8 @@
 #
 # Canonical order provenance
 # --------------------------
-# docs/research/04 section 1 (SigProfilerMatrixGenerator audit) is the gold
-# standard for SPMG channel semantics; docs/research/05 section 2 fixes the
+# vignettes/articles/research-04-source-audit.qmd section 1 (SigProfilerMatrixGenerator audit) is the gold
+# standard for SPMG channel semantics; vignettes/articles/research-05-standards-data.qmd section 2 fixes the
 # canonical label lists. The audited rules, verified against
 # SigProfilerMatrixGeneratorFunc.py (master index construction, tsb /
 # bias_sort) and the shipped BRCA_bench example matrices:
@@ -29,7 +29,7 @@
 #              last "T[T>G]T".
 #   * SBS192   96 x {T, U} transcriptional strand states (transcribed /
 #              untranscribed), label "<S>:<SBS96 label>", T block first
-#              (docs/research/05 section 2, "SBS192 = 96 x {T,U}").
+#              (vignettes/articles/research-05-standards-data.qmd section 2, "SBS192 = 96 x {T,U}").
 #   * SBS384   96 x {T, U, B, N} in SPMG bias_sort order
 #              (bias_sort = {T:0, U:1, B:2, N:3}), same label grammar.
 #   * SBS1536  pentanucleotide labels "O1I5[REF>ALT]I3O2", ASCII
@@ -47,7 +47,7 @@
 # No COSMIC or SigProfiler data files are downloaded, cached or bundled by
 # this script (data-raw/reference/ is intentionally absent). COSMIC terms
 # formally prohibit redistribution of COSMIC data and the residual gap is
-# flagged as legally ambiguous in docs/research/05 section 1; per project
+# flagged as legally ambiguous in vignettes/articles/research-05-standards-data.qmd section 1; per project
 # policy we err on the conservative side. All labels are generated
 # programmatically from the audited structural rules above and validated by
 # in-script structural assertions.
@@ -209,11 +209,11 @@
 # ---------------------------------------------------------------------------
 # DBS78 (10 canonical refs x SPMG alt sets, ASCII lexicographic)
 # ---------------------------------------------------------------------------
-# Canonical reference dinucleotides (docs/research/05 section 2): the
+# Canonical reference dinucleotides (vignettes/articles/research-05-standards-data.qmd section 2): the
 # pyrimidine-start refs (CC/CT/TC/TT, strand-unambiguous), the two mixed
 # refs (AC/TG, chosen from the revcompl pairs {AC,GT}/{CA,TG}) and the four
 # self-reverse-complement refs (AT/CG/GC/TA, SPMG "Q" strand-ambiguous
-# family; docs/research/04 section 1, dinuc_tsb_ref normalization).
+# family; vignettes/articles/research-04-source-audit.qmd section 1, dinuc_tsb_ref normalization).
 .dbs_refs <- c("AC", "AT", "CC", "CG", "CT", "GC", "TA", "TC", "TG", "TT")
 
 # SPMG-pinned fold choices for Q-type refs: within each alt pair
@@ -327,11 +327,11 @@ attr(channel_tables, "provenance") <- list(
     "SBS96/SBS1536/DBS78; SBS192/SBS384 = strand blocks T,U / T,U,B,N in",
     "SPMG bias_sort order over SBS96 order"
   ),
-  semantics = "docs/research/04 section 1 (SPMG audit); docs/research/05 section 2",
+  semantics = "vignettes/articles/research-04-source-audit.qmd section 1 (SPMG audit); vignettes/articles/research-05-standards-data.qmd section 2",
   license_note = paste(
     "no COSMIC/SigProfiler data files bundled or cached; labels generated",
     "programmatically and validated by structural assertions (conservative",
-    "reading of docs/research/05 section 1)"
+    "reading of vignettes/articles/research-05-standards-data.qmd section 1)"
   )
 )
 
@@ -382,8 +382,8 @@ attr(channel_tables, "provenance") <- list(
     "//!\n",
     "//! Source of truth: `data-raw/build_channels.R` -- regenerate with\n",
     "//! `Rscript data-raw/build_channels.R`; do not edit by hand.\n",
-    "//! Canonical-order provenance: `docs/research/04` section 1 (SPMG\n",
-    "//! semantics) and `docs/research/05` section 2. These arrays must stay\n",
+    "//! Canonical-order provenance: `vignettes/articles/research-04-source-audit.qmd` section 1 (SPMG\n",
+    "//! semantics) and `vignettes/articles/research-05-standards-data.qmd` section 2. These arrays must stay\n",
     "//! bit-identical to `R/sysdata.rda` (`channel_tables`), enforced by\n",
     "//! `tests/testthat/test-channels-sync.R`; structural contract pinned by\n",
     "//! `src/rust/catalog/tests/channels.rs`.\n",

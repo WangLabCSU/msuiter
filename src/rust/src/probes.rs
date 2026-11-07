@@ -9,7 +9,7 @@
 //! (no embedded R), while the R-side testthat suite covers the end-to-end
 //! mapping through the real FFI.
 //!
-//! Probe ↔ contract map (`docs/ARCHITECTURE.md` §2):
+//! Probe ↔ contract map (`vignettes/articles/architecture.qmd` §2):
 //! * `column_major_position_checksum` — contract 2 (column-major layout),
 //! * `scan_no_nan`                    — contract 3 (NA/NaN rejection),
 //! * `error_probe_bounds`             — contracts 4 + 5 (index bounds,
