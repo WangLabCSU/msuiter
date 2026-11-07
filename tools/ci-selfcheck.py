@@ -126,14 +126,48 @@ def bare_rhome_hits(text):
 
     Literal substring scan, never a regex: in a regex `R.home` would also
     match the correct `R.home()` (`.` is any char), which is exactly the
-    vacuous form this law must not degrade into.
+    vacuous form this law must not degrade into. The discriminator is the
+    single `(` that follows a real call -- `R.home()` and `R.home("bin")`
+    are both calls, and the argument-free form is NOT the only correct one.
     """
     out = []
     i = text.find("R.home")
     while i >= 0:
-        if text[i + len("R.home"):i + len("R.home") + 2] != "()":
+        if text[i + len("R.home"):i + len("R.home") + 1] != "(":
             out.append(i)
         i = text.find("R.home", i + 1)
+    return out
+
+
+def binless_rhome_hits(text):
+    """Offsets where `file.path()` is handed a bare `R.home()` first argument.
+
+    The call law above is necessary but not sufficient. `R.home()` returns the
+    R home DIRECTOR, and `file.path(R.home(), "Rscript")` names `<home>/Rscript`
+    -- a path that does not exist. system2() then fails with "error in running
+    command" and a NULL `status` attribute, so the caller's
+    `st <- attr(res, "status")` guard cannot fire either: the identical
+    guard-blind class as the bare closure, one typo further along. Every
+    file.path(R.home(), ...) in these workflows locates a BINARY, so require
+    the "bin" component. Substring scan, never a regex (`.` matches `(`).
+    """
+    out = []
+    i = text.find("file.path(")
+    while i >= 0:
+        j = i + len("file.path(")
+        while j < len(text) and text[j] in " \t\n":
+            j += 1
+        if text.startswith("R.home()", j):
+            k = j + len("R.home()")
+            while k < len(text) and text[k] in " \t\n":
+                k += 1
+            if text.startswith(",", k):
+                k += 1
+                while k < len(text) and text[k] in " \t\n":
+                    k += 1
+                if not (text.startswith('"bin"', k) or text.startswith("'bin'", k)):
+                    out.append(i)
+        i = text.find("file.path(", i + 1)
     return out
 
 
@@ -966,19 +1000,35 @@ def main():
     # `.github` is in .Rbuildignore, so no local R CMD check can see this.
     wfdir = REPO / ".github/workflows"
     wf_bare = {}
+    wf_binless = {}
     for wf in sorted(wfdir.glob("*.yml")):
         body = txt(wf)
         for h in bare_rhome_hits(body):
             wf_bare.setdefault(wf.name, []).append(body[h:h + 34])
+        for h in binless_rhome_hits(body):
+            wf_binless.setdefault(wf.name, []).append(body[h:h + 40])
     check("every workflow calls R.home(), never the bare closure",
           not wf_bare, str(wf_bare))
-    # Firing control (house law: a law that cannot fire is vacuous): the
-    # measured typo shape must be caught, and the correct form -- which a
+    # Second shape, measured one PR later: the call alone still lands on a
+    # file that cannot exist. A guard over `attr(res, "status")` is blind to
+    # both classes (the status is NULL when the spawn never happens), so this
+    # must be a source law, not a runtime probe.
+    check('every workflow locates R binaries under R.home("bin"), never '
+          "file.path(R.home(), ...)", not wf_binless, str(wf_binless))
+    # Firing controls (house law: a law that cannot fire is vacuous): both
+    # measured typo shapes must be caught, and every correct form -- which a
     # naive `R.home` regex would wrongly flag -- must pass.
-    check("R.home-call law firing control: the bare closure is caught, "
-          "the called form passes",
+    check("R.home-call law firing control: the bare closure is caught, both "
+          "call forms pass",
           bool(bare_rhome_hits('system2(file.path(R.home, "Rscript"), a)'))
-          and not bare_rhome_hits("cat(R.home())"))
+          and not bare_rhome_hits("cat(R.home())")
+          and not bare_rhome_hits('file.path(R.home("bin"), "Rscript")'))
+    check("R.home-bin law firing control: the binless call is caught, the "
+          "bin-bearing form and a bare value read pass",
+          bool(binless_rhome_hits('system2(file.path(R.home(), "Rscript"), a)'))
+          and not binless_rhome_hits('file.path(R.home("bin"), "Rscript")')
+          and not binless_rhome_hits("cat(R.home())")
+          and not binless_rhome_hits('file.path(R.home("bin"), "R")'))
 
     # ---- the Pages publishing workflow (push-built pkgdown site) -----------
     # The site is published on every push to main by .github/workflows/

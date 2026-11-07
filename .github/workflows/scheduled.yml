@@ -216,7 +216,7 @@ jobs:
         env:
           MSUITER_TRUNK_SHA: ${{ github.sha }}
         run: |
-          res <- system2(file.path(R.home(), "Rscript"),
+          res <- system2(file.path(R.home("bin"), "Rscript"),
                          c("tools/site-bundle.R", "--site=docs/dev",
                            "--out=site-bundle",
                            paste0("--rev=", Sys.getenv("MSUITER_TRUNK_SHA", ""))),
@@ -238,7 +238,7 @@ jobs:
       - name: "Deploy to GitHub Pages (dormant guard)"
         shell: Rscript {0}
         run: |
-          res <- system2(file.path(R.home(), "Rscript"),
+          res <- system2(file.path(R.home("bin"), "Rscript"),
                          c("tools/site-deploy.R", "--live",
                            "--bundle-dir=site-bundle"),
                          stdout = TRUE, stderr = TRUE)
@@ -764,7 +764,6 @@ jobs:
         with:
           needs: check
           extra-packages: any::rcmdcheck
-          use-cache: true
 
       # The monolith itself, verbatim from the retired PR-gate leg: the
       # action's build+install+check runs the FULL test phase in one
