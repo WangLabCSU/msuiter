@@ -266,3 +266,45 @@ M0 ─ M1s ─(v0.1)─ M1c ─ M2 ─ M3a ─(v0.2)
                       M3b (incl. the G2 cohort gate) ─ M4 ─ M6s ─ M7 ─ M8 ─(v1.0)
 G3 (quarterly competitive review) ───────────────────┘
 ```
+
+## SigProfiler parity campaign (P0-P7) and the P8 face: mapping onto the M/G vocabulary
+
+The parity campaign is specified in
+`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` section 5 (one
+phase, one issue, one PR) and its phases are named P0-P7 there. That is a
+campaign vocabulary, not a milestone vocabulary; this section is the single
+index between the two, so a phase can be located in the version track above
+without re-reading the plan. Sigminer-side phases land in
+`ShixiangWang/sigminer`; msuiter-side phases land here. This section changes
+no version and no gate above it.
+
+| Phase | Lands in | This roadmap | Acceptance gate (plan sec. 5) |
+|---|---|---|---|
+| P0 Interop hygiene | sigminer | M0 top / M1c adapter floor | version-pin matrix CI over {1.2.x, 1.4.0, >=1.5} against the official image; the #470 Windows-path trace reproduced; import/export round-trip on fixtures; `type='refit'` re-verified |
+| P1 Kernel swap (closes sigminer #478) | sigminer, after the msuiter kernel-extension PR | M1s (the certified KL-MU kernel, U-M1s-14) | bit-equivalence to R `NMF::nmf(brunet)`, relative Frobenius error < 1e-10 on a fixed platform; thread-count invariance `identical()`; sigminer arm wall-clock <= 2x sigprofiler arm |
+| P2 K arbitration + seed law | sigminer | M2 (the `ms_select_k` arbiter) | K agreement with the msuiter arbiter on the three-tier calibration cells; >= baseline 2.3.3 on Hungarian-matched P/R/F1; byte-identical rerun from one seed |
+| P3 Refit upgrade | sigminer | M3b (the 198-cell calibration protocol) | presence-test null calibration inside the judgment window; no regression on flat-signature cells; the bootstrap speed claim is MEASURED before it is stated |
+| P4 QC sentries | msuiter first (adapter/report PR) | M4 (the `ms_qc_report` surfaces) | injected-artifact fixtures: sentry recall = 1, a documented false-positive ceiling, a provenance checklist on the report |
+| P5 Catalog currency | sigminer | M4 (the refdb updater, `ms_update_refdb`) | every numeric file sha256-pinned against the pinned SigProfilerAssignment mirror rev; zero COSMIC numerics committed (D3); updater fully offline-fixture-tested |
+| P6 Evidence loop | msuiter (`bench/` PRs only) | M7 (the m7 harness: GO-05 anchor probe, CI-noise anchor gate, floor gate) | 42-cell regeneration all-`ok`, zero cached, `host`/`hw_profile` stamped; sigminer arms <= 2x sigprofiler wall AND no TP-only-judgment regression |
+| P7 Campaign (not a PR) | campaign | G0 (the primary run) plus the RB-10 bootstrap shot | each produces a path:line-sealed devlog entry; operator-gated |
+
+Sequencing, from the plan: P0/P5 are independent quick wins; P1 to P6-regen is
+the parity spine; P2/P3 gate on P1; P4 is orthogonal. A phase whose gate fails
+stops at its own PR and does not block the others.
+
+### P8 (application-scenario case studies) against the deferred list
+
+P8 is not a plan phase. It is Pillar 3's case-study face, carried in `NEWS.md`
+("P8 - Application-scenario case studies") and designed in
+`vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd`; in
+this roadmap it is documentation-plus-fixtures work under M7 and M8. Its CS-3
+face ships `ms_treatment_report()`, and the deferred list above names
+"therapy forensics" as a hard v1.x non-goal. Controller ruling recorded here
+(this revision): the shipped artifact is the Pillar-3 case-study MVP surface,
+a report over already-extracted exposures with committed synthetic fixtures,
+while the v1.x non-goal continues to cover the full therapy-forensics program
+(de-novo detection, clinical linkage, longitudinal inference). The deferral
+line stands as written and is read through this paragraph. Moving that
+boundary in either direction is a PI call, and the collision is recorded here
+rather than silently absorbed.
