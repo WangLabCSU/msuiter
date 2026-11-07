@@ -2,7 +2,7 @@
 title: "msuiter research executive summary (Executive Summary)"
 ---
 
-> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [ARCHITECTURE.md](../ARCHITECTURE.md) §0 (D1–D16) and [reviews/00-synthesis.md](../reviews/00-synthesis.md); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [CAPABILITY-MATRIX.md](../CAPABILITY-MATRIX.md) and ARCHITECTURE §8.
+> ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 (D1–D16) and [review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) and ARCHITECTURE §8.
 
 
 > Research date: 2026-09-27. Method: GitHub issue archaeology (WangLabCSU/msuiter#1, all the open issues of ShixiangWang/sigminer), a close reading of the whole SigProfiler family's source, 5-way parallel deep research (the extraction methods / the fitting inference / the application scenarios / the repository-by-repository source audit / the standards and data licenses), and a broad retrieval over PubMed + bioRxiv + the academic databases.
@@ -62,17 +62,17 @@ SigProfiler = the Python gold standard but slow and closed; on the R side sigmin
 ## 6. The document index (the full library)
 
 **The research reports (this directory, all of snapshot nature)**
-- [01-extraction-methods.md](01-extraction-methods.md) — the extraction-method panorama and the NMF-engine zoo (incl. the update equations)
-- [02-fitting-inference.md](02-fitting-inference.md) — fitting, attribution, uncertainty, post-processing analysis
-- [03-applications.md](03-applications.md) — the application literature and scenarios → the workflow-module requirement mapping (incl. the PMIDs)
-- [04-source-audit.md](04-source-audit.md) — the repository-by-repository source audit (the algorithms precise to file:line, the licenses)
-- [05-standards-data.md](05-standards-data.md) — the COSMIC license, the channel standards, the genome readers, the visualization, the benchmarks, the CRAN policy
-- [06-s7-class-system.md](06-s7-class-system.md) — the state of the S7 class system, the design patterns and the method-dispatch blueprint
-- [07-algorithm-zoo.md](07-algorithm-zoo.md) — the full stocktake of the tiered algorithm zoo + the self-development opportunity list
-- [08-fact-check-audit.md](08-fact-check-audit.md) — the whole-corpus fact-check audit (the discrepancy adjudications)
+- [research-01-extraction-methods.qmd](https://wanglabcsu.github.io/msuiter/articles/research-01-extraction-methods.html) — the extraction-method panorama and the NMF-engine zoo (incl. the update equations)
+- [research-02-fitting-inference.qmd](https://wanglabcsu.github.io/msuiter/articles/research-02-fitting-inference.html) — fitting, attribution, uncertainty, post-processing analysis
+- [research-03-applications.qmd](https://wanglabcsu.github.io/msuiter/articles/research-03-applications.html) — the application literature and scenarios → the workflow-module requirement mapping (incl. the PMIDs)
+- [research-04-source-audit.qmd](https://wanglabcsu.github.io/msuiter/articles/research-04-source-audit.html) — the repository-by-repository source audit (the algorithms precise to file:line, the licenses)
+- [research-05-standards-data.qmd](https://wanglabcsu.github.io/msuiter/articles/research-05-standards-data.html) — the COSMIC license, the channel standards, the genome readers, the visualization, the benchmarks, the CRAN policy
+- [research-06-s7-class-system.qmd](https://wanglabcsu.github.io/msuiter/articles/research-06-s7-class-system.html) — the state of the S7 class system, the design patterns and the method-dispatch blueprint
+- [research-07-algorithm-zoo.qmd](https://wanglabcsu.github.io/msuiter/articles/research-07-algorithm-zoo.html) — the full stocktake of the tiered algorithm zoo + the self-development opportunity list
+- [research-08-fact-check-audit.qmd](https://wanglabcsu.github.io/msuiter/articles/research-08-fact-check-audit.html) — the whole-corpus fact-check audit (the discrepancy adjudications)
 
 **The live documents (the single authoritative caliber)**
-- [../ARCHITECTURE.md](../ARCHITECTURE.md) — architecture v2.2 (the decisions D1–D16, the layering, the scientific contracts)
-- [../ROADMAP.md](../ROADMAP.md) — the dual-track roadmap v3 (v0.1/v0.2/v1.0 + the G0–G3 organizational gates)
-- [../CAPABILITY-MATRIX.md](../CAPABILITY-MATRIX.md) — the capability-coverage matrix (the completeness authoritative checklist)
-- [../reviews/00-synthesis.md](../reviews/00-synthesis.md) — the five-expert review adjudication (01–05 are the evidence originals)
+- [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) — architecture v2.2 (the decisions D1–D16, the layering, the scientific contracts)
+- [roadmap.qmd](https://wanglabcsu.github.io/msuiter/articles/roadmap.html) — the dual-track roadmap v3 (v0.1/v0.2/v1.0 + the G0–G3 organizational gates)
+- [capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) — the capability-coverage matrix (the completeness authoritative checklist)
+- [review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html) — the five-expert review adjudication (01–05 are the evidence originals)

@@ -7,7 +7,8 @@
 # byte-unchanged by this move.
 #
 # CI shard-stale unit (moved out of test-check-layout-sim.R verbatim,
-# 2026-10-21 shard restructure; docs/devlog). It carries the provisioning
+# 2026-10-21 shard restructure; the campaign devlog under
+# `vignettes/articles/devlog-*.qmd`). It carries the provisioning
 # tree-identity law of the P4 lane; like its sentry sibling it stands as a
 # shard of its own because its green path drives one full simulate.
 #

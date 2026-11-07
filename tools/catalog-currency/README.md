@@ -7,7 +7,7 @@ still the snapshot upstream publishes?* -- and reports drift per governed
 source document rather than ever passing silently.
 
 It is the phase-P5 deliverable of the sigminer v3 parity plan
-(`docs/research/09-sigminer-v3-parity-plan.md`, section 5), built in the
+(`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd`, section 5), built in the
 governance shape of the refdb chain (`R/refdb.R`, `data-raw/build_refdb.R`).
 
 ## What is governed

@@ -1,8 +1,8 @@
 # bench/bootstrap — GO-05 bootstrap-vs-sigminer campaign lane
 
-Host-R measurement lane for the bootstrap row of `docs/PERFORMANCE.md`
+Host-R measurement lane for the bootstrap row of `vignettes/articles/performance.qmd`
 (U-M7-04 GO-05, SCOPE B). Pre-registration law: the protocol
-`docs/devlog/2026-10-10-m7-bootstrap-campaign.md` is committed before any
+`vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd` is committed before any
 campaign execution and is the sole definition of what a number may mean here.
 
 Instruments:

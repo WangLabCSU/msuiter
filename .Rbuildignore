@@ -1,6 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.agents$
+^\.claude$
 ^\.git$
 ^\.pytest_cache$
 ^src/\.cargo$

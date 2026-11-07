@@ -1,5 +1,5 @@
 //! U-M1s-14 scratch driver (one-off platform experiment, NOT part of the
-//! package or CI; `docs/ARCHITECTURE.md` §7.1 / D11 / A8).
+//! package or CI; `vignettes/articles/architecture.qmd` §7.1 / D11 / A8).
 //!
 //! Contract:
 //! - reads `V.csv` (m×n), `W0.csv` (m×k), `H0.csv` (k×n) from `--in`

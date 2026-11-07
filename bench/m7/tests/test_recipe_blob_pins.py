@@ -63,7 +63,7 @@ SITE_RE = re.compile(
 HEX64_RE = re.compile(r"[0-9a-f]{64}")
 
 # The launcher's attested drift history, oldest first, pinned by value
-# (docs/devlog/2026-11-04-m7-build-pin-drift-attestation.md): origin seal, then
+# (vignettes/articles/devlog-2026-11-04-m7-build-pin-drift-attestation.qmd): origin seal, then
 # the two moves the stale pin missed. A fourth touch reddens the lineage unit --
 # moving the launcher is only lawful together with a re-seal and an attestation.
 ATTESTED_LAUNCHER_MOVES = (
@@ -367,7 +367,7 @@ def test_control_the_origin_sealed_launcher_pin_is_rejected_today():
     assert touches, "the arm recipe has no committed history at all"
     origin = touches[-1]          # the pin text's first rider (measured recipe
     # history, NOT the launcher's origin narrative -- attested in
-    # docs/devlog/2026-11-04-m7-build-pin-drift-attestation.md; the launcher's
+    # vignettes/articles/devlog-2026-11-04-m7-build-pin-drift-attestation.qmd; the launcher's
     # own origin commit is computed from its own git log below, never quoted).
     origin_recipe = _blob(RECIPE_REL, origin).decode("utf-8")
     origin_sites, _, _ = _parse(origin_recipe)

@@ -9,7 +9,7 @@ dispatcher — during the TDD RED phase the harness modules under test are
 intentionally absent (RED-by-absence), and the evidence we want is the
 per-seam ModuleNotFoundError transcript, not a dead runner.
 
-Groups (task contract, docs/devlog/2026-10-08-m7-competitor-harness-design.md §7):
+Groups (task contract, vignettes/articles/devlog-2026-10-08-m7-competitor-harness-design.qmd §7):
   ① test_registry            competitor registry load + pinned provenance
   ② test_adapters            refuse-to-run seam + frozen thread-cap injection
   ③ test_timings_schema      timings columns = G0 six-column prefix + cpu_seconds
@@ -53,7 +53,7 @@ bench table; the Han annotation here since PR #18 is translated, EN-only law):
       operator's M7_HW_PROFILE; reader-side verifier verdicts a committed
       table from its own bytes
 Bootstrap campaign instrument (U-M7-04 GO-05, charter SCOPE B,
-pre-registration law docs/devlog/2026-10-10-m7-bootstrap-campaign.md):
+pre-registration law vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd):
   (T) test_bootstrap_campaign  deterministic frozen generator (double-run byte
       identity + seal), decisive tier ladder, anchor gates, SCIENCE-FIRST
       reader-side verifier (inflated claim / failed anchor / self-adjudicating

@@ -1,6 +1,6 @@
 //! Golden tests for the variant classification router, split-VCF
 //! reconnection and skip ledger (U-M1s-07; A11 catalog-completeness
-//! contract, `docs/ARCHITECTURE.md` §7 entry 2).
+//! contract, `vignettes/articles/architecture.qmd` §7 entry 2).
 //!
 //! Routing rules pinned here (each golden hand-derived):
 //!   * single-base SNV -> `Sbs`;

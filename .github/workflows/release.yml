@@ -3,7 +3,7 @@
 #
 # Enabling record: M1s closed 14/14 (plan-A accounting); version bump 0.1.0;
 # this file moved in from
-# docs/release/release.yml-draft.yml. Trigger = an annotated tag `v0.1.0`
+# .github/workflows/release.yml. Trigger = an annotated tag `v0.1.0`
 # push (the tag is cut on a clean main tree).
 #
 # Design (aligned with the .github/workflows/ci.yml U-M0-07 conventions):

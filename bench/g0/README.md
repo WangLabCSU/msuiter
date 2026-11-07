@@ -2,12 +2,12 @@
 
 > All the own components that are independent of the competitor environment: the simulation generation, the seed discipline, the coverage-rate computation, the own presence
 > LRT, the grid configuration, the container adapter layer and the orchestrator. The protocol was frozen on 2026-09-28
-> ([pi-adjudication](../../docs/devlog/2026-09-28-G0-pi-adjudication.md)
+> ([pi-adjudication](../../vignettes/articles/devlog-2026-09-28-G0-pi-adjudication.qmd)
 > F1–F4); this harness is the runnable implementation of the frozen protocol, **it does not alter any frozen parameter**.
 >
 > Status: the harness initial build is complete and passed the independent-audit repairs (2026-09-28: the NB-branch EM-mathematics error P0-1, the sensitivity-arm leakage P0-2, the frozen-space shrinkage P0-3 and the P1/P2 batches all landed);
 > the self-check tests take the whole-table green as the condition (`python3 -m tests.run_all`); the degraded lane has been closed-looped — the authoritative degraded run
-> 2026-10-08 verdict=A (the evidence `bench/results/docker_degraded_pi_20261007-212438/`, see the docs/ROADMAP.md
+> 2026-10-08 verdict=A (the evidence `bench/results/docker_degraded_pi_20261007-212438/`, see the vignettes/articles/roadmap.qmd
 > G0 row); the primary lane (primary × docker × cosmic-file) **has not been started**, waiting for the F5 execution environment to land.
 
 ## 1. The frozen-protocol essentials (the implementation basis of this harness)

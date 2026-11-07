@@ -1,5 +1,5 @@
 //! NNDSVD/NNDSVDa initialization with exact (one-sided Jacobi) and
-//! randomized SVD backends (U-M1s-03; `docs/ARCHITECTURE.md` §2
+//! randomized SVD backends (U-M1s-03; `vignettes/articles/architecture.qmd` §2
 //! `engine/nndsvd.rs`, decision D6). GREEN pass: kernels implemented against
 //! the frozen property/golden suite below.
 

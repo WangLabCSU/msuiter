@@ -1,4 +1,4 @@
-//! Sparse / minimum-volume NMF kernels (U-M2-05; `docs/CAPABILITY-MATRIX.md`
+//! Sparse / minimum-volume NMF kernels (U-M2-05; `vignettes/articles/capability-matrix.qmd`
 //! L-C `ms_sparse` row: "volume-regularized mvNMF (Leplat–Gillis) + L1").
 //!
 //! Two deterministic KL-NMF variants share this module:
@@ -17,13 +17,13 @@
 //! The log-determinant volume term shrinks the simplex volume spanned by
 //! the signature columns, restoring identifiability under correlated /
 //! near-parallel signatures (the linear-world counterpart of Cornet's
-//! embedding model, `docs/research/04` §9).
+//! embedding model, `vignettes/articles/research-04-source-audit.qmd` §9).
 //!
 //! **Attribution erratum (audited)**: the L1L1 update below is the
 //! Hoyer/Cichocki KL-L1 multiplicative form; upstream `SparseSignatures`
 //! (Lal et al. 2021) is least-squares + LASSO, NOT this KL-MU family —
 //! earlier comments/research notes calling it "SparseSignatures semantics"
-//! were wrong. `docs/research/01` §9 likewise mislabels it "L1-penalized
+//! were wrong. `vignettes/articles/research-01-extraction-methods.qmd` §9 likewise mislabels it "L1-penalized
 //! Poisson NMF" (erratum recorded in the M1c devlog).
 //!
 //! Upstream implementation anchor (pinned to source, D11/D13):
@@ -64,7 +64,7 @@
 //! # 2. L1-penalized NMF ([`fit_sparse_l1`], Hoyer/Cichocki KL-L1L1 MU;
 //! ##     NOT SparseSignatures — see the attribution erratum above)
 //!
-//! Objective (Hoyer/Cichocki KL-L1L1 MU; `docs/research/04` §9 —
+//! Objective (Hoyer/Cichocki KL-L1L1 MU; `vignettes/articles/research-04-source-audit.qmd` §9 —
 //! `SparseSignatures` itself is least-squares + LASSO, not this form:
 //! "SparseSignatures:
 //! L1-penalized Poisson NMF"; classic penalized MU, Hoyer 2002 / Cichocki

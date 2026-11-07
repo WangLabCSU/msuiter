@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # =============================================================================
 # bench/m1s/nnls · M1s bench: batch NNLS(101×10³, k=10)vs scipy.optimize.nnls
-# per-sample (docs/ARCHITECTURE.md §8 budget row, criterion ≥10×;CI only ships sanity bound).
+# per-sample (vignettes/articles/architecture.qmd §8 budget row, criterion ≥10×;CI only ships sanity bound).
 #
 # Ours = driver = driver(path depends on msuiter-engine) shares the Gram G=WᵀW + per-sample
 #   nnls_gram(Lawson-Hanson,pivot LDLᵀ + KKT  assertions)—— the timed section includes Gram/b assembly

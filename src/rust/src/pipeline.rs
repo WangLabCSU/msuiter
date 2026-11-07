@@ -3,7 +3,7 @@
 //! `ms_extract(method = NULL)` and the K-evidence face of `ms_select_k()`.
 //!
 //! Pipeline order (design memo
-//! `docs/devlog/2026-09-30-M2-pipeline-design-memo.md` §1/§2/§4; ARCHITECTURE
+//! `vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd` §1/§2/§4; ARCHITECTURE
 //! §5 framework component "consensus-CV extraction pipeline"):
 //!
 //! 1. **Ensemble** — [`replicates::nmf_ensemble`], the multi-initialization

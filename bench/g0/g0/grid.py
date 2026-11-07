@@ -1,6 +1,6 @@
 """The G0 grid and experiment-profile configuration (all the numbers are frozen protocol values; do not alter).
 
-The grid's provenance (the frozen adjudication docs/devlog/2026-09-28-G0-pi-adjudication.md "the PI has adjudicated"
+The grid's provenance (the frozen adjudication vignettes/articles/devlog-2026-09-28-G0-pi-adjudication.qmd "the PI has adjudicated"
 clause 3, adopting the realism memo §2):
 - the geometric grid N ≈ 30–10⁶ (the realism memo §2: the panel/ctDNA end 30–100 must enter the grid;
   the upper end 10⁶ covers the common WGS arm ceiling, Alexandrov 2020 PMID 32025018);

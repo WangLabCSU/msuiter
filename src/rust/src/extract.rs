@@ -5,7 +5,7 @@
 //! generic (`R/extract.R`). It runs exactly ONE kernel fit with the seeded
 //! initializer drawn from the canonical zero stream (`StreamId::ZERO`):
 //! the replicate / consensus / K-selection machinery of the M2 extraction
-//! pipeline deliberately does not exist yet (`docs/ROADMAP.md` M1s:
+//! pipeline deliberately does not exist yet (`vignettes/articles/roadmap.qmd` M1s:
 //! "ms_extract (single method)"). The variant is the [`NmfVariant`] switch: KL
 //! (β = 1, the D6 default) or EU (β = 2), both faces of
 //! `msuiter_engine::nmf`.
@@ -28,7 +28,7 @@
 //! `max_iter` loop of dense `O(m·n·k)` updates with no early exit.
 //! This export is therefore **declared bounded-duration and
 //! non-interruptible within `max_iter`** (documented in
-//! `docs/ffi-surface.md`): the alternative — per-iteration boundary polls —
+//! `vignettes/articles/ffi-surface.qmd`): the alternative — per-iteration boundary polls —
 //! would either fork the kernel loop into the FFI shell or require a
 //! callback seam through the pure engine crate, both worse trades for M1s.
 //! The target workload (96 channels × tens of samples × 500 iterations)

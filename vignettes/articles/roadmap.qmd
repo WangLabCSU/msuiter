@@ -3,7 +3,7 @@ title: "msuiter roadmap (ROADMAP) -- v3 (dual-track versioning + organizational 
 ---
 
 > v3 (2026-09-28): restructured per the five-expert review adjudication
-> ([reviews/00-synthesis.md](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html)) -- the original M0-M8
+> ([vignettes/articles/review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html)) -- the original M0-M8
 > estimates were systematically underestimating by ~3x and carried no
 > minimal-shareable-version cut line; this revision adopts the **dual-track
 > versioning scheme** and makes the organizational action items that require
@@ -12,7 +12,7 @@ title: "msuiter roadmap (ROADMAP) -- v3 (dual-track versioning + organizational 
 > the three paper pillars are bound to milestones.
 > Executable decomposition (work units / dependency graph / v0.1 week-by-week
 > schedule / G-gate actions / kickoff checklist):
-> [IMPLEMENTATION-PLAN.md](https://wanglabcsu.github.io/msuiter/articles/implementation-plan.html).
+> [vignettes/articles/implementation-plan.qmd](https://wanglabcsu.github.io/msuiter/articles/implementation-plan.html).
 
 ## Version-track overview
 

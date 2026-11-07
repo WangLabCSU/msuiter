@@ -37,7 +37,7 @@ if str(HERE) not in sys.path:
 from competitors import timings                     # noqa: E402
 from tools import matrix_governance as gov          # noqa: E402
 
-# Frozen protocol constants (docs/devlog/2026-10-10-m7-bootstrap-campaign.md §2)
+# Frozen protocol constants (vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd §2)
 S_FULL, N_SIG, K_FULL = 1000, 50, 1000
 R_TIER_A, R_TIER_B = 1000, 200
 CAP_SECONDS = 21600                                  # six hours, the pre-registered cap
@@ -47,7 +47,7 @@ MIN_OVERLAP, MIN_MEDIAN_OK = 0.90, 0.95
 # is a CI-noise envelope, not a flat relative tolerance -- a relative tolerance
 # explodes at near-zero estimands, which is a property of the definition, not
 # of the data. Both constants are fixed a-prior; see
-# docs/devlog/2026-10-11-go05-anchor-gate-amendment.md for the verbatim
+# vignettes/articles/devlog-2026-10-11-go05-anchor-gate-amendment.qmd for the verbatim
 # retired outcome and the K_CI/EPS a-prior provenance.
 K_CI = 1.0                                             # envelope multiple
 EPS = 0.005                                            # both-below auto-pass floor

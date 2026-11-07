@@ -141,3 +141,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [Build-pin drift attestation -- blob-form re-anchor of the arm-recipe digest pins (2026-11-04)](devlog-2026-11-04-m7-build-pin-drift-attestation.html) | `devlog-2026-11-04-m7-build-pin-drift-attestation` |
 | [2026-11-05 -- CI PR-gate tiering ruling: three arms, one tier, nightly depth](devlog-2026-11-05-ci-pr-gate-tiering-ruling.html) | `devlog-2026-11-05-ci-pr-gate-tiering-ruling` |
 | [2026-11-05 -- P7cap batch-face no-stamp ruling: archival record (audit #74 P2)](devlog-2026-11-05-p7cap-no-stamp-ruling-archive.html) | `devlog-2026-11-05-p7cap-no-stamp-ruling-archive` |
+| [2026-11-07 -- Generator-emitted artifacts: the dead `docs/` citation sweep](devlog-2026-11-07-generator-doc-citation-sweep.html) | `devlog-2026-11-07-generator-doc-citation-sweep` |

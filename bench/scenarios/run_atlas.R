@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # bench/scenarios/run_atlas.R -- the executable atlas-mode scenario
-# (Phase-8 CS-1; docs/research/03-applications.md section 1). Drives the five
+# (Phase-8 CS-1; vignettes/articles/research-03-applications.qmd section 1). Drives the five
 # variant classes through the public ingestion face, adjudicates the pipeline
 # against the a-priori generator truth and persists the evidence tables under
 # bench/scenarios/out/. Verdict discipline: every claim is measured here, the

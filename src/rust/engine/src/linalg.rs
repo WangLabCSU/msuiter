@@ -1,13 +1,13 @@
 //! Pivoted LDLᵀ factorization with Bunch–Kaufman diagonal pivoting, block
 //! triangular solves, and the symmetric PSD (Gram matrix) entry points
-//! (U-M1s-01; `docs/ARCHITECTURE.md` §2 `engine/linalg.rs`).
+//! (U-M1s-01; `vignettes/articles/architecture.qmd` §2 `engine/linalg.rs`).
 //!
 //! # Pivot strategy: Bunch–Kaufman diagonal pivoting
 //!
 //! The factorization computes `P A Pᵀ = L D Lᵀ` for a symmetric input `A`,
 //! with `P` a permutation, `L` unit lower triangular and `D` block diagonal
 //! with 1×1 and 2×2 blocks (unblocked LAPACK `dsytrf`/`dsytf2` scheme).
-//! Choice rationale, documented per `docs/ARCHITECTURE.md` §2:
+//! Choice rationale, documented per `vignettes/articles/architecture.qmd` §2:
 //!
 //! * Gram matrices in signature fitting are PSD in exact arithmetic but are
 //!   formed in floating point and are frequently near-singular (flat or
@@ -46,7 +46,7 @@
 //!   which is negligible for every κ ≲ 1e8 and only becomes active in the
 //!   near-singular regime (κ ≳ 1e12) where unconstrained LS coefficients
 //!   are meaningless anyway — exactly the "ε‖G‖ ridge" contract of
-//!   `docs/ARCHITECTURE.md` §2 `engine/nnls.rs`.
+//!   `vignettes/articles/architecture.qmd` §2 `engine/nnls.rs`.
 //!
 //! # Contract notes
 //!

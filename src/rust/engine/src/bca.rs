@@ -1,5 +1,5 @@
 //! BCa (bias-corrected and accelerated) bootstrap intervals for signature
-//! exposures (U-M3b-02; design memo `docs/devlog/2026-10-04-M3b-design-memo.md`
+//! exposures (U-M3b-02; design memo `vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd`
 //! §1.2, PI ruling: BCa default, percentile as the degenerate fallback).
 //!
 //! # The interval (Hall 1988, Ann. Statist. 16(3):927–985,

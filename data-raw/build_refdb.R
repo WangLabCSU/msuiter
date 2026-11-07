@@ -3,7 +3,7 @@
 #
 # Downloads the COSMIC v3.6 human reference signature matrices from the
 # Alexandrov-lab BSD-2 mirror (SigProfilerSuite/SigProfilerAssignment --
-# NOT a cancer.sanger.ac.uk download; docs/research/05 section 1 and
+# NOT a cancer.sanger.ac.uk download; vignettes/articles/research-05-standards-data.qmd section 1 and
 # ADR D3 pin this provenance) at a PINNED upstream commit, verifies every
 # file against the SHA-256 digests recorded below, canonicalizes the
 # SBS96/DBS78 channel order to the msuiter channel registry
@@ -272,7 +272,7 @@ manifest <- list(
     "mirror (SigProfilerSuite/SigProfilerAssignment, pinned commit above) -- NOT",
     "a cancer.sanger.ac.uk download. COSMIC terms formally prohibit",
     "redistribution of COSMIC data; the residual gap is flagged as legally",
-    "ambiguous in docs/research/05 section 1 (domain practice: every signature",
+    "ambiguous in vignettes/articles/research-05-standards-data.qmd section 1 (domain practice: every signature",
     "tool bundles the same BSD-2 numerical matrices)."
   ),
   citations = c(

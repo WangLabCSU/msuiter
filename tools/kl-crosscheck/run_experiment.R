@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # U-M1s-14 · KL numeric protocol equivalence cross-check: msuiter in-house KL-NMF vs R NMF package brunet
-# One-off fixed-platform experiment (not a CI gate; docs/ARCHITECTURE.md §7.1 / D11 / A8).
+# One-off fixed-platform experiment (not a CI gate; vignettes/articles/architecture.qmd §7.1 / D11 / A8).
 #
 # Scheme A (external initialization): nmf(V, k, method="brunet", seed=<nmfModel(W0,H0)>,
 #   maxIter=T, stopconv=1e6) -- same W0/H0, same iteration count; compare iteration semantics.

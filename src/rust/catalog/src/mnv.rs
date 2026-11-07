@@ -1,5 +1,5 @@
 //! Variant classification router, split-VCF reconnection and skip ledger
-//! (U-M1s-07; A11 catalog-completeness contract, `docs/ARCHITECTURE.md`
+//! (U-M1s-07; A11 catalog-completeness contract, `vignettes/articles/architecture.qmd`
 //! §7 entry 2).
 //!
 //! Input is a slice of coordinate-sorted variant records (same chromosome;
@@ -10,7 +10,7 @@
 //! deterministic text rendering); R-side provenance wiring is the
 //! assembly unit's job.
 //!
-//! # Routing table (SPMG semantics, `docs/research/04` section 1)
+//! # Routing table (SPMG semantics, `vignettes/articles/research-04-source-audit.qmd` section 1)
 //!
 //! | input event                                          | destination        |
 //! |------------------------------------------------------|--------------------|

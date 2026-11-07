@@ -1,6 +1,6 @@
 //! ID83 golden + property tests (U-M1c-01).
 //!
-//! Semantic source of truth: `docs/devlog/2026-09-30-ID83-design-memo.md`
+//! Semantic source of truth: `vignettes/articles/devlog-2026-09-30-ID83-design-memo.qmd`
 //! (the adjudicated spec), itself pinned line-by-line to SPMG
 //! `MutationMatrixGenerator.py` (MMG) / `SigProfilerMatrixGeneratorFunc.py`
 //! (Func) at upstream master `edccbea6`. The ID classification function is

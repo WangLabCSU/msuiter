@@ -18,16 +18,16 @@ description: Orchestrate the msuiter development agent team (PI + Rust engineer 
 | 计算生物学家 | Agent 子代理 | 科学有效性、数据现实性、测试场景、通道语义 |
 | **独立审核员** | Agent 子代理（**独立**） | 只读交付物与标准文档做对抗审查， verdict: PASS / REVISE(问题清单) |
 
-**独立性铁律**：审核员的输入只有 (a) 任务描述 (b) 仓库中的交付物路径（git diff/新文件）(c) 标准文档（ARCHITECTURE.md、reviews/00-synthesis.md、相关 research 报告）。**绝不**把团队内部讨论、专家报告原文喂给审核员——它必须像外部审稿人一样只看结果。
+**独立性铁律**：审核员的输入只有 (a) 任务描述 (b) 仓库中的交付物路径（git diff/新文件）(c) 标准文档（vignettes/articles/architecture.qmd、vignettes/articles/review-00-synthesis.qmd、相关 research 报告）。**绝不**把团队内部讨论、专家报告原文喂给审核员——它必须像外部审稿人一样只看结果。
 
 ## 工作流（每个工作单元一轮）
 
 ### 第 0 步：读状态
-开始任何团队工作前，按序读：`vignettes/articles/roadmap.qmd`（当前版本轨道与下一个未完成工作单元）、`vignettes/articles/architecture.qmd` §0 的 D1–D16 决策、`docs/devlog/` 最新一条（若有）、`git status`。若用户给了明确任务，以用户任务为准并核对它与 ROADMAP 的一致性（冲突则先问用户）。
+开始任何团队工作前，按序读：`vignettes/articles/roadmap.qmd`（当前版本轨道与下一个未完成工作单元）、`vignettes/articles/architecture.qmd` §0 的 D1–D16 决策、`vignettes/articles/devlog-*.qmd` 最新一条（若有）、`git status`。若用户给了明确任务，以用户任务为准并核对它与 `vignettes/articles/roadmap.qmd` 的一致性（冲突则先问用户）。
 
 ### 第 1 步：PI 分解（不写代码）
 - 把任务切成 ≤3 个可并行/串行的工作片，每片定义：交付物（文件路径）、验收标准（可执行/可检验）、涉及契约（引用 ARCHITECTURE 具体条款编号）。
-- **先设计后编码**：凡涉及算法语义或统计声明的工作片，先派 mutational signature 专家 + 计算生物学家（可并行）产出设计备忘（写入 `docs/devlog/`），经你裁决后再派工程师实现。
+- **先设计后编码**：凡涉及算法语义或统计声明的工作片，先派 mutational signature 专家 + 计算生物学家（可并行）产出设计备忘（写入 `vignettes/articles/devlog-*.qmd`），经你裁决后再派工程师实现。
 - 给每位专家的简报必须**自包含**（子代理无会话记忆）：明确指出要读哪些文件的哪些节、交付什么、验收标准、约束（引用 D 条款）。简报 ≤400 词，要求其报告 ≤800 词。
 
 ### 第 2 步：并行/串行派出
@@ -44,7 +44,7 @@ PI 亲自做：跑 `cargo test`（src/rust 下）、`devtools::check()` 或相�
 - **REVISE** → PI 修复问题清单后**重新审核**（新审核员、同样只喂交付物）。最多 2 轮；第 3 轮仍 REVISE 则停止并向用户汇报分歧点。
 
 ### 第 5 步：记录与汇报
-- 写 `docs/devlog/YYYY-MM-DD-<work-unit>.md`：做了什么、关键决策（引用 D 条款）、审核轮次与结论、遗留问题。
+- 写 `vignettes/articles/devlog-YYYY-MM-DD-<name>.qmd`：做了什么、关键决策（引用 D 条款）、审核轮次与结论、遗留问题。
 - **不主动 git commit**——除非用户明确要求。
 - 向用户汇报：结果、审核结论、下一步建议（通常 = ROADMAP 下一工作单元）。
 

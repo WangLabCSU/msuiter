@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Anchor-probe mode laws for the bootstrap-vs-sigminer campaign harness.
 
-GO-05 (charter SCOPE B follow-on, docs/devlog/2026-10-10-m7-bootstrap-campaign.md).
+GO-05 (charter SCOPE B follow-on, vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd).
 The single authoritative full shot is the RB-10 doctrine: at most one ledger
 entry with mode=="full" is lawful, and a red-anchor shot is unrecoverable.
 So the anchor gate at full shape (K=1000, S=1000, n_sig=50, S_ANCHOR=25,

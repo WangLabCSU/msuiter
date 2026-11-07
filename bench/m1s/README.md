@@ -1,7 +1,7 @@
-# bench/m1s · the M1s acceptance-gate performance bench (the docs/ARCHITECTURE.md §8 budget rows)
+# bench/m1s · the M1s acceptance-gate performance bench (the vignettes/articles/architecture.qmd §8 budget rows)
 
 "catalog generation ≥50× SPMG (the pinned-hardware bench; the CI carries only the sanity bound <5s); NMF ≥100× R NMF"
-(the docs/ROADMAP.md the M1s acceptance row). **Not belonging to the CI**: the CI carries only the sanity bound.
+(the vignettes/articles/roadmap.qmd the M1s acceptance row). **Not belonging to the CI**: the CI carries only the sanity bound.
 
 ## The layout
 

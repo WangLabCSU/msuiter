@@ -172,7 +172,7 @@
 //! [`bootstrap`] gains `bca: bool` (default-off: the percentile face keeps
 //! its exact legacy cost and output). When on, the SAME boot sample yields
 //! the bias-corrected-and-accelerated interval (Hall 1988; design memo
-//! `docs/devlog/2026-10-04-M3b-design-memo.md` §1.2, PI ruling: BCa
+//! `vignettes/articles/devlog-2026-10-04-M3b-design-memo.qmd` §1.2, PI ruling: BCa
 //! default, percentile as the flagged degenerate fallback) with zero extra
 //! resampling: `z₀ = Φ⁻¹(#{θ*_b < θ̂}/B)` reads the existing replicates,
 //! and the acceleration comes from the fixed-active-set analytic jackknife

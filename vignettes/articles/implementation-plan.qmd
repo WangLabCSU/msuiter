@@ -2,7 +2,7 @@
 title: "msuiter implementation plan (IMPLEMENTATION-PLAN) -- the executable decomposition of ROADMAP v3"
 ---
 
-> Version: **v1 (2026-09-28)**. Upstream authorities: [ROADMAP.md](https://wanglabcsu.github.io/msuiter/articles/roadmap.html) (the sole authoritative definition of the version tracks and milestones), [ARCHITECTURE.md](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 D1–D16 (the constitution), [CAPABILITY-MATRIX.md](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) (the completeness authoritative checklist).
+> Version: **v1 (2026-09-28)**. Upstream authorities: [vignettes/articles/roadmap.qmd](https://wanglabcsu.github.io/msuiter/articles/roadmap.html) (the sole authoritative definition of the version tracks and milestones), [vignettes/articles/architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 D1–D16 (the constitution), [vignettes/articles/capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) (the completeness authoritative checklist).
 > This document introduces no new scope: it translates the ROADMAP's milestones into work units (U-*), each carrying deliverable paths, acceptance criteria (citing the D clauses), dependencies and estimates. Any conflict with the ROADMAP/matrix is resolved in favor of the upstream source and goes through docs-sync for correction.
 > Execution: each work unit runs one round per the PI team workflow of [.agents/skills/msuiter-team/SKILL.md](../../../.agents/skills/msuiter-team/SKILL.md); the devlog file name uses the unit ID (`vignettes/articles/YYYY-MM-DD-<U-ID>.md`, the directory is created with the first unit).
 

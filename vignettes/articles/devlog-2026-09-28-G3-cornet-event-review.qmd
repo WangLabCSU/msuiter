@@ -19,7 +19,7 @@ Park 组现在同时持有主流拟合工具（MuSiCal）+ 相关性感知提取
 
 ## 行动项
 
-1. **G0 立即执行**（F1–F4 已于 2026-09-28 冻结，见 [G0 裁决文档](2026-09-28-G0-pi-adjudication.md)）；harness 中与竞品环境无关的部分（模拟生成/覆盖率计算/自校验）即日开建；F5 环境待作者指定。
+1. **G0 立即执行**（F1–F4 已于 2026-09-28 冻结，见 [G0 裁决文档](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G0-pi-adjudication.html)）；harness 中与竞品环境无关的部分（模拟生成/覆盖率计算/自校验）即日开建；F5 环境待作者指定。
 2. 相关性引擎（v1.x）benchmark 规格补充：Cornet bioRxiv DOI 入引文与对拍清单（U-M2 之后、v1.x 开工前落地）。
 3. G3 观察名单（下次季度复核 ~2026-12 前持续跟踪）：MuSiCal 版本动态（尤其 uncertainty 相关 API）、Cornet 期刊接收动态、SigFormer、STL/sigfit 更新。
 4. v0.1/v0.2 范围**不变**（本事件不产生任何 M0/M1s/M2/M3a 范围变更）。

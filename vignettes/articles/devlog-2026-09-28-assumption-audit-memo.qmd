@@ -2,7 +2,7 @@
 title: "Devlog · 假设审计备忘：Cornet 之后的领域共同假设地图（2026-09-28）"
 ---
 
-> 触发：G3 事件复核（[Cornet 正式发表](2026-09-28-G3-cornet-event-review.md)）后作者指令——从 mutational signature 的理论与计算/算法假设限制出发，打磨我方理论和方法。Cornet 打掉的是 A1（签名间独立）；本备忘系统枚举领域方法共同依赖的统计/算法假设，逐条标注 (a) 默许处、(b) 已有破坏、(c) 破坏后的下游空白、(d) msuiter 三方法站位，并给出候选延伸命题 P1–P3。
+> 触发：G3 事件复核（[Cornet 正式发表](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G3-cornet-event-review.html)）后作者指令——从 mutational signature 的理论与计算/算法假设限制出发，打磨我方理论和方法。Cornet 打掉的是 A1（签名间独立）；本备忘系统枚举领域方法共同依赖的统计/算法假设，逐条标注 (a) 默许处、(b) 已有破坏、(c) 破坏后的下游空白、(d) msuiter 三方法站位，并给出候选延伸命题 P1–P3。
 > **声明纪律（D13）**：本文全部命题均为**候选命题 + 四件套草案**，无任何一项已完成验证；阈值均为草案，冻结前可改，冻结后依 G0 条款只允许追加。措辞红线："首个/无损/分布自由"类声明一律限定到可辩护范围。
 > 事实基础：vignettes/articles/research-01-extraction-methods.qmd/02/07 源码级审计 [V]；G0 协议/现实性两备忘（2026-09-28）；本日经 Crossref 补核 DOI：Wu 2022、Aitchison 1982、Self–Liang 1987。任务简报候选假设映射：①→A2，②→A1+P1，③→A7+P2，④→A6，⑤→A5。
 

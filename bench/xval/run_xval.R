@@ -2,7 +2,7 @@
 # tallying against sigminer and (optional) MutationalPatterns, plus a pure-R
 # naive recomputation as an anti-"false agreement" third opinion.
 #
-# Design (docs/research/04 section 1, SPMG semantics):
+# Design (vignettes/articles/research-04-source-audit.qmd section 1, SPMG semantics):
 #   * A toy "patch genome" is cut from REAL hg19 (BSgenome.Hsapiens.UCSC.hg19,
 #     required by both sigminer and MutationalPatterns; msuiter reads the same
 #     sequence through its own 2bit path -- one reference, three readers).

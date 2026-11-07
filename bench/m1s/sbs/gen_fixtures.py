@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # =============================================================================
 # bench/m1s/sbs/gen_fixtures.py · M1s acceptance-gate SBS catalog generation bench deterministic fixtures
-# (docs/ARCHITECTURE.md §8 budget row: catalog generation SBS96(10⁶ mutations)≥50× SPMG and
+# (vignettes/articles/architecture.qmd §8 budget row: catalog generation SBS96(10⁶ mutations)≥50× SPMG and
 #   <5s single-core. CI only ships  sanity bound, this bench does not enter CI ).
 #
 # generated artifacts (all land under cache/,gitignore;seeds are recorded in the manifest; reruns are byte-reproducible):

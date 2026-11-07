@@ -1,6 +1,6 @@
 //! Structured error type for engine (and catalog) kernels (U-M0-09).
 //!
-//! FFI contract 5 (`docs/ARCHITECTURE.md` §2): every kernel returns
+//! FFI contract 5 (`vignettes/articles/architecture.qmd` §2): every kernel returns
 //! `Result<_, MsError>`; kernels never call throwing R APIs and never panic
 //! across the boundary. Only the FFI shell converts an `MsError` into an R
 //! condition, so a kernel failure always fails the whole call — no partial

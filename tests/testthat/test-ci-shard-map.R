@@ -9,7 +9,8 @@
 # byte-stable, and its instruments proven to FIRE (cjk-census self-test
 # family: a scanner without a firing positive control is vacuous and
 # refused). Baseline forensics and the before/after ledgers live in the lane
-# manifest (/tmp/ciopt/manifest.md) and docs/devlog/.
+# manifest (/tmp/ciopt/manifest.md) and the campaign devlog under
+# `vignettes/articles/devlog-*.qmd`.
 
 .ci_require_checkout <- function() {
   if (is.na(.ms_root)) {

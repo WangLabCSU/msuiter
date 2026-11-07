@@ -1,7 +1,7 @@
 # tools/kl-gate-p1 -- P1 bit-equivalence gate (one-shot fixed-platform experiment)
 
 The msuiter-side kernel-extension face of parity-plan phase P1
-(`docs/research/09-sigminer-v3-parity-plan.md` §5 row P1, §7 P1-kickoff
+(`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` §5 row P1, §7 P1-kickoff
 resolution): the certified in-house Apache-2.0 KL-MU kernel
 (`src/rust/engine/src/nmf.rs`, `fit_kl`/`fit_kl_on_stream`/
 `fit_kl_with_init`) consumed through the stable batch entry
@@ -20,7 +20,7 @@ gets certified.
 
 ## Posture: one-shot evidence, mechanically audited record
 
-Per `docs/ARCHITECTURE.md` §7.1 / D11 / A8 this is a fixed-platform
+Per `vignettes/articles/architecture.qmd` §7.1 / D11 / A8 this is a fixed-platform
 one-shot experiment, NOT a CI-per-run gate. CI enforces the committed
 evidence instead: `tests/testthat/test-kernel-gate-evidence.R` refuses a
 missing, truncated, or over-budget `result.md` (verdict line required,

@@ -44,7 +44,7 @@
 //! CN48 operationalises the COSMIC copy-number signature space derived
 //! from the PCAWG/TCGA copy-number signature work (Steele et al.,
 //! Nature 606:984-991, 2022, doi:10.1038/s41586-022-04738-6; per
-//! docs/research/08 fact-check row 7). Alternative CN feature spaces
+//! vignettes/articles/research-08-fact-check-audit.qmd fact-check row 7). Alternative CN feature spaces
 //! exist — CN40 (Wang), the Macintyre 36-component space with BoZp/BoZd
 //! breakage (breakend) features, Drews features, CN176 (Tao);
 //! CAPABILITY-MATRIX L-B pins msuiter v0.2 to CN48. Consequence: the

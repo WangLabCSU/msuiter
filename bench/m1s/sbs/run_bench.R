@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # =============================================================================
 # bench/m1s/sbs/run_bench.R · M1s acceptance-gate SBS catalog generation bench
-#(docs/ARCHITECTURE.md §8 budget row: catalog generation SBS96(10⁶ mutations)vs SPMG ≥50×,
+#(vignettes/articles/architecture.qmd §8 budget row: catalog generation SBS96(10⁶ mutations)vs SPMG ≥50×,
 #   and ours <5s single-core. ROADMAP M1s acceptance gate: catalog generation ≥50× SPMG(pinned-hardware bench;
 #   CI only sanity bound <5s ). this script is not part of CI.
 #
@@ -234,7 +234,7 @@ lines <- c(
          " SBS96(sanity sum=100 vs our side 96, the diff-sum is exactly = 4  DBS members; minimal probe:",
          "1 adjacent pair + 1 isolated pair → SPMG SBS96=3 and produces no DBS78). We follow the U-M1s-09 audit",
          "semantics (dinuc_sub==1 excluded from all SBS matrices) implementation.**the upstream behavior the audit relies on and",
-         "1.3.6 does not match the measurement**——needs PI PI re-review of docs/research/04 the pinned upstream version/code path,",
+         "1.3.6 does not match the measurement**——needs PI PI re-review of vignettes/articles/research-04-source-audit.qmd the pinned upstream version/code path,",
          "and in M1c the DBS78 units to decide the trade-off (this bench does not change package code)."), "",
   "## Caliber notes (verbatim)", "",
   "- SPMG the SPMG side includes VCF parsing + 9 kinds of full-set matrix computing and writing; ours is only SBS96 single table, inputs in memory.",

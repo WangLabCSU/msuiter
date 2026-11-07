@@ -1,6 +1,6 @@
 # run_jiang.R -- v0.2 acceptance gate: the Jiang 2025 fit-evaluation
 # protocol benchmark (bbaf042; design memo
-# docs/devlog/2026-10-05-bench-jiang-memo.md).
+# vignettes/articles/devlog-2026-10-05-bench-jiang-memo.qmd).
 #
 # Setup: a known COSMIC v3.6 dictionary (8 reference signatures, bundled
 # refdb), 3 active + 5 decoy signatures per replicate, burdens

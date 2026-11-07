@@ -17,7 +17,7 @@ title: "msuiter capability coverage matrix (CAPABILITY-MATRIX)"
 > v1.x · 🔭 exploratory · ❌ explicitly not done. Architecture-ready designs
 > live in ARCHITECTURE.md; this matrix records what ships.
 > Milestone codenames (the sole authoritative definitions are in
-> [ROADMAP.md](https://wanglabcsu.github.io/msuiter/articles/roadmap.html)): **M0** engineering foundations (v0.1) · **M1s**
+> [vignettes/articles/roadmap.qmd](https://wanglabcsu.github.io/msuiter/articles/roadmap.html)): **M0** engineering foundations (v0.1) · **M1s**
 > engine-and-catalog core (v0.1) · **M1c** catalog completeness + ID83
 > (v0.2) · **M2** unified extraction pipeline (v0.2) · **M3a** fitting three
 > methods + bootstrap (v0.2) · **M3b** MSU-Fit calibration statistics
@@ -194,7 +194,7 @@ semantics + flat cleaning ✅ v0.2.
 
 | API (`ms_*`) | Layer | Description | Milestone |
 |---|---|---|---|
-| `ms_variants()` `ms_tally()` `ms_extract()` `ms_fit()` `ms_compare()` `plot()` | L2/L3 | the trunk of the unified workflow grammar (the six variant classes share one grammar; swapping the engine does not change the pipeline) | M1s/M2/M3a/M4 |
+| `ms_variants()` `ms_tally()` `ms_extract()` `ms_fit()` `ms_compare()` `plot()` | L2/L3 | the trunk of the unified workflow grammar (one grammar spans the modalities; swapping the engine does not change the pipeline -- per-class coverage is the rows above) | M1s/M2/M3a/M4 |
 | `ms_select_k()` | L3 | the K-selection adjudication rule (CV argmin -> stability veto -> Wilcoxon diagnostic) | M2 (some diagnostics ⏳) |
 | `ms_fit_bootstrap()` `ms_test_presence()` | L3 | the bootstrap CI (support-conditional) and the presence LRT (NB χ²₁ + BH) | M3a |
 | `ms_calibration_grid()` `ms_calibration_verdict()` `plot_calibration_curve()` `ms_calibration_sanity()` | L3 | the calibration experiment faces: the MC coverage grid (assembled over the `ms_calibration_grid_rust` kernel face) + the verdict-window verdict + the coverage-curve plot + the real-data downsampling sanity harness (sanity is never written as calibration evidence; the data-acquisition/governance protocol inst/sanity/README.md, real data never enters the repository) | M3b |

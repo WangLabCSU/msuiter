@@ -1,12 +1,12 @@
 //! One-dimensional two-component Gaussian mixture and the SigProfiler
-//! hypermutant normalization cutoff (U-M1c-02; `docs/ARCHITECTURE.md` §2
+//! hypermutant normalization cutoff (U-M1c-02; `vignettes/articles/architecture.qmd` §2
 //! `engine/stats.rs`, §5 consensus-extraction pipeline).
 //!
 //! # Upstream semantics (pinned to source, D11/D13)
 //!
 //! SigProfilerExtractor handles hypermutated cohorts through a GMM-derived
 //! "normalization cutoff". The design memo
-//! `docs/devlog/2026-09-30-GMM-stratify-memo.md` pins the rule to upstream
+//! `vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd` pins the rule to upstream
 //! master `cc6bf5ef` (tag v1.5.0; line numbers below refer to
 //! `SigProfilerExtractor/subroutines.py` = Sub and `sigpro.py` = Sig):
 //!
@@ -345,7 +345,7 @@ pub fn fit_gmm1d_with_rng(
 }
 
 /// Apply the frozen SigProfiler hypermutant normalization-cutoff rule
-/// (`docs/devlog/2026-09-30-GMM-stratify-memo.md` §1.3) to per-sample
+/// (`vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd` §1.3) to per-sample
 /// mutation totals.
 ///
 /// Protocol (upstream `cc6bf5ef`, Sub:149-200, Sig:913-921):

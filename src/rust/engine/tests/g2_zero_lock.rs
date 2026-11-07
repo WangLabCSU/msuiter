@@ -1,12 +1,12 @@
 //! P1 kernel-extension face (b): G2 zero-lock hardening.
 //!
-//! The epsilon policy contract (docs/ARCHITECTURE.md:303 — "no +ε at the
+//! The epsilon policy contract (vignettes/articles/architecture.qmd:303 — "no +ε at the
 //! catalog layer; the numerical protection enters only the division", and
 //! the kernel-side placement in src/rust/engine/src/nmf.rs module docs
 //! "ε policy"): `KL_EPS` floors DIVISION DENOMINATORS and log arguments
 //! only; it is never added to a factor, never used to floor a factor
 //! entry after an update. The distinction is the 1.5.0-class landmine the
-//! parity plan names (docs/research/09 §5 row P1: "zero-lock hardening
+//! parity plan names (vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P1: "zero-lock hardening
 //! incl. NNDSVD-init regression (G2)"): an implementation that resurrects
 //! or clamps dead entries with `max(x, ε)` after each update silently
 //! changes the MLE path, reports "converged" while components are frozen

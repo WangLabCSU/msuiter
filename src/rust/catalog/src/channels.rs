@@ -2,8 +2,8 @@
 //!
 //! Source of truth: `data-raw/build_channels.R` -- regenerate with
 //! `Rscript data-raw/build_channels.R`; do not edit by hand.
-//! Canonical-order provenance: `docs/research/04` section 1 (SPMG
-//! semantics) and `docs/research/05` section 2. These arrays must stay
+//! Canonical-order provenance: `vignettes/articles/research-04-source-audit.qmd` section 1 (SPMG
+//! semantics) and `vignettes/articles/research-05-standards-data.qmd` section 2. These arrays must stay
 //! bit-identical to `R/sysdata.rda` (`channel_tables`), enforced by
 //! `tests/testthat/test-channels-sync.R`; structural contract pinned by
 //! `src/rust/catalog/tests/channels.rs`.

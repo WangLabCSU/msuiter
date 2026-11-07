@@ -1,6 +1,6 @@
 //! Consensus clustering core and evaluation matching layer (U-M2-01;
-//! `docs/ARCHITECTURE.md` §2 `engine/consensus.rs`, design memo
-//! `docs/devlog/2026-09-30-M2-pipeline-design-memo.md` §1/§1.5/§5).
+//! `vignettes/articles/architecture.qmd` §2 `engine/consensus.rs`, design memo
+//! `vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd` §1/§1.5/§5).
 //!
 //! # Upstream semantics (pinned to source, D11/D13)
 //!

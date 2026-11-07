@@ -1,7 +1,7 @@
 //! Golden and property tests for DBS78 doublet-substitution arithmetic
 //! (U-M1s-07; D11 "semantic bit" acceptance: integer + label goldens).
 //!
-//! Semantics (SPMG, audited at `docs/research/04` section 1 and pinned by
+//! Semantics (SPMG, audited at `vignettes/articles/research-04-source-audit.qmd` section 1 and pinned by
 //! `data-raw/build_channels.R` / `channels.rs`):
 //!   * a doublet substitution is two SNVs at distance exactly 1
 //!     (`dinuc_sub == 1`);

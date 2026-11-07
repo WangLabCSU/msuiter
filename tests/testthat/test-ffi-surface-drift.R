@@ -6,7 +6,7 @@
 # (R/extendr-wrappers.R). Any drift — a new, removed or renamed
 # msffi_*/ms_*_rust export that did not go through the frozen-surface
 # review — turns this test red. Skips under R CMD check of a tarball,
-# where the docs/ and generated-wrapper sources are absent.
+# where the vignettes/ and generated-wrapper sources are absent.
 
 .ms_ffi_surface_manifest <- function() {
   path <- testthat::test_path("../../vignettes/articles/ffi-surface.qmd")

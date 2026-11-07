@@ -2,7 +2,7 @@
 #
 # Weekly updates for the Rust workspace (/src/rust) and GitHub Actions.
 #
-# Pin protection (docs/adr/0002-vendor-budget.md §4.4): the Cargo.lock pins
+# Pin protection (vignettes/articles/adr-0002-vendor-budget.qmd §4.4): the Cargo.lock pins
 # exist ONLY to hold MSRV 1.71 (matrixmultiply >= 0.3.10 and rayon >= 1.11
 # both declare rustc >= 1.75/1.80). Dependabot must not lift them; the pins
 # are additionally asserted in CI by the guards job and by

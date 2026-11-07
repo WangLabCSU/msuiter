@@ -7,7 +7,7 @@
 # (team iron law)":
 #   * ANY golden-fixture update (bit-exact semantic goldens, numeric-protocol
 #     goldens, RNG goldens, channel reference files) must state its upstream
-#     reason in the matching devlog (docs/devlog/YYYY-MM-DD-<unit>.md);
+#     reason in the matching devlog (vignettes/articles/devlog-YYYY-MM-DD-<name>.qmd);
 #     golden changes without a stated reason are refused outright. This
 #     script only regenerates -- it is never itself a reason to update: after
 #     a regeneration, a non-empty git diff means STOP and write the devlog

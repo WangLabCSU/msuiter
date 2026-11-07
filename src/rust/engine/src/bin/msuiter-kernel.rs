@@ -1,6 +1,6 @@
 //! `msuiter-kernel` — the stable batch entry of the isolated-process
 //! boundary (P1 kernel-extension face (d); parity plan
-//! `docs/research/09-sigminer-v3-parity-plan.md` §5 row P1 and §7
+//! `vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` §5 row P1 and §7
 //! P1-kickoff resolution, controller ruling 2026-10-14 / PR #23).
 //!
 //! The sigminer side will consume the certified in-house Apache-2.0 KL-MU

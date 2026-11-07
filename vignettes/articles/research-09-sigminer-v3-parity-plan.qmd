@@ -3,7 +3,7 @@ title: "09 · sigminer v3 parity plan — closing the SigProfiler result-perform
 ---
 
 > Doc nature: research/devlog lane for msuiter issue #1 ("sigminer v3 implementation, domain progress, and best-algorithm integration"; ask: raise sigminer's result performance to SigProfiler parity).
-> Verified date: 2026-10-13. Method: local read-only inventory of `/Users/wsx/Documents/GitHub/sigminer` (master @ `196471a5`, DESCRIPTION Version 2.3.3), upstream reads via `gh` (issues #478/#470/#472/#479/#456/#455/#460, releases; SigProfilerExtractor CHANGELOG), msuiter docs/bench at main @ `5f0ea42` (msuiter-side line pins re-anchored at this rev, post #20/#21 English corpus passes), literature via arxiv/biorxiv fetches available in this environment.
+> Verified date: 2026-10-13. Method: local read-only inventory of `/Users/wsx/Documents/GitHub/sigminer` (master @ `196471a5`, DESCRIPTION Version 2.3.3), upstream reads via `gh` (issues #478/#470/#472/#479/#456/#455/#460, releases; SigProfilerExtractor CHANGELOG), msuiter bench at main @ `5f0ea42` (msuiter-side line pins re-anchored at this rev, post #20/#21 English corpus passes), literature via arxiv/biorxiv fetches available in this environment.
 > Protocol: zero fabricated numbers; every claim carries a pointer that was actually opened; unavailable sources are declared, not papered over (per the verify-by-command protocol).
 
 ## 1. Executive verdict

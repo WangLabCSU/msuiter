@@ -30,15 +30,34 @@
 # census speaks true on perfect bytes); a one-observation V mutation
 # breaks the W equality (the census speaks false on broken bytes).
 #
-# Gate (audit #74 P1-6): the evidence is IN the repository -- there is no
-# skip path. Missing or drifted bank bytes stop the unit, and the era
-# commit named in PROVENANCE.tsv must resolve in this checkout.
+# Gate (audit #74 P1-6): the evidence is IN the repository -- the bank
+# bytes have NO skip path. Missing or drifted bank bytes stop the unit in
+# every context. The era commit of PROVENANCE.tsv is a separate, checkout
+# -layer law: it must resolve wherever a checkout is locatable, and where
+# the enclosing tree carries no repository marker (R CMD check extracts a
+# copy and .Rbuildignore drops .git) the gate says so in a named skip
+# instead of reading green. The two layers are separate units below.
 
-test_that("P10-A the attested-geometry faces are byte-identical, with the
-           census controls firing", {
-  ev <- .kbg_ev()                          # stops on absence/drift
-  root <- normalizePath(file.path(ev$root, "..", "..", "..", ".."),
-                        mustWork = FALSE)
+test_that("P10-A the era commit of the banked face resolves in the checkout", {
+  ev <- .kbg_ev()
+  # Firing controls (house law: a law that cannot fire is vacuous): the
+  # resolver must find a checkout it is handed and must speak NA for a tree
+  # with no repository marker or no DESCRIPTION of its own -- stuck on
+  # either answer, this gate is a dead metric in one of the two contexts.
+  ctl <- tempfile("bi-root-")
+  fx <- file.path(ctl, "tests", "testthat", "fixtures", "kernel-geometry")
+  dir.create(fx, recursive = TRUE)
+  expect_identical(.kbg_git_root(fx), NA_character_)
+  file.create(file.path(ctl, ".git"))
+  expect_identical(.kbg_git_root(fx), NA_character_)
+  file.create(file.path(ctl, "DESCRIPTION"))
+  # Both operands in the helper's forward-slash convention: this law is
+  # about which root answers, never about a platform's separator.
+  expect_identical(.kbg_git_root(fx), normalizePath(ctl, winslash = "/"))
+  root <- .kbg_git_root(ev$root)
+  if (is.na(root)) {
+    skip("repository checkout not locatable (R CMD check context)")
+  }
   prov <- ev$prov
   git <- .kpp_exec_real("git", c("-C", root, "cat-file", "-t",
                                   paste0(prov$era_commit, "^{commit}")))
@@ -46,6 +65,11 @@ test_that("P10-A the attested-geometry faces are byte-identical, with the
                    info = paste0("era commit ", prov$era_commit,
                                  " does not resolve in this checkout"))
   expect_match(paste(git$stdout, collapse = ""), "commit")
+})
+
+test_that("P10-A the attested-geometry faces are byte-identical, with the
+           census controls firing", {
+  ev <- .kbg_ev()                          # stops on absence/drift
   bin <- .kpp_bin()
   hs <- .kpp_exec_real(bin, "--version")
   expect_identical(hs$rc, 0L)

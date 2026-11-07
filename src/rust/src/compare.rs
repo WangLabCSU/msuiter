@@ -1,5 +1,5 @@
 //! Null-distribution faces for the M4 `ms_compare()` calibration library
-//! (U-M4-01; design memo `docs/devlog/2026-10-04-M4-01-design-memo.md`
+//! (U-M4-01; design memo `vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd`
 //! §2/§5) — the pure (R-type-free) heart of `ms_compare_null_rust`.
 //!
 //! # The two frozen null families (D13: estimation object = null quantiles;
@@ -139,7 +139,7 @@ pub struct NullDraw {
 
 /// audit #74 P1-1 (measured: a burden 1e12 call hung in
 /// `resample::multinomial` for >10 min, witness banked). The null faces
-/// are declared bounded-duration uninterruptible (docs/ffi-surface.md
+/// are declared bounded-duration uninterruptible (vignettes/articles/ffi-surface.qmd
 /// contracts 6/7); an uncapped burden makes that declaration a lie.
 /// The burden rides an f64 through `as u64`, so the exact-integer domain
 /// of an R double is the outer bound (the `fit.rs` / bootstrap precedent:
@@ -758,7 +758,7 @@ mod tests {
     fn unbounded_burden_and_word_budget_are_refused_before_any_draw() {
         // audit #74 P1-1 (2026-11-04): the multinomial arms burn one stream
         // word per mutation and the null faces are declared bounded-duration
-        // uninterruptible (docs/ffi-surface.md contract 7) -- an uncapped
+        // uninterruptible (vignettes/articles/ffi-surface.qmd contract 7) -- an uncapped
         // burden is a session freeze, so the burden domain and the
         // n_draws x burden word product must gate BEFORE the first draw.
         let q = [0.95f64];

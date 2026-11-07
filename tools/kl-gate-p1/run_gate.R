@@ -9,13 +9,13 @@
 # boundary surface rather than the scratch driver.
 #
 # One-shot fixed-platform experiment, NOT a CI-per-run gate
-# (docs/ARCHITECTURE.md §7.1 / D11 / A8). What CI enforces is the committed
+# (vignettes/articles/architecture.qmd §7.1 / D11 / A8). What CI enforces is the committed
 # evidence record: tests/testthat/test-kernel-gate-evidence.R audits the
 # result.md produced here (verdict line, endpoint ratios under 1e-10, seeds
 # on the record). Regeneration: Rscript run_gate.R [tool_dir].
 #
 # Acceptance criterion (parity plan §5 row P1,
-# docs/research/09-sigminer-v3-parity-plan.md:71):
+# vignettes/articles/research-09-sigminer-v3-parity-plan.qmd:71):
 #   per case, T in {50, 200}:  |dW|_F / |W_R|_F < 1e-10   (and the H twin)
 # Fixed seeds are those of the committed synthetic inputs (kl-crosscheck
 # record: V seeds 20260928-29-30, init seeds 401/402/403; the inputs are
