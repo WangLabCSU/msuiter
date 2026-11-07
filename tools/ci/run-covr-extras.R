@@ -162,14 +162,19 @@
   # The child sees ONLY its leg's stub library plus base packages: the real
   # covr can never leak into a control (search order puts R_LIBS_USER ahead
   # of the distribution library, so the stub shadows even a host covr).
-  old.env <- Sys.getenv(c("R_LIBS_USER", "R_LIBS_SITE", "R_PROFILE", "R_ENIRON"))
+  # R_ENVIRON/R_ENVIRON_USER are suppressed by name: a Renviron file's
+  # R_LIBS_SITE beats the shell's empty string, and a mistyped variable fails
+  # closed with no signal (measured: windows cran-shape-check).
+  old.env <- Sys.getenv(c("R_LIBS_USER", "R_LIBS_SITE", "R_PROFILE",
+                          "R_ENVIRON", "R_ENVIRON_USER"))
   on.exit({
     gone <- names(old.env)[sapply(old.env, is.na)]
     keep <- old.env[!sapply(old.env, is.na)]
     Sys.unsetenv(gone)
     if (length(keep)) do.call(Sys.setenv, as.list(keep))
   }, add = TRUE)
-  Sys.setenv(R_LIBS_SITE = "", R_PROFILE = "no", R_ENIRON = "no")
+  Sys.setenv(R_LIBS_SITE = "", R_PROFILE = "no", R_ENVIRON = "no",
+             R_ENVIRON_USER = "no")
 
   run.child <- function(leg, type, slash = TRUE) {
     lib <- file.path(fix, paste0("lib-", leg))

@@ -738,7 +738,14 @@ jobs:
           - {os: windows-latest, r: 'release'}
 
     steps:
+      # fetch-depth: 0 -- audit #74 P1-6: this monolith runs the FULL test
+      # phase (the PR fanout runs --no-tests), so the era-gate law resolves
+      # PROVENANCE's banked commit with `git cat-file -t <sha>^{commit}`
+      # right here; the default depth-1 checkout makes that ancestor
+      # unreachable (rc 128, "Not a valid object name").
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Fetch vendored offline tarball (built by vendor-prep)
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8

@@ -611,15 +611,19 @@ test_that("with digest unloadable the gate falls back byte-identically (F2)", {
     "cat('probe=', isTRUE(probe), ' sha=', msuiter:::.ms_cc_sha256_raw(raw),",
     "    '\\n', sep = '')"), script)
   # The child's isolation is the R_LIBS_USER farm plus the R_LIBS_SITE/R_PROFILE/
-  # R_ENIRON neutralizers, set around the spawn and restored after: every
-  # platform drives the same Rscript invocation, no shell wrapper (measured:
-  # /bin/sh is absent on windows and the spawn died at exit 127 there).
+  # R_ENVIRON/R_ENVIRON_USER neutralizers and the --vanilla spawn flag, restored
+  # after: every platform drives the same Rscript invocation, no shell wrapper
+  # (measured: /bin/sh is absent on windows and the spawn died at exit 127
+  # there). A Renviron file's R_LIBS_SITE beats the shell's empty string, so the
+  # empty-string neutralizer cannot evict a runner-injected site library on its
+  # own -- the pickup must be suppressed by name, and "R_ENIRON" is a typo for
+  # R_ENVIRON, no variable at all (measured: windows cran-shape-check).
   # R_LIBS (the master variable) rides as well: under the covr coverage lane
   # the test parent carries covr's R_LIBS, which outranks the _USER/_SITE
   # pair and would hand the child the full library set -- digest included --
   # flipping the probe to TRUE (witnessed: PR #52 coverage run, shard 4).
   childenv <- c(R_LIBS = farm, R_LIBS_USER = farm, R_LIBS_SITE = "",
-                R_PROFILE = "no", R_ENIRON = "no")
+                R_PROFILE = "no", R_ENVIRON = "no", R_ENVIRON_USER = "no")
   prior <- Sys.getenv(names(childenv), unset = NA_character_)
   do.call(Sys.setenv, stats::setNames(as.list(childenv), names(childenv)))
   on.exit({
@@ -630,7 +634,8 @@ test_that("with digest unloadable the gate falls back byte-identically (F2)", {
     }
   })
   of <- tempfile("cc-absent-out-"); ef <- paste0(of, ".err")
-  st <- suppressWarnings(system2(ex, script, stdout = of, stderr = ef))
+  st <- suppressWarnings(system2(ex, c("--vanilla", script),
+                                 stdout = of, stderr = ef))
   expect_identical(as.integer(st), 0L,
                    info = paste0(readLines(ef, warn = FALSE), collapse = " | "))
   line <- paste0(readLines(of, warn = FALSE), collapse = "")

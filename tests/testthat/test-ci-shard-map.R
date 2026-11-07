@@ -18,6 +18,20 @@
   }
 }
 
+# Repository workflow reads are repo-only by nature: .Rbuildignore excludes
+# .github from the tarball, so test_path("../..") above the check dir has no
+# workflows/ to read. .ms_src finds the checkout (or an installed copy);
+# absent both, skip on an explicit repository-ness gate -- never read blind
+# (test-docs-sync.R doctrine).
+.ci_repo_file <- function(rel) {
+  p <- .ms_src(rel)
+  if (is.na(p)) {
+    skip(paste0(rel, " not available (R CMD check context)"))
+  }
+  p
+}
+.ci_workflow <- function(name) .ci_repo_file(file.path(".github", "workflows", name))
+
 # Instrument locators are hard expectations, never silent skips: in a
 # checkout a missing instrument is a census failure (vacuous-green law).
 .ci_ci_locate <- function(name) {
@@ -167,8 +181,7 @@ test_that("the fan-out rosters keep the eight-arm census across the two gates (i
                           "macos-latest/release", "macos-latest/oldrel-1")))
   # A roster with no live face is a silent green: the version fan-out must
   # ride the scheduled file -- budgeted, deep-tier, and reading its own roster.
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  sched <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"), warn = FALSE)
+  sched <- readLines(.ci_workflow("scheduled.yml"), warn = FALSE)
   h <- which(sched == "  R-CMD-check-version-fanout:")
   expect_identical(length(h), 1L, info = "the scheduled version fan-out vanished")
   win <- sched[seq(from = h + 1L, to = length(sched))]
@@ -189,8 +202,7 @@ test_that("the fan-out rosters keep the eight-arm census across the two gates (i
 
 test_that("the CRAN-shape monolithic check rides the scheduled gate, not the PR gate", {
   .ci_require_checkout()
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  rd <- function(f) readLines(file.path(root, ".github", "workflows", f), warn = FALSE)
+  rd <- function(f) readLines(.ci_workflow(f), warn = FALSE)
   ci <- rd("ci.yml")
   sched <- rd("scheduled.yml")
   # The single-process CRAN-shape check keeps its science (serial state, CRAN
@@ -199,6 +211,16 @@ test_that("the CRAN-shape monolithic check rides the scheduled gate, not the PR 
                info = "ci.yml still invokes the monolithic check-r-package action")
   expect_true(any(grepl("check-r-package", sched, fixed = TRUE)),
                info = "scheduled.yml lost the CRAN-shape monolithic check")
+  # This leg runs the FULL test phase, so the era-gate law
+  # (test-kernel-bit-identity.R) resolves a banked ancestor commit in its
+  # own checkout: a depth-1 clone reds it (audit #74 P1-6).
+  h <- which(sched == "  cran-shape-check:")
+  expect_identical(length(h), 1L, info = "scheduled.yml lost the CRAN-shape job")
+  win <- sched[seq(from = h + 1L, to = length(sched))]
+  nxt <- which(grepl("^  [A-Za-z0-9_-]+:$", win))
+  if (length(nxt)) win <- win[seq_len(nxt[1L] - 1L)]
+  expect_true(grepl("fetch-depth: 0", paste0(win, collapse = "\n"), fixed = TRUE),
+              info = "the full-test-phase monolith rides a depth-1 checkout: the era-commit law cannot resolve")
 })
 
 test_that("the aggregator census FIRES on its shipped self-test controls", {
@@ -369,12 +391,9 @@ test_that("job budgets cover the measured tails -- no arm dies on its own timer"
   # a stalled runner. A budget is a hang detector, not a starvation engine:
   # it must exceed the measured tail with headroom.
   .ci_require_checkout()
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
-  sc <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"),
-                   warn = FALSE)
-  rl <- readLines(file.path(root, ".github", "workflows", "release.yml"),
-                   warn = FALSE)
+  ci <- readLines(.ci_workflow("ci.yml"), warn = FALSE)
+  sc <- readLines(.ci_workflow("scheduled.yml"), warn = FALSE)
+  rl <- readLines(.ci_workflow("release.yml"), warn = FALSE)
   budget_line <- function(key, src = ci) {
     hdr <- paste0("  ", key, ":")
     h <- which(src == hdr)
@@ -424,8 +443,7 @@ test_that("the tier-T2 heavy class keeps a committed nightly face (issue #76)", 
   # the local one-command contract speaks. A missing leg here would mean
   # 41 minutes of committed provisioning physics silently running nowhere.
   .ci_require_checkout()
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  sc <- readLines(file.path(root, ".github", "workflows", "scheduled.yml"), warn = FALSE)
+  sc <- readLines(.ci_workflow("scheduled.yml"), warn = FALSE)
   h <- which(sc == "  test-heavy:")
   expect_identical(length(h), 1L, info = "the nightly heavy leg vanished -- T2 would run nowhere in CI")
   win <- sc[seq(from = h + 1L, to = length(sc))]
@@ -536,8 +554,7 @@ test_that("the coverage ledger is reverse-audited and its controls FIRE", {
 
 test_that("the covr merge gate reddens zero fragments and the extras prefix cannot drift", {
   .ci_require_checkout()
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  rd <- function(f) paste0(readLines(file.path(root, f), warn = FALSE), collapse = "\n")
+  rd <- function(f) paste0(readLines(.ci_repo_file(f), warn = FALSE), collapse = "\n")
   ci <- rd(".github/workflows/scheduled.yml")
   # (the covr leg moved here with issue #76; the laws travel with the step)
   # The birth defect (attested 2026-10-24): zero fragments echoed and exited
@@ -570,8 +587,7 @@ test_that("a cached R path cannot survive into the cargo jobs", {
   # extendr-ffi build-script output after the cache restore and before the
   # first full-workspace cargo step.
   .ci_require_checkout()
-  root <- normalizePath(testthat::test_path("../.."), mustWork = FALSE)
-  ci <- readLines(file.path(root, ".github", "workflows", "ci.yml"), warn = FALSE)
+  ci <- readLines(.ci_workflow("ci.yml"), warn = FALSE)
   job_window <- function(key) {
     h <- which(ci == paste0("  ", key, ":"))
     expect_identical(length(h), 1L, info = key)
