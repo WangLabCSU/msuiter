@@ -860,6 +860,23 @@ def main():
     vg = sched["jobs"].get("valgrind", {})
     check("scheduled: valgrind job is a hard gate (no continue-on-error)",
           bool(vg) and vg.get("continue-on-error") is not True)
+    # The runner pin (issue #74 residue, 2026-11-07). The leg's census
+    # adjudicates the WHOLE traced process forest, so its verdict is only as
+    # stable as the image beneath it. The hosted ubuntu-latest flipped
+    # 24.04 -> 26.04; 26.04's uutils coreutils leaks 43673 B in
+    # /usr/bin/uname, which --trace-children=yes walks into the trace, and
+    # the HARD ZERO law (run_valgrind_leg.sh, exit 2) aborts a leg whose
+    # package is clean. Measured witnesses: 24.04 GREEN with dlbytes=0
+    # tool=5 files=3 tests=413; both 26.04 runs HARD ZERO on
+    # /usr/bin/uname -m, 43673 B in each. Pin the environment; never widen
+    # the adjudication and never soften the gate.
+    ron = vg.get("runs-on")
+    check("scheduled: valgrind leg pins a dated runner image, never -latest",
+          isinstance(ron, str)
+          and re.fullmatch(r"ubuntu-[0-9][0-9]\.[0-9][0-9]", ron) is not None,
+          f"got {ron!r}")
+    check("valgrind runner-pin law firing control: a rolling tag is refused",
+          re.fullmatch(r"ubuntu-[0-9][0-9]\.[0-9][0-9]", "ubuntu-latest") is None)
     check("scheduled: valgrind job carries a timeout-minutes budget",
           isinstance(vg.get("timeout-minutes"), (int, float))
           and 0 < vg.get("timeout-minutes") <= 120,

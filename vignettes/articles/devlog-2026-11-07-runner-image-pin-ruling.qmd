@@ -1,0 +1,116 @@
+---
+title: "2026-11-07 -- Runner-image pin ruling: the valgrind leg adjudicates a pinned environment"
+---
+
+# Runner-image pin ruling: the valgrind leg adjudicates a pinned environment
+
+Lane: ci/valgrind-runner-pin (branch `ci/valgrind-runner-pin`, base
+origin/main@31205f4).
+Goal: the accepted ruling on the residue of issue #74 -- the nightly
+valgrind leg began aborting on a leak the package does not own. The
+remedy pins the environment; it does not touch one line of the
+adjudication.
+
+## Why the old shape could not hold
+
+The leg runs under `--trace-children=yes`, so its census adjudicates the
+whole traced process forest, not only our guest: the log the awk reads is
+a forest of per-pid report blocks and every pid in it is answerable for
+its own bytes. That is deliberate and it is load-bearing -- at the default
+the guest escapes the trace entirely (`run_valgrind_leg.sh:122`). The
+consequence is that the leg's verdict is only as stable as the image
+beneath it, and the image moved.
+
+The hosted rolling tag flipped 24.04 -> 26.04 between the 2026-10-22 and
+2026-10-26 nightlies. The 24.04 leg is green and its census says our guest
+contributed nothing:
+
+```
+valgrind-leg: report census: 7 error(s) fully adjudicated ambient
+(tool-swarm 5, static caches epoch-registrar 1 + once-cell-probe 1),
+7 record headers backing the count, definitely-lost 0 bytes,
+roster 3/3 files, 413 test(s) passed over 11 attested pids
+```
+
+Both 26.04 nightlies died instead, on the image's own coreutils, with a
+byte count that is identical to the byte:
+
+```
+HARD ZERO: 43673 bytes definitely lost in pid 14003 (Command: /usr/bin/uname -m)
+  -- not one byte may be definitely lost, whoever the owner
+HARD ZERO: 43673 bytes definitely lost in pid 8985 (Command: /usr/bin/uname -m)
+```
+
+Two independent runs, two different pids, the same 43673 bytes in the same
+container binary: that is the signature of a deterministic property of the
+image, not of a race in our guest. The 26.04 uplift replaced the image's
+coreutils provider; the leak lives in the container's `/usr/bin/uname` and
+`--trace-children=yes` walks it into the trace. An arm can gate nothing
+while it is measuring the runner.
+
+## The ruling
+
+1. **Pin the environment.** The `valgrind` job's `runs-on` is
+   `ubuntu-24.04`, a dated image, never the rolling tag. The doctrine
+   comment in the workflow states why in place, and names issue #74.
+2. **Never widen the adjudication.** The tempting fix is to exempt
+   `/usr/bin/uname` from the hard zero, or to drop it from `TOOL_RE`. Both
+   are refused, and the script's own ordering is the reason: the
+   by-path allowance is consulted in the loss-record loop
+   (`run_valgrind_leg.sh:336`), while the hard zero sums definitely-lost
+   bytes for every pid and exits 2 four checks earlier (`:310`). The
+   allowance was never able to rescue a byte count in the first place --
+   `dlbytes` is a raw sum over every measured record, which is precisely
+   why the green leg prints `definitely-lost 0 bytes` and not "0 minus the
+   allowlisted ones". Exempting a utility from the hard zero would blind
+   the census to a real leak in any of the eleven allowlisted commands.
+3. **Never soften the gate.** `continue-on-error` stays absent and the
+   120-minute budget stays as witnessed.
+4. **The pin is law, not a comment.** `tools/ci-selfcheck.py` grew two
+   assertions in the same change set: the valgrind leg's `runs-on` must
+   match a dated `ubuntu-NN.NN` image, and the law's own firing control
+   refuses the rolling tag. A future hand that reverts the pin to
+   `ubuntu-latest` reddens the selfcheck lane, not the nightly.
+
+## Measured
+
+Generator verdict: `python3 tools/ci-selfcheck.py` exits 0, carrying
+
+```
+PASS  scheduled: valgrind leg pins a dated runner image, never -latest
+PASS  valgrind runner-pin law firing control: a rolling tag is refused
+```
+
+alongside the pre-existing hard-gate and timeout-budget assertions on the
+same job, so the new pair sits inside a lane that already had teeth rather
+than beside them. The diff is two files, 22 insertions and 1 deletion.
+
+The byte evidence is quoted above from the archived nightly logs of the
+three runs that bracket the flip: 39722405686 (2026-10-22, green,
+`Image: ubuntu-24.04`, census `dlbytes=0 tool=5 files=3 tests=413`),
+40306103047 (2026-10-26, `Image: ubuntu-26.04`, HARD ZERO 43673 B in pid
+14003) and 41446211210 (2026-11-02, `Image: ubuntu-26.04`, HARD ZERO
+43673 B in pid 8985, the harness closing the leg with
+`valgrind-leg: FAIL: the report census refused the suite log`). The
+rollout is visible in the dependency resolver's own words in the same
+logs: `RemotePkgPlatform: x86_64-pc-linux-gnu-ubuntu-24.04` on the green
+run, `x86_64-pc-linux-gnu-ubuntu-26.04` on both red ones. The recurrence
+that forced the ruling is the 2026-11-06 nightly (42216557267, failure at
+2d38922). The CJK governance census stays green over the edit: in this
+lane's clean worktree it reads `577 file(s) censused, 0 line(s),
+cjk-census: OK`. The count is a walk of the working tree, so it is only
+reproducible against a clean one: the main worktree reads 694 on the same
+revision class purely because its untracked campaign cache under `bench/`
+joins the walk, and all 117 of the difference sit in one ignored tree,
+`bench/g0/cache/`. Quote the count with its worktree or not at all.
+
+## Why a dated tag and not a self-hosted or containerised runner
+
+A container digest, a self-hosted runner and a dated hosted tag all pin
+the environment; only the dated tag pins it without adding an
+infrastructure dependency this project would then have to keep alive. The
+budget is unchanged and the leg's own timeouts are unchanged. When GitHub
+retires 24.04 the selfcheck assertion will still pass for the next dated
+image, and the migration is a one-token edit whose witness is a green leg
+-- which is exactly the shape we want: the environment is a pin, and the
+pin's failure mode is loud.

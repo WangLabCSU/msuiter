@@ -78,7 +78,11 @@ jobs:
   # #32 remediation carried the R CMD check shell template placeholder
   # `{0}`; the token is a shell placeholder, not a numeric claim.)
   valgrind:
-    runs-on: ubuntu-latest
+    # Pinned, never `-latest`: the hosted image flipped 24.04 -> 26.04, whose
+    # uutils coreutils leaks 43673 bytes in /usr/bin/uname. --trace-children=yes
+    # walks that child into the trace and the census's HARD ZERO law aborts the
+    # leg. Pin the environment; never widen the adjudication (issue #74).
+    runs-on: ubuntu-24.04
     # Hard gate: the archived leg carried continue-on-error (D1 class).
     timeout-minutes: 120
     steps:
