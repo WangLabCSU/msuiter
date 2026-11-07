@@ -49,7 +49,10 @@
 # repository can never answer for these bytes. NA when no checkout is
 # reachable (the extracted R CMD check tree carries no .git: .Rbuildignore).
 .kbg_git_root <- function(fixtures_root) {
-  d <- try(normalizePath(fixtures_root), silent = TRUE)
+  # The answer is spoken with forward slashes on every platform: callers
+  # compare it for identity, and a Windows backslash form would turn that
+  # comparison into a separator artefact instead of a statement about roots.
+  d <- try(normalizePath(fixtures_root, winslash = "/"), silent = TRUE)
   while (!inherits(d, "try-error") && nzchar(d)) {
     if (file.exists(file.path(d, ".git")) &&
         file.exists(file.path(d, "DESCRIPTION"))) {

@@ -51,7 +51,9 @@ test_that("P10-A the era commit of the banked face resolves in the checkout", {
   file.create(file.path(ctl, ".git"))
   expect_identical(.kbg_git_root(fx), NA_character_)
   file.create(file.path(ctl, "DESCRIPTION"))
-  expect_identical(.kbg_git_root(fx), normalizePath(ctl))
+  # Both operands in the helper's forward-slash convention: this law is
+  # about which root answers, never about a platform's separator.
+  expect_identical(.kbg_git_root(fx), normalizePath(ctl, winslash = "/"))
   root <- .kbg_git_root(ev$root)
   if (is.na(root)) {
     skip("repository checkout not locatable (R CMD check context)")
