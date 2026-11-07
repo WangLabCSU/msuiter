@@ -51,7 +51,7 @@ while it is measuring the runner.
 ## The ruling
 
 1. **Pin the environment.** The `valgrind` job's `runs-on` is
-   `ubuntu-24.04`, a dated image, never the rolling tag. The doctine
+   `ubuntu-24.04`, a dated image, never the rolling tag. The doctrine
    comment in the workflow states why in place, and names issue #74.
 2. **Never widen the adjudication.** The tempting fix is to exempt
    `/usr/bin/uname` from the hard zero, or to drop it from `TOOL_RE`. Both
@@ -96,8 +96,13 @@ rollout is visible in the dependency resolver's own words in the same
 logs: `RemotePkgPlatform: x86_64-pc-linux-gnu-ubuntu-24.04` on the green
 run, `x86_64-pc-linux-gnu-ubuntu-26.04` on both red ones. The recurrence
 that forced the ruling is the 2026-11-06 nightly (42216557267, failure at
-2d38922). The CJK governance census stays green over the edit:
-`694 file(s) censused, 0 line(s), cjk-census: OK`.
+2d38922). The CJK governance census stays green over the edit: in this
+lane's clean worktree it reads `577 file(s) censused, 0 line(s),
+cjk-census: OK`. The count is a walk of the working tree, so it is only
+reproducible against a clean one: the main worktree reads 694 on the same
+revision class purely because its untracked campaign cache under `bench/`
+joins the walk, and all 117 of the difference sit in one ignored tree,
+`bench/g0/cache/`. Quote the count with its worktree or not at all.
 
 ## Why a dated tag and not a self-hosted or containerised runner
 
