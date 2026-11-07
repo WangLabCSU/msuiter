@@ -633,7 +633,7 @@ jobs:
         run: cargo clippy --workspace -- -D warnings
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
         with:
           tool: cargo-deny
 
@@ -649,7 +649,7 @@ jobs:
       # findings; --deny warnings only by a later controller ruling. The
       # advisory-DB fetch is runner-side network I/O and is permitted here.
       - name: Install cargo-audit
-        uses: taiki-e/install-action@682ce6c3c696a4cd5168a05f98e51aa02b877941 # v2
+        uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
         with:
           tool: cargo-audit
 
