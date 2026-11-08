@@ -27,13 +27,13 @@ Governing house laws restated where they bind this face:
 Provision a library holding a build of the tree (once per tree revision):
 
 ```
-R CMD INSTALL --library=/tmp/paperlane/rlib /path/to/this/tree
+R CMD INSTALL --library=<stage-dir> /path/to/this/tree
 ```
 
 Then:
 
 ```
-MSUITER_REPRO_LIB=/tmp/paperlane/rlib bash inst/repro/reproduce.sh --verify
+MSUITER_REPRO_LIB=<stage-dir> bash inst/repro/reproduce.sh --verify
 ```
 
 Attested run of this face, this lane, 2026-10-31 (wall 176 s, rc=0):

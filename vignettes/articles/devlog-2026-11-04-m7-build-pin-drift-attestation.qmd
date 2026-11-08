@@ -53,7 +53,7 @@ three-move lineage pinned by value (a fourth silent move reddens the suite).
 TDD face: single RED commit; module run 10/11 with exactly the one intended red
 whose payload prints the byte-true capture (pin `7ce0c147...` vs disk bytes
 `5abcb21e...` -- full values in the banked files); full suite 394/395 with that
-one intended red. Evidence: `/tmp/r1lane/pin-lane/` --
+one intended red. Evidence:
 `red-module-20261104T035731Z.txt`, `red-module-final-20261104T040239Z.txt`,
 `suite-redcommit-20261104T035813Z.txt`, `baseline-suite-main.txt` (384/384).
 
@@ -67,16 +67,16 @@ still-true value); the drifted launcher pin carries the measured value below:
 
 | source | container dest | current constant | proposed constant | seal commit | state |
 |---|---|---|---|---|---|
-| `install_sigminer_arm.R` | `/tmp/install_sigminer_arm.R` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` (docs(m7): P6 release-evidence campaign -- parity ladder adjudicated from committed bytes; P-1 MEASURED-FALSE 22.166..67.102x filed via refusal ledger (#30)) | ALIVE-unchanged |
+| `install_sigminer_arm.R` | `<scratch-dest>/install_sigminer_arm.R` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` (docs(m7): P6 release-evidence campaign -- parity ladder adjudicated from committed bytes; P-1 MEASURED-FALSE 22.166..67.102x filed via refusal ledger (#30)) | ALIVE-unchanged |
 | `install_sigminer_arm.R` | `/work/install_sigminer_arm.R` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` | `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` (docs(m7): P6 release-evidence campaign -- parity ladder adjudicated from committed bytes; P-1 MEASURED-FALSE 22.166..67.102x filed via refusal ledger (#30)) | ALIVE-unchanged |
 | `m7_entry.py` | `/work/m7_entry.py` | `7ce0c147ccb7f3c3cb5fddf8062335544823eabfb6ab5423eb23a94b480c14be` | `5abcb21e86bc91d896bcdecba35bc3549c1855a5001b8731b05ab8df165ba010` | `54c58d70dfb5057f5089d21c5afffb46d4716118` (feat(m7): promote the signeR competitor row on the live-inspect witness) | DRIFTED-reseal-proposed |
 | `run_sigminer_arm.R` | `/work/run_sigminer_arm.R` | `018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208` | `018b8f3f286cef9ae43f73ca983f903a36ef029ad42ca9568eeb22ce19af4208` | `821319238c3dc0e5448b3f422635617c85f47298` (feat(m7): P-4 re-adjudication -- dead-metric scoring cure, witnessed extraction-spectra export, byte-pin re-seal r6, evidence reification (#53)) | ALIVE-unchanged |
-| `self_witness_arm.sh` | `/tmp/self_witness_arm.sh` | `926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663` | `926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663` | `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` (docs(m7): P6 release-evidence campaign -- parity ladder adjudicated from committed bytes; P-1 MEASURED-FALSE 22.166..67.102x filed via refusal ledger (#30)) | ALIVE-unchanged |
+| `self_witness_arm.sh` | `<scratch-dest>/self_witness_arm.sh` | `926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663` | `926ae38b08206b779755f660b09314908e1b315549a13f55c23d09ed6ac85663` | `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` (docs(m7): P6 release-evidence campaign -- parity ladder adjudicated from committed bytes; P-1 MEASURED-FALSE 22.166..67.102x filed via refusal ledger (#30)) | ALIVE-unchanged |
 
 Release path (prepared, NOT executed): `green-reseal.patch` alongside this
 record -- `git apply --check` clean against the pristine recipe
 (applies-clean=True; tree-proven-pristine=True) -- or the
-idempotent generator `/tmp/r1lane/pin-lane/reseal_pins.py` at the controller's
+idempotent generator `reseal_pins.py` at the controller's
 word. The sealed rust images' roster digests stand on their own inspect
 attestations, not on this re-anchored recipe: the bytes those images were baked
 against predate the launcher's two moves, and this record attests no identity
@@ -121,7 +121,7 @@ post-bake) carries that re-anchor; this lane prepared it and executed none of it
 - Zero pushes, zero PRs; branch `tools/build-pin-reseal` (unpushed, one commit on
   `main@54c58d7`); `r1-batch-arm` head unmoved from its dispatch value
   `3ecd7e7`; `main` unmoved at `54c58d7`; zero sigminer refs touched.
-- Isolated worktree `/Users/wsx/Documents/GitHub/msuiter-wt/build-pin-reseal`
+- Isolated worktree
   (main-based); the shared worktree was never written by this lane.
 - Recipe immutability proof while under hold: `git hash-object` of
   `Dockerfile.sigminer.tree` byte-equal to `git rev-parse HEAD:<path>`

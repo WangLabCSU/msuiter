@@ -143,7 +143,7 @@ test_that("US-H3 a fabricated anchor is named", {
   pages <- ctx$pages
   ext <- pages[basename(pages) == "extending.Rmd"]
   lines <- readLines(ext, warn = FALSE)
-  hit <- grepl("articles/tour.html", lines, fixed = TRUE)
+  hit <- grepl("](tour.html)", lines, fixed = TRUE)
   expect_true(any(hit))
   bad <- lines
   bad[hit] <- paste0(bad[hit], " or the errors walkthrough [as written](",
@@ -153,6 +153,38 @@ test_that("US-H3 a fabricated anchor is named", {
                       file.path(.ms_root, "NAMESPACE"), .ms_root)
   expect_true(any(grepl("no-such-heading-anywhere", a$violations, fixed = TRUE)),
                info = paste0(a$violations, collapse = "\n"))
+})
+
+test_that("US-H3 an articles-prefixed sibling href is named as too deep", {
+  ctx <- .ef_run()
+  pages <- ctx$pages
+  ext <- pages[basename(pages) == "extending.Rmd"]
+  lines <- readLines(ext, warn = FALSE)
+  hit <- grepl("](tour.html)", lines, fixed = TRUE)
+  expect_true(any(hit))
+  bad <- vapply(lines, function(l) {
+    gsub("](tour.html)", "](articles/tour.html)", l, fixed = TRUE)
+  }, character(1))
+  tmp <- tempfile(fileext = ".Rmd"); writeLines(bad, tmp)
+  a <- ctx$e$ef_audit(c(pages[basename(pages) != "extending.Rmd"], tmp),
+                      file.path(.ms_root, "NAMESPACE"), .ms_root)
+  expect_true(any(grepl("one directory too deep", a$violations, fixed = TRUE)),
+               info = paste0(a$violations, collapse = "\n"))
+})
+
+test_that("US-H3 the articles-prefixed roster entries join the auditable set", {
+  ctx <- .ef_run()
+  yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
+  pref <- grep("^  - articles/", yml, value = TRUE)
+  expect_gte(length(pref), 91L)
+  stems <- sub("^  - articles/", "", pref)
+  set <- ctx$e$ef_article_set(.ms_root)
+  hidden <- setdiff(stems, set)
+  expect_identical(hidden, character(0),
+                   info = paste0("roster entries invisible to the link law: ",
+                                 paste0(utils::head(hidden, 5L), collapse = ", ")))
+  gone <- ctx$e$ef_article_set(.ms_root, minus_articles = stems[1L])
+  expect_false(stems[1L] %in% gone)
 })
 
 test_that("US-H3 a token-free link-free page is vacuous-RED, never empty-green", {

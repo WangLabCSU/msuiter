@@ -69,11 +69,22 @@ if (!is.na(PKG)) {
 }
 ```
 
-With the floors met, the install face is one command:
+With a checkout in hand, the install face is one command:
 
 ```{sh, eval = FALSE}
 R CMD INSTALL msuiter   # from the source root; configure builds the Rust core
 ```
+
+Without a checkout, install the development build straight from GitHub -- the
+same `configure` face builds the Rust core on the way in:
+
+```{sh, eval = FALSE}
+Rscript -e 'remotes::install_github("WangLabCSU/msuiter")'
+```
+
+Prebuilt packages are attached to the tagged release and install from a local
+file with `install.packages(<file>, repos = NULL)`. There is no CRAN release
+yet.
 
 ## Five-minute path
 

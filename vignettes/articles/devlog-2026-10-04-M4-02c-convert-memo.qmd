@@ -8,7 +8,7 @@ title: "U-M4-02c 设计备忘：ms_convert() 机会转换（exome↔genome）"
 
 `conv = sig/opp_from·opp_to`，逐列重归一（每列独立，列和 1）。机会向量 = 96 通道 tri-nucleotide 频数（非份额——比值消尺度）。
 
-**[V] 溯源链**：频数表出自 COSMIC v2/v3 签名数据库（sigfit → sigminer `human_trinuc_freqs`）；本机 sigminer 2.3.1（用户本人维护）源码即锚：`/Users/wsx/Documents/GitHub/sigminer/R/sig_convert.R:103`。genome 总量 8.505e9（≈2×3.1Gb 双链可突变位点量级）、exome 总量 1.53e8——量级健全性双锚。SP 标签序与我方注册表序不同（sigminer 按替换类×5'侧翼分块），**逐标签 match 后取值**，不按位置。
+**[V] 溯源链**：频数表出自 COSMIC v2/v3 签名数据库（sigfit → sigminer `human_trinuc_freqs`）；本机 sigminer 2.3.1（用户本人维护）源码即锚：`本机 sigminer 源码的 sig_convert.R:103`。genome 总量 8.505e9（≈2×3.1Gb 双链可突变位点量级）、exome 总量 1.53e8——量级健全性双锚。SP 标签序与我方注册表序不同（sigminer 按替换类×5'侧翼分块），**逐标签 match 后取值**，不按位置。
 
 ## §2 冻结设计
 

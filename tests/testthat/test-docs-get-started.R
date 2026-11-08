@@ -12,6 +12,9 @@
 #      committed specimen fixture it executes against.
 #  (3) registration: the vignette is named in the _pkgdown.yml articles block
 #      and the navbar carries an internal href into the built articles tree.
+#  (4) acquisition: the page teaches at least one install method reachable from
+#      the published site -- a reader with no source checkout on disk. The
+#      checkout-local `R CMD INSTALL msuiter` face does not satisfy this.
 
 # --- helpers -------------------------------------------------------------------
 
@@ -22,6 +25,11 @@
 }
 
 .gs_IS_TOKEN <- c(LETTERS, letters, 0:9, ".", "_", "-")
+
+# Acquisition markers: install methods that work for a reader who has no source
+# checkout on disk. A bare `R CMD INSTALL msuiter` does not count -- it is the
+# checkout-local face, unreachable from the published page's audience.
+.gs_ACQUISITION <- c("install_github", "install.packages")
 
 # maximal runs of token chars that contain at least one digit; trailing
 # sentence dots are stripped so "1.71." rides as "1.71"
@@ -112,6 +120,13 @@
       v <- c(v, paste0("missing prose section marker: ", h))
     }
   }
+  all_txt <- paste0(lines, collapse = "\n")
+  for (m in .gs_ACQUISITION) {
+    if (grepl(m, all_txt, fixed = TRUE)) return(list(violations = v))
+  }
+  v <- c(v, paste0("page teaches no acquisition method for a reader ",
+                   "without a checkout (needs one of: ",
+                   paste0(.gs_ACQUISITION, collapse = ", "), ")"))
   list(violations = v)
 }
 
@@ -242,6 +257,18 @@ test_that("US-1 a phantom fixture reference is named", {
                         r$violations, fixed = TRUE)))
 })
 
+test_that("US-1 a checkout-only install face reddens the acquisition law", {
+  d <- .gs_shipped()
+  tampered <- vapply(d$lines, function(l) {
+    gsub("install_github", "install_from_a_checkout_only", l, fixed = TRUE)
+  }, character(1))
+  tampered <- vapply(tampered, function(l) {
+    gsub("install.packages", "install_from_a_checkout_only", l, fixed = TRUE)
+  }, character(1))
+  r <- .gs_law_path(tampered)
+  expect_true(any(grepl("no acquisition method", r$violations, fixed = TRUE)))
+})
+
 test_that("US-1 dropping the navbar registration is named", {
   d <- .gs_shipped()
   keep <- vapply(d$yml, function(l) {
@@ -295,6 +322,7 @@ test_that("US-1 the constructed-perfect skeleton greens the laws (live control)"
     "db <- ms_refdb_bundled()",
     "```",
     "The specimen rides the committed fixture named above.",
+    "Or fetch it with install.packages from a local tarball.",
     "## Anatomy of the output")
   r1 <- .gs_law_prose(skeleton, root)
   r2 <- .gs_law_path(skeleton)

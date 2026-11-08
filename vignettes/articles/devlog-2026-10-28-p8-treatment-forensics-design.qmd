@@ -111,4 +111,4 @@ thiopurine SBS32 PMID 31697823):
 activites are hand-set numbers on the sealed bundled dictionary served via
 `ms_refdb_bundled()`; law-unit truth: exactly the planted
 treatment-x-signature cells associate). RED/GREEN witnesses and the budget
-ledger live under `/tmp/p8lane/logs/`.
+ledger live under the lane's `logs/`.

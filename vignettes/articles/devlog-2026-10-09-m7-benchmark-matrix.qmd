@@ -321,7 +321,7 @@ never a silent float."
 - Manifest: `rehearsal_manifest.json` (16 entries + 6 adapters) binds every
   witness's sha256, bytes and role, including the unsanitised originals'
   full-file hashes (`stage2.log`, `runB.log`, `selfwitness_prebake2.log`
-  on the controller host at `/tmp/m7probe/`).
+  on the controller host).
 
 ## RB-05(6) — the r5 bake, the GREEN probe, and the registry ceremony
 
@@ -616,11 +616,11 @@ silent passes):
 * 10 pre-flag sweep witnesses (batch v1 era, predating the `--floor-gate
   off` probe law; their argv lacks the token) survived the v2/v3 valid()
   resume-skip — the admission argv-law refused them; quarantined to
-  /tmp/m7probe/orphans_pre-flag and re-measured under the current probe.
+  `orphans_pre-flag` and re-measured under the current probe.
 * sigminer main N1000 rep10 measured cpu 729.34 s — 60% above the
   adjacent-points trend (rep1 360.99, rep5 403.67) and ABOVE the class's
   own rep-100 anchor economics: contamination. Quarantined
-  (/tmp/m7probe/orphans_suspect) and re-measured: 409.56 s, collinear
+  (`orphans_suspect`) and re-measured: 409.56 s, collinear
   (resid 3.47%), slope 41.919 -> 5.223. One point, one re-measure, data
   won.
 
@@ -672,7 +672,7 @@ never as a silent re-status. Full m7 suite at this boundary: 144/144.
   `declare: -A: invalid option` (assoc arrays need bash ≥ 4; macOS ships 3.2) — and
   produced ZERO events across both ignitions; its pre-ignition "dry-run" had validated
   only the grep pattern against fixture lines, never the script end-to-end. Rebuilt
-  (`/tmp/m7probe/matrix_watch2.sh`: per-file offset files, no `declare -A`), proven by
+  (`matrix_watch2.sh`: per-file offset files, no `declare -A`), proven by
   a true end-to-end fixture dry-run (2/2 tagged events, history not replayed, empty
   stderr), and redeployed (bk5htp95f). Meanwhile the authoritative pass stayed covered
   by the driver job's completion notification, the trio tripwire, and the controller's

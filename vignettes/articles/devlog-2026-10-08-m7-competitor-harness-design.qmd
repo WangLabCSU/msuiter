@@ -53,14 +53,14 @@ recorded only from `docker image inspect` output of a verified mirror pull.
 
 | # | Competitor | Runtime | Pinned version | Provenance evidence | Container image | Digest | Status |
 |---|---|---|---|---|---|---|---|
-| a | **sigminer** | R | CRAN **2.3.1** | `packageVersion("sigminer")` → `2.3.1` in the host R library `/Users/wsx/Library/R/arm64/4.5/library/sigminer` (2026-10-08); SBS96 label-aligned cross-validation against this copy already gates the package (`tests/testthat/test-xval-sigminer.R`) | harness-built `m7-sigminer:cr2.3.1` (mirror-pulled `rocker/r-ver` base + CRAN install + build-time `packageVersion()=="2.3.1"` assert, G0 build-guard idiom) | PENDING-VERIFY | ready (after image build) |
+| a | **sigminer** | R | CRAN **2.3.1** | `packageVersion("sigminer")` → `2.3.1` in the host R library (2026-10-08); SBS96 label-aligned cross-validation against this copy already gates the package (`tests/testthat/test-xval-sigminer.R`) | harness-built `m7-sigminer:cr2.3.1` (mirror-pulled `rocker/r-ver` base + CRAN install + build-time `packageVersion()=="2.3.1"` assert, G0 build-guard idiom) | PENDING-VERIFY | ready (after image build) |
 | b | **SigProfiler (assignment)** | Python | **v1.1.5** | `gh api repos/SigProfilerSuite/SigProfilerAssignment/releases/latest` → tag `v1.1.5`, published 2026-07-29T09:00:29Z; `repos/AlexandrovLab/SigProfilerAssignment` redirects to the same canonical repo. README advertises PyPI, but this network's PyPI index has **no** distribution ("No matching distribution found", 2026-10-08) → pin provenance is the git tag; container installs `pip install git+<repo>@v1.1.5` | harness-built `m7-sigprofiler:spa-1.1.5` (mirror-pulled Python base) | PENDING-VERIFY | ready (after image build) |
 | c | **Signal** | R (Bioconductor) | **UNRESOLVED** | Registry probes on 2026-10-08: not in the CRAN index (`available.packages()` over `cloud.r-project.org`); not in the Bioconductor **3.22** index enumerated via `BiocManager::repositories()` (name search returns only unrelated packages, e.g. `SIGN@0.1.0`, legacy `signal@1.8-1`); `gh api repos/debruijn-lab/Signal` → 404; GitHub search finds no canonical repo. Selection is kept per the PI brief, but the exact package/version/image coordinates must be supplied by the PI before it can run. | — (none pinned) | PENDING-VERIFY | **pending-verify → refuses to run** |
 
 Notes on three recording decisions:
 
 * **sigminer 2.3.1 vs the host source tree.** The verbatim ground-truth copy
-  at `/Users/wsx/Documents/GitHub/sigminer` reads `Version: 2.3.3` in its
+  at the local read-only sigminer checkout reads `Version: 2.3.3` in its
   DESCRIPTION — a host working tree ahead of the registry. The benchmark pins
   the **installed CRAN 2.3.1** copy, because that is the exact artifact the
   existing xval gate cross-validates msuiter's SBS96 catalog against; the

@@ -20,7 +20,7 @@ reader's `mode == "full"` shot counter. The RB-10 shot stays unspent.
 
 ## 2. The verbatim old-rule outcome (stays disclosed, RB-09 law)
 
-Probe: `/tmp/go05lane/probe_20261011T013344Z` (+ `.log`).
+Probe: `probe_20261011T013344Z` (+ `.log`).
 Seal of the sealed campaign bytes:
 `sha256 cc094225d599a6765dbc7958a445609459ded0f32f2481f87c5cb9e8762b3263`
 - reader verifier: rc=0 ("0 full shot(s) on the ledger")
@@ -64,7 +64,7 @@ of zeros, which any relative measure reads as infinite divergence).
 
 Independent relaunch (`run_probe2.sh`, same branch ef1c563, same seed
 20260928, same full shape), fresh outdir
-`/tmp/go05lane/probe2_20261011T014912Z`:
+`probe2_20261011T014912Z`:
 - `witnesses/anchor_A1.jsonl` sha256 `1fa9ed3e5c099930635e4aabcefb40baaf36330d5405be4db864085cc4895090`
 - `witnesses/anchor_A2.jsonl` sha256 `d2d9fb2fb63825a5d79870ebd19f732e574fdbf2c0c12d5c837137c3157f663e`
 - probe1 bytes byte-identical to probe2 bytes; `campaign.rds` byte-identical
@@ -99,7 +99,7 @@ envelope and EPS boundaries pinned to the exact bit, inclusive at
 
 Executed in-suite (`test_anchor_gate.py::test_attested_probe_witnesses_adjudicate_green`,
 digest-pinned to the attestation above) and re-verified by command against
-`/tmp/go05lane/probe2_20261011T014912Z/witnesses`:
+`probe2_20261011T014912Z/witnesses`:
 
     n_cells = 1250, overlap_frac = 1.0, median_ok_frac = 1.0, ok = True
     (K_CI*maxHW failures under the amended rule: 0; every former breach sits

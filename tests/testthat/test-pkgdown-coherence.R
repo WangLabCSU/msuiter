@@ -9,6 +9,14 @@
 # tree when the lane-built site is present). Constructed-broken controls name
 # the orphan / ghost / dangling href; the constructed-perfect pair greens the
 # law. Vacuous-green ban: empty sides are violations, never silent passes.
+#
+# The fourth clause is the audience post-condition: a tier-level "navbar:" key
+# inside the articles block is what puts a tier's heading in the dropdown, i.e.
+# what makes it reachable in one click from the homepage; a tier without one is
+# folded behind "More articles...". Every tier therefore defaults to user-facing
+# and must carry the key, and only a declared internal corpus may drop it. The
+# clause is line-based on purpose: no CI job sets MSUITER_DS2_SITE_DIR and /docs/
+# is gitignored, so every built-tree assertion above is skipped in CI.
 
 # --- parsers (pure line walks, this base's tre quirks) -------------------------
 
@@ -26,7 +34,7 @@
   }
   items <- character(0)
   in_contents <- FALSE
-  for (i in (a[1L] + 1L):length(yml)) {
+  for (i in seq_len(length(yml) - a[1L]) + a[1L]) {
     l <- yml[i]
     if (!nzchar(trimws(l)) || startsWith(trimws(l), "#")) next
     if (!startsWith(l, " ") && !startsWith(l, "-")) break
@@ -38,6 +46,37 @@
   list(ok = TRUE, items = items, why = "")
 }
 
+# Tier-level navbar keys: the audience post-condition. A tier carrying the key
+# gets its own heading in the Articles dropdown (one click from the homepage);
+# a tier without one is folded behind "More articles...". The walk splits on
+# the tier boundary "- title:" at column 0 and reads the key only from an
+# exactly-two-space "  navbar:" line, so a bare "  - docs-bridge" contents
+# entry cannot be mistaken for one.
+.coh_parse_article_navbars <- function(yml) {
+  a <- .coh_which_pref(yml, "articles:")
+  if (length(a) != 1L) {
+    return(list(ok = FALSE, title = character(0), keyed = logical(0),
+                why = paste0("articles: block hits=", length(a))))
+  }
+  title <- character(0)
+  keyed <- logical(0)
+  for (i in seq_len(length(yml) - a[1L]) + a[1L]) {
+    l <- yml[i]
+    if (!nzchar(trimws(l)) || startsWith(trimws(l), "#")) next
+    if (!startsWith(l, " ") && !startsWith(l, "-")) break
+    if (startsWith(l, "- title:")) {
+      t <- trimws(sub("^- title:", "", l))
+      title <- c(title, gsub('"', "", t, fixed = TRUE))
+      keyed <- c(keyed, FALSE)
+      next
+    }
+    if (length(keyed) && startsWith(l, "  navbar:") && !startsWith(l, "   ")) {
+      keyed[length(keyed)] <- TRUE
+    }
+  }
+  list(ok = TRUE, title = title, keyed = keyed, why = "")
+}
+
 # navbar: structure side-tokens + components map (4-space keys, 6-space fields)
 .coh_parse_navbar <- function(yml) {
   nb <- .coh_which_pref(yml, "navbar:")
@@ -46,7 +85,7 @@
                 tokens = character(0), components = list()))
   }
   end <- length(yml)
-  for (i in (nb[1L] + 1L):length(yml)) {
+  for (i in seq_len(length(yml) - nb[1L]) + nb[1L]) {
     l <- yml[i]
     if (nzchar(trimws(l)) && !startsWith(l, " ") && !startsWith(l, "-")) {
       end <- i - 1L
@@ -92,6 +131,38 @@
     }
   }
   list(ok = TRUE, why = "", tokens = tokens, components = components)
+}
+
+# The audience post-condition. A tier is user-facing by default and must carry
+# the tier-level navbar key; only a tier named here may drop it, because only
+# these four have the project itself as audience.
+.coh_internal_tiers <- c("Repository governance corpus", "Research dossiers",
+                         "Independent reviews", "Campaign devlog")
+
+# The bijection runs both ways so a stale allowlist entry is caught too, and an
+# empty tier set is a violation rather than a silent pass.
+.coh_navbar_audience_law <- function(an, internal = .coh_internal_tiers) {
+  if (!an$ok) return(paste0("articles: ", an$why))
+  if (length(an$title) == 0L) return("vacuous: no article tiers found")
+  v <- character(0)
+  for (i in seq_along(an$title)) {
+    t <- an$title[i]
+    if (!an$keyed[i] && !t %in% internal) {
+      v <- c(v, paste0("user-facing tier lacks the tier-level navbar key ",
+                       "(folded behind More articles..., not reachable in one ",
+                       "click from the homepage): ", t))
+    }
+    if (an$keyed[i] && t %in% internal) {
+      v <- c(v, paste0("declared-internal tier carries a tier-level navbar ",
+                       "key: ", t))
+    }
+  }
+  for (t in internal) {
+    if (!t %in% an$title) {
+      v <- c(v, paste0("declared-internal tier names no article tier: ", t))
+    }
+  }
+  v
 }
 
 .coh_site_dir <- function() {
@@ -216,6 +287,18 @@ test_that("US-3 navbar internal hrefs resolve in the built tree when the lane si
       sep = "")
 })
 
+test_that("US-3 every user-facing article tier reaches the dropdown in one click", {
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
+  yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
+  an <- .coh_parse_article_navbars(yml)
+  r <- .coh_navbar_audience_law(an)
+  expect_identical(r, character(0), info = paste0(r, collapse = "\n"))
+  expect_gte(length(an$title), 1L)   # vacuous-green ban: the tier set is non-empty
+  cat("US-3 NAVBAR AUDIENCE CENSUS: tiers=", length(an$title),
+      " keyed=", sum(an$keyed), " internal=", length(.coh_internal_tiers),
+      " violations=0\n", sep = "")
+})
+
 # --- red halves ---------------------------------------------------------------------------
 
 test_that("US-3 an orphaned vignette is named by the law (constructed-broken)", {
@@ -274,4 +357,39 @@ test_that("US-3 empty sides can never pass silently (vacuous guard)", {
   r <- .coh_law(character(0), .coh_parse_articles(yml), .coh_parse_navbar(yml))
   expect_true(any(grepl("vacuous: no vignettes found", r$violations,
                         fixed = TRUE)))
+})
+
+test_that("US-3 a user-facing tier stripped of its navbar key is named", {
+  yml <- c("articles:",
+           "- title: Keyed", "  navbar: Keyed", "  contents:", "  - a",
+           "- title: Bare", "  contents:", "  - b")
+  r <- .coh_navbar_audience_law(.coh_parse_article_navbars(yml),
+                                internal = character(0))
+  expect_true(any(grepl("user-facing tier lacks the tier-level navbar key",
+                        r, fixed = TRUE)))
+  expect_true(any(grepl(": Bare$", r)))
+  expect_false(any(grepl(": Keyed$", r)))
+})
+
+test_that("US-3 a declared-internal tier carrying the key is named", {
+  yml <- c("articles:",
+           "- title: Internal", "  navbar: Internal", "  contents:", "  - a")
+  r <- .coh_navbar_audience_law(.coh_parse_article_navbars(yml),
+                                internal = "Internal")
+  expect_true(any(grepl("declared-internal tier carries a tier-level navbar key: Internal",
+                        r, fixed = TRUE)))
+})
+
+test_that("US-3 a stale internal allowlist entry is named", {
+  yml <- c("articles:",
+           "- title: Keyed", "  navbar: Keyed", "  contents:", "  - a")
+  r <- .coh_navbar_audience_law(.coh_parse_article_navbars(yml),
+                                internal = "Gone")
+  expect_true(any(grepl("declared-internal tier names no article tier: Gone",
+                        r, fixed = TRUE)))
+})
+
+test_that("US-3 an empty tier set can never pass the audience law silently", {
+  r <- .coh_navbar_audience_law(.coh_parse_article_navbars("articles:"))
+  expect_identical(r, "vacuous: no article tiers found")
 })

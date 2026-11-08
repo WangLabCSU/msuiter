@@ -9,6 +9,11 @@ url: https://wanglabcsu.github.io/msuiter
 template:
   bootstrap: 5
 
+# Two build faces read this file. `.github/workflows/pkgdown.yaml` publishes,
+# and overrides the mode to "release" so the Pages artifact root is docs/;
+# `.github/workflows/scheduled.yml` runs a bare build_site(), which lands under
+# docs/dev/ -- the preview namespace this setting reserves. Both workflows
+# assert the paths their own face writes.
 development:
   mode: devel
 
@@ -39,6 +44,7 @@ reference:
   - MsRefDb
   - MsBenchmark
 - title: Fitting and benchmarking
+  desc: Reference-based fitting against a signature database, and the benchmark matrix that compares engines on a shared grid.
   contents:
   - ms_fit
   - ms_benchmark
@@ -52,6 +58,7 @@ reference:
   - ms_engines
   - MsEngine
 - title: Diagnostics
+  desc: The environment and provenance status report.
   contents:
   - ms_sitrep
 - title: Engine implementations
@@ -167,11 +174,13 @@ reference:
 
 articles:
 - title: "Get started"
+  navbar: "Get started"
   desc: "Install, the five-minute path, and the full tour from variants to a reference comparison."
   contents:
   - get-started
   - tour
 - title: "Core workflows"
+  navbar: "Core workflows"
   desc: "The task guides: bring data in, build catalogs, extract de novo, fit and test."
   contents:
   - import-data
@@ -179,24 +188,27 @@ articles:
   - signature-extraction
   - signature-fitting
 - title: "Statistics and comparison"
+  navbar: "Statistics and comparison"
   desc: "The calibrated-similarity comparison and the MSU-Fit calibration statistics."
   contents:
   - comparing-signatures
   - calibrated-statistics
 - title: "Applications and QC"
+  navbar: "Applications and QC"
   desc: "The scenario atlas, the QC/reporting faces and the figure-type gallery."
   contents:
   - scenarios
   - quality-control
   - visualization-gallery
 - title: "Performance and peer evidence"
+  navbar: "Performance and peer evidence"
   desc: "Frozen floors, witness censuses and the sealed peer-evidence face."
   contents:
   - performance-anchoring
   - scenarios-gallery
   - peer-evidence
 - title: "Repository governance corpus"
-  desc: "The converted docs/ tree: architecture, capability matrix, roadmap, performance, the FFI surface, ADRs and the paper lane."
+  desc: "The converted docs/ tree: architecture, capability matrix, roadmap, performance, the FFI surface, ADRs, the paper lane and the corpus navigation index."
   contents:
   - articles/architecture
   - articles/capability-matrix
@@ -210,6 +222,7 @@ articles:
   - articles/roadmap
   - articles/adr-0001-twobit-reader-choice
   - articles/adr-0002-vendor-budget
+  - docs-bridge
 - title: "Research dossiers"
   desc: "The pre-implementation survey corpus (methods, fitting, applications, source audits, standards)."
   contents:
@@ -232,11 +245,11 @@ articles:
   - articles/review-03-ml-statistician
   - articles/review-04-software-engineer
   - articles/review-05-nature-editor
-- title: "Extending and navigation"
-  desc: "The engine-extension guide and the corpus navigation page."
+- title: "Extending msuiter"
+  navbar: "Extending msuiter"
+  desc: "The third-party engine extension guide and the registry contract."
   contents:
   - extending
-  - docs-bridge
 - title: "Campaign devlog"
   desc: "The dated decision and delivery records of the whole campaign, oldest first."
   contents:

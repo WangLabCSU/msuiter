@@ -5,7 +5,7 @@ title: "2026-10-21 -- CI wall-clock restructure: shard-parallel attested arms"
 Lane: ci-optimization (branch `feat/ci-shard-parallel`, base `b03a404`).
 Goal: PR wall-clock <= 35 min at the 95th-percentile arm with zero test
 removal or weakening. The full lane manifest (measured before/after tables,
-evidence paths, decisions) is `/tmp/ciopt/manifest.md`; this devlog records
+evidence paths, decisions) is the lane's `manifest.md`; this devlog records
 what the repository itself needs to remember.
 
 ## Why the old shape could not hold

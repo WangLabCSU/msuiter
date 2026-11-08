@@ -5,7 +5,7 @@ title: "Research report 02: fitting/attribution, exposure statistical inference 
 > ℹ️ **Document nature**: this piece is a research snapshot (archival snapshot; the verification date is in the text). Live decisions are governed by [architecture.qmd](https://wanglabcsu.github.io/msuiter/articles/architecture.html) §0 (D1–D16) and [review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html); the method names in the text (e.g. MSU-Extract, MSU-Corr) are the wording of the time, the current naming is in ARCHITECTURE §5; the benchmark metrics are governed by [capability-matrix.qmd](https://wanglabcsu.github.io/msuiter/articles/capability-matrix.html) and ARCHITECTURE §8.
 
 
-> Research date: 2026-09-27. Method annotation: [V] = verified by cloning the source to /tmp/fitresearch or reading the full text; [U] = not fully verified. Repositories read closely: parklab/MuSiCal, steverozen/mSigAct, Rozen-Lab/mSigTools, AlexandrovLab/SigProfilerAssignment, Nik-Zainal-Group/signature.tools.lib, kgori/sigfit, lrgr/signature-estimation-py, evenrus/mmsig. Papers read closely: bbaf042 (PMC11798676), MuSiCal (PMC10937379), Medo 2024 (PMC11530434), sigLASSO (PMC7368050).
+> Research date: 2026-09-27. Method annotation: [V] = verified by cloning the source or reading the full text; [U] = not fully verified. Repositories read closely: parklab/MuSiCal, steverozen/mSigAct, Rozen-Lab/mSigTools, AlexandrovLab/SigProfilerAssignment, Nik-Zainal-Group/signature.tools.lib, kgori/sigfit, lrgr/signature-estimation-py, evenrus/mmsig. Papers read closely: bbaf042 (PMC11798676), MuSiCal (PMC10937379), Medo 2024 (PMC11530434), sigLASSO (PMC7368050).
 
 ---
 
