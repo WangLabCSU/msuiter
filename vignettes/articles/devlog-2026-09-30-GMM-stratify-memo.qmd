@@ -4,7 +4,7 @@ title: "GMM 超突变分层语义设计备忘（U-M1c-02·先设计后实现）"
 
 > 2026-09-30。对象：ROADMAP M1c「GMM 分层器（`ms_stratify_hypermutants` 语义落地）」；ARCHITECTURE §2 `engine/stats.rs`（1-D GMM 分层器）、§5 共识-CV 流水线（「分类+排除 de novo+强制 refit，非"归一化"」）；CAPABILITY-MATRIX L-A（GMM cutoff + 排除 de novo + 强制 refit）。
 >
-> **证据基线**：SigProfilerExtractor 上游克隆 /tmp/audit-spe/repo。master = `cc6bf5ef`（2026-09-28，"Merge dev for v1.5.0 release"）；最新 tag `v1.5.0` = `a5d636a3`（同日）。行号均指 master `SigProfilerExtractor/subroutines.py`（下称 Sub）与 `sigpro.py`（下称 Sig）。注意：`AlexandrovLab/SigProfiler` 仓库现已是同一 Python 项目的镜像（非 2015 Matlab 原版）；Python 仓全历史最早提交 85dfe32（2018-09-10）至 master 的 "hypermut*" 全史 grep 仅命中归一化注释，**任何可检索版本都不存在「分离-排除-合并」实现**。
+> **证据基线**：SigProfilerExtractor 上游克隆。master = `cc6bf5ef`（2026-09-28，"Merge dev for v1.5.0 release"）；最新 tag `v1.5.0` = `a5d636a3`（同日）。行号均指 master `SigProfilerExtractor/subroutines.py`（下称 Sub）与 `sigpro.py`（下称 Sig）。注意：`AlexandrovLab/SigProfiler` 仓库现已是同一 Python 项目的镜像（非 2015 Matlab 原版）；Python 仓全历史最早提交 85dfe32（2018-09-10）至 master 的 "hypermut*" 全史 grep 仅命中归一化注释，**任何可检索版本都不存在「分离-排除-合并」实现**。
 
 ---
 

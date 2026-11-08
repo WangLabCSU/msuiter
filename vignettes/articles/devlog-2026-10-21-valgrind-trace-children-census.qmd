@@ -5,11 +5,11 @@ title: "Valgrind leg, child instrumentation: the execve escape, the last-writer"
 # census race, and the death of the suppression engine (PR #45)
 
 Date: 2026-10-21. Lane: valgrind deep-check remediation (issue #32
-successor class), branch `feat/valgrind-trace-children`, worktree
-`msuiter-wt/vgfix`. Harness: `tools/deep-checks/run_valgrind_leg.sh`.
-Gate: `tools/ci-selfcheck.py` (census-law block). Truth capture:
-`/tmp/vgart5/repro6/check-valgrind/valgrind-suite.log` (host-side shrine,
-cited only; committed evidence is read-only per the evidence law).
+successor class), branch `feat/valgrind-trace-children`.
+Harness: `tools/deep-checks/run_valgrind_leg.sh`.
+Gate: `tools/ci-selfcheck.py` (census-law block). Truth capture: the
+host-side `valgrind-suite.log` shrine (cited only; committed evidence is
+read-only per the evidence law).
 
 ## 1. The blind window, in layers (what kept being false)
 

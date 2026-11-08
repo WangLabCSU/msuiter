@@ -2,7 +2,6 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/WangLabCSU/msuiter/actions/workflows/ci.yml/badge.svg)](https://github.com/WangLabCSU/msuiter/actions/workflows/ci.yml)
-[![msuiter status badge](https://WangLabCSU.r-universe.dev/badges/msuiter)](https://WangLabCSU.r-universe.dev/msuiter)
 [![Docs](https://github.com/WangLabCSU/msuiter/actions/workflows/pkgdown.yaml/badge.svg)](https://wanglabcsu.github.io/msuiter/)
 <!-- badges: end -->
 
@@ -64,22 +63,16 @@ is the authoritative coverage checklist.
 The package builds from source: `R CMD INSTALL` compiles the vendored Rust core
 offline (toolchain floor: `rustc >= 1.71`, see `SystemRequirements`).
 
-Install the development build from [r-universe](https://wanglabcsu.r-universe.dev):
-
-```r
-install.packages("msuiter",
-                 repos = c("https://wanglabcsu.r-universe.dev",
-                           "https://cloud.r-project.org"))
-```
-
-Or from GitHub:
+Install the development build from GitHub:
 
 ```r
 remotes::install_github("WangLabCSU/msuiter")
 ```
 
-Release binaries (macOS / Linux / Windows) are attached to each
-[GitHub release](https://github.com/WangLabCSU/msuiter/releases). There is no CRAN
+Prebuilt source and binary packages are attached to the
+[v0.1.0 release](https://github.com/WangLabCSU/msuiter/releases/tag/v0.1.0) and can be
+installed locally with `install.packages(<file>, repos = NULL, type = "source")`
+(`.tar.gz` / `.tgz`) or `type = "binary"` (`.zip` on Windows). There is no CRAN
 release yet.
 
 ## Quick start
@@ -164,7 +157,7 @@ onboarding checklist. Please note the project's
 
 ## License
 
-[Apache-2.0](LICENSE). The bundled COSMIC v3.6 reference data is mirrored from the
+[Apache-2.0](https://github.com/WangLabCSU/msuiter/blob/main/LICENSE). The bundled COSMIC v3.6 reference data is mirrored from the
 Alexandrov-lab BSD-2 distribution (SigProfilerAssignment) with full provenance
 governance — see the reference-database faces on the
 [MSU map](https://wanglabcsu.github.io/msuiter/articles/msu-map.html) page.

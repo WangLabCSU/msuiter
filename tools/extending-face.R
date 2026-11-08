@@ -102,7 +102,15 @@ ef_article_set <- function(root, minus_articles = character(0)) {
     if (startsWith(s, "- ") && !grepl("title:", s, fixed = TRUE) &&
         !grepl("contents:", s, fixed = TRUE)) {
       tok <- .ef_trim(sub("^-", "", s))
-      if (grepl("^[a-z0-9][-a-z0-9]*$", tok)) registered <- c(registered, tok)
+      # pkgdown registers a subdirectory article under its articles/ prefix
+      # (pkg$vignettes$name), so the roster spells them that way; the link law
+      # keys on the stem the built page actually lives under. Campaign filenames
+      # carry uppercase lane ids and dots (G0, M0-01, v0.1), so the shape rule
+      # admits both; the coherence law owns the ghost check.
+      tok <- sub("^articles/", "", tok)
+      if (grepl("^[A-Za-z0-9][-A-Za-z0-9._]*$", tok)) {
+        registered <- c(registered, tok)
+      }
     }
   }
   if (!length(registered)) {
@@ -342,8 +350,14 @@ ef_audit <- function(pages, ns_path, root, minus_articles = character(0),
         }
       } else if (grepl("[.]html$", tg)) {
         nm <- sub("[.]html$", "", tg)
-        nm <- sub("^articles/", "", nm)
-        if (grepl("/", nm, fixed = TRUE)) {
+        if (startsWith(nm, "articles/")) {
+          # pkgdown builds every vignette and article into the one articles/
+          # directory, so a source page's sibling href must be bare. An
+          # articles/-prefixed href resolves to /articles/articles/<nm>.html.
+          v <- c(v, paste0("articles-prefixed sibling href resolves one ",
+                          "directory too deep in the built site: ", tg, " (",
+                          basename(pages[i]), " line ", ln, ")"))
+        } else if (grepl("/", nm, fixed = TRUE)) {
           v <- c(v, paste0("site-area link the article set cannot adjudicate: ",
                           tg, " (", basename(pages[i]), " line ", ln, ")"))
         } else if (nm %in% articles) {

@@ -50,7 +50,7 @@ OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
 drivers use, and cross-checks the live output against the committed evidence
 table whenever that table is on disk. The browsable census of the committed
-evidence is the [scenario gallery](articles/scenarios-gallery.html); this
+evidence is the [scenario gallery](scenarios-gallery.html); this
 page's own [HRD dual-oracle leg](#byte-exact-hrd-adjudication-against-the-dual-oracles)
 pins those tables byte for byte.
 

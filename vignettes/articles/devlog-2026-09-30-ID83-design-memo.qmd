@@ -4,7 +4,7 @@ title: "ID83 语义设计备忘（M1c 头号单元·先设计后实现）"
 
 > 2026-09-30。mutational signature 方法学专家独立备忘，供 PI 裁决后派实现。对象：ROADMAP M1c 首项「ID83（SPMG 语义逐位复刻：重复游走/MH 前向优先/封顶/Q 规则）+ ID83 golden」；ARCHITECTURE §7 条目 2（目录完备性契约）、§0 D11/D13；CAPABILITY-MATRIX L-B（ID83=SPMG 逐位）。
 >
-> **证据基线**：SPMG 上游克隆 /tmp/audit/SPMG（AlexandrovLab/SigProfilerMatrixGenerator）。master = `edccbea6`（Merge PR #256）；tag `v1.3.6` = `4923d61`。行号均指 master `MutationMatrixGenerator.py`（下称 MMG）与 `SigProfilerMatrixGeneratorFunc.py`（下称 Func）；ID 函数区域 v1.3.6 行号 ≈ master + 16（函数体逐字节相同，见 §1）。
+> **证据基线**：SPMG 上游克隆（AlexandrovLab/SigProfilerMatrixGenerator）。master = `edccbea6`（Merge PR #256）；tag `v1.3.6` = `4923d61`。行号均指 master `MutationMatrixGenerator.py`（下称 MMG）与 `SigProfilerMatrixGeneratorFunc.py`（下称 Func）；ID 函数区域 v1.3.6 行号 ≈ master + 16（函数体逐字节相同，见 §1）。
 
 ---
 
@@ -287,7 +287,7 @@ G23 文字版（修正表内占位）：基因组 `T T C C A G C A G A T`（pos1
 
 ### 9.2 独立审核 P0 修复与 golden 补充（本轮）
 
-- **P0-1（key4 R 类缺封顶）**：§3.6 正文写对（`min(len(sequence)/L - 1, 5)`，:1653-1659/:1699-1705），实现漏译 `.min(5)`：≥7 拷贝串联（key4=6 起）debug 触发构造哨兵 panic、release 静默错桶（(AC)⁹ 缺失被计为 3:Del:R:2）。已修；补 4 条 golden——Del R 与 Ins R 各「恰好 7 拷贝边界 + 9 拷贝远界」，逐条与独立 oracle（/tmp/audit-id83/oracle.py，master edccbea6 誊写）对拍一致。
+- **P0-1（key4 R 类缺封顶）**：§3.6 正文写对（`min(len(sequence)/L - 1, 5)`，:1653-1659/:1699-1705），实现漏译 `.min(5)`：≥7 拷贝串联（key4=6 起）debug 触发构造哨兵 panic、release 静默错桶（(AC)⁹ 缺失被计为 3:Del:R:2）。已修；补 4 条 golden——Del R 与 Ins R 各「恰好 7 拷贝边界 + 9 拷贝远界」，逐条与独立 oracle（master edccbea6 誊写）对拍一致。
 - **P0-2（release profile 编译失败）**：`label_of` 原挂 `#[cfg(debug_assertions)]`，而 `debug_assert_eq!` 函数体在 release 仍参与类型检查 → `cargo build --release -p msuiter-catalog` E0425（CRAN 模式 R CMD INSTALL 必挂）。修复：去 cfg 常驻（构造正确性哨兵，两种 profile 下均无死代码）。**release profile（build + test）自本轮加入验收门。**
 - **P2（同轮顺带备案）**：DuplicateRecord 去重按上游作用域扩展到 INDEL 流全部行（转换器 :94 判据：一切非纯 SNV 记录，含 complex 与块替换；流内 `prev_line` 跨 SNV 连续，golden G37b-G37e）；右窗循环体内无守卫复读（:1477/:1566）补结构化 bounds golden（G33b，oracle 同位 IndexError 对拍）。
 

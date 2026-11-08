@@ -50,7 +50,7 @@ it that the table attests its machine.
 
 ## TDD evidence (verbatim command output, same window; RED before GREEN)
 
-RED — `python3 /tmp/go05lane/run_one_group.py test_hardware_pin` (implementation
+RED — `python3 run_one_group.py test_hardware_pin` (implementation
 absent; the two survivors are precisely the optionality-law controls, so they
 were green by construction and stayed green throughout):
 
@@ -112,7 +112,7 @@ never held with the assert present. Two physical facts from the follow-on lane:
 174/174 tests passed.
 ```
 
-(/tmp/go05lane/m7_suite_after_T2.log — the group tally that covers commits
+(`m7_suite_after_T2.log` — the group tally that covers commits
 18d2c41, 5822aab, e105351.) The number spoken in the record from now on is
 174/174; the 157/157 line stands above as the historical RED/GREEN witness for
 group (S) only, never as the lane's final tally.
@@ -130,7 +130,7 @@ is appended to this file's next section before the checkbox may flip.
 
 The single authoritative shot ran to completion (driver `ignition-rc=0`,
 witnessed verbatim in the background-task output). Terminal marker, verbatim
-from `/tmp/go05lane/ignite1.log`:
+from `ignite1.log`:
 
 ```
 [adapter] docker: 42/42 cells ok|cached; timings -> timings_m7_degraded_20261011-042331.csv

@@ -5,7 +5,7 @@ title: "GO-05 tier-oracle amendment — consumed vs report-only fits, the floor-
 # fallback, and the --tier-probe rehearsal (controller ruling @10:45, RB-09
 # doctrine: principle, not outcome)
 
-Date: 2026-10-11. Lane: GO-05 successor (worktree agent-a266f2d2cd8559ec4,
+Date: 2026-10-11. Lane: GO-05 successor (a dedicated feature worktree,
 branch go-05-anchor-probe). Oracle: `bench/m7/tools/verify_campaign.py`.
 Harness: `bench/bootstrap/run_campaign.R`. Tests: new group **(W)**
 `bench/m7/tests/test_tier_probe.py`, registered in `tests/run_all.py`.
@@ -30,7 +30,7 @@ Seven laws bind this amendment; they are cited where each is discharged.
 
 Frozen dir `bench/results/bootstrap_vs_sigminer_20261011T024301Z/` — touched
 by nothing since; cited only. Its shot log
-(`/tmp/go05lane/shot_20261011T024301Z.log`) tail:
+(`shot_20261011T024301Z.log`) tail:
 
 ```
 [campaign] probes (S=5, R=10/20, warmup + 3 timed; medians adjudicated by the oracle):
@@ -167,17 +167,17 @@ and re-reads it through `vc._parse_result_md`).
 
 ## 7. TDD record and measurements
 
-- **RED** (`/tmp/go05lane/red_witness_w.log`): 3/10 passing pre-amendment,
+- **RED**: 3/10 passing pre-amendment,
   with the golden regression reproducing tonight's death verbatim from live
   fixture bytes: `non-physical cost fit: p=0.179 rate=-0.0002200000000000002`.
-- **GREEN** (`/tmp/go05lane/green_w.log`): (W) 10/10.
-- **Full m7 suite** (`/tmp/go05lane/suite_tier.log`): **207/207** — 197
+- **GREEN**: (W) 10/10.
+- **Full m7 suite**: **207/207** — 197
   pre-existing (the (U)/(V)/(S)/(T) harness-lint groups all re-run against
   the edited harness) plus the new (W) ten.
 - **The rehearsal, executed once** — wrapper
-  `/tmp/go05lane/run_tier_probe.sh`, outdir
-  `/tmp/go05lane/tierprobe_20261011T043151Z`, log
-  `/tmp/go05lane/tierprobe_20261011T043151Z.log`, **rc 0**:
+  `run_tier_probe.sh`, outdir
+  `tierprobe_20261011T043151Z`, log
+  `tierprobe_20261011T043151Z.log`, **rc 0**:
 
   ```
   [campaign] TIER-PROBE (full shape K=1000 S=1000 n_sig=50; decision-path observation only — the RB-10 shot stays unspent)
@@ -196,16 +196,16 @@ and re-reads it through `vc._parse_result_md`).
   line; the reader read zero claims and zero full shots.
 
 - **The golden replay** — tonight's own bytes (copied out of the frozen dir,
-  which stays untouched) through the amended oracle, `/tmp/go05lane/golden_replay`:
+  which stays untouched) through the amended oracle, `golden_replay`:
 
   ```
-  $ verify_campaign --campaign /tmp/go05lane/golden_replay --decide   -> rc 0
+  $ verify_campaign --campaign <campaign-dir> --decide   -> rc 0
   {"tier": "A", "fits": {"A1": {"fit_status": "ok", "p": 0.0722, "rate": 0.01234, ...},
    "A2": {"fit_status": "non-identifiable-at-probe-scale", "p": 0.179, "rate": -0.0002200000000000002, ...},
    "A3": {"fit_status": "ok", "p": 0.1716, "rate": 0.00012000000000000011, ...}},
    "cap": 21600, "projections": {"A": 12412.2, "B": 2540.2}}
 
-  $ verify_campaign --campaign /tmp/go05lane/golden_replay --floor-check --arm A2 --observed 0.9 --reps 1000  -> rc 2
+  $ verify_campaign --campaign <campaign-dir> --floor-check --arm A2 --observed 0.9 --reps 1000  -> rc 2
   {"ok": false, "error": "A2: probe fit unusable (non-physical cost fit: p=0.179 rate=-0.0002200000000000002); the floor gate refuses to stand on a non-physical fit, and no committed governance floor class covers this arm"}
   ```
 
@@ -224,7 +224,7 @@ and re-reads it through `vc._parse_result_md`).
   once the mode AND both guards exist in the source, else it reports
   `[skip]` — witnessed live once; never again.
 - **Wrapper v2 (law (6) co-tenancy) is prepared, not fired**:
-  `/tmp/go05lane/run_shot2.sh` samples `docker ps` + `sysctl vm.loadavg` +
+  `run_shot2.sh` samples `docker ps` + `sysctl vm.loadavg` +
   `uptime` + `vm_stat` three times over 30 s into
   `co_tenancy_<TS>.txt`, echoes it verbatim at the head of the launch log,
   and refuses (rc 4) unless all three load1 samples read under the ruled
@@ -298,7 +298,7 @@ battery gates before any shot burns, so nothing is spent to discover it.
 
 **TDD record.** Group (X) of the m7 suite,
 `tests/test_floor_gate_unmeasurable.py`, seven units, RED witnessed first
-against the unamended instruments (`/tmp/go05lane/red_x_witness.log`:
+against the unamended instruments (`red_x_witness.log`:
 2/7, the five law-new units failing with the frozen rc-2 error verbatim),
 then 7/7 green; (W) re-greened 10/10 under the amended oracle
 (`green_w_x.log`). The W5 bad-fit leg was repinned from rc 2 to the
@@ -315,13 +315,12 @@ Section 2 cites the frozen witness outdir as
 `bench/results/bootstrap_vs_sigminer_20261011T024301Z/`. That path is
 lane-relative, not a committed trunk path: verified 2026-10-13, the outdir
 exists **uncommitted** inside the GO-05 lane worktree named in this file's
-header (worktree `agent-a266f2d2cd8559ec4`, branch `go-05-anchor-probe`), at
+header (a dedicated feature worktree, branch `go-05-anchor-probe`), at
 `bench/results/bootstrap_vs_sigminer_20261011T024301Z/` beneath that
 worktree root (`campaign_launches.jsonl`, `campaign.rds`, `seal.json`,
 `Seeds.txt`, `witnesses/`); it is not present under the repository's
 committed `bench/results/` tree, and no `bootstrap_vs_sigminer_*` copy
-exists under `/tmp/go05lane/` — the lane's `/tmp/go05lane/` evidence
-verified today is the shot log cited above,
-`/tmp/go05lane/shot_20261011T024301Z.log`. A committed replication of the
+exists under the lane's scratch bank — the lane's scratch evidence
+verified today is the shot log cited above. A committed replication of the
 frozen witness bytes is a follow-on item; until then, read the Section 2
 citation as lane-worktree-relative evidence.

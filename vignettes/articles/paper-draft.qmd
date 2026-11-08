@@ -2,7 +2,6 @@
 title: "msuiter — manuscript spine (PP-1 draft)"
 ---
 
-> Lane artifact. Worktree `msuiter-wt/paper`, branch `feat/paper-draft` @ `b92c092`.
 > Every sentence-bearing slot below is either **FILLED** from committed, measured
 > evidence (each quoted number carries a byte-verifiable source anchor: `file:line`
 > or a commit object) or an explicit `[GATED: <gate-name>]` decision block. No gated
@@ -48,7 +47,7 @@ the headline sentence is gated]
 The calibration of exposure uncertainty is the field's own declared open question:
 the community benchmarks that adjudicate mutational-signature tools report point
 estimates and fitting quality but do not audit whether the reported interval
-estimates cover at their nominal level (/tmp/noveltylane/novelty-scan-2026-10-30.md §2
+estimates cover at their nominal level (novelty-scan §2
 E8 [M]-class records: the 12-tool fitting comparison of Medo et al.,
 Nat Commun 2024, and the 13-tool attribution benchmark of Jiang et al.,
 Brief Bioinform bbaf042 — both re-pinned at DOI pass, Appendix A/§9). msuiter
@@ -60,7 +59,7 @@ protocol, published RNG stream layouts, and a measurement-and-attestation regime
 co-tenancy censuses, hardware-pinned rows, firing constructed controls) that lets
 every speed and correctness claim in this paper resolve to committed witness bytes
 (vignettes/articles/performance.qmd:3-9 zero-fabrication design;
-/tmp/noveltylane/novelty-scan-2026-10-30.md §3 item 2, the banked RB-10/P-1/G5
+novelty-scan §3 item 2, the banked RB-10/P-1/G5
 record).
 
 > [GATED: G0-PRIMARY] The abstract's headline sentence — the coverage-validation
@@ -110,7 +109,7 @@ the compiled yardstick re-measures 147/147 cells breaching the <=2x bar
    randomness, and measurements are individually attestable bit-for-bit — and the
    calibration audits that this makes affordable are the ones the field's own
    benchmarks declared missing
-   (/tmp/noveltylane/novelty-scan-2026-10-30.md §3 one-sentence draft, cited
+   (novelty-scan §3 one-sentence draft, cited
    as-is per lane law; its (a)-class labels carry the scan's own
    negative-search caveat and targeted re-scan requirement,
    novelty-scan §Method + §Integrity note 2).
@@ -189,10 +188,10 @@ protocol/protocol-memo trio 2026-09-28, the pipeline design memo 2026-09-30,
 the M3b design memo 2026-10-04, the benchmark design memo 2026-10-05 whose
 adjudications D1+D2 (TP-only judgment) are the benchmark's law
 (vignettes/articles/roadmap.qmd:229)). The originality scan
-(/tmp/noveltylane/novelty-scan-2026-10-30.md, cited as-is) delivers the
-per-element verdicts: no primitive in this stack is claimed as algorithmically
-new (KL-MU, NNDSVD, Hungarian consensus, CV-K all carry (c)-prior-art findings,
-§2), while the certified-compute combination (E1+E4+E5+E6) and the
+(novelty-scan, cited as-is) delivers the per-element verdicts: no primitive in
+this stack is claimed as algorithmically new (KL-MU, NNDSVD, Hungarian
+consensus, CV-K all carry (c)-prior-art findings, §2), while the
+certified-compute combination (E1+E4+E5+E6) and the
 attestation-regime-as-method (E6+E11) carry the (b)/(a) labels the scan's own
 caveats attach to (negative searches pending a targeted re-scan;
 novelty-scan §Method, §Integrity note 2).
@@ -219,7 +218,7 @@ Table 1 — sealed campaign verdicts.
 | 2 | same campaign, pool-scaling isolation | secondary A1/A3 = 14.2209x | vignettes/articles/performance.qmd:88 (verbatim from the same sealed outdir) |
 | 3 | P-1 parity re-adjudication post-#53 (comparison-cosine arms vs compiled yardstick, N-grid) | **MEASURED-FALSE**, 23.728x–32.160x | commit object 8213192 message bytes ("P-1 parity verdict MEASURED-FALSE (23.7-32.2x)"); exact pair in the PR #53 body (https://github.com/WangLabCSU/msuiter/pull/53, mergedAt 2026-10-24T23:58:29Z, merge commit 8213192 — banked byte copy sha256 in the lane manifest); sealed original gate table bench/results/p6_regen_20261016-011928/result.md:6 (18 offending classes, 22.166–67.102) |
 | 4 | NM-factorization yardstick (rust kernel vs R NMF/brunet, 400 fixed iters, 1 thread) | ratio_r_over_rust = 1.2323x | bench/results/p6_regen_20261016-011928/nmf_yardstick_authoritative.json:9 (`1.2323046734094532`); campaign ledger row bench/results/p6_regen_20261016-011928/result.md:14 |
-| 5 | P10 batch bridge on the product bridge face | landing ratio A0/A3 = 2.3004x (per-k 2.74/2.43/2.19/2.04), **bit-identical** | commit object 2296f49 message bytes (measured block: A0 0.14060 s/run, A3 0.06112 s/run); lane bank /tmp/perf10lane/logs/20-p10c-measurement.txt:13 ("LANDING RATIO A0/A3 = 2.3004") |
+| 5 | P10 batch bridge on the product bridge face | landing ratio A0/A3 = 2.3004x (per-k 2.74/2.43/2.19/2.04), **bit-identical** | commit object 2296f49 message bytes (measured block: A0 0.14060 s/run, A3 0.06112 s/run; witness bytes "LANDING RATIO A0/A3 = 2.3004") |
 
 Epoch discipline on quoted timings (post-cap witness law; the post-cap floor
 epoch pins `f3e894a6933a2ffb`, bench/m7/tests/test_p6_floor_governance.py:156):
@@ -236,8 +235,8 @@ The Phase-7 O5 face (`bench/m7/tools/parity_recompute.py`, committed by the
 #55 lineage 309ab5b) re-reads every R-family face of the sealed floor table
 against the compiled sigprofiler yardstick, per class, on the cpu basis, under
 MEASURED-then-STATED and PATH-BINDING laws (witness bytes must equal table
-bytes or the line is refused). In-lane re-run, this worktree, rc=0
-(/tmp/paperlane/logs/o5_parity_recompute.txt): **faces=7 classes=21 lines=147
+bytes or the line is refused). In-lane re-run, rc=0:
+**faces=7 classes=21 lines=147
 breaches=147 bar<=2.0x epoch=f3e894a6933a2ffb** — i.e. all 147 R-face x class
 cells currently breach the hard <=2x bar against the compiled yardstick
 (per-face cpu-basis ranges 13.4045–72.8837; best arms `sigminer_post_p1_rust`
@@ -404,7 +403,7 @@ the scan has not itself re-verified on-page.
 > sentence of this manuscript; peers (a) sigminer and (b) sigprofiler are the
 > only quotable comparison identities. (Recorded posture: the novelty executive
 > review lists the signeR ruling as pending,
-> /tmp/noveltylane/executive-review-2026-10-31.md §2 item 2.)
+> §2 item 2.)
 
 ## 6. Limitations and honest posture
 
@@ -430,7 +429,7 @@ the scan has not itself re-verified on-page.
    scan rest on the scan's self-declared flaky-backends environment and await a
    targeted re-scan (novelty-scan §Method, §Integrity notes 1-2); the executive
    review accepted the posture with exactly that caveat
-   (/tmp/noveltylane/executive-review-2026-10-31.md §2 item 2).
+   (§2 item 2).
 
 ## 7. Data and code availability
 
@@ -543,10 +542,10 @@ Every number quoted in a filled slot, with its byte-verifiable anchor:
 | 23.728–32.160; "MEASURED-FALSE (23.7-32.2x)" | commit object 8213192 (message bytes) + PR #53 body (banked sha256 in manifest) | `git show -s --format=%B 8213192`; `gh pr view 53 -q .body` |
 | 22.166–67.102, 18 offending classes | bench/results/p6_regen_20261016-011928/result.md:6 | `sed -n '6p' <file>` |
 | 1.2323 (bytes 1.2323046734094532) | bench/results/p6_regen_20261016-011928/nmf_yardstick_authoritative.json:9 | `sed -n '9p' <file>` |
-| 2.3004 (A0 0.14060, A3 0.06112 s/run) | commit object 2296f49 (message bytes) + /tmp/perf10lane/logs/20-p10c-measurement.txt:13 | `git show -s --format=%B 2296f49` |
-| O5 census faces=7 classes=21 lines=147 breaches=147 | live re-run bank /tmp/paperlane/logs/o5_parity_recompute.txt (rc=0) | `cd bench/m7 && python3 -m tools.parity_recompute` |
+| 2.3004 (A0 0.14060, A3 0.06112 s/run) | commit object 2296f49 (message bytes) | `git show -s --format=%B 2296f49` |
+| O5 census faces=7 classes=21 lines=147 breaches=147 | live re-run bank (rc=0) | `cd bench/m7 && python3 -m tools.parity_recompute` |
 | epoch pin f3e894a6933a2ffb | bench/m7/tests/test_p6_floor_governance.py:156 | `sed -n '156p' <file>` |
-| 476+346 law expectations; 364/364 m7 tests | commit object 2296f49 (message); live re-run bank /tmp/paperlane/logs/m7-tests-run-all.txt (rc=0, "364/364 tests passed.") | `cd bench/m7 && python3 -m tests.run_all` |
+| 476+346 law expectations; 364/364 m7 tests | commit object 2296f49 (message); live re-run bank (rc=0, "364/364 tests passed.") | `cd bench/m7 && python3 -m tests.run_all` |
 | 198-cell grid landed | vignettes/articles/roadmap.qmd:175-180 | `sed -n '175,180p' vignettes/articles/roadmap.qmd` |
 | master seed 20260928 | bench/results/bootstrap_vs_sigminer_20261013T175859Z/result.md:8; per-campaign `Seeds.txt` | `sed -n '8p' <file>` |
 

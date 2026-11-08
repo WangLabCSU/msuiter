@@ -70,8 +70,8 @@ wave alone packs to a 172 s makespan -- the PR-gate testthat phase is a
 ~3-minute wave where the full-roster K-wave ran ~25+ min (and rode 10
 gates). Projected per-push critical path per slim arm: setup ~2.5 min +
 build+check (no-tests) ~14 min + INSTALL ~1 min + T0 wave ~3 min.
-Full attestation sweep banked in the lane evidence
-(/tmp/issue76lane/evidence): generator byte-gate, aggregator/runner/heavy
+Full attestation sweep banked in the lane evidence:
+generator byte-gate, aggregator/runner/heavy
 self-tests with every new control FIR/GREEN, law units nb/failed/error/
 skipped read from `as.data.frame`, ci-selfcheck PASS.
 The committed battery ran against a fresh INSTALL of this tree:

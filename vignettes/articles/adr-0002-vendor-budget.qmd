@@ -75,7 +75,7 @@ Under `CARGO_NET_OFFLINE=true` any networking attempt makes cargo error-exit; th
 
 ```sh
 cp /tmp/vendor.tar.xz src/rust/vendor.tar.xz        # the Makevars/config.R expected location
-env -u NOT_CRAN -u DEBUG R CMD INSTALL . -l /tmp/msuiter-testlib
+env -u NOT_CRAN -u DEBUG R CMD INSTALL . -l <test-lib-dir>
 ```
 
 The key evidence of the measured output (exit 0, `* DONE (msuiter)`, and after the installation `library(msuiter)` loads successfully):
@@ -116,7 +116,7 @@ cargo +1.71.0 test  --workspace   # 1 passed (ffi_links_engine_and_catalog)
 ```sh
 env -u NOT_CRAN -u DEBUG R_ENVIRON_USER=/tmp/empty-renviron \
   PATH="$HOME/.rustup/toolchains/1.71.0-aarch64-apple-darwin/bin:$PATH" \
-  R CMD INSTALL . -l /tmp/msuiter-testlib
+  R CMD INSTALL . -l <test-lib-dir>
 # Using cargo 1.71.0 / rustc 1.71.0 → offline vendor tarball → -j 2 --offline --release → * DONE (msuiter)
 ```
 
@@ -126,7 +126,7 @@ env -u NOT_CRAN -u DEBUG R_ENVIRON_USER=/tmp/empty-renviron \
 
 1. **matrixmultiply must not, along `cargo update`, rise to ≥0.3.10** (1.75+); the dependabot/lock check must retain that pin or an equivalent rust-version gate.
 2. **Cargo.lock must stay version 3** (v4 needs cargo ≥1.78 to be read); it is currently v3.
-3. The this-machine reproduction pitfall: `~/.Renviron` injects `PATH="/Users/wsx/miniconda3/bin/:${PATH}"`, and inside the R subprocess the conda-bundled cargo 1.92.0 shadows the prepended toolchain directory (Makevars appends `~/.cargo/bin` to the PATH tail and cannot correct it). To verify the MSRV on this machine one needs `R_ENVIRON_USER=/tmp/empty-renviron` + the 1.71 bin prepended to the PATH; the CI images have no conda rust, unaffected.
+3. The this-machine reproduction pitfall: `~/.Renviron` injects `PATH="a conda bin/ prefix:${PATH}"`, and inside the R subprocess the conda-bundled cargo 1.92.0 shadows the prepended toolchain directory (Makevars appends `~/.cargo/bin` to the PATH tail and cannot correct it). To verify the MSRV on this machine one needs `R_ENVIRON_USER=/tmp/empty-renviron` + the 1.71 bin prepended to the PATH; the CI images have no conda rust, unaffected.
 
 ## 5. The acceptance cross-check (the U-M0-02 [engineering] items)
 
