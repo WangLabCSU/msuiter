@@ -447,6 +447,21 @@
 #'
 #' @return An [MsComparison].
 #'
+#' @examples
+#' # Compare estimated signatures against the truth that generated them,
+#' # with the Jiang protocol calibrated by a small null Monte Carlo.
+#' ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+#' S <- ref[, c("SBS1", "SBS5", "SBS13")]
+#' colnames(S) <- paste0("CS", 1:3)
+#' E <- matrix(rep(c(0.5, 0.3, 0.2), each = 24), 3, 24)
+#' sim <- ms_simulate(S, exposures = E, burden = 4000, seed = 7)
+#' ext <- ms_extract(sim, k = 3)
+#'
+#' cmp <- ms_compare(ext@signatures, S,
+#'   exposures_est = ext@exposures, exposures_ref = E,
+#'   null_n = 200, null_n_draws = 500, seed = 1L)
+#' round(cmp@metrics$cosine, 3)
+#'
 #' @seealso [MsComparison], [ms_match_solutions_rust] for the raw sweep.
 #' @export
 ms_compare <- S7::new_generic(

@@ -106,6 +106,20 @@ error (NA at the boundary); an adhoc `reference_summary` snapshot
 derived from the signature labels hash (sha256, FIPS 180-4); and
 `engine` = the method string.
 }
+\examples{
+# Refit exposures of the simulated catalog against the true signatures.
+ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S <- ref[, c("SBS1", "SBS5", "SBS13")]
+colnames(S) <- paste0("CS", 1:3)
+E <- matrix(rep(c(0.5, 0.3, 0.2), each = 24), 3, 24)
+sim <- ms_simulate(S, exposures = E, burden = 4000, seed = 7)
+ext <- ms_extract(sim, k = 3)
+
+fit <- ms_fit(sim, ext@signatures)
+fit@exposures[1:3, 1:4]
+head(fit@support)
+
+}
 \seealso{
 [ms_extract()] for discovery, [ms_catalog()] / [ms_tally()] for
   the upstream counts, [MsFit] for the result container.
