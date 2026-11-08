@@ -92,6 +92,20 @@
 #'   seed and the method evidence: the pipeline path fills `stability` and
 #'   `k_evidence`; the single-method path leaves them empty (M1s shape).
 #'
+#' @examples
+#' # A synthetic catalog over the bundled COSMIC SBS96 reference: three
+#' # active signatures and 24 samples with fixed activity shares.
+#' ref <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+#' S <- ref[, c("SBS1", "SBS5", "SBS13")]
+#' colnames(S) <- paste0("CS", 1:3)
+#' E <- matrix(rep(c(0.5, 0.3, 0.2), each = 24), 3, 24)
+#' sim <- ms_simulate(S, exposures = E, burden = 4000, seed = 7)
+#'
+#' # Default pipeline: stability + K evidence over the rank grid.
+#' ext <- ms_extract(sim, k = 3)
+#' ext@signatures[1:4, ]
+#' ext@k_evidence[, c("k", "selected")]
+#'
 #' @seealso [ms_nmf()] for the engine factory, [ms_select_k()] for the K
 #'   arbitration over a rank grid, [ms_tally()] for the upstream catalog,
 #'   [ms_signature()] for the low-level constructor.

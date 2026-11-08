@@ -63,6 +63,40 @@ the tally context wins: the tally-produced keys (`genome`, `genome_path`,
 `mode`, `ledger`, `n_skipped`, `n_variants`) are written after the merge
 and overwrite same-named keys coming from the variants' provenance.
 }
+\examples{
+# A minimal VCF whose records sit on one short chromosome.
+lines <- c(
+  "##fileformat=VCFv4.2",
+  "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
+  "chr1\t3\t.\tA\tT\t.\tPASS\t.",
+  "chr1\t6\t.\tA\tG\t.\t.\t."
+)
+path <- tempfile(fileext = ".vcf")
+writeLines(lines, path)
+v <- ms_variants(path, "GRCh38",
+  caller = "synthetic", matched_normal = "none")
+
+# A tiny 2bit reference is built in-memory for the example; point
+# `genome` at a real UCSC .2bit file in your own analysis. The chromosome
+# reads TCACGACG (2-bit packing, T=0 C=1 A=2 G=3, first base high).
+twobit <- tempfile(fileext = ".2bit")
+u32 <- function(x) writeBin(as.integer(x), raw(), size = 4L,
+  endian = "little")
+# record: dnaSize, nBlockCount=0, no blocks, reserved x2, packed dna
+rec <- c(u32(8L), u32(0L), raw(0L), raw(0L), u32(0L), u32(0L),
+  as.raw(c(0x19, 0xE7)))
+# index: nameLen, name, data offset (16-byte header + 9-byte index entry)
+idx <- c(as.raw(4L), charToRaw("chr1"), u32(25L))
+con <- file(twobit, open = "wb")
+writeBin(c(u32(0x1A412743), u32(0L), u32(1L), u32(0L), idx, rec), con)
+close(con)
+
+cat1 <- ms_tally(v, twobit, mode = "SBS96")
+cat1
+cat1@provenance$n_skipped # records the ledger, not an error
+unlink(c(path, twobit))
+
+}
 \seealso{
 [ms_variants()] for the input container, [ms_catalog()] for the
   low-level constructor.
