@@ -73,7 +73,7 @@
 
 use crate::detmath::{det_ln};
 use crate::error::MsError;
-use crate::nmf::{kl_h_step, kl_w_step, matmul};
+use crate::nmf::{kl_h_step_scratch, kl_w_step_scratch, matmul, KlScratch};
 use crate::rng::{MsRng, StreamId};
 
 /// SUITOR `min.value` floor (source.R:42-45 default; applied to the whole
@@ -659,9 +659,13 @@ pub fn ecm_fit(
     let mut prev_lik: Option<f64> = None;
     let mut last_train = 0.0f64;
 
+    // One scratch for the whole fit (P11 L4): the certified step bodies are
+    // unchanged; only the per-iteration buffer allocation is hoisted.
+    let mut scratch = KlScratch::new(m, n, rank);
+
     for t in 1..=max_iter {
-        kl_h_step(&working, &w, &mut h, m, n, rank);
-        kl_w_step(&working, &mut w, &h, m, n, rank);
+        kl_h_step_scratch(&working, &w, &mut h, m, n, rank, &mut scratch);
+        kl_w_step_scratch(&working, &mut w, &h, m, n, rank, &mut scratch);
         xhat = matmul(&w, &h, m, n, rank);
         delta = match delta_denom(&xhat) {
             Some(d) => d,

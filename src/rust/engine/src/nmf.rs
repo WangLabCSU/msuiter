@@ -563,6 +563,37 @@ pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize,
     kl_w_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow, &mut s.wparts);
 }
 
+/// Scratch-reusing H step for the CV driver's per-fit loop (P11 L4): the
+/// certified body on a caller-owned [`KlScratch`], so one `ecm_fit` call
+/// pays for its buffers once instead of once per iteration. The scratch is
+/// shaped, not seasoned — every buffer is fully written before it is read.
+pub(crate) fn kl_h_step_scratch(
+    v: &[f64],
+    w: &[f64],
+    h: &mut [f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    s: &mut KlScratch,
+) {
+    s.ensure(m, n, k);
+    kl_h_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.num, &mut s.den);
+}
+
+/// Scratch-reusing W step; see [`kl_h_step_scratch`].
+pub(crate) fn kl_w_step_scratch(
+    v: &[f64],
+    w: &mut [f64],
+    h: &[f64],
+    m: usize,
+    n: usize,
+    k: usize,
+    s: &mut KlScratch,
+) {
+    s.ensure(m, n, k);
+    kl_w_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow, &mut s.wparts);
+}
+
 /// The certified W step body (see [`kl_w_step`]). Two recomputations of the
 /// committed code become hoists WITHOUT any value change, and that is the
 /// whole safety argument:
