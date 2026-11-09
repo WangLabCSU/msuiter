@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-06 自研 RNG 模块（2026-09-28，W2 轮）"
+title: "2026-09-28 -- U-M0-06 the in-house RNG module (round W2)"
 ---
 
 ## 做了什么

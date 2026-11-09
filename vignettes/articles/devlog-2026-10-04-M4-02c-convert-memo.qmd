@@ -1,5 +1,5 @@
 ---
-title: "U-M4-02c 设计备忘：ms_convert() 机会转换（exome↔genome）"
+title: "2026-10-04 -- U-M4-02c design memo: ms_convert() opportunistic conversion (exome <-> genome)"
 ---
 
 日期：2026-10-04（夜间窗口第二批随批）。范围：CAPABILITY-MATRIX L-G 行"机会归一化：基因组/外显子/panel 机会向量；exome↔genome 转换 | sigfit 似然内机会；sig_convert"——M4 面交付转换器；"似然内机会"（sigfit 语义）记 v1.x。

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1s-05 线程不变性接线 + 审核轮（2026-09-30）"
+title: "2026-09-30 -- U-M1s-05 thread-invariance wiring + the review round"
 ---
 
 ## U-M1s-05（交付，随下轮审核）

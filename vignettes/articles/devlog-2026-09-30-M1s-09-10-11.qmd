@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1s-09/10/11 组装层 + 审计修复（2026-09-30）"
+title: "2026-09-30 -- U-M1s-09/10/11 the assembly layer + audit fixes"
 ---
 
 ## 交付

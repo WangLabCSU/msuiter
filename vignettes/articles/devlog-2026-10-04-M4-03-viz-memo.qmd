@@ -1,5 +1,5 @@
 ---
-title: "U-M4-03 设计备忘：viz 首批 8 图型"
+title: "2026-10-04 -- U-M4-03 design memo: the first viz batch of 8 plot faces"
 ---
 
 日期：2026-10-04（夜间窗口第二批）。范围：ROADMAP M4 "viz 首批 8 图型（COSMIC 调色板、规范序、矢量输出）"；CAPABILITY-MATRIX L-F 表（首批 8 图 M4）。exposure UMAP 与全集图型不在本批。

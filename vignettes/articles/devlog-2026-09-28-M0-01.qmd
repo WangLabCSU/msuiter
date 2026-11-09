@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-01 rextendr 脚手架 + Cargo workspace（2026-09-28）"
+title: "2026-09-28 -- U-M0-01 rextendr scaffold + Cargo workspace"
 ---
 
 ## 做了什么

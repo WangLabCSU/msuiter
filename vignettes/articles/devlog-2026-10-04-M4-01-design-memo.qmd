@@ -1,5 +1,5 @@
 ---
-title: "U-M4-01 设计备忘：ms_compare() 校准相似度库"
+title: "2026-10-04 -- U-M4-01 design memo: the ms_compare() calibrated similarity library"
 ---
 
 日期：2026-10-04（夜间窗口批次）。状态：设计冻结 + 实现开工。

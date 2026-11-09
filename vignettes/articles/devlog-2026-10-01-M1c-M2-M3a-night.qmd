@@ -1,5 +1,5 @@
 ---
-title: "Devlog · M1c/M2/M3a 联合批次（2026-10-01 夜间）"
+title: "2026-10-01 -- the M1c/M2/M3a joint batch (overnight)"
 ---
 
 ## ID83 终审（2×P0 → 已修）

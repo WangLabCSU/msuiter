@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1s-02 修复 + U-M1s-03 green pass + U-M1s-04（2026-09-29）"
+title: "2026-09-29 -- U-M1s-02 fixes + U-M1s-03 green pass + U-M1s-04"
 ---
 
 ## U-M1s-02 审核（REVISE，1×P1）与 PI 修复

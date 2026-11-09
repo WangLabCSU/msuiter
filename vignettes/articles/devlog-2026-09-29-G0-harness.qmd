@@ -1,5 +1,5 @@
 ---
-title: "Devlog · G0 harness 开建与修复（2026-09-29）"
+title: "2026-09-29 -- G0 harness build-out and fixes"
 ---
 
 > G0 为组织行动门（作者裁决）；本 devlog 记录团队代办部分——harness 的建造与一轮独立审核修复。协议冻结记录见 [devlog-2026-09-28-G0-pi-adjudication.qmd](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G0-pi-adjudication.html)。

@@ -1,5 +1,5 @@
 ---
-title: "GMM 超突变分层语义设计备忘（U-M1c-02·先设计后实现）"
+title: "2026-09-30 -- GMM hypermutant stratification semantics design memo (U-M1c-02, design before implementation)"
 ---
 
 > 2026-09-30。对象：ROADMAP M1c「GMM 分层器（`ms_stratify_hypermutants` 语义落地）」；ARCHITECTURE §2 `engine/stats.rs`（1-D GMM 分层器）、§5 共识-CV 流水线（「分类+排除 de novo+强制 refit，非"归一化"」）；CAPABILITY-MATRIX L-A（GMM cutoff + 排除 de novo + 强制 refit）。

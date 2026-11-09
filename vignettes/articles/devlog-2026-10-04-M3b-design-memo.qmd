@@ -1,5 +1,5 @@
 ---
-title: "设计备忘 · M3b MSU-Fit 校准统计（2026-10-04）"
+title: "2026-10-04 -- M3b MSU-Fit calibration statistics design memo"
 ---
 
 > 状态：**草案 v1.0，待 PI 裁决**（裁决项见 §7 三个分叉点；实现等裁决后派单，本备忘不改任何代码）。

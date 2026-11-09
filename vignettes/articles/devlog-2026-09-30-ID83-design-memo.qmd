@@ -1,5 +1,5 @@
 ---
-title: "ID83 语义设计备忘（M1c 头号单元·先设计后实现）"
+title: "2026-09-30 -- ID83 semantics design memo (the M1c head unit, design before implementation)"
 ---
 
 > 2026-09-30。mutational signature 方法学专家独立备忘，供 PI 裁决后派实现。对象：ROADMAP M1c 首项「ID83（SPMG 语义逐位复刻：重复游走/MH 前向优先/封顶/Q 规则）+ ID83 golden」；ARCHITECTURE §7 条目 2（目录完备性契约）、§0 D11/D13；CAPABILITY-MATRIX L-B（ID83=SPMG 逐位）。

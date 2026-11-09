@@ -1,5 +1,5 @@
 ---
-title: "Devlog · M3b 设计备忘 + M3a 关闭确认轮（2026-10-04）"
+title: "2026-10-04 -- M3b design memo + the M3a closure-confirmation round"
 ---
 
 ## M3a 关闭确认轮：PASS

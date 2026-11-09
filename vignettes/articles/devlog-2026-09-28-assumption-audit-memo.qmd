@@ -1,5 +1,5 @@
 ---
-title: "Devlog · 假设审计备忘：Cornet 之后的领域共同假设地图（2026-09-28）"
+title: "2026-09-28 -- Assumption audit memo: the field's shared-assumption map after Cornet"
 ---
 
 > 触发：G3 事件复核（[Cornet 正式发表](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G3-cornet-event-review.html)）后作者指令——从 mutational signature 的理论与计算/算法假设限制出发，打磨我方理论和方法。Cornet 打掉的是 A1（签名间独立）；本备忘系统枚举领域方法共同依赖的统计/算法假设，逐条标注 (a) 默许处、(b) 已有破坏、(c) 破坏后的下游空白、(d) msuiter 三方法站位，并给出候选延伸命题 P1–P3。

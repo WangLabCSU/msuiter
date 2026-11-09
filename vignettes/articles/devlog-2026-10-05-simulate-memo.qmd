@@ -1,5 +1,5 @@
 ---
-title: "U-M7 前置设计备忘：ms_simulate() 第一版（场景目录模拟器）"
+title: "2026-10-05 -- U-M7 pre-design memo: the first ms_simulate() (scenario-catalog simulator)"
 ---
 
 日期：2026-10-05 凌晨随批。范围：CAPABILITY-MATRIX L-G "目录模拟器：基因组真实放置、场景生成器、NB 校准采样 | SigProfilerSimulator/SynSig/Jiang | ms_simulate() | M7（内核 M1s）"——**第一版交付变异计数层**（字典+暴露→目录）；基因组真实放置（VCF 级）记 ⏳ M7 全集。

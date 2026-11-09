@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M3a-03 presence P0 + bootstrap CI P1 修复记录（2026-10-03）"
+title: "2026-10-03 -- U-M3a-03 presence P0 + bootstrap CI P1 fix record"
 ---
 
 ## P0：presence 池化零分布（审计 agent_c96cc80b 抓出）

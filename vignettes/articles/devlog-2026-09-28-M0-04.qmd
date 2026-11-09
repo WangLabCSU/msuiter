@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-04 引擎注册表 + 契约测试套件（2026-09-28，W3 轮）"
+title: "2026-09-28 -- U-M0-04 engine registry + contract test suite (round W3)"
 ---
 
 ## 做了什么

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-03 S7 类骨架（2026-09-28，W2 轮）"
+title: "2026-09-28 -- U-M0-03 the S7 class skeleton (round W2)"
 ---
 
 ## 做了什么

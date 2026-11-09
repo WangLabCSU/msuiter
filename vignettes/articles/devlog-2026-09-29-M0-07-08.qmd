@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-07 CI + U-M0-08 治理文件（2026-09-29，W4 轮，联合）"
+title: "2026-09-29 -- U-M0-07 CI + U-M0-08 governance files (round W4, joint)"
 ---
 
 ## 做了什么

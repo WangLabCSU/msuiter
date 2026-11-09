@@ -1,5 +1,5 @@
 ---
-title: "设计备忘 · M2 统一提取流水线（共识 Hungarian 语义 + SUITOR CV 语义 + K 仲裁规则）"
+title: "2026-09-30 -- M2 unified extraction pipeline design memo (consensus Hungarian semantics + SUITOR CV semantics + the K arbitration rule)"
 ---
 
 > **状态**：设计备忘（算法语义工作片，先设计后编码）。**未经 PI 裁决前不得派实现**。

@@ -1,5 +1,5 @@
 ---
-title: "bench/jiang 设计备忘：Jiang 2025 拟合协议对标（v0.2 验收门证据）"
+title: "2026-10-05 -- bench/jiang design memo: benchmarking against the Jiang 2025 fitting protocol (the v0.2 acceptance-gate evidence)"
 ---
 
 日期：2026-10-05 凌晨随批。目的：ROADMAP v0.2 验收门最后一项——"Jiang 协议（活性>0 匹配 + Combined Score）对标进入第一梯队合理区间"。**不需要 Islam 口径裁决**（Jiang 活性匹配无双口径歧义）。

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1c-02 GMM 超突变分层器（2026-09-30）"
+title: "2026-09-30 -- U-M1c-02 the GMM hypermutant stratifier"
 ---
 
 ## 交付

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · 并行 tally 优化 + sigminer/MP 交叉验证（2026-09-30）"
+title: "2026-09-30 -- parallel tally optimization + the sigminer/MP cross-validation"
 ---
 
 ## 并行 tally 优化（U-M1s-05 架构的兑现）

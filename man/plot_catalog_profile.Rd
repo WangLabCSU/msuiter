@@ -8,7 +8,7 @@ plot_catalog_profile(matrix, column = 1L, mode = c("share", "count"))
 }
 \arguments{
 \item{matrix}{An m x 1 numeric matrix (or a named numeric vector) in a
-supported canonical channel order (SBS96, DBS78, ID83), or an
+supported canonical channel order (SBS96, DBS78), or an
 [MsSignature] (uses its first signature).}
 
 \item{column}{Column name or index when `matrix` has several columns.}
@@ -22,7 +22,7 @@ A ggplot object.
 \description{
 Channel-level bar profile of one catalog sample or one signature:
 substitution-class colors (the verified COSMIC SBS palette), class
-separation lines, 5'-flank labels rotated vertical. DBS78/ID83 inputs
+separation lines, 5'-flank labels rotated vertical. DBS78 inputs
 render in a simplified single-color style (their palettes are frozen
 at M7).
 }
