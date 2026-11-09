@@ -199,6 +199,38 @@ impl KlScratch {
     }
 }
 
+/// Per-call temporaries of the EU steps (P11 L5): same shaped-not-seasoned
+/// contract as [`KlScratch`] — buffers sized to one (m, n, k) point, written
+/// before read, no fit values across calls. `h_pre`/`w_pre` carry the audited
+/// pre-step snapshots; `num` the H step's WᵀV product; `gww`/`ghh` the k×k
+/// Gram matrices.
+#[derive(Debug, Clone)]
+struct EuScratch {
+    m: usize,
+    n: usize,
+    k: usize,
+    num: Vec<f64>,
+    gww: Vec<f64>,
+    ghh: Vec<f64>,
+    h_pre: Vec<f64>,
+    w_pre: Vec<f64>,
+}
+
+impl EuScratch {
+    fn ensure(&mut self, m: usize, n: usize, k: usize) {
+        if (self.m, self.n, self.k) != (m, n, k) {
+            self.m = m;
+            self.n = n;
+            self.k = k;
+            self.num = vec![0.0f64; k * n];
+            self.gww = vec![0.0f64; k * k];
+            self.ghh = vec![0.0f64; k * k];
+            self.h_pre = vec![0.0f64; k * n];
+            self.w_pre = vec![0.0f64; m * k];
+        }
+    }
+}
+
 /// Outcome of a fixed-iteration NMF fit.
 #[derive(Debug, Clone, PartialEq)]
 pub struct NmfFit {
@@ -447,9 +479,10 @@ pub fn fit_eu_with_init(
     let mut h = h0.to_vec();
     let mut objective = Vec::with_capacity(max_iter + 1);
     objective.push(sse_objective(v, &w, &h, m, n, k));
+    let mut eu_scratch = EuScratch { m: 0, n: 0, k: 0, num: Vec::new(), gww: Vec::new(), ghh: Vec::new(), h_pre: Vec::new(), w_pre: Vec::new() };
     for _ in 0..max_iter {
-        eu_h_step(v, &w, &mut h, m, n, k);
-        eu_w_step(v, &mut w, &h, m, n, k);
+        eu_h_step(v, &w, &mut h, m, n, k, &mut eu_scratch);
+        eu_w_step(v, &mut w, &h, m, n, k, &mut eu_scratch);
         objective.push(sse_objective(v, &w, &h, m, n, k));
     }
     Ok(NmfFit { w, h, objective, iterations: max_iter })
@@ -690,10 +723,17 @@ fn kl_w_step_core(
     }
 }
 
-/// One EU H step: `H ← H ⊙ (WᵀV) ⊘ max(WᵀW H, ε)`.
-fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) {
+/// One EU H step: `H ← H ⊙ (WᵀV) ⊘ max(WᵀW H, ε)`. The per-call temporaries
+/// live in the caller-owned [`EuScratch`] (P11 L5): the buffers are hoisted
+/// out of the per-iteration heap allocations of the certified loop; every
+/// value and every accumulation order is the committed one.
+fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize, e: &mut EuScratch) {
+    e.ensure(m, n, k);
     // num = WᵀV (k×n), gww = WᵀW (k×k), den = gww·H (k×n).
-    let mut num = vec![0.0f64; k * n];
+    let EuScratch { num, gww, h_pre, .. } = e;
+    for x in num.iter_mut() {
+        *x = 0.0f64;
+    }
     for i in 0..m {
         let wrow = &w[i * k..i * k + k];
         for j in 0..n {
@@ -705,7 +745,9 @@ fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) 
             }
         }
     }
-    let mut gww = vec![0.0f64; k * k];
+    for x in gww.iter_mut() {
+        *x = 0.0f64;
+    }
     for i in 0..m {
         for s in 0..k {
             let wis = w[i * k + s];
@@ -727,7 +769,7 @@ fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) 
     // the denominator never sees rows already rewritten this step (audited
     // P1: in-place accumulation is a "half new, half old" hybrid that breaks
     // the MM guarantee for k >= 2).
-    let h_pre = h.to_vec();
+    h_pre.copy_from_slice(h);
     for s in 0..k {
         for j in 0..n {
             let mut den = 0.0f64;
@@ -739,11 +781,16 @@ fn eu_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) 
     }
 }
 
-/// One EU W step: `W ← W ⊙ (V Hᵀ) ⊘ max(W H Hᵀ, ε)`.
-fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) {
+/// One EU W step: `W ← W ⊙ (V Hᵀ) ⊘ max(W H Hᵀ, ε)`. Scratch-reused like
+/// [`eu_h_step`] (P11 L5).
+fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize, e: &mut EuScratch) {
+    e.ensure(m, n, k);
     // ghh = H Hᵀ (k×k), then den[i][s] = Σ_t W[i][t]·ghh[t][s];
     // num[i][s] = Σ_j V[i][j]·H[s][j].
-    let mut ghh = vec![0.0f64; k * k];
+    let EuScratch { ghh, w_pre, .. } = e;
+    for x in ghh.iter_mut() {
+        *x = 0.0f64;
+    }
     for j in 0..n {
         for s in 0..k {
             let hsj = h[s * n + j];
@@ -763,7 +810,7 @@ fn eu_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) 
     // Snapshot for the same pre-step semantics as `eu_h_step` (see note
     // there): the denominator must read the W that the numerator equation
     // was written against, not partially rewritten entries.
-    let w_pre = w.to_vec();
+    w_pre.copy_from_slice(w);
     for i in 0..m {
         for s in 0..k {
             let mut num = 0.0f64;
