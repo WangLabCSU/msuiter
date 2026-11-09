@@ -457,6 +457,12 @@ pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize,
 /// The certified H step body (see [`kl_h_step`]). The temporaries arrive as
 /// disjoint field borrows of a [`KlScratch`]; every value and every
 /// per-accumulator accumulation order is the committed one.
+///
+/// L1 pass fusion: each row's GEMM (zero-fill, ascending s, `ws == 0` skip
+/// — the exact [`matmul_body`] per-cell order) is followed immediately by
+/// that row's ratio and scatter, so `wh` is consumed L1-hot instead of
+/// re-read in a separate full pass. The ratio operands are the same f64s
+/// and no per-cell accumulation order changes — pure fusion.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_h_step_core(
     v: &[f64],
@@ -468,13 +474,26 @@ fn kl_h_step_core(
     wh: &mut [f64],
     num: &mut [f64],
 ) {
-    matmul_body(w, h, m, n, k, wh);
-    // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
     for x in num.iter_mut() {
         *x = 0.0f64;
     }
     for i in 0..m {
         let wrow = &w[i * k..i * k + k];
+        // Row i of WH in the exact matmul_body per-cell order, then the
+        // fused ratio epilogue on the row while it is still L1-hot.
+        for x in wh[i * n..i * n + n].iter_mut() {
+            *x = 0.0f64;
+        }
+        for (s, &ws) in wrow.iter().enumerate() {
+            if ws == 0.0 {
+                continue;
+            }
+            let hrow = &h[s * n..s * n + n];
+            for (j, &hvj) in hrow.iter().enumerate() {
+                wh[i * n + j] += ws * hvj;
+            }
+        }
+        // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
         for j in 0..n {
             let r = v[i * n + j] / wh[i * n + j].max(KL_EPS);
             if r != 0.0 {
@@ -514,9 +533,22 @@ pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize,
 ///     loop for every s with identical div operands — one pass per row
 ///     yields exactly the same f64s for all s;
 ///
+///   * `den` (the H row sum, ascending j) was recomputed for every (i, s)
+///     pair with identical operands — it depends only on s, so one pass per
+///     call yields exactly the same f64s;
+///   * the ratio column r[j] = V/max(WH, ε) was recomputed inside the s
+///     loop for every s with identical div operands — one pass per row
+///     yields exactly the same f64s for all s;
+///
 /// the per-(i, s) `num` accumulation keeps its committed ascending-j order,
 /// so every product enters each accumulator in the same sequence with the
 /// same values.
+///
+/// L1 pass fusion: row i of WH is produced in the exact [`matmul_body`]
+/// per-cell order (zero-fill, ascending s, `ws == 0` skip) and the ratio
+/// `rrow` epilogue for row i follows it while the row is still L1-hot —
+/// the same f64 operands and the same order, one full `wh` re-read per
+/// step saved.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_w_step_core(
     v: &[f64],
@@ -529,7 +561,6 @@ fn kl_w_step_core(
     hrow: &mut [f64],
     rrow: &mut [f64],
 ) {
-    matmul_body(w, h, m, n, k, wh);
     for s in 0..k {
         let mut d = 0.0f64;
         for j in 0..n {
@@ -538,6 +569,21 @@ fn kl_w_step_core(
         hrow[s] = d.max(KL_EPS);
     }
     for i in 0..m {
+        // Row i of WH in the exact matmul_body per-cell order, then the
+        // fused ratio epilogue on the row while it is still L1-hot.
+        for x in wh[i * n..i * n + n].iter_mut() {
+            *x = 0.0f64;
+        }
+        for s in 0..k {
+            let ws = w[i * k + s];
+            if ws == 0.0 {
+                continue;
+            }
+            let hrow = &h[s * n..s * n + n];
+            for (j, &hvj) in hrow.iter().enumerate() {
+                wh[i * n + j] += ws * hvj;
+            }
+        }
         for j in 0..n {
             rrow[j] = v[i * n + j] / wh[i * n + j].max(KL_EPS);
         }
