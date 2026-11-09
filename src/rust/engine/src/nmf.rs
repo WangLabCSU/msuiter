@@ -154,7 +154,8 @@ pub struct KlScratch {
     hrow: Vec<f64>,
     rrow: Vec<f64>,
     // den (length k) carries the H step's hoisted Wᵀ column sums; wparts
-    // (m×k) carries the W step's deferred per-(i, s) numerators.
+    // (m×k) carries the W step's deferred per-(i, s) numerators. `num`
+    // holds the H step's scatter temporary in the L3 [j][s] layout.
     den: Vec<f64>,
     wparts: Vec<f64>,
 }
@@ -478,11 +479,17 @@ pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize,
 ///
 /// L2 column blocking: the n axis walks in [`KL_BLOCK`]-column blocks, so
 /// the block slice of `wh` stays L1-resident across GEMM, ratio, scatter
-/// and H update. Safety: the block loop is over j only — `num[s*n+j]`
+/// and H update. Safety: the block loop is over j only — every `num` cell
 /// still accumulates in ascending i; each block's GEMM reads only that
 /// block's h columns, which no earlier block's H update touched; the
 /// hoisted `den[s] = (Σ_i w[i*k+s]).max(ε)` has j-independent operands,
 /// so its f64s are the committed per-s column sums exactly.
+/// L3 `num` layout: the scatter temporary is stored [j][s] (`num[j*k+s]`)
+/// instead of the committed [s][j]. It is an internal temporary never
+/// visible in any output, so its layout is not part of the certified
+/// contract; [j][s] turns the stride-n scatter and the H-update read into
+/// contiguous k-wide runs. Per-cell accumulation order (ascending i) and
+/// every f64 operand are unchanged — layout only.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_h_step_core(
     v: &[f64],
@@ -526,21 +533,24 @@ fn kl_h_step_core(
                     wh[i * n + jb + j] += ws * hvj;
                 }
             }
-            // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
+            // num[j][s] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε) — the L3
+            // [j][s] layout makes the scatter contiguous in s.
             for j in jb..je {
                 let r = v[i * n + j] / wh[i * n + j].max(KL_EPS);
                 if r != 0.0 {
                     for (s, &ws) in wrow.iter().enumerate() {
-                        num[s * n + j] += ws * r;
+                        num[j * k + s] += ws * r;
                     }
                 }
             }
         }
         // H update for the block's columns only; num/den bits per cell are
-        // the committed ones, so the product is too.
-        for s in 0..k {
-            for j in jb..je {
-                h[s * n + j] *= num[s * n + j] / den[s];
+        // the committed ones, so the product is too — read contiguously in
+        // the [j][s] layout.
+        for j in jb..je {
+            let nrow = &num[j * k..j * k + k];
+            for s in 0..k {
+                h[s * n + j] *= nrow[s] / den[s];
             }
         }
     }
