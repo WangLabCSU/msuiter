@@ -129,6 +129,10 @@ use crate::rng::{MsRng, StreamId};
 /// floating-point guard only, never a pseudocount).
 pub const KL_EPS: f64 = 1e-12;
 
+/// P11 L2 column-block width: a 96×64 slice of the `wh` row-major buffer
+/// is ~49 KB, L1-resident on the 128 KB M-series L1 (P11 design memo).
+const KL_BLOCK: usize = 64;
+
 /// Working set of the certified KL loop (parity plan P3): the per-call
 /// temporaries of the certified steps live here instead of on the heap per
 /// call, so a batch pays for its buffers once per shape instead of roughly
@@ -149,6 +153,10 @@ pub struct KlScratch {
     lnv: Vec<f64>,
     hrow: Vec<f64>,
     rrow: Vec<f64>,
+    // den (length k) carries the H step's hoisted Wᵀ column sums; wparts
+    // (m×k) carries the W step's deferred per-(i, s) numerators.
+    den: Vec<f64>,
+    wparts: Vec<f64>,
 }
 
 impl KlScratch {
@@ -165,6 +173,8 @@ impl KlScratch {
             lnv: Vec::new(),
             hrow: Vec::new(),
             rrow: Vec::new(),
+            den: Vec::new(),
+            wparts: Vec::new(),
         };
         s.ensure(m, n, k);
         s
@@ -182,6 +192,8 @@ impl KlScratch {
             self.lnv = vec![0.0f64; m * n];
             self.hrow = vec![0.0f64; k];
             self.rrow = vec![0.0f64; n];
+            self.den = vec![0.0f64; k];
+            self.wparts = vec![0.0f64; m * k];
         }
     }
 }
@@ -406,8 +418,8 @@ fn fit_kl_core(
     });
     objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
     for _ in 0..max_iter {
-        kl_h_step_core(v, &w, &mut h, m, n, k, &mut s.wh, &mut s.num);
-        kl_w_step_core(v, &mut w, &h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow);
+        kl_h_step_core(v, &w, &mut h, m, n, k, &mut s.wh, &mut s.num, &mut s.den);
+        kl_w_step_core(v, &mut w, &h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow, &mut s.wparts);
         if !endpoints {
             objective.push(kl_objective_core(v, &s.lnv, &w, &h, m, n, k, &mut s.wh));
         }
@@ -451,7 +463,7 @@ pub fn fit_eu_with_init(
 /// kernel verbatim instead of forking it.
 pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize, k: usize) {
     let mut s = KlScratch::new(m, n, k);
-    kl_h_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.num);
+    kl_h_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.num, &mut s.den);
 }
 
 /// The certified H step body (see [`kl_h_step`]). The temporaries arrive as
@@ -463,6 +475,14 @@ pub(crate) fn kl_h_step(v: &[f64], w: &[f64], h: &mut [f64], m: usize, n: usize,
 /// that row's ratio and scatter, so `wh` is consumed L1-hot instead of
 /// re-read in a separate full pass. The ratio operands are the same f64s
 /// and no per-cell accumulation order changes — pure fusion.
+///
+/// L2 column blocking: the n axis walks in [`KL_BLOCK`]-column blocks, so
+/// the block slice of `wh` stays L1-resident across GEMM, ratio, scatter
+/// and H update. Safety: the block loop is over j only — `num[s*n+j]`
+/// still accumulates in ascending i; each block's GEMM reads only that
+/// block's h columns, which no earlier block's H update touched; the
+/// hoisted `den[s] = (Σ_i w[i*k+s]).max(ε)` has j-independent operands,
+/// so its f64s are the committed per-s column sums exactly.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_h_step_core(
     v: &[f64],
@@ -473,45 +493,55 @@ fn kl_h_step_core(
     k: usize,
     wh: &mut [f64],
     num: &mut [f64],
+    den: &mut [f64],
 ) {
     for x in num.iter_mut() {
         *x = 0.0f64;
     }
-    for i in 0..m {
-        let wrow = &w[i * k..i * k + k];
-        // Row i of WH in the exact matmul_body per-cell order, then the
-        // fused ratio epilogue on the row while it is still L1-hot.
-        for x in wh[i * n..i * n + n].iter_mut() {
-            *x = 0.0f64;
-        }
-        for (s, &ws) in wrow.iter().enumerate() {
-            if ws == 0.0 {
-                continue;
-            }
-            let hrow = &h[s * n..s * n + n];
-            for (j, &hvj) in hrow.iter().enumerate() {
-                wh[i * n + j] += ws * hvj;
-            }
-        }
-        // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
-        for j in 0..n {
-            let r = v[i * n + j] / wh[i * n + j].max(KL_EPS);
-            if r != 0.0 {
-                for (s, &ws) in wrow.iter().enumerate() {
-                    num[s * n + j] += ws * r;
-                }
-            }
-        }
-    }
-    // den[s][j] = Σ_i W[i][s]  (W column sums — independent of j)
+    // den[s] = Σ_i W[i][s] (W column sums — independent of j), hoisted out
+    // of the block loop with the committed ascending-i order.
     for s in 0..k {
         let mut col = 0.0f64;
         for i in 0..m {
             col += w[i * k + s];
         }
-        let den = col.max(KL_EPS);
-        for j in 0..n {
-            h[s * n + j] *= num[s * n + j] / den;
+        den[s] = col.max(KL_EPS);
+    }
+    for jb in (0..n).step_by(KL_BLOCK) {
+        let je = (jb + KL_BLOCK).min(n);
+        for i in 0..m {
+            let wrow = &w[i * k..i * k + k];
+            // Row i of WH restricted to the block columns, in the exact
+            // matmul_body per-cell order, then the fused ratio epilogue on
+            // the block slice while it is still L1-hot.
+            for x in wh[i * n + jb..i * n + je].iter_mut() {
+                *x = 0.0f64;
+            }
+            for (s, &ws) in wrow.iter().enumerate() {
+                if ws == 0.0 {
+                    continue;
+                }
+                let hrow = &h[s * n + jb..s * n + je];
+                for (j, &hvj) in hrow.iter().enumerate() {
+                    wh[i * n + jb + j] += ws * hvj;
+                }
+            }
+            // num[s][j] = Σ_i W[i][s] · V[i][j]/max(WH[i][j], ε)
+            for j in jb..je {
+                let r = v[i * n + j] / wh[i * n + j].max(KL_EPS);
+                if r != 0.0 {
+                    for (s, &ws) in wrow.iter().enumerate() {
+                        num[s * n + j] += ws * r;
+                    }
+                }
+            }
+        }
+        // H update for the block's columns only; num/den bits per cell are
+        // the committed ones, so the product is too.
+        for s in 0..k {
+            for j in jb..je {
+                h[s * n + j] *= num[s * n + j] / den[s];
+            }
         }
     }
 }
@@ -520,23 +550,16 @@ fn kl_h_step_core(
 /// Crate-visible for the SUITOR CV driver (see [`kl_h_step`]).
 pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize, k: usize) {
     let mut s = KlScratch::new(m, n, k);
-    kl_w_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow);
+    kl_w_step_core(v, w, h, m, n, k, &mut s.wh, &mut s.hrow, &mut s.rrow, &mut s.wparts);
 }
 
 /// The certified W step body (see [`kl_w_step`]). Two recomputations of the
 /// committed code become hoists WITHOUT any value change, and that is the
 /// whole safety argument:
-///   * `den` (the H row sum, ascending j) was recomputed for every (i, s)
+///   * `hrow` (the H row sum, ascending j) was recomputed for every (i, s)
 ///     pair with identical operands — it depends only on s, so one pass per
 ///     call yields exactly the same f64s;
-///   * the ratio column r[j] = V/max(WH, ε) was recomputed inside the s
-///     loop for every s with identical div operands — one pass per row
-///     yields exactly the same f64s for all s;
-///
-///   * `den` (the H row sum, ascending j) was recomputed for every (i, s)
-///     pair with identical operands — it depends only on s, so one pass per
-///     call yields exactly the same f64s;
-///   * the ratio column r[j] = V/max(WH, ε) was recomputed inside the s
+///   * the ratio row rrow[j] = V/max(WH, ε) was recomputed inside the s
 ///     loop for every s with identical div operands — one pass per row
 ///     yields exactly the same f64s for all s;
 ///
@@ -549,6 +572,17 @@ pub(crate) fn kl_w_step(v: &[f64], w: &mut [f64], h: &[f64], m: usize, n: usize,
 /// `rrow` epilogue for row i follows it while the row is still L1-hot —
 /// the same f64 operands and the same order, one full `wh` re-read per
 /// step saved.
+///
+/// L2 column blocking: the n axis walks in [`KL_BLOCK`]-column blocks and
+/// the W update is DEFERRED: `wparts[i*k+s]` accumulates each product
+/// `rrow[j]·h[s*n+j]` directly (ascending j within a block, blocks in
+/// ascending order), so the per-(i, s) add sequence is the committed
+/// ascending-j sequence exactly — no per-block partials are re-added, which
+/// would regroup FP additions and change rounding. `hrow[s]` accumulates
+/// its raw ascending-j sum across blocks with `.max(ε)` applied only at
+/// final use, matching the committed f64s. The deferred update
+/// `w[i*k+s] *= wparts[i*k+s] / hrow[s]` then runs once per (i, s) as the
+/// committed single pass did.
 #[allow(clippy::too_many_arguments)] // repo convention: flat certified faces
 fn kl_w_step_core(
     v: &[f64],
@@ -560,39 +594,57 @@ fn kl_w_step_core(
     wh: &mut [f64],
     hrow: &mut [f64],
     rrow: &mut [f64],
+    wparts: &mut [f64],
 ) {
-    for s in 0..k {
-        let mut d = 0.0f64;
-        for j in 0..n {
-            d += h[s * n + j];
+    for x in hrow.iter_mut() {
+        *x = 0.0f64;
+    }
+    for x in wparts.iter_mut() {
+        *x = 0.0f64;
+    }
+    for jb in (0..n).step_by(KL_BLOCK) {
+        let je = (jb + KL_BLOCK).min(n);
+        for i in 0..m {
+            // Row i of WH restricted to the block columns, in the exact
+            // matmul_body per-cell order over the post-H-update h, then the
+            // fused ratio epilogue on the block slice while it is still
+            // L1-hot.
+            for x in wh[i * n + jb..i * n + je].iter_mut() {
+                *x = 0.0f64;
+            }
+            for s in 0..k {
+                let ws = w[i * k + s];
+                if ws == 0.0 {
+                    continue;
+                }
+                let hrow = &h[s * n + jb..s * n + je];
+                for (j, &hvj) in hrow.iter().enumerate() {
+                    wh[i * n + jb + j] += ws * hvj;
+                }
+            }
+            for j in jb..je {
+                rrow[j] = v[i * n + j] / wh[i * n + j].max(KL_EPS);
+            }
+            // Per-(i, s) numerators land directly in the persistent
+            // wparts accumulator in ascending-j order.
+            for j in jb..je {
+                let rj = rrow[j];
+                for s in 0..k {
+                    wparts[i * k + s] += rj * h[s * n + j];
+                }
+            }
         }
-        hrow[s] = d.max(KL_EPS);
+        // H row sums accumulate the raw ascending-j sum across blocks;
+        // the ε floor is applied only at final use.
+        for s in 0..k {
+            for j in jb..je {
+                hrow[s] += h[s * n + j];
+            }
+        }
     }
     for i in 0..m {
-        // Row i of WH in the exact matmul_body per-cell order, then the
-        // fused ratio epilogue on the row while it is still L1-hot.
-        for x in wh[i * n..i * n + n].iter_mut() {
-            *x = 0.0f64;
-        }
         for s in 0..k {
-            let ws = w[i * k + s];
-            if ws == 0.0 {
-                continue;
-            }
-            let hrow = &h[s * n..s * n + n];
-            for (j, &hvj) in hrow.iter().enumerate() {
-                wh[i * n + j] += ws * hvj;
-            }
-        }
-        for j in 0..n {
-            rrow[j] = v[i * n + j] / wh[i * n + j].max(KL_EPS);
-        }
-        for s in 0..k {
-            let mut num = 0.0f64;
-            for j in 0..n {
-                num += rrow[j] * h[s * n + j];
-            }
-            w[i * k + s] *= num / hrow[s];
+            w[i * k + s] *= wparts[i * k + s] / hrow[s].max(KL_EPS);
         }
     }
 }
