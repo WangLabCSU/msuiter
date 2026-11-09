@@ -104,18 +104,48 @@ per-iteration cost is not two but **four m·n·k passes**:
 The Phase-9 engine-iterations forensics (94.1% stage mass) lives only in
 lane records that have already evaporated from /tmp. This PR carries it as
 a paper-grade devlog (`devlog-2026-11-09-p9-engine-iterations-forensics.qmd`)
-so the 性能与benchmark chapter cites committed evidence, not lane lore.
+so the performance-and-benchmark chapter cites committed evidence, not lane lore.
 
-## Expected ceiling, stated honestly
+## Expected ceiling, stated honestly - now MEASURED
 
-L1–L5 attack the four-pass memory-bound structure. Bound: traffic per
-iteration drops from ~3.8 MB to ~1.6 MB (V read twice is irreducible; the
-two GEMM H-reads are 80 KB each) and all four passes become L1-resident
-per block. Realistic engine-face gain: **1.5–2.5x**, not the ~6.2x the
-system-level ≤2x row needs. This phase therefore (a) banks the honest
-bit-identical ceiling, (b) lands the forensics devlog, and (c) quantifies
-the residual gap precisely for the parity-law memo and the L6 ruling —
-both surface-only.
+L1-L5 attack the four-pass memory-bound structure. The design-time bound
+(traffic ~3.8 MB -> ~1.6 MB per iteration; all four passes L1-resident per
+block) predicted a 1.5-2.5x engine-face gain. **Post-implementation, the
+gain was measured directly** with a differential microbench
+(`/tmp/p11bench`: bit-identity-gated twin of the d04929b scalar path vs
+the live b3719df faces, at the exact m1s fixture 96x1000, k=10, T=100,
+warm-up 1 + median 3, rustc 1.92, release lto=1 cgu=1):
+
+| Face | PRE (twin) | LIVE (engine) | Speedup |
+|------|-----------:|--------------:|--------:|
+| steps only (no per-iteration objective) | 129.920 ms | 106.2 ms (derived) | **1.223x** |
+| end-to-end (Full trace, per-iteration objective) | 237.056 ms | 214.235 ms | 1.107x |
+
+Decomposition: per-iteration objective call ~ 1.07 ms (twin/live call
+ratio 0.992x - the twin is faithful); objective share of loop mass
+**45.2% PRE / 49.4% LIVE**; steps floor ~ 1.062 ms/iter. The objective
+pass (one WH matmul + 96k det_ln per iteration) is untouched by L1-L5 by
+design (the m1s numeric protocol U-M1s-14 requires the Full-trace
+objective trajectory), so it dilutes the 1.223x step-core gain to 1.107x
+on the Full face.
+
+Reading, honestly:
+
+- **Step-core (production face): 1.223x.** Post-P10 the production
+  pipeline runs the Endpoints trace (two objective calls per fit), so
+  the production-relevant gain is the steps-only 1.223x.
+- **m1s bench record: ~2%** (205.904 -> 201.919 ms median), because the
+  m1s protocol requires the Full-trace per-iteration objective
+  (U-M1s-14) - the diluted end-to-end face. The twin's absolute Full
+  time (237 ms) sits above the historical pre-P11 m1s record (~206 ms),
+  so the differential end-to-end 1.107x slightly overstates; the
+  phase-mass decomposition is the robust finding.
+- **System-level gap: unchanged.** The O5 census needs ~6.7x system-wide
+  to reach the <=2x row; 1.223x step-core does not close it. L1-L5 bank
+  the honest bit-identical ceiling; the named follow-up lever remains
+  **L6 (disjoint-j in-fit threading, flagged above)** - a design-doc
+  ruling (ARCH 2.6), surface-only for the user - plus the parity-law
+  5-option memo (also surface-only).
 
 ## TDD plan
 
