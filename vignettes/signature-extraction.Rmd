@@ -106,6 +106,18 @@ head(ext@exposures[, 1L:4L])
 ext@catalog_summary$channel_name
 ```
 
+The `stability` slot is the consensus pipeline's self-report — read it
+before trusting the ensemble: the average and per-signature stability of
+the Hungarian-matched replicates, how many replicates ran, the consensus
+restarts and rounds behind the clustering, and whether the consensus
+converged:
+
+```{r stability}
+ext@stability$avg_stability
+ext@stability$per_signature_stability
+ext@stability$converged
+```
+
 The reconstruction quality of the extraction can be eyeballed against the
 input catalog with `plot_catalog_profile()`
 ([the visualization gallery](visualization-gallery.html) shows it).
@@ -132,6 +144,14 @@ same `MsSignature` output contract, comparing engines is a one-line swap,
 and the results can be compared against each other or against a reference
 with `ms_compare()`
 ([Comparing signatures](comparing-signatures.html)).
+
+One protocol note for that comparison call: of the three matching
+protocols, `hungarian` and `islam` match on the signature matrices alone,
+while `jiang` matches on sample-level activity and therefore needs both
+exposure matrices — and only accepts them when the two catalogs are
+cell-aligned (the same samples, the true dictionary fitted). For a
+de-novo-versus-reference check like the one above, the signature-only
+protocols are the ones that apply.
 
 ## Where to go next
 

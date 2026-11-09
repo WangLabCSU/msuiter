@@ -88,6 +88,53 @@ head(as.data.frame(mc))
 report's faces (shown in
 [the visualization gallery](visualization-gallery.html)).
 
+## The artifact roster and its share
+
+Not every signature in a fit is biology. COSMIC catalogues a fixed roster
+of artefact signatures — technical processes such as FFPE damage — and
+the QC layer ships that roster as data so pipelines can state exactly
+which claims they are counting against:
+
+```{r roster}
+ms_qc_artifact_roster()
+```
+
+The roster-share sentry measures, per sample, how much of a fitted
+exposure rides on those artefact signatures. The demo below plants the
+artefact signature SBS27 alongside two real ones — keeping the COSMIC
+column labels this time, because roster matching is **by label**:
+
+```{r roster-share}
+ref27 <- ms_refdb_bundled()$SBS_GRCh38@matrices[[1]]
+S27   <- ref27[, c(1, 5, 36)] # SBS1, SBS5, SBS27 -- COSMIC labels kept
+E27   <- matrix(c(0.45, 0.3, 0.25), 3, 16,
+                dimnames = list(colnames(S27), paste0("S", 1:16)))
+sim27 <- ms_simulate(S27, exposures = E27, burden = 2000, seed = 2)
+fit27 <- ms_fit(sim27, S27)
+head(ms_qc_roster_share(sim27, S27, fit27@exposures))
+```
+
+Every sample carries its SBS27 load in `artifact_sigs`, the share sits
+far above the declared `artifact_share_flag` (0.05), and the verdict
+column reads `hit` — exactly what `qc_flag` would surface in the report.
+The label key cuts both ways: rebuild the same fit with columns renamed
+to the `CS1`/`CS2`/`CS3` idiom of the report section above and the share
+drops to zero with verdict `ok`, because the roster counts what the
+signature labels name, never column positions.
+
+## The provenance checklist
+
+The report closes with an audit checklist of its own inputs — the input
+class, the channel space, the catalog's generation provenance, the
+bundled reference pin, the roster pin, the declared thresholds, and the
+package version. Unlike the computed faces this audit never aborts on a
+bad input: it records the failing row as `fail` and lets the pipeline
+decide what that is worth:
+
+```{r provenance}
+ms_qc_provenance(sim)
+```
+
 ## Hypermutant stratification
 
 A handful of extreme-burden samples can drive an entire ensemble. The

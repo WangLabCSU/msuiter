@@ -30,6 +30,22 @@ every digit from the committed bytes at build time, and the testthat law
 witness and that every stamp and census matches the disk bytes -- a
 tampered witness, a dropped card or an empty witness tree reddens the lane.
 
+Reading the cards: `run_atlas.R` produces most of the census — the SBS96
+and DBS78 count tables (`counts_sbs.csv`, `counts_dbs.csv`), the
+synthetic copy-number segments (`synth-cn.tsv`), the per-sample QC table
+(`qc_report.csv`), and the atlas adjudication faces (`compare_sweep.csv`
+for the Hungarian sweep it gates at recall 1, `pbr.csv` for the
+per-sample profile-reconstruction gate, `prevalence.csv`,
+`association.csv` and `presence.csv` for the ensemble faces).
+`run_hrd.R` writes `hrd_report.csv`, its planted pLOH/aneuploidy truth
+adjudicated byte-exact against published dual oracles.
+`run_treatment.R` writes the treatment faces (`treatment_association.csv`,
+`treatment_timing.csv`), checked for planted-fidelity association and
+byte-identical seeded reruns. Each driver ends its run with a single
+`== <scenario>: OVERALL PASS|OVERALL FAIL ==` verdict and exits nonzero
+on failure, so the committed tree doubles as the last green run's
+receipt.
+
 ```{r gallery, echo = FALSE, message = FALSE, results = "asis"}
 if (is.na(PKG) ||
     !dir.exists(file.path(PKG, "bench", "scenarios", "out")) ||

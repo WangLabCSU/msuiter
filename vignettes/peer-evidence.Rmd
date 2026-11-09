@@ -37,6 +37,18 @@ audit name it, drop a scored column and watch the render refuse rather than
 zero-fill, and empty the corpus and watch the face redden instead of
 passing silently.
 
+Reading the cards: each sealed campaign under `bench/results/` carries
+its own witness directory, and the cards name the witness files they
+quote — `arm_*.jsonl` for the per-arm wall/cpu measurements and
+floor projections, `anchor_*.jsonl` for the anchor runs the floor model
+is calibrated against, `host_census.jsonl` for the machine census that
+makes the numbers interpretable off-host. The sweep table at the bottom
+is the atlas comparison sweep (`bench/scenarios/out/compare_sweep.csv`),
+the same committed bytes the scenario gallery stamps, scored only on the
+columns the audit certifies as live. Between the sha256 stamps, the row
+censuses and the span-by-span audit, the page's only claim is: nothing
+here can drift from its witness without reddening the lane.
+
 ```{r peer, echo = FALSE, message = FALSE, results = "asis"}
 if (is.na(PKG) ||
     !dir.exists(file.path(PKG, "bench", "results")) ||
