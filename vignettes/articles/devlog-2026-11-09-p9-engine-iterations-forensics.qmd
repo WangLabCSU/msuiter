@@ -1,0 +1,88 @@
+---
+title: "Phase-9 O2 forensics — engine-iterations = 94.1% of serialized-extraction stage mass (reified, paper-grade)"
+---
+
+Date: 2026-11-09 (carried into `feat/perf-p11-engine-kl`).
+Provenance: **reified**. The original Phase-9 lane logs evaporated from
+`/tmp/perf9lane` (only the o1-* cache legs survive; the forensics
+directories `p9fa`/`p9fa2` are empty, and no file in the repository
+carries the raw stage table). Every figure below is quoted verbatim from
+surviving secondary records: the PR #60 squash commit `78d09e0` message
+and PR body (merged 2026-10-29, squash `78d09e00f2d7f4cf8777a4260ce9b7d1605a8bfc`)
+and the deep-archive controller record. This devlog exists so the
+performance-and-benchmark chapter cites committed evidence, not lane
+lore.
+
+## The question Phase-9 O2 answered
+
+Before the engine-optimization phases (P11 onward), the parity program
+needed to know **where the time actually goes** in a serialized
+post-cap extraction leg. If any meaningful mass lived outside the engine
+(serialization, export, orchestration), pipeline-level levers would
+out-rank engine work. The forensics leg decomposed the leg's wall-clock
+into engine-iteration mass vs all non-engine mass.
+
+## The stage table (verbatim from the PR #60 body, O2 section)
+
+> O2: serialized post-cap extraction floor decomposed (>=2 forensics
+> legs + sidecars + sampler): engine-iterations span **94.1% of the
+> leg**; all non-engine mass **4.35%** (readRDS+saveRDS full 80-file
+> bill **0.048 s** -- serialization measurably excluded); export tail
+> **<0.02%**. NO candidate lever is both bit-identical and >=10%
+> (sealed image pin + frozen geometry + bit-identity predicate foreclose
+> the engine; the remainder is below the bar) -- adopted levers NONE,
+> every candidate delivered as an evidence-backed sketch.
+
+Companion measurements banked in the same lane:
+
+- Six-leg wall+cpu A/B for the O1 cache lever: leg A 1695.6 -> 0.143 s,
+  leg B 1209.9 -> 0.112 s (off-baselines OK-verdict 958.26 / 1213.8 s) —
+  the cache eliminates whole legs, which is why it was adopted (default
+  OFF, env-only), while every *within-leg* candidate fell under the 10%
+  bar.
+- M2 per-launch split was surface-refused and instead bounded via a
+  task-span census (no blind retry); the micro clock probe spoke the
+  five named `proc.time` clocks (user.self / sys.self / elapsed /
+  user.child / sys.child), bound by attested position with a
+  `clock_names` stamp and drift gate.
+
+## The verdict and its consequence
+
+**Pipeline-level adopted levers: NONE.** With 94.1% of stage mass inside
+the engine-iterations and the entire non-engine remainder at 4.35%
+(serialization measurably excluded by the 80-file RData bill of
+0.048 s; export <0.02%), no pipeline-side lever can be both
+bit-identical and >=10%. The engine is the only remaining lever — which
+is precisely the mandate quote that opens the P11 design memo
+(`devlog-2026-11-09-p11-engine-kl-design.qmd`).
+
+## Where this leads (the perf-program thread)
+
+- O5 scoreboard (Phase-7, epoch `f3e894a6933a2ffb`): 147/147 cpu-basis
+  ratios BREACH the <=2x bar (best 13.4045x, worst 72.8837x) — the perf
+  program's target list. Closing to <=2x needs ~6.7x system-wide.
+- Phase-9 O2 localizes the actionable surface: engine-iterations, 94.1%
+  of stage mass.
+- P11 (this branch) attacks that surface with bit-identical levers and
+  **measures** the result: 1.223x step-core / 1.107x Full-trace
+  end-to-end at the m1s fixture (see the P11 memo's measured-ceiling
+  section). The objective pass (~45-49% of Full-trace loop mass) is
+  untouched by design; the named follow-up lever is L6 (disjoint-j
+  in-fit threading), a design-doc ruling held surface-only for the
+  user.
+
+## Provenance attestation
+
+| Figure | Source record |
+|--------|---------------|
+| 94.1% / 4.35% / 0.048 s / <0.02% | PR #60 body O2 section (verbatim above); squash commit `78d09e0` message |
+| six-leg A/B 1695.6 -> 0.143 s, 1209.9 -> 0.112 s | deep-archive controller record (Phase-9 lane summary) |
+| O5 147/147, best 13.4045x / worst 72.8837x, epoch `f3e894a6933a2ffb` | Phase-7 record (PR #55, main@309ab5b) |
+| "adopted levers NONE" + 10% bar reasoning | PR #60 body O2 section (verbatim above) |
+| P11 measured differential 1.223x / 1.107x | this branch's differential microbench (bit-identity-gated; P11 memo) |
+
+Raw lane logs for this table are not recoverable; the numbers above are
+quoted from the merged PR record and the controller archive, both of
+which predate the /tmp evaporation. The controller's five-gate PASS
+(2026-10-29) re-derived O0 147/147 from committed evidence at merge
+time, independently corroborating the lane's census.

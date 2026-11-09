@@ -1,0 +1,164 @@
+---
+title: "P11 — engine-internal KL kernel optimization design memo"
+---
+
+Date: 2026-11-09. Branch: `feat/perf-p11-engine-kl` from `main@1ae9aad`.
+Phase-3 perf-parity lane: algorithm/architecture optimization inside the
+certified Apache-2.0 `src/rust/engine`, under the perf-parity mandate
+(system-level ≤2x sigprofiler parity is a hard requirement; gates stay
+frozen, code moves toward them).
+
+## Mandate ground truth (quoted, not paraphrased)
+
+`loop-handoff-20261031` rev2, verbatim:
+
+> NEXT LEG (reconciled, self-adoptable): perf-parity mandate phase (3) —
+> algorithm/architecture optimization INSIDE the certified Apache-2.0
+> src/rust/engine. Ground truth: system-level <=2x row still BREACH (O5
+> 147/147 R-face x class cells, 13.4045-72.8837x, ~6.7x needed); Phase-9
+> forensics localized engine-iterations = 94.1% of stage mass (non-engine
+> 4.35%), pipeline-level adopted levers NONE, so engine work is the only
+> remaining lever. Route: design memo devlog -> TDD behind LOCAL
+> devtools::check -> one phase-PR -> CI confirmation; bit-identity via
+> tolerance-split precedents; accuracy non-regression travels with every
+> change; gates stay frozen, code moves toward the gates.
+
+## New probe evidence (this branch, /tmp/p11probe, Apple Silicon, rustc 1.92, release lto=1 cgu=1)
+
+Hypothesis tested first: "SIMD across independent j-accumulators" in
+`matmul_body` as the leading lever. Result — **rejected**:
+
+- bit-identity: the j-vectorized rewrite (`orow[j] += ws * hrow[j]` over a
+  row slice) is bit-identical to the committed scalar body on pseudo-random
+  W (96×10), H (10×1000) — every output cell's ascending-s sequence is
+  unchanged, as predicted.
+- speed: **1.02x at n=1000 and 1.02x at n=4000** (500 GEMMs, warm-up 1 +
+  median of 3, m1s protocol). LLVM already auto-vectorizes the inner AXPY
+  loop at `opt-level 3`; there is no hand-SIMD headroom in the inner loop.
+
+The probe also re-frames where the time goes. At the parity shape
+(m=96, n=1000, k=10) one `matmul_body` costs ~104 µs for 1.92 MFLOP
+(~18 GFLOP/s) while streaming ~1.5 MB through the m×n `out` buffer
+(zero-fill write + accumulate write + re-read). Arithmetic intensity
+≈ 1.3 FLOP/byte — **the kernel is memory-bound at production k**. And the
+per-iteration cost is not two but **four m·n·k passes**:
+
+1. GEMM₁ (`matmul_body(w, h) → wh`) in `kl_h_step_core`;
+2. the `num` scatter (`num[s*n+j] += ws * r`, stride-n writes, 8 KB jump
+   per s — every store a fresh cache line) in `kl_h_step_core`;
+3. GEMM₂ (`matmul_body(w, h_new) → wh`) in `kl_w_step_core`;
+4. the per-(i,s) `num = Σ_j rrow[j]·h[s*n+j]` dots in `kl_w_step_core`.
+
+## Levers adopted this phase (all bit-identical, per-cell order preserved)
+
+- **L1 — fused ratio epilogues.** Compute `r = v / max(wh, ε)` per row
+  inside the H-step body immediately after that row's GEMM columns are
+  written, and `rrow` inside the W-step body likewise. Saves two full
+  reads of `wh` per iteration (~1.5 MB) and keeps the row L1-hot. Pure
+  pass fusion: the per-cell GEMM order and the elementwise ratio are
+  untouched.
+- **L2 — column-blocked iteration.** Process n in blocks of 64 columns
+  (wh block 96×64×8 B = 49 KB → L1-resident on the 128 KB M-series L1):
+  per block, GEMM₁ → fused ratio → scatter → H update → GEMM₂ → fused
+  ratio → W-step partials. Order proofs: `num[s*n+j]` still accumulates
+  in ascending i (block loop is over j only); the W-step per-(i,s)
+  accumulation still consumes j in ascending order (accumulated across
+  blocks in ascending block order); `hrow[s]` (H row sums) accumulates
+  ascending j across blocks exactly as the committed single pass.
+  Block-boundary correctness gets a dedicated test at n ∈ {63, 64, 65,
+  1000, 1001}.
+- **L3 — transpose the `num` temporary to [j][s] layout.** `num` is an
+  internal temporary never visible in any output; its layout is not part
+  of the certified contract. [j][s] turns the stride-n scatter into
+  contiguous 80-byte runs and the H-update read into a contiguous read.
+  Per-cell accumulation order (ascending i) unchanged.
+- **L4 — cv.rs wrapper scratch reuse.** `kl_h_step`/`kl_w_step` allocate a
+  fresh `KlScratch` per step; the SUITOR CV driver calls them once per
+  iteration. Hoist to a per-call scratch threaded through the driver.
+  Guarded by `tests/kl_scratch_bit_exact.rs`.
+- **L5 — EU step allocation hoisting.** `eu_h_step` allocates `num`,
+  `gww`, `h_pre` per call; hoist into an EU scratch. Bit-identical (the
+  `h_pre` snapshot semantics are preserved verbatim).
+- **L6 — flagged, NOT adopted (needs a ruling): disjoint-j in-fit
+  threading.** Splitting `matmul_body`'s j-range across threads gives
+  every thread disjoint output columns; each cell's ascending-s sequence
+  is untouched, so output is bit-identical for threads ∈ {1, N} (same
+  argument as `replicates.rs`'s unit-level law). But "Never parallel: the
+  inside of a fit" is a documented concurrency law (ARCH §2.6 /
+  architecture.qmd); amending it is a design-doc ruling, out of
+  self-adopt scope. Recorded here as the named follow-up lever with its
+  proof sketch.
+
+## What this phase deliberately does NOT do
+
+- No tolerance re-anchoring: every produced digit must be unchanged
+  (bit-for-bit) on all guarded workloads. The 21 batch-face REP-100
+  anchors stay bit-pinned; the parity-law 5-option memo stays
+  surface-only for the user.
+- No dependency additions (Cargo.toml stays zero-dep; no BLAS crate).
+- No `unsafe`, no FFI changes, no Makevars/target-feature injection
+  (auto-vectorization is already active; NEON/SSE are baseline).
+
+## Forensics carry (paper-grade)
+
+The Phase-9 engine-iterations forensics (94.1% stage mass) lives only in
+lane records that have already evaporated from /tmp. This PR carries it as
+a paper-grade devlog (`devlog-2026-11-09-p9-engine-iterations-forensics.qmd`)
+so the performance-and-benchmark chapter cites committed evidence, not lane lore.
+
+## Expected ceiling, stated honestly - now MEASURED
+
+L1-L5 attack the four-pass memory-bound structure. The design-time bound
+(traffic ~3.8 MB -> ~1.6 MB per iteration; all four passes L1-resident per
+block) predicted a 1.5-2.5x engine-face gain. **Post-implementation, the
+gain was measured directly** with a differential microbench
+(`/tmp/p11bench`: bit-identity-gated twin of the d04929b scalar path vs
+the live b3719df faces, at the exact m1s fixture 96x1000, k=10, T=100,
+warm-up 1 + median 3, rustc 1.92, release lto=1 cgu=1):
+
+| Face | PRE (twin) | LIVE (engine) | Speedup |
+|------|-----------:|--------------:|--------:|
+| steps only (no per-iteration objective) | 129.920 ms | 106.2 ms (derived) | **1.223x** |
+| end-to-end (Full trace, per-iteration objective) | 237.056 ms | 214.235 ms | 1.107x |
+
+Decomposition: per-iteration objective call ~ 1.07 ms (twin/live call
+ratio 0.992x - the twin is faithful); objective share of loop mass
+**45.2% PRE / 49.4% LIVE**; steps floor ~ 1.062 ms/iter. The objective
+pass (one WH matmul + 96k det_ln per iteration) is untouched by L1-L5 by
+design (the m1s numeric protocol U-M1s-14 requires the Full-trace
+objective trajectory), so it dilutes the 1.223x step-core gain to 1.107x
+on the Full face.
+
+Reading, honestly:
+
+- **Step-core (production face): 1.223x.** Post-P10 the production
+  pipeline runs the Endpoints trace (two objective calls per fit), so
+  the production-relevant gain is the steps-only 1.223x.
+- **m1s bench record: ~2%** (205.904 -> 201.919 ms median), because the
+  m1s protocol requires the Full-trace per-iteration objective
+  (U-M1s-14) - the diluted end-to-end face. The twin's absolute Full
+  time (237 ms) sits above the historical pre-P11 m1s record (~206 ms),
+  so the differential end-to-end 1.107x slightly overstates; the
+  phase-mass decomposition is the robust finding.
+- **System-level gap: unchanged.** The O5 census needs ~6.7x system-wide
+  to reach the <=2x row; 1.223x step-core does not close it. L1-L5 bank
+  the honest bit-identical ceiling; the named follow-up lever remains
+  **L6 (disjoint-j in-fit threading, flagged above)** - a design-doc
+  ruling (ARCH 2.6), surface-only for the user - plus the parity-law
+  5-option memo (also surface-only).
+
+## TDD plan
+
+1. RED: new `tests/kl_bit_freeze.rs` — frozen reference vectors (W, H,
+   objective endpoints) captured from the PRE-change kernel at shapes
+   (96×1000, k=10, T=100), (96×1001, k=10, T=64), (96×63, k=3, T=50),
+   (50×200, k=5, T=1), plus a zero-column and a zero-row case. Any
+   order drift redden.
+2. GREEN: implement L1–L5 one commit per lever, `cargo test -p
+   msuiter-engine` after each; kernel CLI protocol suite and
+   thread-invariance suite must stay byte-identical green.
+3. LOCAL gate: `devtools::check()` green; m1s nmf bench re-run for the
+   headline number (warm-up 1 + median 3 protocol, same pinned hardware
+   class as the 2.3× record).
+4. One phase-PR: memo + forensics devlog + engine change set + bench
+   result; CI confirmation after local green.
