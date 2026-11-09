@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-09 FFI 硬契约落地 + ms_sitrep()（2026-09-28，W3 轮）"
+title: "2026-09-28 -- U-M0-09 the FFI hard contract lands + ms_sitrep() (round W3)"
 ---
 
 ## 做了什么

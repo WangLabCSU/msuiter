@@ -1,5 +1,5 @@
 ---
-title: "Devlog · M3b 收官三件：U-M3b-04 / 05 / 06（2026-10-04）"
+title: "2026-10-04 -- M3b close-out trio: U-M3b-04 / 05 / 06"
 ---
 
 > 状态：**交付完成，M3b 6/6 待终审确认后正式勾选 ROADMAP**（本单元不 git commit；设计备忘 `2026-10-04-M3b-design-memo.md` §5 切分表 + PI 裁决三分为实现锚）。

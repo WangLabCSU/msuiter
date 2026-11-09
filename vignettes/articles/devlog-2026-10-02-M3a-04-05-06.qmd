@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M3a-04/05/06 收官批（2026-10-02 凌晨）"
+title: "2026-10-02 -- U-M3a-04/05/06 the closing batch (pre-dawn)"
 ---
 
 ## U-M3a-04 每突变分配 + TSB 检验（assign.rs，1208 行）

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1s-01 linalg + Lawson–Hanson NNLS（2026-09-29，W4 轮，M1s 轨道开闸）"
+title: "2026-09-29 -- U-M1s-01 linalg + Lawson-Hanson NNLS (round W4, the M1s track opens)"
 ---
 
 ## 做了什么

@@ -1,5 +1,5 @@
 ---
-title: "Devlog · M1c 输入层收尾（2026-09-30）——M1c 里程碑 4/4 关闭"
+title: "2026-09-30 -- M1c input-layer close-out: the milestone shuts 4/4"
 ---
 
 ## 交付

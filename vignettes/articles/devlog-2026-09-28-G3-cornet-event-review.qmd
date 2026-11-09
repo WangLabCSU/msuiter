@@ -1,5 +1,5 @@
 ---
-title: "Devlog · G3 事件驱动竞争复核：Cornet 预印本正式发表（2026-09-28）"
+title: "2026-09-28 -- G3 event-driven competitor review: the Cornet preprint is formally published"
 ---
 
 > 触发：风险登记（ARCH §11）"Cornet 正式发表压制相关性组件"事件发生——Hu, Geiger, Glodzik, Gulhan & Park, *Correlation-aware discovery of co-occurring mutational signatures in cancer*, bioRxiv 2026.09.14.751548（2026-09-21 挂网，Harvard/MIT；一作 Jin Hu 即 MuSiCal 一作）。本复核早于 ~2026-12 季度节点，属事件驱动。

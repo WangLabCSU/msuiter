@@ -1,5 +1,5 @@
 ---
-title: "U-M4-02 设计备忘：ms_downsample() + 格式互操作首批"
+title: "2026-10-04 -- U-M4-02 design memo: ms_downsample() + the first format-interop batch"
 ---
 
 日期：2026-10-04（夜间窗口批次，继 U-M4-01 后随批）。状态：范围冻结 + 实现开工。

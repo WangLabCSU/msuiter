@@ -1,5 +1,5 @@
 ---
-title: "M7 前置设计备忘：ms_benchmark() 网格驱动器"
+title: "2026-10-05 -- M7 pre-design memo: the ms_benchmark() grid driver"
 ---
 
 日期：2026-10-05 晨（窗口尾批——**设计冻结，实现为 M7 本体**）。范围：CAPABILITY-MATRIX L3 "ms_benchmark() | mlr3 式基准网格；non-certified 引擎显式 warning | M0 骨架/M7 完备"。M0 已交付 MsBenchmark 容器（R/classes-benchmark.R：results/.engine/.scenario/.metric/.estimate + settings）；本备忘冻结 M7 网格驱动器的 API、场景语义与验收锚——**实现开工前须 PI 对两个开放裁决点表态**（§5）。

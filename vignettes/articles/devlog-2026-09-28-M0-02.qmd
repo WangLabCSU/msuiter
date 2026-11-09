@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M0-02 M0 spike（2026-09-28）"
+title: "2026-09-28 -- U-M0-02 the M0 spike"
 ---
 
 ## 结果（全部实测数字）

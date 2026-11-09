@@ -1,5 +1,5 @@
 ---
-title: "Devlog · U-M1s-12 审核 + U-M1s-13 正式化 + M1s 验收门 bench（2026-09-30）"
+title: "2026-09-30 -- U-M1s-12 review + U-M1s-13 formalization + the M1s acceptance-gate bench"
 ---
 
 ## U-M1s-12 审核（REVISE 1×P1 → 已修）

@@ -1,5 +1,5 @@
 ---
-title: "U-M4-02b 设计备忘：ms_qc_report() 初版（样本 QC 报告）"
+title: "2026-10-04 -- U-M4-02b design memo: the first ms_qc_report() (sample QC report)"
 ---
 
 日期：2026-10-04（夜间窗口第二批）。范围：CAPABILITY-MATRIX L-A M4 行"样本 QC：负荷分布" + L-F 伪迹贡献初版（amber/red 拟合层级 ⏳v1.x 不在本批）。

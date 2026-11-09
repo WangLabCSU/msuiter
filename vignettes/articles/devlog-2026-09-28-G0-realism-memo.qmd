@@ -1,5 +1,5 @@
 ---
-title: "G0 先导覆盖实验——生物学与数据现实性备忘"
+title: "2026-09-28 -- G0 pilot coverage experiment: biological and data realism memo"
 ---
 
 > 2026-09-28。计算生物学家独立备忘（与协议设计备忘并行、互不假设）。对象：ARCHITECTURE §8 G0 段 + ROADMAP G 门（2 竞品工具 × TMB 网格，exposure 区间名义 vs 实际覆盖率；kill-criterion 门）。

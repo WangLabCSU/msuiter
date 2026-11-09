@@ -1,5 +1,5 @@
 ---
-title: "Devlog · G0 先导覆盖实验——PI 裁决与待冻结项（2026-09-28）"
+title: "2026-09-28 -- G0 pilot coverage experiment: the PI adjudication and the pending freeze items"
 ---
 
 > 输入：[devlog-2026-09-28-G0-protocol-memo.qmd](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G0-protocol-memo.html)（方法学草案）+ [devlog-2026-09-28-G0-realism-memo.qmd](https://wanglabcsu.github.io/msuiter/articles/devlog-2026-09-28-G0-realism-memo.html)（现实性审查，独立撰写）。两备忘结论一致性高，PI 裁决合并如下。**G0 执行权在作者本人（ROADMAP 组织行动门）；"待作者冻结"项落定前不开跑。**
