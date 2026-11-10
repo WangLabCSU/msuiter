@@ -118,7 +118,11 @@ ARCH <- paste0(CRAN, "/src/contrib/Archive")
 ## idiom (memo §8).
 BIOC_CONTRIB <- "https://bioconductor.org/packages/3.17/bioc/src/contrib"
 LIB <- .libPaths()[1L]
-MAX_TRY <- 3L
+## 5 (2026-11-11): 3 was exhausted by the transient windows in both live
+## arm builds (arms.build.log / arms.build2.log) — canon fetches failed all
+## 3 bursts seconds before the window passed; the backoff then rides
+## 2+4+6+8+8 = 28s per URL shape.
+MAX_TRY <- 5L
 BASE_R <- paste0(R.version$major, ".", R.version$minor)
 ## The tree root: the pre-registered bytes themselves — the BFS
 ## intercept below resolves it from TREE; op/ver carry no meaning.
@@ -585,7 +589,11 @@ walkArchiveListing <- function(name, note = new.env()) {
 ## Returns NULL (already installed and satisfying), the accepted tarball
 ## list(tf,url), or a failure record list(fail=<verbatim>, transient=<lgl>) —
 ## transient failures are the BFS deferral's input (probe8: bioc live URLs
-## fail ~30% of requests, seconds-apart successes interleaved).
+## fail ~30% of requests, seconds-apart successes interleaved). A tarball
+## reached through the Archive walk after transient canon failures carries
+## degraded=TRUE — the BFS requeues it so canon gets a second chance before
+## the graph accepts a floor-settle (arms.build2.log: pkgconfig silently
+## settled 2.0.2 while the 2.0.3 URL flaked, starving the joint audit).
 resolveNode <- function(name, op, want, filter = NULL) {
   have <- verOfAny(name)
   if (!is.null(have) && satisfies(have, op, want)) return(NULL)
@@ -648,7 +656,10 @@ resolveNode <- function(name, op, want, filter = NULL) {
       say("  walk reject %s %s (imports vs settled graph)", name, cv)
       next
     }
-    return(f)
+    ## degraded flag: canon candidates hit transient failures before the
+    ## Archive walk settled this tarball — never for a clean first-choice
+    ## fetch (canon success above returns early with no marker).
+    return(c(f, list(degraded = isTRUE(note$transient))))
   }
   list(fail = paste0("node ", name, ": no Archive-listed version satisfies (",
                      op %||% "", " ", want %||% "", ") + base R ", BASE_R),
@@ -696,6 +707,21 @@ while (length(queue)) {
   if (is.null(r)) {
     say("RESOLVE %-14s %s %s INSTALLED (library reports %s)",
         nd$name, nd$op %||% "", nd$ver %||% "", verOfAny(nd$name))
+    next
+  }
+  ## A degraded settle (Archive floor after transient canon failures) gets
+  ## ONE canon retry: transient windows pass in seconds (probe8), and the
+  ## floor version then poisons the joint audit downstream (arms.build2.log
+  ## pkgconfig 2.0.2 / ggplot2 0.8 class). Requeue the node verbatim — canon
+  ## wins when the window has passed, else the degraded tarball re-settles.
+  if (isTRUE(r$degraded) &&
+      !(exists(key, envir = defers, inherits = FALSE) &&
+        get(key, envir = defers) >= 1L)) {
+    assign(key, 1L, envir = defers)
+    seen <- setdiff(seen, key)
+    say("  DEFER %-14s degraded Archive-settle (canon transient) — requeued once",
+        nd$name)
+    queue <- c(queue, list(nd))
     next
   }
   fld <- tarDesc(r$tf)
@@ -758,7 +784,11 @@ findViolation <- function(cm) {
   }
   NULL
 }
-MAX_CONSIST <- 3L
+## 5 (2026-11-11): run 2 consumed two fix rounds (glue->stringr float, then
+## gtable->ggplot2 float) and died on the third — the cap admits exactly one
+## confirming round for a two-floater graph. 5 keeps the loud die for
+## genuinely divergent graphs.
+MAX_CONSIST <- 5L
 for (round in 1L:MAX_CONSIST) {
   cm <- collectCons()
   viol <- findViolation(cm)
@@ -787,13 +817,55 @@ for (round in 1L:MAX_CONSIST) {
     settled[[from.key]] <- list(name = settled[[from.key]]$name,
                                 ver = fld[["Version"]] %||% settled[[from.key]]$ver,
                                 tf = r$tf, children = parseDeps(fld))
-    ## the floater must not smuggle in a dependency the BFS never met
-    kid.keys <- unlist(lapply(settled[[from.key]]$children,
-                              function(d) tolower(d$name)))
-    fresh <- setdiff(kid.keys, c(names(settled), seen))
-    if (length(fresh))
-      die("consistency: floater %s introduced unknown dependency %s — refusing to install blind",
-          from.key, paste0(fresh, collapse = ","))
+    ## the floater's fresh imports join the graph through the same resolution
+    ## rules instead of failing closed: an Archive-floor floater imports peers
+    ## of its own era that no BFS round ever met (arms.build2.log: ggplot2's
+    ## over-float imports reshape,proto; run 1: dplyr's imports lazyeval,dbi).
+    ## Un-resolvable or Needs-R-exceeding fresh nodes still die loudly; a
+    ## newly settled node that breaks someone else is caught by the next
+    ## audit round below.
+    fresh.q <- lapply(settled[[from.key]]$children,
+                      function(d) list(name = d$name, op = d$op, ver = d$ver))
+    while (length(fresh.q)) {
+      fnd <- fresh.q[[1]]; fresh.q[[1]] <- NULL
+      fk <- tolower(fnd$name)
+      if (fk %in% names(settled) || fk %in% seen) next
+      seen <- c(seen, fk)
+      fr <- resolveNode(fnd$name, fnd$op, fnd$ver)
+      if (!is.null(fr) && !is.null(fr$fail)) {
+        fd <- if (exists(fk, envir = defers, inherits = FALSE))
+                get(fk, envir = defers) else 0L
+        if (isTRUE(fr$transient) && fd < MAX_DEFER) {
+          assign(fk, fd + 1L, envir = defers)
+          seen <- setdiff(seen, fk)
+          say("  DEFER %-14s floater-import transient class — requeued (round %d/%d)",
+              fnd$name, fd + 1L, MAX_DEFER)
+          fresh.q <- c(fresh.q, list(fnd))
+          next
+        }
+        die("consistency: floater %s introduced %s and it does not resolve: %s (transient=%s)",
+            from.key, fnd$name, fr$fail, isTRUE(fr$transient))
+      }
+      if (is.null(fr)) next                    # installed and satisfying
+      if (isTRUE(fr$degraded) &&
+          !(exists(fk, envir = defers, inherits = FALSE) &&
+            get(fk, envir = defers) >= 1L)) {
+        assign(fk, 1L, envir = defers)
+        seen <- setdiff(seen, fk)
+        say("  DEFER %-14s degraded Archive-settle (canon transient) — requeued once",
+            fnd$name)
+        fresh.q <- c(fresh.q, list(fnd))
+        next
+      }
+      ffld <- tarDesc(fr$tf)
+      say("  CONSIST adopt %s %s (fresh import of floater %s) via %s",
+          fnd$name, ffld[["Version"]] %||% "?", from.key, fr$url)
+      fkids <- parseDeps(ffld)
+      settled[[fk]] <- list(name = fnd$name, ver = ffld[["Version"]] %||% fnd$ver,
+                            tf = fr$tf, children = fkids)
+      fresh.q <- c(fresh.q, lapply(fkids,
+                                   function(k) list(name = k$name, op = k$op, ver = k$ver)))
+    }
   } else {
     if (identical(viol$key, "sigminer"))
       die("consistency: the tree root's version is the frozen bytes themselves, never raisable")

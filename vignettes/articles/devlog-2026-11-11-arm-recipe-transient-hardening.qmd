@@ -1,0 +1,123 @@
+---
+title: "Build-pin drift attestation -- arm-recipe transient-window hardening re-seal (2026-11-11)"
+---
+
+Attestation record of the `arm-recipe-degraded-requeue` lane (one commit on
+`main@2846dec`). Both live six-arm image builds of the generation-4
+pre-ignition batch died in the same systematic class -- not in the recipe's
+dependency logic, but in its transient-window retry budgets. This record
+attests the remedy, the re-seal of the two affected blob pins, and the gates
+that now hold the amended bytes. It is the second build-pin drift attestation:
+the first (`vignettes/articles/devlog-2026-11-04-m7-build-pin-drift-attestation.qmd`)
+re-anchored the pin ceremony to git blobs; this one amends a pinned file's
+bytes under that ceremony.
+
+Every hex below was emitted by command this session (git plumbing, `shasum
+-a 256`, build-log files); no digest was typed from memory into any tool
+call. The reading test (`bench/m7/tests/test_recipe_blob_pins.py`, group
+(AM)) re-measures every pin claim here against git and disk on every suite
+run -- this file is the narrative, the gate is the authority.
+
+## 1. The failures, measured
+
+Two sequential six-arm builds (`tools/p6_build_arms.py`, sigminer tree
+recipe) each died at the CONSISTENCY stage, with different victims but one
+shape:
+
+- Run 1 (`/tmp/p6lane/logs/arms.build.log`):
+  `FATAL:consistency: floater dplyr introduced unknown dependency lazyeval,dbi — refusing to install blind`
+  (2851.5 s).
+- Run 2 (`/tmp/p6lane/logs/arms.build2.log`):
+  `CONSIST glue 1.3.2 breaks (glue >= 1.6.1) from stringr` → Archive walk for
+  stringr → `CONSIST float stringr 1.6.0 -> 0.6` → `CONSIST gtable 0.3.5
+  breaks (gtable >= 0.3.6) from ggplot2` → Archive walk for ggplot2 →
+  `CONSIST float ggplot2 4.0.3 -> 0.8` →
+  `FATAL:consistency: floater ggplot2 introduced unknown dependency reshape,proto — refusing to install blind`
+  (3187.9 s, log line 176).
+
+Run 2 also contains the silent case the die could not see: `pkgconfig` 2.0.3
+canon candidates failed (bioconductor URL flakes) and the Archive walk
+settled 2.0.2 at 2550.3 s with no marker.
+
+The class: canon (CRAN-current) fetch failures inside transient proxy
+windows exhausted the retry budget; the resolver then fell through to an
+Archive floor-settle (silently, or loudly as a floater); the floater's fresh
+imports sat outside the settled graph and the fail-closed die fired. The
+reference recipe (`Dockerfile.sigminer.tree` lineage) built clean twice on
+the same network, so the trigger is the current transient-window density,
+not a defect in the dependency graph itself -- hence recipe hardening, not a
+third plain retry.
+
+## 2. The remedy (committed)
+
+`bench/m7/adapters/install_sigminer_arm.R` amended, committed as
+`0e7a27a9565f7a8a08331420b84452db070ee652` ("fix: harden arm installer
+against transient-window floor-settles", parent
+`2846decb245f9055196bcbc2ae8ffe09f8d45433`, 2026-11-11T06:26:53+08:00):
+
+1. `resolveNode` marks an Archive-settled result `degraded = TRUE` when its
+   canon candidates saw transient failures; a clean canon success returns
+   unmarked.
+2. The BFS requeues a degraded settle exactly once per node (`MAX_DEFER`
+   budget, `seen` key re-opened) so canon gets a second chance before the
+   graph accepts a floor-settle.
+3. `MAX_TRY` 3 → 5 (the burst backoff rides 2+4+6+8+8 = 28 s per URL shape;
+   both logs' windows out-lived the old 3-burst budget).
+4. The CONSIST floater path no longer dies fail-closed on fresh imports: the
+   imports join the graph through a fresh-import adoption BFS (resolve,
+   DEFER on transient, degraded requeue, adopt with their own dependency
+   subtrees).
+5. `MAX_CONSIST` 3 → 5 (run 2 consumed two float rounds and died on the
+   third; the loud die is kept for genuinely divergent graphs).
+
+## 3. The re-seal (four authorities)
+
+Both `Dockerfile.sigminer.tree` pin sites that COPY
+`install_sigminer_arm.R` (stage `<scratch-dest>` site and `/work` site)
+re-sealed to the amendment commit. Gate:
+`python3 bench/m7/tests/test_recipe_blob_pins.py` → EXIT:0.
+
+| authority | value |
+|---|---|
+| seal commit (both sites) | `0e7a27a9565f7a8a08331420b84452db070ee652` |
+| file lineage head (== seal commit == last touch) | `0e7a27a9565f7a8a08331420b84452db070ee652` |
+| blob at seal commit == blob at HEAD | `fb067809b8d9c2325a553e6357d4676dae9192d2` |
+| blob at old seal `34fdc2ce031be0f6d24f1f826dae67a88c5285b5` | `4157b68aa0a29991a0f4aa4fbe73504ac90789b4` |
+| on-disk sha256 (build-context bytes) | `8c584fccdda81c35db0dc73941897d8f85498860ca82de783a6aeeafce28a21f` |
+| old on-disk sha256 (superseded) | `1e34500e30d2dc1d9be837c53664cb3bfa1170928a03a5d5e2d57941369d7569` |
+
+Untouched pins: `m7_entry.py` @ `54c58d7…`, `run_sigminer_arm.R` @
+`8213192…`, `run_sigminer_arm_batch.R` @ `472c8be9…`, `self_witness_arm.sh`
+@ `34fdc2ce…`, `self_witness_batch_arm.sh` @ `472c8be9…` (full values
+live in the gate, which re-derives them from git on every run). The batch
+fork pins stay on their r1-batch-face lineage, exactly as §4 of the
+2026-11-04 record ruled.
+
+## 4. Gates
+
+- `test_recipe_blob_pins.py` EXIT:0 -- both seal sites validate (seal commit
+  == lineage head == last touch; blob-at-seal == blob-at-HEAD == on-disk
+  bytes).
+- `test_p6_roster`, `test_registry`, `test_p6_floor_governance`,
+  `test_hardware_pin` all EXIT:0 against the amended tree.
+- `test_batch_bridge_arm` EXIT:0 via `python3 -m tests.test_batch_bridge_arm`
+  from `bench/m7`. Invocation note (pre-existing, unrelated to this
+  amendment): the direct-script form `python3 tests/test_batch_bridge_arm.py`
+  raises `ImportError: cannot import name 'coex_fixtures' from 'tests'`
+  because the `tests` package then resolves to `bench/g0/tests`; the module
+  invocation resolves `bench/m7/tests`, which owns `coex_fixtures.py`. The
+  failure reproduces with main's copy byte-for-byte; module invocation is the
+  sanctioned form for the m7 gates.
+
+## 5. Custody
+
+- Branch `arm-recipe-degraded-requeue`; installer amendment committed first
+  (`0e7a27a…`), Dockerfile re-seal + this devlog land as the lane's second
+  commit; one phase-PR to main.
+- The six arm images are NOT yet rebuilt from the amended recipe: the image
+  digests in `competitors/p6_arms.py` still speak the pre-hardening builds
+  and flip only after the rebuilt roster attests 8/8 (SS3 law, one change
+  set carrying the build-log witnesses).
+- Zero real-data bytes (COSMIC) touched; zero sigminer refs touched; the
+  reference recipe lineage and its settled parity rows are unaffected --
+  this lane hardens the resolver's transient-window behavior only.

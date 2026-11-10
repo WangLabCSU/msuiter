@@ -149,3 +149,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [Claims re-scan + DOI re-pin — erratum to the 2026-10-30 novelty scan (reified, paper-grade)](devlog-2026-11-10-novelty-rescan.html) | `devlog-2026-11-10-novelty-rescan` |
 | [Novelty lane-2 verdicts — Xue 2025 / N-of-1-time / ClockShares / Morrill 2025 (reified, paper-grade)](devlog-2026-11-10-novelty-lane2.html) | `devlog-2026-11-10-novelty-lane2` |
 | [R1 — post-P10 full-table parity regeneration design memo (pre-ignition, paper-grade)](devlog-2026-11-10-r1-parity-regen-design.html) | `devlog-2026-11-10-r1-parity-regen-design` |
+| [Build-pin drift attestation — arm-recipe transient-window hardening re-seal (2026-11-11)](devlog-2026-11-11-arm-recipe-transient-hardening.html) | `devlog-2026-11-11-arm-recipe-transient-hardening` |
