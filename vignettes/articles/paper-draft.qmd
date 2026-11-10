@@ -110,9 +110,12 @@ the compiled yardstick re-measures 147/147 cells breaching the <=2x bar
    calibration audits that this makes affordable are the ones the field's own
    benchmarks declared missing
    (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §3 one-sentence draft, cited
-   as-is per lane law; its (a)-class labels carry the scan's own
-   negative-search caveat and targeted re-scan requirement,
-   vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §Method + §Integrity note 2).
+   as-is per lane law; its (a)-class labels were targeted-rescanned on 2026-11-10 and
+   the verdicts are reified in the erratum
+   vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd — Claim 1 (a) with one
+   named caveat (Xue 2025, abstract unverified), Claim 2 (b) with narrowed "first"
+   phrasing, Claim 3 split (c)/(b) — superseding the parent's pending statuses per
+   its integrity note 7).
 
 ## 2. Software overview
 
@@ -395,7 +398,12 @@ harness itself committed (bench/m7/adapters, registry in
 bench/m7/competitors/registry.py listing the 7 R-family faces and the
 python-basis yardstick). The field-landscape citations are the re-pinned
 bibliography (§9), with the novelty scan's [M]/[U] tier honesty attached where
-the scan has not itself re-verified on-page.
+the scan has not itself re-verified on-page; the 2026-11-10 targeted re-scan
+plus full DOI re-pin (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd,
+erratum) re-verified 23/26 DOI entries, corrected 2 (patrec→patcog;
+gm1228→btad756 with venue/author fix), and left 1 unresolved (btab144:
+re-source or drop), superseding the parent's pending statuses per its
+integrity note 7.
 
 > [GATED: PI-C] The third competitor slot — peer (c), the signeR hypothesis — is
 > UNVERIFIED by the PI record. Until the PI ruling lands, signeR stays a
@@ -426,10 +434,15 @@ the scan has not itself re-verified on-page.
    prior package (CRAN sigminer 2.3.3 lineage), labeled as such (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd
    §4 R8); an independent reference is named follow-up, not fabricated.
 6. **Negative-search caveats.** The (a)-class originality labels in the novelty
-   scan rest on the scan's self-declared flaky-backends environment and await a
-   targeted re-scan (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §Method, §Integrity notes 1-2); the executive
-   review accepted the posture with exactly that caveat
-   (§2 item 2).
+   scan rested on the scan's self-declared flaky-backends environment; the
+   targeted re-scan was executed 2026-11-10 and is reified as the erratum
+   (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd): Claim 1 (a) with one
+   named caveat (Xue 2025 Harvard DASH dissertation, abstract unverified — must be
+   read before printing), Claim 2 (b) with narrowed "first" phrasing, Claim 3
+   split — TSB/RTT reporting is (c) prior art (no "first" wording defensible),
+   treatment/timing deconvolution (b) conditional on reading N-of-1-time and
+   ClockShares. The parent devlog's §Method + §Integrity notes 1-2 record the
+   scan-side posture; the erratum's supersession table governs.
 
 ## 7. Data and code availability
 

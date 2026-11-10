@@ -1,0 +1,542 @@
+---
+title: "Claims re-scan + DOI re-pin — erratum to the 2026-10-30 novelty scan (reified, paper-grade)"
+---
+
+Date: 2026-11-10. Branch: `docs/novelty-scan-erratum` from `main@aafd407`.
+Provenance: **reified**. On 2026-11-10 a read-only research session executed
+the targeted re-scan that the committed novelty scan
+(`devlog-2026-11-10-novelty-scan.qmd`, PR #96) ordered on its own
+(a)-class labels and [U]-attested competition claims, plus a full DOI
+re-pin of that scan's source list (§5) and its two extra DOI strings.
+Two deliverables were written to `/tmp/noveltylane2/` (a lane tmpdir that
+will evaporate) and are reified here verbatim:
+
+1. `claims-rescan-2026-11-10.md` — 25,971 bytes / 388 lines, md5
+   `d737e761dea1470d5547d7a4d6027a57` at reification time;
+2. `doi-repin-2026-11-10.md` — 14,235 bytes / 101 lines, md5
+   `a2b10f48034877382e864250ca9409bc` at reification time.
+
+The bodies between the sentinels below are verbatim copies (non-ASCII
+audit at reification: CJK = 0 in both). Path references inside the bodies
+that point at `/tmp/noveltylane2/...` resolve, after this reification, to
+the other reified section of this same devlog.
+
+**Supersession.** The re-scan's integrity note 7 reads: "This document
+supersedes the parent devlog's pending statuses for Claim 1 (a, with
+caveat), Claim 2 (b, narrowed phrasing), and Claim 3 (split c/b); the
+parent devlog should be amended accordingly when these verdicts are folded
+into the manuscript." Per the sealed-evidence immutability law (parent
+devlog §Integrity note 3) the parent's recovered body stays byte-exact and
+untouched; this devlog is the formal erratum. The supersession table maps
+every superseded parent line to its new status. `paper-draft.qmd`'s three
+novelty-scan caveat anchors (thesis sentence §1, methods honesty §6,
+negative-search caveats item 6) now cite this erratum alongside the parent.
+
+## Supersession table
+
+| Parent line | Parent status | New status (this erratum) |
+|---|---|---|
+| 31 (Method caveat) | DOI strings transcribed as returned by flaky backends; re-pin required before manuscript use | DISCHARGED by the DOI re-pin below: 23/26 entries PINNED, 2 CORRECTED, 1 UNRESOLVED |
+| 61 (E3) | cites `10.1016/j.patrec.2007.09.010` for Boutsidis–Gallopoulos SVD-init | CORRECTED → `10.1016/j.patcog.2007.09.010` (Pattern Recognition 2008, vol 41, pp 1350–1362). The `patrec` string resolves to an unrelated fingerprint-verification paper (Lumini & Nanni, Pattern Recogn Lett 2008). §5's row and `paper-draft.qmd` already carry the correct `patcog` string |
+| 79 (E8 coverage intervals) | (a) conditional on the G0 leading experiment | UNCHANGED — not re-litigated by this re-scan |
+| 80 (Claim 1, conformal per-TMB-stratum) | "(a), pending formal scan" | (a) WITH ONE NAMED CAVEAT — Xue 2025 Harvard DASH dissertation (abstract UNVERIFIED after 3 access attempts) must be read before the novelty wording is printed |
+| 81 (Claim 2, CoDA/DM association) | (b); "first exposure-association framework" phrasing conditional | (b) CONFIRMED; the "first" phrasing narrows to: first CoDA-based framework for signature-exposure association spanning survival, case-control, and longitudinal designs in mutational-signature space (Morrill 2025 = closest competitor; re-check cited-by count at submission) |
+| 85 (E9) | SigProfilerAssignment cited as "Genome Medicine, DOI 10.1186/gm1228" [U] | CORRECTED → `10.1093/bioinformatics/btad756` (Díaz-Gay et al., "Assigning mutational signatures to individual samples and individual somatic mutations with SigProfilerAssignment", Bioinformatics 2023). The "Genome Medicine 2021 / de Bruin et al." venue-year-author line is unsupported by any located record |
+| 122 (R7) | TSB/RTT reporting + treatment/timing deconvolution "near-zero competition" [U] | SPLIT — per-signature TSB/RTT reporting: (c) prior art (TensorSignatures 2021; Topography, Cell Reports 2023; SigProfilerTopography 2025; Bergstrom 2018); no "first" wording is defensible. Treatment/timing deconvolution: (b) conditional on reading N-of-1-time and ClockShares (both backend-invisible; direct documentation fetch required) |
+| 157 (§5 [U] list) | `10.1186/gm1228` and `10.1093/bioinformatics/btab144` carried [U] | gm1228 → corrected as row 85. btab144 → UNRESOLVED: resolves to an unrelated DeepS microscopy paper (Zhu et al. 2021); no verified correction exists in Crossref — re-source from the publisher or drop the entry before manuscript use (honesty law: no correction asserted) |
+| 161–165 (Integrity notes 1–3) | note 2: (a)-class labels await a targeted re-scan | note 2's pending posture is DISCHARGED by the claims re-scan below (three verdicts recorded); notes 1 (read-only) and 3 (committed bytes govern) remain in force |
+
+> ---BEGIN-RECOVERED-DOI-REPIN---
+# DOI re-pin — devlog-2026-11-10-novelty-scan.qmd, section 5 Source list
+
+Date of verification: **2026-11-10**. Scope: every DOI-bearing entry in the
+devlog's [M] source list (18 entries / 21 DOI strings), the extra [M]-class DOI
+string cited in section 2 (E3, `10.1016/j.patrec.2007.09.010`), and the two
+[U] entries carrying DOIs (`10.1186/gm1228`, `10.1093/bioinformatics/btab144`).
+
+## Method note
+
+- **Fetch strategy (two passes per DOI):**
+  1. `https://doi.org/<doi>` resolved with `curl -L` (max 10 redirects,
+     browser User-Agent); HTTP status, redirect count, and final publisher
+     URL recorded, and the landing HTML saved for `<title>` /
+     `citation_*` meta extraction.
+  2. DOI content negotiation (`Accept:
+     application/vnd.citationstyles.csl+json`) through `https://doi.org/`
+     — i.e., the publisher-deposited metadata record served by the DOI
+     registration agency (Crossref transform endpoint) — parsed for title,
+     container-title, issued year, first author.
+- **Evidence classes.** `PAGE` = rendered publisher HTML retrieved and
+  title/citation-meta read directly. `CN+REDIRECT` = the DOI resolved
+  through the full redirect chain to the correct publisher article URL,
+  and the publisher-deposited metadata record matches the cited work, but
+  the final HTML was bot-gated (Cloudflare "Just a moment…", Incapsula
+  "Client Challenge", or HTTP 429 at biorxiv) so the human-readable page
+  could not be rendered. Under the honesty law no DOI was guessed or
+  reconstructed from memory; corrections were located only via Crossref
+  bibliographic search and then the corrected string itself re-resolved.
+- **Verdict rules.** PINNED = resolved record (page and/or
+  publisher-deposited metadata) matches the devlog's citation line on
+  title, venue, and year. CORRECTED = listed DOI resolves to a different
+  valid record or 404s, and a corrected DOI was found by search AND the
+  corrected string itself resolved to a record matching the cited work.
+  UNRESOLVED = could not be pinned to the cited work (404, bot-block with
+  no usable record, or resolves to an unrelated work with no verified
+  correction).
+
+## Results table
+
+| # | Listed DOI (devlog) | Resolved title / venue / year (as returned) | Match vs devlog line | Verdict | Corrected DOI |
+|---|---------------------|---------------------------------------------|----------------------|---------|---------------|
+| 1 | 10.1371/journal.pcbi.1009309 | "SUITOR: Selecting the number of mutational signatures through cross-validation", PLOS Computational Biology, 2022 (PAGE) | Title match; venue match; year match (2022; devlog: PLoS Comput Biol 2022;18(4):e1009309) | PINNED (PAGE) | — |
+| 2 | 10.1038/s41588-024-01659-0 | "Accurate and sensitive mutational signature analysis with MuSiCal", Nature Genetics, 2024 (PAGE) | Title match; venue match; year match | PINNED (PAGE) | — |
+| 3 | 10.1038/s41467-024-53711-6 | "A comprehensive comparison of tools for fitting mutational signatures" (Medo et al.), Nature Communications, 2024 (PAGE) | Title match; venue match; year match | PINNED (PAGE) | — |
+| 4 | 10.1093/bib/bbaf042 | "Benchmarking 13 tools for mutational signature attribution, including a new and improved algorithm", Briefings in Bioinformatics, 2024 online / vol 26 (2025) (CN+REDIRECT; OUP HTML Cloudflare 403) | Title match (13-tool attribution benchmark); venue match (Brief Bioinform); year: devlog states none | PINNED (CN+REDIRECT) | — |
+| 5 | 10.1186/s13059-025-03835-9 | "BASCULE: bayesian inference and clustering of mutational signatures leveraging biological priors", Genome Biology, 2025 (CN+REDIRECT; Springer HTML Incapsula "Client Challenge") | Title match; venue match (Genome Biol); year match | PINNED (CN+REDIRECT) | — |
+| 6 | 10.1101/2024.09.16.613266 | "BASCULE: Bayesian inference and clustering of mutational signatures leveraging biological priors", bioRxiv preprint, posted 2024 (CN; biorxiv HTML HTTP 429) | Title match; venue match (bioRxiv preprint); year match | PINNED (CN+REDIRECT) | — |
+| 7 | 10.1101/372896 | "sigfit: flexible Bayesian inference of mutational signatures", bioRxiv preprint, 2018 (CN; biorxiv HTML HTTP 429) | Title match; venue match; year match | PINNED (CN+REDIRECT) | — |
+| 8 | 10.1093/nargab/lqad005 | "mSigHdp: hierarchical Dirichlet process mixture modeling for mutational signature discovery", NAR Genomics and Bioinformatics, 2023 (CN+REDIRECT; OUP HTML Cloudflare 403) | Title match; venue match; year match | PINNED (CN+REDIRECT) | — |
+| 9 | 10.1186/s12859-021-04450-8 | "MSA: reproducible mutational signature attribution with confidence based on simulations" (Senkin et al.), BMC Bioinformatics, 2021 (CN+REDIRECT; BMC HTML bot-gated) | Title match; venue match; year match | PINNED (CN+REDIRECT) | — |
+| 10 | 10.1093/bioinformatics/btaa473 | "Mutational signature learning with supervised negative binomial non-negative matrix factorization" (Lyu et al.), Bioinformatics, 2020 (CN+REDIRECT; OUP HTML Cloudflare 403) | Title match (supervised NB-NMF); venue match; year match | PINNED (CN+REDIRECT) | — |
+| 11 | 10.1186/s12859-023-05304-1 | "Model selection and robust inference of mutational signatures using Negative Binomial non-negative matrix factorization" (Pelizzola et al.), BMC Bioinformatics, 2023 (CN+REDIRECT; BMC HTML bot-gated) | Title match (NB-NMF model selection); venue match; year match | PINNED (CN+REDIRECT) | — |
+| 12 | 10.1089/cmb.2021.0438 | "Deep Unfolding for Non-Negative Matrix Factorization with Application to Mutational Signature Analysis" (Nasser et al.), Journal of Computational Biology, 2022 (CN+REDIRECT; SAGE HTML HTTP 403) | Title match (deep-unfolded NMF); venue match (J Comput Biol); year match | PINNED (CN+REDIRECT) | — |
+| 13 | 10.1089/cmb.2024.0784 | "On the Relation Between Linear Autoencoders and Non-Negative Matrix Factorization for Mutational Signature Extraction" (Egendal et al.), Journal of Computational Biology, 2025 (CN+REDIRECT; SAGE HTML HTTP 403) | Title match (linear-autoencoder/NMF equivalence); venue match; year match | PINNED (CN+REDIRECT) | — |
+| 14 | 10.1101/2023.03.28.534619 | "Bayesian Multi-Study Non-Negative Matrix Factorization for Mutational Signatures" (Grabski et al.), bioRxiv preprint, 2023 (CN; biorxiv HTML HTTP 429) | Title match (BayesMSNF); venue match; year match | PINNED (CN+REDIRECT) | — |
+| 15 | 10.1101/2020.03.15.992826 | "MutSignatures: An R Package for Extraction and Analysis of Cancer Mutational Signatures" (Fantini et al.), bioRxiv preprint, 2020 (CN; biorxiv HTML HTTP 429) | Title match; venue match; year match | PINNED (CN+REDIRECT) | — |
+| 16 | 10.1101/424960 | "CANCERSIGN: a user-friendly and robust tool for identification and classification of mutational signatures and patterns in cancer genomes" (Bayati et al.), bioRxiv preprint, 2018 (CN; biorxiv HTML HTTP 429) | Title match; venue match (devlog: "2018" preprint); year match | PINNED (CN+REDIRECT) | — |
+| 17 | 10.1214/26-aoas2138 | "Bayesian selection and refitting of reference mutational signatures in cancer genomics" (Hua et al.), The Annals of Applied Statistics, 2026 (CN+REDIRECT to projecteuclid.org; Euclid HTML Incapsula-blocked) | Title match; venue match (Ann Appl Stat); year match | PINNED (CN+REDIRECT) | — |
+| 18 | 10.1186/s13073-018-0539-0 | "MutationalPatterns: comprehensive genome-wide analysis of mutational processes" (Blokzijl et al.), Genome Medicine, 2018 (CN+REDIRECT; BMC HTML bot-gated) | Title match; venue match (Genome Medicine 2018); year match | PINNED (CN+REDIRECT) | — |
+| 19 | 10.1186/s12864-022-08357-3 | "MutationalPatterns: the one stop shop for the analysis of mutational processes" (Manders et al.), BMC Genomics, 2022 (CN+REDIRECT; BMC HTML bot-gated) | Title match; venue match (BMC Genomics 2022); year match | PINNED (CN+REDIRECT) | — |
+| 20 | 10.1016/j.patcog.2007.09.010 (devlog §5, "Pattern Recognition 2008") | "SVD based initialization: A head start for nonnegative matrix factorization" (Boutsidis & Gallopoulos), Pattern Recognition, 2008, vol 41, pp 1350–1362 (CN+REDIRECT via Elsevier linkinghub; ScienceDirect HTML JS-gated) | Title match (Boutsidis–Gallopoulos SVD-init); venue match (Pattern Recognition); year match (2008) | PINNED (CN+REDIRECT) | — |
+| 21 | 10.1016/j.patrec.2015.05.019 | "New SVD based initialization strategy for non-negative matrix factorization" (Qiao et al.), Pattern Recognition Letters, 2015 (CN+REDIRECT via Elsevier linkinghub) | Title match (PRL 2015 follow-up); venue match (Pattern Recogn Lett); year match | PINNED (CN+REDIRECT) | — |
+| 22 | 10.1016/j.patrec.2007.09.010 (devlog §2, E3 text) | Resolves to "Advanced methods for two-class pattern recognition problem formulation for minutiae-based fingerprint verification" (Lumini & Nanni), Pattern Recognition Letters, 2008 — a valid record but NOT the cited Boutsidis–Gallopoulos work (CN) | Title MISMATCH (fingerprint-verification paper, unrelated); venue mismatch; year coincides only | CORRECTED | 10.1016/j.patcog.2007.09.010 (verified: resolves to Boutsidis & Gallopoulos, Pattern Recognition 2008 — row 20) |
+| 23 | 10.1186/gm1228 (devlog [U]: "SigProfiler 2021 assignment paper, Genome Medicine") | HTTP 404 at doi.org — "Error: DOI Not Found"; no Crossref record exists (PAGE + CN both 404) | Unresolvable; venue "Genome Medicine 2021" also unconfirmed by Crossref search | CORRECTED | 10.1093/bioinformatics/btad756 (verified: resolves; "Assigning mutational signatures to individual samples and individual somatic mutations with SigProfilerAssignment", Díaz-Gay et al., Bioinformatics, 2023 — OUP HTML Cloudflare 403, CN + OUP article URL confirm). Note: the devlog's stated venue/year (Genome Medicine 2021) and author attribution ("de Bruin et al.") do not match the verified record and must be corrected alongside the DOI. |
+| 24 | 10.1093/bioinformatics/btab144 (devlog [U]: "SigMiner original paper, Bioinformatics, Hoadley et al.") | Resolves to "DeepS: a web server for image optical sectioning and super resolution microscopy based on a deep learning framework" (Zhu et al.), Bioinformatics, 2021 — a valid record but completely unrelated to mutational signatures (CN; OUP HTML Cloudflare 403) | Title MISMATCH (unrelated microscopy web-server paper); DOI is not the cited SigMiner paper | UNRESOLVED | — (Crossref bibliographic searches for "SigMiner" / Hoadley / SigProfilerAssignment-style title fragments found no record matching a "SigMiner" paper by Hoadley et al. in Bioinformatics; per the honesty law no correction is asserted) |
+| 25 (suppl.) | 10.1016/j.xgen.2022.100179 (devlog [P], §2 E2) | "Uncovering novel mutational signatures by de novo extraction with SigProfilerExtractor" (Islam et al.), Cell Genomics, 2022 (CN+REDIRECT via Elsevier linkinghub) | Title match; venue match; year match | PINNED (CN+REDIRECT) | — |
+| 26 (suppl.) | 10.64898/2026.01.20.700228 (devlog §2 E12, "SigFormer 2026 preprint") | "SigFormer: an Attention-Based Framework for Robust Single-Sample Mutational Signature Decomposition", bioRxiv (openRxiv) preprint, posted 2026-01-21 (PAGE: biorxiv.org title tag + CN) | Title match; venue match (preprint); year match | PINNED (PAGE) | — |
+
+## Failure log (UNRESOLVED entries)
+
+| DOI | Failure mode | Detail |
+|-----|--------------|--------|
+| 10.1093/bioinformatics/btab144 | Resolves to unrelated work; no verified correction | The DOI string resolves (Crossref record exists, Bioinformatics 2021) but the record is "DeepS: a web server for image optical sectioning and super resolution microscopy" (Zhu et al.) — nothing to do with mutational signatures. Crossref searches on "SigMiner", "SigMiner Hoadley", and related title fragments returned no matching Bioinformatics paper. The devlog itself flagged this entry as "format-plausible, unconfirmed". Per the honesty law the correction is left unrecorded; this citation must be re-sourced from the publisher or the repo corpus before manuscript use. |
+| 10.1186/gm1228 | (resolved via correction, recorded for completeness) | HTTP 404 at doi.org ("Error: DOI Not Found", Cloudflare, no redirect). Original scan had observed "redirect, final page 404". The corrected DOI 10.1093/bioinformatics/btad756 was located via Crossref bibliographic search (title "Assigning mutational signatures … with SigProfilerAssignment", Díaz-Gay et al., Bioinformatics, 2023) and verified to resolve to that work. The devlog's "Genome Medicine 2021, de Bruin et al." venue/year/author line is not supported by any located record and needs correction. |
+
+## Notes on evidence quality
+
+- 4 entries were pinned from the rendered publisher page (`PAGE`): SUITOR
+  (PLOS), MuSiCal (Nature Genetics), Medo (Nature Communications), SigFormer
+  (bioRxiv).
+- 16 entries were pinned via the DOI system's own content-negotiated,
+  publisher-deposited metadata plus a completed redirect chain to the
+  correct publisher article URL (`CN+REDIRECT`). Bot-gates encountered:
+  Cloudflare managed challenge at academic.oup.com (403), Incapsula
+  "Client Challenge" at link.springer.com / bmcbioinformatics /
+  projecteuclid.org (HTTP 200 but challenge HTML), HTTP 429 at
+  biorxiv.org, and an HTTP 403 at journals.sagepub.com. In every such
+  case the redirect Location chain terminated at the correct article path
+  on the publisher host, and the CN record matched the cited work —
+  this is treated as sufficient for a pin, since the garble risk being
+  tested (wrong/nonexistent DOI string) would manifest as a 404 or a
+  mismatched record, neither of which occurred.
+- Elsevier DOIs terminate at a `linkinghub.elsevier.com` JS redirect to
+  ScienceDirect; the PII embedded in the redirect target plus the
+  publisher-deposited CN record were used as confirmation.
+- The extra `10.1016/j.patrec.2007.09.010` probe (row 22) was fetched
+  because the devlog cites it in section 2 with a different journal
+  fragment than section 5's `patcog` string — exactly the digits/separators
+  drift class this re-pin was auditing; it resolved to an unrelated
+  fingerprint-verification paper, confirming the drift, and the corrected
+  `patcog` string (already listed in §5) was re-verified directly.
+> ---END-RECOVERED-DOI-REPIN---
+
+> ---BEGIN-RECOVERED-CLAIMS-RESCAN---
+# Claims re-scan — the three pending items of the 2026-10-30 novelty scan
+
+**Date:** 2026-11-10 · **Scan basis:** the committed novelty scan
+`vignettes/articles/devlog-2026-11-10-novelty-scan.qmd` at `main@aafd407`
+(merged as PR #96). That devlog marked three items pending or [U]-only; this
+document is the formal targeted re-scan that upgrades or downgrades each:
+
+1. **Claim 1 (devlog line 80):** Conformal per-TMB-stratum intervals
+   (MSU-LowCount) — "(a), pending formal scan."
+2. **Claim 2 (devlog line 81):** CoDA/DM-mixture exposure association
+   (MSU-Infer) — "(b)"; the "first exposure-association framework covering
+   survival/case-control/longitudinal" phrasing was made conditional on this
+   scan.
+3. **Claim 3 (devlog line 122 / R7):** per-signature TSB/RTT reporting and
+   treatment/timing deconvolution — "near-zero competition" claim only
+   [U]-attested, ordered to "run the same scan treatment before printing
+   'first'."
+
+Repo files were READ for context only. No file inside the repository was
+created, modified, or deleted; all writes landed under `/tmp/noveltylane2/`.
+
+## Method and provenance discipline
+
+The house zero-fabrication law applies, unchanged from the parent scan. Every
+source is tiered:
+
+- **[P]** primary page fetched and read in this scan (arXiv abstract pages via
+  curl with a browser User-Agent; publisher/bioRxiv HTML). Four arXiv records
+  are [P]-verified at the abstract level: 2404.10974, 2502.01468, 2510.07518,
+  2610.00523.
+- **[M]** bibliographic metadata confirmed through search backends (OpenAlex
+  REST API via curl, Crossref REST API via curl, `scholar_search`) — title +
+  venue + DOI exactly as returned.
+- **[U]** unverified in this scan — carried from the repo corpus or from
+  model knowledge; never load-bearing for a verdict.
+
+**DOI-garble caveat.** Search backends have exhibited systematic
+digit/separator garble in DOI transcription. All DOIs below are transcribed
+exactly as returned by the backend that surfaced them; none has been
+re-pinned against the publisher page in this scan (that is a separate
+exercise). The sibling deliverable
+`/tmp/noveltylane2/doi-repin-2026-11-10.md` re-pinned the parent devlog's
+source list the same day and empirically confirmed the garble class (one
+`patrec`/`patcog` journal-fragment drift, one 404 DOI corrected to
+`10.1093/bioinformatics/btad756`), so the caveat is not hypothetical.
+
+**Backend reliability note.** `mcp__websearch__web_search` returned Chinese
+dictionary entries for all four English queries (W1–W4) — unusable, results
+discarded. The built-in `WebSearch` returned empty result sets for both
+quoted queries (B1–B2). `mcp__websearch__scholar_search` (OpenAlex backend)
+was reliable. The workhorse was `curl` against `api.openalex.org` and
+`api.crossref.org`; arXiv `/abs/` pages fetched cleanly; `dash.harvard.edu`
+was permanently bot-blocked (HTTP 429 via fetch_page; a 1515-byte bot-gated
+stub via curl with full Chrome UA; HTTP 401 on the DASH REST API endpoint).
+
+**Search-volume accounting.** 62 logged search/fetch tool invocations:
+10 `scholar_search` + 4 `mcp__websearch__web_search` + 2 built-in
+`WebSearch` + 1 `fetch_page` + 45 Bash curl-family network calls. Distinct
+search operations: 59 (removing one duplicate curl pair C40/C41, one
+non-search directory-creation call, and one log-extraction script run that
+touched no network). The verbatim query log is embedded per claim below.
+
+**Negative results are supportive, not conclusive.** Every per-claim verdict
+below rests partly on searches that returned nothing relevant; search
+backends index titles/abstracts, not full texts, and non-English or
+tool-documentation venues are under-covered. A negative here lowers the
+probability of prior art; it cannot zero it.
+
+---
+
+## Claim 1 — Conformal prediction for signature exposures (MSU-LowCount)
+
+**Parent-scan status:** "(a), pending formal scan." This scan adjudicates it.
+
+### Query log (Claim 1)
+
+- scholar_search S01 `conformal prediction mutational signature exposure` · S02 `conformal prediction non-negative matrix factorization deconvolution prediction intervals` · S03 `Mondrian conformal prediction bioinformatics calibrated intervals` · S04 `uncertainty quantification mutational signature activity confidence interval cancer genomes` · S05 `Catherine Xue uncertainty quantification non-negative matrix factorization mutational signatures` · S06 `conformal prediction intervals source contribution estimation blind source separation` · S07 `Bayesian non-negative matrix factorization mutational signatures posterior credible intervals exposures`
+- web_search W1 `conformal prediction mutational signature exposure interval cancer` and W2 `"conformal prediction" "mutational signature"` (both garbled, discarded) · built-in WebSearch B1 `"conformal prediction" "mutational signature" cancer exposure` and B2 `conformal prediction NMF deconvolution prediction intervals biology` (both empty) · fetch_page F1 `https://dash.harvard.edu/handle/1/41730990` (HTTP 429)
+- Bash curl (OpenAlex/Crossref/DASH/arXiv): "conformal prediction mutational signature"; "conformal prediction signature exposure deconvolution cancer"; `title.search:` "Catherine Xue mutational"; "Robust Uncertainty Quantification Non-Negative Matrix Factorization Mutational Signatures"; "Wild Bootstrap Inference NMF Random Effects"; "conformal prediction spectral unmixing or NMF interval"; SimplexUQ; "coverage calibrated confidence interval signature refitting assignment mutational"; "conformal prediction cancer genome variants calibration"; DASH handles 1/41730990 + 1/42725950 + DASH API; arXiv 2404.10974, 2502.01468, 2510.07518, 2610.00523 (all [P]); BASCULE; SigProfilerAssignment; Senkin MSA; Medo comparison.
+
+### Findings
+
+- **Xue, Catherine (2025). "Robust Uncertainty Quantification for
+  Non-Negative Matrix Factorization with Applications to Mutational
+  Signatures Analysis." Harvard DASH dissertation.** OpenAlex
+  W7126542226; no DOI; landing `https://dash.harvard.edu/handle/1/42725950`.
+  **[M]** — abstract UNVERIFIED: DASH blocked every access route in this
+  environment (fetch_page 429; curl full-Chrome-UA returned a 1515-byte
+  bot-gated stub; DASH REST API 401). This is the single explicit
+  unresolved nearest-neighbor: the title says "robust uncertainty
+  quantification for NMF with applications to mutational signatures," which
+  is compatible both with posterior/Bayesian UQ and with distribution-free
+  intervals. Whether it touches conformal methods for exposures could not
+  be established from here.
+- **SimplexUQ (2026), arXiv 2610.00523, DOI 10.48550/arxiv.2610.00523 [P,
+  abstract verified]:** "first benchmark and reproducible protocol for
+  measuring this allocation problem on simplex-valued predictions; it
+  compares existing conformal wrappers rather than proposing a new one."
+  Twelve simplex tasks include spectral abundances and cell-type fractions
+  — adjacent domains, **no mutational-signature application**. Its headline
+  result validates the Mondrian choice generically: CIFAR-10 marginal
+  coverage 0.900 but worst-stratum 0.542; Mondrian raises worst-stratum to
+  0.886 and cuts max disparity 0.358 → 0.022.
+- **Posterior-based UQ line (adjacent, not conformal):** Zito & Miller 2024,
+  "Compressive Bayesian non-negative matrix factorization for mutational
+  signatures analysis," arXiv 2404.10974 [P]; Hansen, Grabski, Parmigiani
+  2025, Bayesian Probit Multi-Study NMF, arXiv 2502.01468 [P]; Hansen et
+  al. 2025, Zero-Inflated Bayesian Multi-Study Infinite NMF, arXiv
+  2510.07518 [P, dietary application]; Landy, Basava, Parmigiani 2026,
+  "bayesNMF," JCGS, 10.1080/10618600.2026.2657487 [M]; sigfit, bioRxiv
+  10.1101/372896 [M]; Hua et al. 2026, Ann Appl Stat, 10.1214/26-aoas2138
+  [M]. All produce posterior/credible intervals from Bayesian models — a
+  different guarantee class than distribution-free, coverage-audited
+  conformal intervals.
+- **MSA (Senkin et al. 2021), BMC Bioinformatics, 10.1186/s12859-021-04450-8
+  [M]:** simulation-calibrated confidence for signature attribution — not
+  conformal, not coverage-audited on real data.
+- **Medo et al. 2024, Nat Commun, 10.1038/s41467-024-53711-6 [M]**
+  (12-tool fit comparison; its open-question row corroborates the
+  sub-100-mutation fitting gap) and **BASCULE 2025, Genome Biology,
+  10.1186/s13059-025-03835-9 [M]** (credible intervals) — neither applies
+  conformal wrappers.
+- **Conformal-in-biomedicine is generic published art:** Papangelou et al.
+  2025, Frontiers in Bioinformatics, 10.3389/fbinf.2025.1507448 [M];
+  Sreenivasan et al. 2025, npj Digital Medicine, 10.1038/s41746-025-01616-z
+  [M]; ACM Computing Surveys survey 10.1145/3736575 [M]. Mondrian conformal
+  in chemistry/toxicology: CPSign 10.1186/s13321-024-00870-9 [M]; iSKIN
+  10.1002/smm2.1278 [M]; eMolTox 10.1093/bioinformatics/bty135 [M];
+  10.1016/j.xphs.2020.09.055 [M]. No instance found in any of these domains
+  of conformal intervals for mixture-deconvolution exposures.
+- **Negative search:** OpenAlex queries pairing "conformal" with
+  "mutational signature" / "signature exposure" / "deconvolution" /
+  "source contribution" / "spectral unmixing" returned zero records
+  applying conformal prediction to signature (or analogous mixture) exposures.
+
+### Verdict recommendation: (a) genuinely novel — with one named caveat
+
+Reasoning: conformal methodology itself is published art (Shafer–Vovk,
+Angelopoulos–Bates, and the biomedicine/chem applications above); the
+novelty claim reduces to the *application* — Mondrian-by-TMB-stratum
+conformal intervals for signature exposures with verified empirical
+coverage on stratified simulations and retrospective real panel data. No
+prior art surfaced that does this. Differentiation from the nearest
+neighbors: SimplexUQ benchmarks generic simplex conformal wrappers but
+never touches signatures; the Bayesian-NMF line delivers posterior
+intervals, not distribution-free coverage guarantees; MSA is
+simulation-calibrated, not coverage-audited. The Xue 2025 dissertation is
+the one record that could conceivably overlap and could not be inspected
+beyond metadata — it must be read (it is a public dissertation) before the
+(a) is printed in the manuscript. **Negative results here are supportive,
+not conclusive:** backend coverage of dissertations and of tool
+documentation is weak, and the Xue caveat is unresolved.
+
+---
+
+## Claim 2 — CoDA methodology for signature-exposure association (MSU-Infer)
+
+**Parent-scan status:** "(b)"; the "first exposure-association framework
+covering survival/case-control/longitudinal" phrasing was deferred to this
+scan.
+
+### Query log (Claim 2)
+
+- scholar_search S08 `compositional data analysis mutational signature exposure association Dirichlet multinomial` · S09 `Morrill mutational signature association analysis compositional` · S10 `differential mutational process association case control log-ratio CLR tumor signatures statistics` · web_search W3 `Morrill 2025 mutational signatures compositional data association survival arxiv` (garbled, discarded)
+- Bash curl (OpenAlex): "compositional data analysis cancer mutation spectra log-ratio signature activity"; "Dirichlet multinomial mixed model differential abundance mutational signatures"; "Morrill mutational signatures"; DOI lookup 10.1186/s12859-025-06055-x; log-ratio compositional survival/Cox; SurvBal / FLORAL / coda4microbiome / Cox-compositional; Diffsig; Morrison SVA; Hart AMSD; "compositional data mutational signature exposures ILR CLR associations".
+
+### Findings
+
+- **Morrill et al. 2025, "A Dirichlet-multinomial mixed model for
+  determining differential abundance of mutational signatures," BMC
+  Bioinformatics, 10.1186/s12859-025-06055-x [M, full abstract via
+  OpenAlex]:** paired design (two observations per patient), multivariate
+  random effects, group-specific dispersion, regression generalization;
+  validated on PCAWG clonal/subclonal data; ~0 citations at scan time.
+  This is CoDA-adjacent DM modeling for signature DA **including a
+  regression generalization** — the closest single competitor.
+- **Diffsig (Park, Smith, Van Alsten 2024), "Diffsig: Associating Risk
+  Factors with Mutational Signatures," Cancer Epidemiology Biomarkers &
+  Prevention, 10.1158/1055-9965.epi-23-0728 [M]:** risk-factor association
+  testing on signature exposures that "takes into account the uncertainty
+  associated with assigning signatures to samples." Case-control-class
+  association testing in signature space already exists.
+- **Hart, Alcala, Feder, Harris (2026), "A signature-agnostic test for
+  differences between tumor mutation spectra reveals carcinogen and
+  ancestry effects," 10.1038/s42003-026-09652-5 [M; DOI prefix =
+  Communications Biology class; venue string not separately
+  page-pinned]:** AMSD permutation test — group comparison of mutation
+  spectra without fitting signatures. Abstract as returned: "Despite
+  dozens of tools to identify mutational signatures in cancer samples,
+  there is not an established metric for quantifying whether signature
+  expo[sures differ]" (truncated by backend).
+- **Morrison et al. 2023 (bioRxiv preprint, 10.1101/2023.11.23.23298821
+  [M]):** signature variability analysis (SVA), population-genetics
+  statistics on signature diversity/homogeneity vs carcinogen exposure —
+  exposure-phenotype association, non-CoDA machinery.
+- **The CoDA-survival / CoDA-case-control methodology exists maturely — in
+  microbiome, not signatures:** SurvBal, Bioinformatics 2024,
+  10.1093/bioinformatics/btae612 [M]; balance-based differential
+  abundance, NAR Genom Bioinform 2024, 10.1093/nargab/lqae038 [M]; FLORAL,
+  Cell Reports Methods 2024, 10.1016/j.crmeth.2024.100899 [M];
+  coda4microbiome R package, 10.32614/cran.package.coda4microbiome [M];
+  Cox regression on log-ratio transformed compositional data, Stat Med /
+  10.1177/0962280219864125 [M]. No record found porting any of these to
+  mutational-signature exposures.
+- **Negative search:** queries combining CLR/ILR/log-ratio/Dirichlet-
+  multinomial with "mutational signature" + survival / case-control /
+  longitudinal surfaced only the five records above — nothing that spans
+  all three outcome types in signature space.
+
+### Verdict recommendation: (b) novel combination — the "first" phrasing must be narrowed
+
+Reasoning: every methodological ingredient exists. DM mixed modeling with
+paired designs and regression generalization exists (Morrill 2025 —
+devlog's plan is to reproduce then extend it, which is consistent with a
+(b)); risk-factor association with assignment uncertainty exists (Diffsig
+2024); group-comparison testing exists (Hart 2026, Morrison 2023); and
+CoDA-survival/Cox-log-ratio machinery exists in microbiome. What did not
+surface is a **unified exposure-association framework in signature space
+covering survival, case-control, and longitudinal designs** — that is a
+combination claim, not a first-in-class claim. Recommended manuscript
+phrasing: "first CoDA-based framework for signature-exposure association
+spanning survival, case-control, and longitudinal designs in mutational-
+signature space" — and even that only after checking Morrill 2025's cited-by
+list again at submission time (it was 0 at scan date; a fast-moving
+neighbor). **Negative results are supportive, not conclusive.**
+
+---
+
+## Claim 3 — TSB/RTT reporting + treatment/timing deconvolution
+
+**Parent-scan status:** "near-zero competition" claim carried [U] from
+`docs/research/00` §2 post-processing; ordered to be scanned before printing
+"first." **The scan REFUTES the note for the TSB/RTT half.** Split verdict:
+
+### Query log (Claim 3)
+
+- web_search W4 `N-of-1-time MutationalPatterns relative timing of mutational processes single sample` (garbled, discarded)
+- Bash curl (OpenAlex/Crossref): "transcriptional strand bias mutational signatures replication timing"; "strand bias mutation signature transcription asymmetry cancer tool"; "per-sample transcriptional strand bias signature attribution reporting tool asymmetry per signature"; TensorSignatures; "Accounting Transcriptional Asymmetries Mutational Signature Compressive Bayesian" (Zito chapter); TrackSig; "N-of-1-time mutational patterns timing signatures"; quoted "N-of-1-time" (OpenAlex, then Crossref); MutationalPatterns (both papers); "treatment associated mutational signature change longitudinal therapy response signature dynamics"; "chemotherapy platinum signature emergence treatment deconvolution sequential samples"; Blood 2023 tracking; "Timing the Initiation of Multiple Myeloma"; oesophageal dynamics; colorectal geographic/age variation Nature 2025; "mutational signatures treatment timing platinum temozolomide when acquired clinical"; "CLOCK mutational clock signature exposures shares separating SBS1 SBS5 time"; "clock signature shares SBS1 SBS5 separation tumor age attribute"; "extraction of timing information mutational signatures cancer genome subclonal clonal stratification tool"; "relative timing of mutational processes split catalog subclonal clonal single sample"; "relative timing mutational processes single sample R package"; chemotherapy-signature-timing-deconvolution query.
+
+### Findings — half 1: per-signature TSB / RTT reporting
+
+Substantial prior art exists; "near-zero competition" is **refuted** here:
+
+- **TensorSignatures** (Jin et al. 2021?), "Learning mutational signatures
+  and their multidimensional genomic properties with TensorSignatures,"
+  Nature Communications, 10.1038/s41467-021-23551-9 [M]: joint learning of
+  signatures with transcriptional/replication-strand and
+  replication-timing covariates.
+- **Bergstrom-line 2018**, "Mutational signature distribution varies with
+  DNA replication timing and strand asymmetry," Genome Biology,
+  10.1186/s13059-018-1509-y [M].
+- **"Topography of mutational signatures in human cancer," Cell Reports
+  2023, 10.1016/j.celrep.2023.112930 [M].**
+- **SigProfilerTopography (NEW hit this session):** "Evaluating topography
+  of mutational signatures with SigProfilerTopography," Genome Biology
+  2025, 10.1186/s13059-025-03612-8 [M] — a maintained SigProfiler-family
+  tool whose entire purpose is per-signature topographic (strand, timing,
+  genomic-region) reporting.
+- **Zito, Xue, Miller 2025**, "Accounting for Transcriptional Asymmetries
+  in Mutational Signature Analysis Using Compressive Bayesian Non-negative
+  Matrix Factorization," Springer chapter, 10.1007/978-3-031-96033-8_81
+  [M] — strand asymmetry modeled inside the NMF likelihood.
+- Supporting adjacency: RT-in-normal signatures 10.1038/s41598-023-34631-9
+  [M]; SBS8 late-replication, Comm Biol 2020, 10.1038/s42003-020-01119-5
+  [M]; MutationalPackages ecosystem 10.1186/s13073-018-0539-0 +
+  10.1186/s12864-022-08357-3 [M] (strand-bias functions documented [U]
+  from tool docs, not backend-surfaced).
+
+**Verdict for the reporting half: (c) prior art for the capability; at most
+(b) for a per-sample, per-signature reporting/UX combination inside a
+refitting pipeline.** No "first" wording is defensible for TSB/RTT
+reporting as such.
+
+### Findings — half 2: treatment/timing deconvolution from mutation catalogs
+
+Prior art is application-level, not a general tool — plausibly (b):
+
+- **"Tracking the Evolution of Therapy-Related Myeloid Neoplasms Using
+  Chemotherapy Signatures," Blood 2023, 10.1182/blood.2022018244 [M]:**
+  uses chemo signatures to track therapy-related evolution — an
+  application, not a general deconvolution method.
+- **"Timing the Initiation of Multiple Myeloma," Nat Commun 2020(?),
+  10.1038/s41467-020-15740-9 [M]:** timing-of-initiation from signature
+  accumulation; adjacent, disease-specific.
+- **TrackSig**, "Reconstructing evolutionary trajectories of mutation
+  signature activities in cancer using TrackSig," Nat Commun 2020,
+  10.1038/s41467-020-14352-7 [M] (+ preprint 10.1101/260471 [M]): CNV-
+  based changepoint timing of signature activities — the nearest
+  methodological neighbor; CNV-stratified rather than treatment/timing
+  deconvolution from the raw catalog.
+- **Oesophageal adenocarcinoma signature dynamics**, Nat Commun 2023,
+  10.1038/s41467-023-39957-6 [M]; **colorectal geographic/age variation**,
+  Nature 2025, 10.1038/s41586-025-09025-8 [M] — application-level timing/
+  variation analyses.
+- **Negative searches (documented, remain [U]):** "N-of-1-time" returned
+  zero relevant records on OpenAlex (quoted phrase) AND Crossref
+  (bibliographic query) — GPS timing, a 1981 cerebral-processes paper,
+  etc. ClockShares returned nothing on two phrasings (CLOCK/SBS1/SBS5
+  share-separation query). Both remain [U]-carried: known
+  MutationalPatterns-ecosystem/community tools whose function is
+  corroborated by the repo corpus but invisible to the backends used. If
+  either does treatment-timing deconvolution generically, it could erode
+  the (b) below — both must be read before printing "first."
+
+### Verdict recommendation: SPLIT — (c) for TSB/RTT reporting; (b) for treatment/timing deconvolution
+
+Reasoning: the corpus's "near-zero competition" note was [U]-carried and
+half-wrong: per-signature TSB/RTT analysis is a developed subfield
+(TensorSignatures, SigProfilerTopography, Topography 2023, Bergstrom 2018,
+Zito-Xue-Miller). For treatment/timing deconvolution from mutation
+catalogs as a general, model-based capability, only application-level
+studies and CNV-based TrackSig surfaced; a generic per-sample
+treatment/timing deconvolution claim survives as (b), conditional on
+resolving the two backend-invisible tools (N-of-1-time, ClockShares) by
+direct documentation fetch. **Negative results (N-of-1-time, ClockShares
+not surfaced) are supportive, not conclusive — and here they are weaker
+than usual, because the tools are known to exist by name.**
+
+---
+
+## Consolidated source list (tiered)
+
+**Claim 1.** Xue 2025 dissertation, DASH, no DOI, W7126542226 [M, abstract
+unverified] · SimplexUQ, arXiv 2610.00523, 10.48550/arxiv.2610.00523 [P] ·
+Zito & Miller, arXiv 2404.10974, 10.48550/arxiv.2404.10974 [P] · Hansen et
+al., 10.48550/arxiv.2502.01468 [P]; 10.48550/arxiv.2510.07518 [P] · Landy
+et al., JCGS, 10.1080/10618600.2026.2657487 [M] · sigfit, 10.1101/372896
+[M] · Senkin MSA, 10.1186/s12859-021-04450-8 [M] · Medo et al., Nat Commun
+2024, 10.1038/s41467-024-53711-6 [M] · BASCULE, 10.1186/s13059-025-03835-9
+[M] · Hua et al., Ann Appl Stat 2026, 10.1214/26-aoas2138 [M] ·
+Papangelou, 10.3389/fbinf.2025.1507448 [M] · Sreenivasan,
+10.1038/s41746-025-01616-z [M] · Zhou et al. survey, 10.1145/3736575 [M] ·
+CPSign, 10.1186/s13321-024-00870-9 [M] · iSKIN, 10.1002/smm2.1278 [M] ·
+eMolTox, 10.1093/bioinformatics/bty135 [M] · Pharm-res conformal,
+10.1016/j.xphs.2020.09.055 [M].
+
+**Claim 2.** Morrill et al., BMC Bioinformatics 2025,
+10.1186/s12859-025-06055-x [M] · Diffsig, CEBP 2024,
+10.1158/1055-9965.epi-23-0728 [M] · Hart et al. 2026,
+10.1038/s42003-026-09652-5 [M] · Morrison et al. 2023 preprint,
+10.1101/2023.11.23.23298821 [M] · SurvBal, 10.1093/bioinformatics/btae612
+[M] · Balance-DA, 10.1093/nargab/lqae038 [M] · FLORAL,
+10.1016/j.crmeth.2024.100899 [M] · coda4microbiome,
+10.32614/cran.package.coda4microbiome [M] · Cox-compositional,
+10.1177/0962280219864125 [M].
+
+**Claim 3.** TensorSignatures, 10.1038/s41467-021-23551-9 [M] · Bergstrom
+et al. 2018, 10.1186/s13059-018-1509-y [M] · Topography, Cell Reports
+2023, 10.1016/j.celrep.2023.112930 [M] · SigProfilerTopography, Genome
+Biology 2025, 10.1186/s13059-025-03612-8 [M] · Zito-Xue-Miller chapter,
+Springer 2025, 10.1007/978-3-031-96033-8_81 [M] · RT-in-normal,
+10.1038/s41598-023-34631-9 [M] · SBS8-RT, 10.1038/s42003-020-01119-5 [M] ·
+MutationalPatterns, 10.1186/s13073-018-0539-0 [M] and
+10.1186/s12864-022-08357-3 [M] · TrackSig, 10.1038/s41467-020-14352-7 [M]
++ 10.1101/260471 [M] · Blood 2023, 10.1182/blood.2022018244 [M] · Myeloma
+timing, 10.1038/s41467-020-15740-9 [M] · Oesophageal dynamics,
+10.1038/s41467-023-39957-6 [M] · Colorectal Nature 2025,
+10.1038/s41586-025-09025-8 [M] · N-of-1-time: not surfaced [U] ·
+ClockShares: not surfaced on two phrasings [U].
+
+## Scan-level integrity notes
+
+1. **Read-only attestation:** no file inside
+   `/Users/wsx/Documents/GitHub/msuiter` was created, modified, or
+   deleted; all reads were for context (the parent devlog, the sibling
+   doi-repin deliverable); all writes landed under `/tmp/noveltylane2/`.
+2. **DOI integrity:** every DOI above is transcribed exactly as the
+   backend returned it; none was re-pinned to a publisher page in this
+   scan (except the four arXiv [P] pages). The parent scan's DOI list has
+   confirmed garble instances (see `/tmp/noveltylane2/doi-repin-2026-11-10.md`),
+   so each DOI here should be treated as [M] until re-pinned.
+3. **Flaky-backend accounting:** 6 tool queries (W1–W4, B1–B2) produced
+   unusable output (Chinese dictionary entries / empty results) and are
+   logged but not counted as evidence; the scan's coverage rests on the
+   OpenAlex/Crossref API calls and the four arXiv [P] fetches.
+4. **Author-string garble:** OpenAlex returned the SimplexUQ author list
+   partially garbled ("Liang You, Hengyu Shi, …" with one CJK-rendered
+   name); the arXiv [P] page is the authoritative record for that entry.
+5. **Xue 2025 dissertation:** abstract unverified after three access
+   attempts (429 / bot-stub / API 401). Flagged as the single open
+   nearest-neighbor risk for Claim 1's (a).
+6. **N-of-1-time and ClockShares** are known-by-name tools that no backend
+   would surface; their absence from results is recorded as negative
+   search, not as evidence of nonexistence.
+7. **This document supersedes the parent devlog's pending statuses for
+   Claim 1 (a, with caveat), Claim 2 (b, narrowed phrasing), and Claim 3
+   (split c/b)**; the parent devlog should be amended accordingly when
+   these verdicts are folded into the manuscript.
+> ---END-RECOVERED-CLAIMS-RESCAN---
