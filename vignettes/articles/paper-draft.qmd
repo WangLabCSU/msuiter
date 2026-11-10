@@ -264,6 +264,9 @@ printed ratio.
 > that regeneration — the live epoch, the 147→168 face accounting, the cost
 > basis, the ignition gates, and the stale-epoch quote-site table — is
 > reified as vignettes/articles/devlog-2026-11-10-r1-parity-regen-design.qmd.
+> The generation-4 pre-ignition arm-image rebuilds run on a hardened arm
+> recipe (transient-window floor-settle remedy, blob-pin re-seal):
+> vignettes/articles/devlog-2026-11-11-arm-recipe-transient-hardening.qmd.
 
 Historical framing that may be quoted with its own honesty markers (already
 committed): the pre-recalibration >=50x/>=100x/>=10x rhetoric was moved to the

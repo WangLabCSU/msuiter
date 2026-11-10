@@ -91,3 +91,4 @@ directory's files for the output contract.
 - `vignettes/articles/devlog-2026-10-10-m7-rb11-restoration.qmd` — RB-11 restoration record
 - `vignettes/articles/devlog-2026-10-10-m7-bootstrap-campaign.qmd` — GO-05 campaign pre-registration (protocol)
 - `vignettes/articles/devlog-2026-11-04-m7-build-pin-drift-attestation.qmd` — arm-recipe digest-pin drift attestation and blob-seal law
+- `vignettes/articles/devlog-2026-11-11-arm-recipe-transient-hardening.qmd` — arm-recipe transient-window floor-settle remedy and re-seal
