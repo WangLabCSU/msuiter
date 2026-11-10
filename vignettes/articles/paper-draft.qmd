@@ -115,7 +115,12 @@ the compiled yardstick re-measures 147/147 cells breaching the <=2x bar
    vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd — Claim 1 (a) with one
    named caveat (Xue 2025, abstract unverified), Claim 2 (b) with narrowed "first"
    phrasing, Claim 3 split (c)/(b) — superseding the parent's pending statuses per
-   its integrity note 7).
+   its integrity note 7; the erratum's lane-2 pass then resolved its own open
+   conditions in vignettes/articles/devlog-2026-11-10-novelty-lane2.qmd —
+   Xue 2025 is abstract-verified PARTIAL-OVERLAP (same domain, different method:
+   Bayesian/bootstrap/OLS-CI, no conformal, no strata), and N-of-1-time /
+   ClockShares remain unverified on ~10 backends, so no "first" wording prints
+   for treatment/timing deconvolution without a community primary source).
 
 ## 2. Software overview
 
@@ -403,7 +408,13 @@ plus full DOI re-pin (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd,
 erratum) re-verified 23/26 DOI entries, corrected 2 (patrec→patcog;
 gm1228→btad756 with venue/author fix), and left 1 unresolved (btab144:
 re-source or drop), superseding the parent's pending statuses per its
-integrity note 7.
+integrity note 7; the erratum's lane-2 verdicts
+(vignettes/articles/devlog-2026-11-10-novelty-lane2.qmd) further pin the
+nearest-neighbor posture — Xue 2025 abstract-verified PARTIAL-OVERLAP for
+Claim 1(a) (same domain, different method class; no conformal, no strata)
+and a Morrill 2025 cited-by baseline of 0 (OpenAlex W4407702897,
+2026-11-10T07:49:51Z; Crossref/S2 each 1) for Claim 2's re-check at
+submission.
 
 > [GATED: PI-C] The third competitor slot — peer (c), the signeR hypothesis — is
 > UNVERIFIED by the PI record. Until the PI ruling lands, signeR stays a
@@ -436,13 +447,23 @@ integrity note 7.
 6. **Negative-search caveats.** The (a)-class originality labels in the novelty
    scan rested on the scan's self-declared flaky-backends environment; the
    targeted re-scan was executed 2026-11-10 and is reified as the erratum
-   (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd): Claim 1 (a) with one
-   named caveat (Xue 2025 Harvard DASH dissertation, abstract unverified — must be
-   read before printing), Claim 2 (b) with narrowed "first" phrasing, Claim 3
-   split — TSB/RTT reporting is (c) prior art (no "first" wording defensible),
-   treatment/timing deconvolution (b) conditional on reading N-of-1-time and
-   ClockShares. The parent devlog's §Method + §Integrity notes 1-2 record the
-   scan-side posture; the erratum's supersession table governs.
+   (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd), whose lane-2
+   pass (vignettes/articles/devlog-2026-11-10-novelty-lane2.qmd) then resolved
+   the erratum's own open conditions: Claim 1 (a) holds with Xue 2025 now
+   abstract-verified as PARTIAL-OVERLAP (same domain — UQ for signature
+   exposures — different method class: Bayesian power posteriors /
+   OLS-equivalency CIs / bootstrap; the word conformal never appears and no
+   per-stratum calibration appears, so Claim 1(a)'s specific wording survives
+   but the domain is not empty), Claim 2 (b) with narrowed "first" phrasing
+   (Morrill 2025 re-check baseline pinned: cited_by 0 on OpenAlex at
+   2026-11-10T07:49:51Z), Claim 3 split — TSB/RTT reporting is (c) prior art
+   (no "first" wording defensible), and treatment/timing deconvolution stays
+   unprintable as "first": N-of-1-time and ClockShares were not found on ~10
+   distinct backends, their existence is [U], and a community primary source
+   must be produced before any "first" wording is printed. The parent
+   devlog's §Method + §Integrity notes 1-2 record the scan-side posture; the
+   erratum's supersession table governs, as amended by the lane-2
+   supersession table.
 
 ## 7. Data and code availability
 

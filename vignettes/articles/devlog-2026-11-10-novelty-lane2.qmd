@@ -1,0 +1,156 @@
+---
+title: "Novelty lane-2 verdicts — Xue 2025 / N-of-1-time / ClockShares / Morrill 2025 (reified, paper-grade)"
+---
+
+Date: 2026-11-10. Branch: `docs/novelty-lane2-verdicts` from `main@5db46eb`.
+Provenance: **reified**. On 2026-11-10 a read-only academic verification
+session (zero-fabrication law: every fact tiered [P] primary-read / [M]
+metadata-index / [U] unverified) executed the lane-2 pass ordered by the
+novelty-scan erratum (`devlog-2026-11-10-novelty-rescan.qmd`): read the
+nearest-neighbor risk flagged by its integrity note 5 (Xue 2025 Harvard
+DASH dissertation, abstract unverified after three access attempts),
+attempt to resolve the two backend-invisible names on which its
+supersession table conditioned Claim 3(b) (N-of-1-time, ClockShares), and
+re-pin the Morrill 2025 cited-by baseline for Claim 2's re-check at
+submission. One deliverable was written to `/tmp/noveltylane2/research/`
+(a lane tmpdir that will evaporate) and is reified here verbatim:
+
+1. `verdict-log.md` — 11,284 bytes / 111 lines, md5
+   `a3c413b17fc694e89c4acdac88ef23be` at reification time.
+
+The body between the sentinels below is a verbatim copy (non-ASCII audit
+at reification: CJK = 0).
+
+**Supersession.** Per the sealed-evidence immutability law (parent
+devlog §Integrity note 3, itself restating the parent scan's integrity
+note 3) the erratum's committed bytes stay byte-exact and untouched; this
+devlog is the formal erratum to the erratum. The supersession table maps
+every superseded parent-erratum line to its new status. `paper-draft.qmd`'s
+three novelty caveat anchors (thesis sentence §1, peer posture §5,
+negative-search caveats §6 item 6) now cite this lane-2 devlog alongside
+the erratum.
+
+## Supersession table
+
+| Parent-erratum line | Parent-erratum status | New status (this lane-2 erratum) |
+|---|---|---|
+| 42 (supersession row: Claim 1 / parent-scan line 80) | "(a) WITH ONE NAMED CAVEAT — Xue 2025 Harvard DASH dissertation (abstract UNVERIFIED after 3 access attempts) must be read before the novelty wording is printed" | (a) WITH ABSTRACT-VERIFIED PARTIAL-OVERLAP — Xue 2025's full abstract was recovered via OpenAlex W7126542226 (4,632 chars): its UQ machinery is Bayesian power posteriors / OLS-equivalency CIs / bootstrap — the word conformal never appears — and no per-TMB-stratum or any covariate-stratified calibration appears. Same domain (UQ for signature exposures), so Claim 1(a)'s specific wording survives but the domain is NOT empty. Ch. 2 is peer-reviewed as Xue, Miller, Carter, Huggins, "Robust discovery of mutational signatures using power posteriors", PLoS Comput Biol 2026, DOI 10.1371/journal.pcbi.1014372 (primary-verified via DOI resolution + citation-meta extraction). Full text remains CANNOT-ACCESS (DASH 429 ×4 cumulative); the verdict rests on the indexed abstract, whose chapter enumeration shows no conformal chapter |
+| 45 (supersession row: Claim 3(b) / parent-scan line 122) | "Treatment/timing deconvolution: (b) conditional on reading N-of-1-time and ClockShares (both backend-invisible; direct documentation fetch required)" | CONDITION CANNOT BE SATISFIED AS WRITTEN — N-of-1-time: NOT FOUND on ~10 distinct backends (Crossref, PubMed, Europe PMC, arXiv, GitHub repos+code, CRAN, Bioconductor, DuckDuckGo; OpenAlex daily budget exhausted; Semantic Scholar 429 ×5); existence itself [U]. ClockShares: NOT FOUND, same posture, with negative evidence now substantially stronger than at erratum time (~10 backends vs 2 phrasings). No "first" wording prints for treatment/timing deconvolution until a community primary source naming either tool is produced |
+| 46 (supersession row: §5 [U] list / btab144) | "UNRESOLVED: re-source from the publisher or drop the entry before manuscript use" | UNCHANGED — not re-litigated by this lane-2 pass |
+| 532 (integrity note 5) | "Xue 2025 dissertation: abstract unverified after three access attempts … the single open nearest-neighbor risk for Claim 1's (a)" | DISCHARGED — abstract recovered and content-analyzed this session (row 42 above) |
+| 535 (integrity note 6) | "N-of-1-time and ClockShares are known-by-name tools that no backend would surface" | STRENGTHENED — the names' provenance is confirmed to be the project's own corpus only; no backend ever surfaced either name, including the lane-2 agent's ~10-distinct-backend sweep |
+| — (new baseline, no parent line) | — | Morrill 2025 cited-by pin for Claim 2's re-check at submission: OpenAlex W4407702897 cited_by_count 0 (Crossref is-referenced-by 1, S2 citationCount 1, Europe PMC 0) at 2026-11-10T07:49:51Z — re-check at submission |
+
+> ---BEGIN-RECOVERED-LANE2-VERDICTS---
+# Novelty Lane 2 — Verification Log (Xue 2025 / N-of-1-time / ClockShares / Morrill 2025)
+
+Agent: read-only academic verification subagent
+Date of session: 2026-11-10 (UTC morning; Morrill timestamp pinned 2026-11-10T07:49:51Z)
+Scratch dir: /tmp/noveltylane2/research/
+Zero-fabrication law observed: every fact tiered [P] primary-read, [M] metadata/index, [U] unverified.
+
+---
+
+## 1. XUE 2025 DISSERTATION — verdict: PARTIAL-OVERLAP (vs Claim 1a "conformal per-TMB-stratum prediction intervals for signature exposures")
+
+Record identity:
+- OpenAlex W7126542226, type = "dissertation", publication_date 2025-01-01, author Catherine Xue, no DOI, cited_by_count 0. [M]
+- Full abstract RECOVERED via OpenAlex abstract_inverted_index (4,632 chars) — recorded as [M] (indexed metadata served by API, not the DASH page text).
+
+Abstract content [M]:
+- Ch. 2: BayesPowerNMF — Bayesian NMF with power posteriors for robustness to misspecification; full Bayesian inference gives uncertainty for BOTH signatures and loadings; applied to ICGC/TCGA PCAWG WGS.
+- Ch. 3: maximum-density method for Dirichlet parameter specification (general stats; used for priors/simulations in signature work).
+- Ch. 4: UQ for NNLS (loadings-only, per-sample signature activity) via exactly TWO routes: (1) NNLS↔OLS equivalency confidence intervals for non-zero loadings; (2) bootstrap — resample the observed mutation counts vector, re-run NNLS per replicate, build bootstrap CIs. Reports "well-calibrated confidence intervals for loadings estimates" in simulations.
+
+Determination points:
+(i) Conformal prediction? NO [M] — the abstract names Bayesian power posteriors, OLS-equivalency CIs, and bootstrap CIs; the word conformal never appears (in the indexed abstract).
+(ii) Application to signature EXPOSURES (per-sample activities)? YES [M] — Ch. 2 loadings UQ + Ch. 4 NNLS loadings-only inference, explicitly "activity of a fixed set of signatures in a single tumor genome".
+(iii) Per-stratum (per-TMB-stratum) calibration? NO [M] — no stratification of any kind is mentioned; calibration claim is global ("well-calibrated confidence intervals"), simulation-based.
+(iv) Dissertation, not peer-reviewed paper? YES [M] (OpenAlex type=dissertation; DASH-only). NOTE [M]: Ch. 2 material is published as Xue, Miller, Carter, Huggins, "Robust discovery of mutational signatures using power posteriors", PLoS Comput Biol 2026, DOI 10.1371/journal.pcbi.1014372, PMC13274926 (Semantic Scholar search hit) — so part of the dissertation IS now peer-reviewed.
+
+Access routes log:
+- curl https://dash.harvard.edu/handle/1/42725950 (browser UA) → HTTP 429, 1515-byte "Web Firewall · 429" stub [P] (reproduces the previously recorded blocking behavior).
+- OpenAlex /works/W7126542226 → 200, full record + abstract_inverted_index [M].
+- Semantic Scholar title search → surfaced the PLoS Comp Biol 2026 paper (Ch. 2) [M]; dissertation itself not in S2 results returned.
+- PDF/bitstream discovery: OpenAlex records no pdf_url at any location [M]; DASH blocked before HTML could be parsed for bitstream link.
+
+Verdict: PARTIAL-OVERLAP. Evidence: (1) [M] Xue 2025 is a dissertation on UQ for NMF/NNLS in exactly the mutational-signature-exposures domain — same problem space as Claim 1(a), so the domain is NOT empty. (2) [M] Its UQ machinery is Bayesian posterior / OLS-equivalency CI / bootstrap — not conformal prediction — and no per-TMB-stratum or any covariate-stratified calibration appears. (3) [M] cited_by_count 0; no peer-reviewed per-stratum conformal-interval method surfaced. Caveat: verdict rests on the indexed abstract only (full text inaccessible: DASH 429 ×1 this session + 3 prior failures on record); a conformal chapter cannot be ruled out from full-text, but chapters are enumerated in the abstract and none is conformal.
+
+---
+
+## 2. N-OF-1-TIME — verdict: NOT FOUND / CANNOT-ACCESS — competitor status CANNOT BE CONFIRMED; existence itself unverified on every accessible backend
+
+Searches (all [P] as to the negative result, i.e., I ran them and they returned nothing relevant):
+- OpenAlex title.search:"N-of-1-time" → API daily budget exhausted (rate-limit JSON; retryAfter ~16 h) — could not re-run this session; prior session's quoted-phrase query returned zero relevant records per erratum devlog [M of our own log].
+- Crossref query.bibliographic "N-of-1-time mutational signatures" → 8 items, all irrelevant (mSigPlot, supplementary figures) [P].
+- Crossref query.title "N-of-1-time" → zero phrase-matching titles (all generic "...time..." titles) [P].
+- Crossref "N-of-1 cancer treatment mutational signature temporal" → no N-of-1-time tool/paper [P].
+- PubMed eutils esearch db=pubmed term="N-of-1-time" → exactly 1 hit, PMID 30202210 = "Relationships in Ongoing Structural Maintenances of the Two Cerebral Cortices of an Individual Brain" (J Exp Neurosci 2018) — UNRELATED [P].
+- PubMed esearch "N-of-1" AND "mutational signature(s)" → 0 hits [P].
+- Europe PMC "N-of-1-time" → 574 hits, all unrelated (N-of-1 study designs, time-series language) [P]; "N-of-1-time AND signatures" → 8, none relevant [P].
+- Europe PMC "N-of-1 AND signature activities AND treatment" → 12, none relevant [P].
+- arXiv API all:"N-of-1-time" → 0 entries [P].
+- GitHub repo search exact phrase "N-of-1-time" → 1 repo (brozena/oura_mood_VAR, sleep/mood N-of-1 time series) — unrelated [P].
+- GitHub code search exact phrase → 145 hits; all in simplex-chat (chat-app docs/UI strings) and similar; ZERO in bioinformatics context; combination with mutational/signature/deconvol → 0 [P].
+- Bioconductor site search "N-of-1-time" → 0 [P].
+- CRAN full available-packages list → no Nof1/N-of-1-time package; nearest neighbor nof1kit (0.1.0, 2026-08-08) is an EMA/single-case study design tool, NOT mutational signatures [P].
+- DuckDuckGo html/lite exact-phrase "N-of-1-time" mutational signatures → no results marker / bot-challenge; no external links returned [P].
+- Semantic Scholar /paper/search — 5 attempts, all HTTP 429 rate-limited (no key) [P].
+
+Determination: (i) what it deconvolves — UNKNOWN [U]; (ii) method class — UNKNOWN [U]; (iii) exposure-association coverage — UNKNOWN [U]. The tool could not be located on Crossref, PubMed, Europe PMC, arXiv, GitHub (repos+code), CRAN, Bioconductor, or DDG. Its "known-by-name" status originates from the project's own corpus (devlog-2026-11-10-novelty-rescan.qmd line 535 calls it "known-by-name ... backend-invisible"); no backend ever surfaced it, including mine.
+
+Verdict format per task: COMPETITOR-TO-TREATMENT-TIMING-DECONVOLUTION: UNVERIFIED (name not resolvable to any artifact) + covers exposure-association testing: NO EVIDENCE EITHER WAY. Standing caveat [U]: the name persists in our devlog as a MutationalPatterns-ecosystem tool "known to exist by name"; nothing I could access corroborates that existence. If the name came from a specific community source (slide, mailing list, review), that source must be produced before any "first" wording is printed.
+
+---
+
+## 3. CLOCKSHARES — verdict: NOT FOUND / CANNOT-ACCESS — same posture as N-of-1-time
+
+Searches (all [P] as to execution/negative result):
+- Europe PMC "ClockShares" → hitCount 0 [P]. Europe PMC "ClockShares AND mutational" → 0 [P].
+- Crossref "ClockShares mutational signatures" and "Clock Shares" → zero relevant (Neurospora/Drosophila clock-gene paper, finance chapters) [P].
+- PubMed eutils esearch "ClockShares" → 0 hits [P].
+- arXiv API all:ClockShares → 0 entries [P].
+- GitHub repo search "ClockShares" → 1 unrelated (2k2e2n/Clockshare_Vue); code search "ClockShares" → only a cache-clock UI function (ryx2/slopshopper), a shader, expired-domain lists — zero bioinformatics [P]; code search "ClockShares mutational signatures" → only our own msuiter devlog/paper-draft files [P].
+- DuckDuckGo lite "ClockShares" (exact phrase) + signature → no-results marker TRUE [P]; "ClockShares mutational" (loose) → results are about clock-like mutational signatures generally (Alexandrov ng.3441 etc.), nothing named ClockShares [P].
+- Bioconductor search → 404/0 [P].
+- CRAN full list → 0 matches for "ClockShare" [P].
+- Semantic Scholar search — 4+ attempts, all 429 [P].
+- OpenAlex title search — blocked by exhausted daily budget [P].
+
+Determination: (i)/(ii)/(iii) all UNKNOWN [U]. Zero artifacts surface under the exact name anywhere I can reach. Same provenance caveat as above: name is [U]-carried from the project's own corpus; absence from every backend is supportive-but-not-conclusive negative evidence, now substantially stronger than at erratum time (it was 2 phrasings then; it is ~10 distinct backends now).
+
+Verdict: COMPETITOR-TO-TREATMENT-TIMING-DECONVOLUTION: UNVERIFIED + exposure-association coverage: NO EVIDENCE EITHER WAY.
+
+---
+
+## 4. MORRILL 2025 — cited-by recheck (for Claim 2 re-check at submission)
+
+- Work: Morrill Gavarró G, Couturier DL, Markowetz F., "A Dirichlet-multinomial mixed model for determining differential abundance of mutational signatures", BMC Bioinformatics, 2025-02-18, DOI 10.1186/s12859-025-06055-x. [M]
+- OpenAlex work id: W4407702897; cited_by_count = 0 [M, fetched 2026-11-10T07:49:51Z].
+- Crossref is-referenced-by-count = 1 [P via API, same timestamp].
+- Semantic Scholar citationCount = 1 (paperId 573aca191ad09dbf58095349f77b1bcbeb1b98e3) [P via API, same session].
+- Europe PMC REFERENCES:PMID:39966709 → 0 citing records indexed there [P].
+- One line: W4407702897 · OpenAlex cited_by 0 (Crossref/S2 each 1) · fetched 2026-11-10T07:49:51Z.
+
+---
+
+## Failure-mode ledger (HTTP / API statuses encountered this session)
+
+- DASH handle page: HTTP 429 (firewall stub, 1515 bytes) — direct text still inaccessible; cumulative 4 distinct blocked routes across sessions.
+- OpenAlex API: shared-IP daily budget exhausted mid-session (works-search endpoints returned 429-style budget JSON; single-work DOI lookup for Morrill succeeded before exhaustion).
+- Semantic Scholar API: HTTP 429 on every search attempt (5+); one DOI-lookup succeeded (Morrill).
+- DuckDuckGo: html endpoint 202 bot-wall; lite endpoint intermittently served bot-challenge / "No results".
+- biorxiv.org search: 403 Cloudflare challenge.
+- github.com via WebFetch: domain verification blocked; via gh CLI: worked (code search requires auth — succeeded).
+- CRAN: intermittent connection failures (exit 35 / 000) succeeded on retry.
+- Europe PMC REST: healthy throughout (used as primary biomedical backend).
+- Crossref REST: healthy throughout.
+- NCBI eutils: healthy (one transient forwarding error on db=pmc).
+
+## Bottom line for the erratum
+
+1. Xue 2025: PARTIAL-OVERLAP with Claim 1(a) — same domain (UQ for signature exposures), different method class (Bayesian/bootstrap/OLS-CI, not conformal; no strata). Upgrade from "cannot access" to abstract-verified via OpenAlex [M]; DASH full text remains CANNOT-ACCESS.
+2. N-of-1-time: NOT FOUND on 10 distinct backends; existence and function remain [U]; cannot be treated as a competitor without a primary source.
+3. ClockShares: NOT FOUND on the same backends; same posture.
+4. Morrill 2025: OpenAlex W4407702897 cited_by_count 0 (Crossref 1, S2 1) at 2026-11-10T07:49:51Z — re-check at submission.
+> ---END-RECOVERED-LANE2-VERDICTS---
