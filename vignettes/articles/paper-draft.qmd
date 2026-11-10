@@ -47,7 +47,7 @@ the headline sentence is gated]
 The calibration of exposure uncertainty is the field's own declared open question:
 the community benchmarks that adjudicate mutational-signature tools report point
 estimates and fitting quality but do not audit whether the reported interval
-estimates cover at their nominal level (novelty-scan §2
+estimates cover at their nominal level (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §2
 E8 [M]-class records: the 12-tool fitting comparison of Medo et al.,
 Nat Commun 2024, and the 13-tool attribution benchmark of Jiang et al.,
 Brief Bioinform bbaf042 — both re-pinned at DOI pass, Appendix A/§9). msuiter
@@ -59,7 +59,7 @@ protocol, published RNG stream layouts, and a measurement-and-attestation regime
 co-tenancy censuses, hardware-pinned rows, firing constructed controls) that lets
 every speed and correctness claim in this paper resolve to committed witness bytes
 (vignettes/articles/performance.qmd:3-9 zero-fabrication design;
-novelty-scan §3 item 2, the banked RB-10/P-1/G5
+vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §3 item 2, the banked RB-10/P-1/G5
 record).
 
 > [GATED: G0-PRIMARY] The abstract's headline sentence — the coverage-validation
@@ -109,10 +109,10 @@ the compiled yardstick re-measures 147/147 cells breaching the <=2x bar
    randomness, and measurements are individually attestable bit-for-bit — and the
    calibration audits that this makes affordable are the ones the field's own
    benchmarks declared missing
-   (novelty-scan §3 one-sentence draft, cited
+   (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §3 one-sentence draft, cited
    as-is per lane law; its (a)-class labels carry the scan's own
    negative-search caveat and targeted re-scan requirement,
-   novelty-scan §Method + §Integrity note 2).
+   vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §Method + §Integrity note 2).
 
 ## 2. Software overview
 
@@ -123,14 +123,14 @@ than re-prosing it]
   `#![forbid(unsafe_code)]`, zero FFI, zero dependencies at the kernel tier;
   the FFI shell is the only `unsafe` surface; directionality
   `ffi -> catalog -> engine` is asserted by a committed link witness
-  (`src/rust/engine/src/lib.rs:25-29` per the novelty-scan E1 row;
+  (`src/rust/engine/src/lib.rs:25-29` per the vignettes/articles/devlog-2026-11-10-novelty-scan.qmd E1 row;
   frozen dependency budget and MSRV pin in `src/rust/Cargo.toml`);
   per-call thread pools, the global rayon pool never used (FFI contract 6).
   Narrative authority: vignettes/articles/architecture.qmd §2, README.md "Design pillars".
 - **Determinism by construction.** Thread-invariance `identical()` laws,
   fixed-order reductions, published RNG stream layout `MSURNGV1` over
   (replicate, rank, fold) with cross-toolchain golden tests
-  (`src/rust/engine/src/rng.rs` docs; novelty-scan §2 E4 [verdict (b)]).
+  (`src/rust/engine/src/rng.rs` docs; vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §2 E4 [verdict (b)]).
 - **Isolated-process kernel boundary.** The `msuiter-kernel` CLI wraps the
   *unmodified* engine kernels behind a frozen, version-stamped protocol-1 CSV
   contract with `%{:.17e}` bit-exact round-trip, one-time handshake, per-case
@@ -188,13 +188,13 @@ protocol/protocol-memo trio 2026-09-28, the pipeline design memo 2026-09-30,
 the M3b design memo 2026-10-04, the benchmark design memo 2026-10-05 whose
 adjudications D1+D2 (TP-only judgment) are the benchmark's law
 (vignettes/articles/roadmap.qmd:229)). The originality scan
-(novelty-scan, cited as-is) delivers the per-element verdicts: no primitive in
+(vignettes/articles/devlog-2026-11-10-novelty-scan.qmd, cited as-is) delivers the per-element verdicts: no primitive in
 this stack is claimed as algorithmically new (KL-MU, NNDSVD, Hungarian
 consensus, CV-K all carry (c)-prior-art findings, §2), while the
 certified-compute combination (E1+E4+E5+E6) and the
 attestation-regime-as-method (E6+E11) carry the (b)/(a) labels the scan's own
 caveats attach to (negative searches pending a targeted re-scan;
-novelty-scan §Method, §Integrity note 2).
+vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §Method, §Integrity note 2).
 
 Measured spine sentences citable today, all anchored:
 - 822 new law expectations shipped with the batch-bridge/trace-face family
@@ -246,7 +246,7 @@ printed ratio.
 
 > [GATED: CAMPAIGN-R] No parity or Rust-headline sentence may enter the
 > manuscript before the post-P10 full-table regeneration plus the real-data arm
-> close the system-level <=2x row (novelty-scan guardrail R1; next-campaign
+> close the system-level <=2x row (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd guardrail R1; next-campaign
 > ignition). Committed bytes today say BREACH verbatim (commit object 2296f49
 > message: "The <=2x peer-parity row stays BREACH at the system level; this
 > lane delivers its measured share toward the needed 6.7x, honestly."). The
@@ -308,10 +308,10 @@ vignettes/articles/research-03-applications.qmd §3 via the runner's header cita
 > cohort collaboration before M3b" as a pivot trigger and the G2 gate was not
 > reached (vignettes/articles/roadmap.qmd:173-180). Pillar 3 as shipped is a
 > methods-demonstration pillar, and the manuscript must describe it so
-> (novelty-scan §4 R6 framing law); it may not be dressed as clinical evidence.
+> (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R6 framing law); it may not be dressed as clinical evidence.
 > Likewise byte-exactness bars in CS-2 are set against the team's own prior
 > package ground truth and must be labeled that way until an independent
-> reference lands (novelty-scan §4 R8).
+> reference lands (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R8).
 
 ### 3.5 Reproduction and the attestation regime
 
@@ -325,7 +325,7 @@ firing constructed controls, MEASURED/UNMEASURED/FIRST-MEASUREMENT-ONLY
 citation classes — is the committed `bench/m7` governance layer
 (`bench/m7/tools/matrix_governance.py`, `attestation.py`, `verify_campaign.py`
 as the shared oracle between harness and reader) and is this manuscript's
-methodological originality record (novelty-scan §2 E11 [verdict (a) per
+methodological originality record (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §2 E11 [verdict (a) per
 standing doctrine], §3 item 2).
 
 ## 4. Methods
@@ -423,11 +423,11 @@ the scan has not itself re-verified on-page.
    (vignettes/articles/performance.qmd:111-130); campaign rows carry host/hw_profile pins so
    their machines are auditable from the tables alone.
 5. **Ground-truth lineage.** CS-2's byte-exactness oracle is the team's own
-   prior package (CRAN sigminer 2.3.3 lineage), labeled as such (novelty-scan
+   prior package (CRAN sigminer 2.3.3 lineage), labeled as such (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd
    §4 R8); an independent reference is named follow-up, not fabricated.
 6. **Negative-search caveats.** The (a)-class originality labels in the novelty
    scan rest on the scan's self-declared flaky-backends environment and await a
-   targeted re-scan (novelty-scan §Method, §Integrity notes 1-2); the executive
+   targeted re-scan (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §Method, §Integrity notes 1-2); the executive
    review accepted the posture with exactly that caveat
    (§2 item 2).
 
@@ -554,7 +554,7 @@ Every number quoted in a filled slot, with its byte-verifiable anchor:
 | Gate | Blocks | Unblock condition |
 |---|---|---|
 | G0-PRIMARY | abstract headline, title choice A-vs-B, Fig. 1 data panel, any "first coverage-measured intervals" phrasing | operator-side G0 primary run (author-side `G0_CATALOG_PATH`; vignettes/articles/roadmap.qmd:186-191) |
-| CAMPAIGN-R | any parity/Rust headline sentence, any <=2x PASS row | post-P10 full-table regeneration + real-data arm (next-campaign ignition; novelty-scan §4 R1) |
+| CAMPAIGN-R | any parity/Rust headline sentence, any <=2x PASS row | post-P10 full-table regeneration + real-data arm (next-campaign ignition; vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R1) |
 | PI-C | naming peer (c) / signeR as a comparison target | PI ruling on the signeR hypothesis (executive-review pending item) |
 | G-GATE-COHORT | real-cohort treatment concordance, re-adjudicated published conclusion, clinical framing of pillar 3 | cohort collaboration (vignettes/articles/architecture.qmd §10 pivot trigger; G2 unreached per vignettes/articles/roadmap.qmd:173-180) |
 
