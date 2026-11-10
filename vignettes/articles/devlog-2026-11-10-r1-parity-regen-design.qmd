@@ -1,0 +1,192 @@
+---
+title: "R1 — post-P10 full-table parity regeneration design memo (pre-ignition, paper-grade)"
+---
+
+Date: 2026-11-10. Branch: `docs/r1-parity-regen-design` from `main@3bee6f7`.
+Provenance: **design memo**. Every number below was re-verified by direct
+command output in the planning session of 2026-11-10 (live epoch probe,
+`tools/parity_recompute.py` reading, `bench/results/p6_regen_20261023-044026/timings_sharded_master.csv`
+awk census, `bench/results/m7_floor_calibration_p7cap_20261104T093543Z/CALIBRATION.json`
+field reads, `bench/m7/tools/p6_ignition.sh` line reads, docker image
+inventory, and a fresh 10-site grep for the stale epoch). This memo is the
+pre-ignition design record ordered by the novelty scan's gap lever R1
+(`devlog-2026-11-10-novelty-scan.qmd` §4); it gates nothing and
+measures nothing itself — it fixes the shape of the next campaign so the
+ignition tick can execute without re-deriving any of it.
+
+## 1. The epoch that governs the next census
+
+The live governance epoch is **`888ce0d4eb7c9635`**, confirmed by
+`cd bench/m7 && python3 -c "from tools.matrix_governance import floor_table_epoch; print(floor_table_epoch())"`
+on 2026-11-10. The manuscript's currently cited
+`f3e894a6933a2ffb` (paper-draft.qmd Table 2 and Appendix A) is stale: the
+pin was re-sealed to its measured ground by commit 17015ea (2026-11-04,
+"fix(m7): reseal POST_CAP_EPOCH_PIN to its measured ground", touching only
+`bench/m7/tests/test_p6_floor_governance.py`, +1/-1), so the assertion at
+`bench/m7/tests/test_p6_floor_governance.py:156` now pins the live epoch.
+
+Every printed parity line and witness row from the next campaign must carry
+`888ce0d4eb7c9635`; any `f3e894a6933a2ffb` output is dead on arrival.
+
+### 1.1 Stale-epoch quote sites (10, grep-verified 2026-11-10)
+
+After the regeneration lands, the manuscript-side sites below need an
+erratum-style update (new devlog + cross-ref supersession; sealed devlog
+bodies stay byte-exact). This table is the work list:
+
+| # | Site | Kind |
+|---|---|---|
+| 1 | `vignettes/articles/paper-draft.qmd:232` | prose |
+| 2 | `vignettes/articles/paper-draft.qmd:238` | prose |
+| 3 | `vignettes/articles/paper-draft.qmd:248` (Table 2 census line) | prose |
+| 4 | `vignettes/articles/paper-draft.qmd:581` (Appendix A epoch row) | prose |
+| 5 | `vignettes/articles/reproduction-proof.qmd:19` | prose |
+| 6 | `vignettes/articles/reproduction-proof.qmd:44` | prose |
+| 7 | `vignettes/articles/devlog-2026-11-09-p9-engine-iterations-forensics.qmd:61` | prose (sealed body — supersede, never rewrite) |
+| 8 | `vignettes/articles/devlog-2026-11-09-p9-engine-iterations-forensics.qmd:80` | prose (sealed body — supersede, never rewrite) |
+| 9 | `vignettes/articles/devlog-2026-11-10-novelty-scan.qmd:51` (E11 row) | prose (sealed body — supersede, never rewrite) |
+| 10 | `bench/m7/tests/test_coex_producer_law.py:382` | law assertion |
+
+Site 10 is **not prose**: `assert att.reportability(committed,
+"f3e894a6933a2ffb") is None` pins the law that a report committed under a
+*superseded* epoch stays reportable (the epoch transition must not
+retroactively criminalize old evidence). That assertion is correct as
+written and must not be edited as part of the epoch update; it belongs in
+this table only so the erratum's site census is complete and the next
+reader does not mistake it for a stale citation.
+
+## 2. The 147 → 168 accounting
+
+The current committed census is **faces=7 classes=21 lines=147** because the
+face-derivation law in `bench/m7/tools/parity_recompute.py` computes R faces
+as `runtime == "R"` tools excluding the sigprofiler yardstick (lines 77-78)
+and pairs them with 21 yardstick classes (lines 105-107). The post-P10
+world has one more R face: the batch bridge `sigminer_post_v3_rust_batch`,
+which enters the census through its committed 21 REP-100 anchors rather
+than an ignition shard. The next full-table census is therefore
+**8 R faces × 21 classes = 168 parity lines**, and the floor table carries
+**189 anchors** (9 tools × 21 classes). The all-or-nothing admissibility
+law stands: a missing anchor class prints `NO-ANCHOR … not admissible` and
+fails the census — the batch face's 21 anchors must resolve before the run
+counts as an attempt.
+
+Paper-draft Table 2 and Appendix A (147/147 breach) are superseded by this
+accounting at the same erratum pass as the epoch sites above.
+
+## 3. Cost basis and witness generations
+
+Canonical cost basis (the authoritative 2026-10-23 campaign
+`p6_regen_20261023-044026`): **167 ok rows, 99,388.8 s** of pure
+measurement. The 192-row master CSV anatomy: 167 ok + 24 cached rows
+(8 tools × 3 shard cache rows) + 1 defect-floor row (sigminer arm=comp_mmr
+n=100, status verbatim "defect-floor: wall/cpu 5364.4s > 3.0x measured
+uncontended floor 994.3s"). The 2026-11-04 p7cap batch calibration
+(`m7_floor_calibration_p7cap_20261104T093543Z/CALIBRATION.json`) adds
+**21 probes / 9,146.6 s** at `attestation_mode: none-with-reason`. Total
+budget for the regeneration ≈ 108,535.4 s ≈ **30.1 h of pure measurement**;
+historical wall for this class of campaign has been 1–2 days.
+
+Witness-generation layering (verified by reading live `python3 -m
+tools.parity_recompute` output on 2026-11-10): today's live census derives
+from the **legacy 2026-10-27 calibration** witnesses
+(`bench/results/m7_floor_calibration_p7cap_legacy_20261027-083955/witnesses/`)
+carrying `attestation=pre-law` at the current epoch, with observed
+sigminer-face ratios 20.7521–48.8384. Three witness generations now exist:
+
+1. **2026-10-23 authoritative campaign** `p6_regen_20261023-044026` — the
+   cost basis and the pre-P10 census provenance.
+2. **Legacy 2026-10-27 calibration** — what the live `parity_recompute`
+   re-run reads today; pre-law attestation; paper-draft.qmd Appendix A's
+   "live re-run bank" evidence row currently cites this face.
+3. **2026-11-04 p7cap batch calibration** — 21 probes, the batch-bridge
+   face's REP-100 anchor set.
+
+The next ignition must produce **generation-4 witnesses** that supersede
+all three for census purposes: post-P10 code, post-re-seal epoch, fresh
+per-row witness paths. The memo's ruling: the erratum must state plainly
+that generation-2 (legacy, pre-law) witnesses are not admissible as the
+paper's census evidence once generation-4 exists, and the ignition must not
+reuse `M7_SKIP_SHARDS` across witness generations — a skip-list is only
+valid within one campaign.
+
+## 4. Ignition gates (quoted from `bench/m7/tools/p6_ignition.sh`)
+
+The launcher refuses to start the authoritative pass unless all of the
+following hold (line numbers from the script bytes):
+
+- **Eight-tool competitor set is mandatory** (:13, :32-37): "this campaign
+  measures the eight-tool set (both reference arms + the six P6 arms), and
+  silence on --competitors is a misconfiguration, not a default" — unset
+  `M7_COMPETITORS` exits 2 ("the P6 campaign is the eight-tool set; an
+  accidental legacy-pair-only campaign must not masquerade as the
+  authoritative pass").
+- **Hardware pin is mandatory** (:38-42): unset `M7_HW_PROFILE` exits 2
+  ("the authoritative final pass would refuse to file (U-M7-04 GO-05) --
+  export the machine-class pin before ignition").
+- **Single-ignition marker is PID-bound** (:43-55, marker
+  `/tmp/p6lane/.campaign-running`, holder pid written at :78): a live
+  holder refuses a second ignition; a dead holder is adopted with the
+  death protocol.
+- **Resume law (SS5)** (:23-28, :64-70): a resumed campaign re-invokes with
+  `M7_REUSE_CACHE=<campaign cachedir>` (must carry a `.p6_outdir` pointer
+  or exits 2) and `M7_SKIP_SHARDS="tag tag ..."` for fully-witnessed
+  shards; no new cachedir, no new outdir stamp. Fresh ignition (:81-83)
+  clears the output tree instead.
+- **Defaults** (:57-60): PROFILE=degraded, ADAPTER=docker, PROVIDER=synthetic,
+  FLOOR_GATE=on; fan-out law :16-19 (no `&`; shards run foreground and
+  sequential).
+
+Pre-flight blockers to clear before the ignition tick:
+
+1. **Competitors + hw-profile env**: both must be exported at launch; the
+   launch shape is
+   `M7_COMPETITORS=<8-tool list> M7_HW_PROFILE='<machine pin>' nohup sh tools/p6_ignition.sh > /tmp/p6lane/logs/<stamp>.ignition.log 2>&1`.
+2. **Docker image inventory (fresh check 2026-11-10)**: of the 10
+   registered measurement images, only `m7-signer:bioc2.12.0` is present
+   locally (RepoDigest `sha256:68f8e25bfca2ed9291c29597abff2e4932770f8a2f3d1e69aad84fe2abe6c575`).
+   All 9 others are absent, **including the yardstick
+   `m7-sigprofiler:spa-1.1.5`** and the batch-face image. Remedy: pull via
+   the user's mirror registry only (`docker_cmd.py` MIRROR_PREFIXES maps
+   docker.io to the user's `*.xuanyuan.run` mirror; `pull_via` raises on
+   unmapped hosts — direct upstream pulls are prohibited), or rebuild
+   locally where a build recipe exists.
+3. **Generation-4 witnesses**: the ignition must write fresh witness tables
+   (not reuse generation-2/3 witnesses) — see §3 ruling.
+
+## 5. Gate carry and forensics disposition
+
+**GATED: CAMPAIGN-R** (paper-draft.qmd:255-263) remains in force until this
+regeneration **plus the real-data arm** close the system-level ≤2x row.
+This memo does not weaken that gate: nothing here is a parity sentence, and
+the gate's own text names this lane ("next-campaign ignition"). The 147/147
+BREACH statement stays the only committed census until generation-4
+evidence replaces it.
+
+**PF forensics re-landing.** The novelty scan's R1 lever carries the
+condition that PF forensics (bridge share 33.4%; 2× measured-foreclosed for
+bit-identical code) currently lives only in a /tmp lane and must either be
+re-landed under `bench/` or cited as an internal ruling
+(`devlog-2026-11-10-novelty-scan.qmd` §4 R1). Ruling: **re-land under
+`bench/`** as part of the same phase as the regeneration, because the
+paper's forensics-direction sentence (paper-draft.qmd:261-263) cites
+pipeline-floor localization and needs committed, path-bound evidence
+behind it. The re-landing is part of the post-ignition erratum phase, not
+a precondition for ignition itself.
+
+## 6. Execution order (the design contract)
+
+1. Pre-flight: pull/rebuild the 9 absent images via the mirror law; verify
+   `docker inspect` sees all 10; confirm the single-ignition marker is
+   clear; export `M7_COMPETITORS` (8 tools) and `M7_HW_PROFILE`.
+2. Ignite generation-4 campaign per §4 (fresh ignition, not resume — the
+   10-23 cache is pre-P10 and stale for this purpose; no
+   `M7_SKIP_SHARDS` across generations).
+3. ~30.1 h measurement (1-2 d wall) with check-run-level CI unaffected
+   (this campaign is local; only the resulting devlogs/PRs touch CI).
+4. Regenerate the census: expect 168 parity lines at epoch
+   `888ce0d4eb7c9635`; re-derive faces exactly as
+   `parity_recompute.py` does (no hand-edited face lists).
+5. Erratum devlog: update the Table 2/Appendix A rows, the 9 prose stale-
+   epoch sites (§1.1), and re-land PF forensics under `bench/` (§5).
+6. Four-touchpoint devlog law for the erratum + one phase-PR per the
+   standing route.
