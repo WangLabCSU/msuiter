@@ -260,7 +260,10 @@ printed ratio.
 > lane delivers its measured share toward the needed 6.7x, honestly."). The
 > defensible present sentences are exactly the Table 1/Table 2 facts plus the
 > forensics direction (pipeline-floor localization, vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §9 and the
-> P7-F five-gate rulings cited there).
+> P7-F five-gate rulings cited there). The pre-ignition design record for
+> that regeneration — the live epoch, the 147→168 face accounting, the cost
+> basis, the ignition gates, and the stale-epoch quote-site table — is
+> reified as vignettes/articles/devlog-2026-11-10-r1-parity-regen-design.qmd.
 
 Historical framing that may be quoted with its own honesty markers (already
 committed): the pre-recalibration >=50x/>=100x/>=10x rhetoric was moved to the
