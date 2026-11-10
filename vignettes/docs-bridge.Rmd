@@ -146,3 +146,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [Phase-9 O2 forensics — engine-iterations = 94.1% of serialized-extraction stage mass (reified, paper-grade)](devlog-2026-11-09-p9-engine-iterations-forensics.html) | `devlog-2026-11-09-p9-engine-iterations-forensics` |
 | [P11 — engine-internal KL kernel optimization design memo](devlog-2026-11-09-p11-engine-kl-design.html) | `devlog-2026-11-09-p11-engine-kl-design` |
 | [Novelty scan — pillar-1 algorithmic & architectural originality (reified, paper-grade)](devlog-2026-11-10-novelty-scan.html) | `devlog-2026-11-10-novelty-scan` |
+| [Claims re-scan + DOI re-pin — erratum to the 2026-10-30 novelty scan (reified, paper-grade)](devlog-2026-11-10-novelty-rescan.html) | `devlog-2026-11-10-novelty-rescan` |
