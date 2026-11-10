@@ -147,3 +147,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [P11 — engine-internal KL kernel optimization design memo](devlog-2026-11-09-p11-engine-kl-design.html) | `devlog-2026-11-09-p11-engine-kl-design` |
 | [Novelty scan — pillar-1 algorithmic & architectural originality (reified, paper-grade)](devlog-2026-11-10-novelty-scan.html) | `devlog-2026-11-10-novelty-scan` |
 | [Claims re-scan + DOI re-pin — erratum to the 2026-10-30 novelty scan (reified, paper-grade)](devlog-2026-11-10-novelty-rescan.html) | `devlog-2026-11-10-novelty-rescan` |
+| [Novelty lane-2 verdicts — Xue 2025 / N-of-1-time / ClockShares / Morrill 2025 (reified, paper-grade)](devlog-2026-11-10-novelty-lane2.html) | `devlog-2026-11-10-novelty-lane2` |
