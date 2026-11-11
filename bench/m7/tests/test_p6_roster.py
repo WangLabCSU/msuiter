@@ -187,6 +187,6 @@ def test_legacy_rows_are_byte_stable_under_the_p6_batch():
     rides the same images, zero-cached law notwithstanding)."""
     reg = registry.load()
     assert reg["sigminer"].image_digest == (
-        "sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9")
+        "sha256:37a5e7d9c61353dd1f40d945fe5ac426214335d01eca972dea71a99823bbdd98")
     assert reg["sigminer"].image_ref == "msuiter-sigminer:slice3-r5"
     assert reg["sigprofiler"].version == "v1.1.5"

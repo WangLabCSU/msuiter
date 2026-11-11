@@ -1,0 +1,212 @@
+{
+ "sigprofiler|clock|N1000": {
+  "cpu_seconds": 40.214871,
+  "reps": 100,
+  "wall_seconds": 18.241,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__clock__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_clock_only|N100": {
+  "cpu_seconds": 36.331770000000006,
+  "reps": 100,
+  "wall_seconds": 17.365,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_clock_only__N100__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_clock_only|N1000": {
+  "cpu_seconds": 36.488886,
+  "reps": 100,
+  "wall_seconds": 16.806,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_clock_only__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_clock_only|N10000": {
+  "cpu_seconds": 36.583656,
+  "reps": 100,
+  "wall_seconds": 16.909,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_clock_only__N10000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_flat_triple|N100": {
+  "cpu_seconds": 39.213222,
+  "reps": 100,
+  "wall_seconds": 18.055,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_flat_triple__N100__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_flat_triple|N1000": {
+  "cpu_seconds": 37.393068,
+  "reps": 100,
+  "wall_seconds": 16.869,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_flat_triple__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_flat_triple|N10000": {
+  "cpu_seconds": 36.192288000000005,
+  "reps": 100,
+  "wall_seconds": 16.757,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_flat_triple__N10000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_mmr|N100": {
+  "cpu_seconds": 36.959694,
+  "reps": 100,
+  "wall_seconds": 17.583,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_mmr__N100__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_mmr|N1000": {
+  "cpu_seconds": 36.673907,
+  "reps": 100,
+  "wall_seconds": 16.98,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_mmr__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_mmr|N10000": {
+  "cpu_seconds": 37.617662,
+  "reps": 100,
+  "wall_seconds": 17.216,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_mmr__N10000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_pole|N100000": {
+  "cpu_seconds": 34.743448,
+  "reps": 100,
+  "wall_seconds": 16.603,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_pole__N100000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_pole|N1000000": {
+  "cpu_seconds": 34.848414000000005,
+  "reps": 100,
+  "wall_seconds": 16.847,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_pole__N1000000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_pole|N300000": {
+  "cpu_seconds": 34.628114000000004,
+  "reps": 100,
+  "wall_seconds": 16.557,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_pole__N300000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_strong_flat|N100": {
+  "cpu_seconds": 35.386553,
+  "reps": 100,
+  "wall_seconds": 16.649,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_strong_flat__N100__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_strong_flat|N1000": {
+  "cpu_seconds": 35.787957000000006,
+  "reps": 100,
+  "wall_seconds": 16.88,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_strong_flat__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|comp_strong_flat|N10000": {
+  "cpu_seconds": 35.831808,
+  "reps": 100,
+  "wall_seconds": 16.889,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__comp_strong_flat__N10000__rep100.json"
+  ]
+ },
+ "sigprofiler|main|N100": {
+  "cpu_seconds": 37.644625,
+  "reps": 100,
+  "wall_seconds": 17.83,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__main__N100__rep100.json"
+  ]
+ },
+ "sigprofiler|main|N1000": {
+  "cpu_seconds": 39.563492999999994,
+  "reps": 100,
+  "wall_seconds": 17.572,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__main__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|main|N10000": {
+  "cpu_seconds": 42.284264,
+  "reps": 100,
+  "wall_seconds": 18.376,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__main__N10000__rep100.json"
+  ]
+ },
+ "sigprofiler|nb|N1000": {
+  "cpu_seconds": 40.846674,
+  "reps": 100,
+  "wall_seconds": 18.6,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__nb__N1000__rep100.json"
+  ]
+ },
+ "sigprofiler|sparse|N1000": {
+  "cpu_seconds": 38.672508,
+  "reps": 100,
+  "wall_seconds": 17.922,
+  "witness": [
+   "m7_floor_calibration_p7cap_legacy_20261111-144552",
+   "witnesses",
+   "sigprofiler__sparse__N1000__rep100.json"
+  ]
+ }
+}
