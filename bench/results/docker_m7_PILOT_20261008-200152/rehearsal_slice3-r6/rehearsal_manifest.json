@@ -72,10 +72,10 @@
       "sha256": "31fe45e69333653bf7b6dac53f9294090a7954ca2b424dbaad603a231858a133"
     },
     {
-      "bytes": 2567,
+      "bytes": 2564,
       "file": "image_inspect_sigprofiler_spa-1.1.5_live.json",
       "role": "verbatim docker image inspect of the READY sigprofiler image at witness time -- the committed backing for the sigprofiler registry/pin row literals (hash-provenance lint, RB-06(4c))",
-      "sha256": "fb0b45305a5013a7bf3cd1113907ebea6d3f4c41680b92cda55897d2277d4596"
+      "sha256": "c797dcab6d096383d7a0de0e16654b43af5a4484829135900cbce3111cac9b7b"
     },
     {
       "bytes": 3985,
@@ -87,7 +87,7 @@
       "bytes": 4531,
       "file": "image_inspect_slice3-r5_live.json",
       "role": "verbatim docker image inspect of msuiter-sigminer:slice3-r5 at witness time -- THE source of record for the registry flip (Id 05cb29e0..02c703e9, Size 1936876727); the GREEN cell-argv probe beside the pilot root binds the same ref+digest pair",
-      "sha256": "fde73968897b21fd4e59753e06becc69ad6665c7504d12da59e12f240111c66d"
+      "sha256": "642ca28ef9f3edc2eac5926d578dd8cf933098c551edf1ff45df54828f4e24e7"
     },
     {
       "bytes": 1015,

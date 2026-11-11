@@ -72,14 +72,16 @@ REGISTRY: dict[str, CompetitorSpec] = {
         # valid, container-side guard satisfied" (zero auto-install lines,
         # NMF suggested 95.5, 3.932 min). Recipe bytes at commit d24ebd4
         # (Dockerfile.sigminer; r5 closure fold — sixth recorded defect,
-        # CRAN-fallback float caught by the literal-version gate). Live
-        # docker image inspect verbatim:
-        # Id/RepoDigest sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9,
-        # Size 1936876727, Created 2026-10-09T00:16:11.442885095Z.
-        # Witness JSONs: r5 image inspect + GREEN cell-argv probe committed
-        # beside the pilot records (see this commit's --stat).
+        # CRAN-fallback float caught by the literal-version gate). Re-baked
+        # in the SS3 arm-lineage rebuild (2026-11-11, same recipe bytes,
+        # fresh Id) — live docker image inspect verbatim:
+        # Id/RepoDigest sha256:37a5e7d9c61353dd1f40d945fe5ac426214335d01eca972dea71a99823bbdd98,
+        # Size 1937719775, Created 2026-11-10T18:11:49.134829878Z.
+        # Witness JSONs: the SS3 build-log attestation lines ride the flip
+        # commit; the original r5 image inspect + GREEN cell-argv probe
+        # remain beside the pilot records (see the flip commits' --stat).
         image_ref="msuiter-sigminer:slice3-r5",
-        image_digest="sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f5d1c135787027e6002c703e9",  # docker image inspect .Id, 2026-10-09 verified build
+        image_digest="sha256:37a5e7d9c61353dd1f40d945fe5ac426214335d01eca972dea71a99823bbdd98",  # docker image inspect .Id, 2026-11-10 verified build
         status=STATUS_READY,
         entrypoint="python3",           # m7_entry.py measures the Rscript child
         runner_script="run_sigminer.R",
@@ -96,7 +98,7 @@ REGISTRY: dict[str, CompetitorSpec] = {
         runtime="python",
         version="v1.1.5",
         image_ref="m7-sigprofiler:spa-1.1.5",
-        image_digest="sha256:7dba2f43ad3a3858ed1cfdedd278c9c2f52a665fd4c18ac91a482b74258bfbed",  # docker image inspect .Id, 2026-10-08 verified build
+        image_digest="sha256:f1b3140eebaa90116e6050ebfc674c74eda4f8a8546d4cca67038e072899167c",  # docker image inspect .Id, 2026-11-10 verified build (SS3 re-bake)
         status=STATUS_READY,
         entrypoint="python3",
         runner_script="run_sigprofiler.py",

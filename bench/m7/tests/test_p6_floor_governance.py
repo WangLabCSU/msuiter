@@ -166,7 +166,7 @@ def test_census_counts_p6_containers_as_ours():
 # attestation land, and they keep biting afterwards (counterfactual-tested).
 
 PRECAP_SEALED_EPOCH = "6b3a66bc9d0224eb"      # measured before the flip
-POST_CAP_EPOCH_PIN = "888ce0d4eb7c9635"   # measured; set at the ADJ-O3 GREEN commit
+POST_CAP_EPOCH_PIN = "cfdcc51dbb9b7041"   # measured; set at the 2026-11-11 sigprofiler legacy re-mint (144552)
 
 
 def _authority_dirs(*, legacy: bool) -> list[Path]:

@@ -43,8 +43,8 @@ VALID_STATUSES = {"ready", "pending-verify"}
 # docker image inspect + the GREEN cell-argv probe; both witness JSONs
 # committed beside the pilot records (see the flip commit's --stat).
 SIGMINER_IMAGE_REF = "msuiter-sigminer:slice3-r5"
-SIGMINER_IMAGE_DIGEST = ("sha256:05cb29e0cfe881c3a0c7d1ec7c9058cfbbb9539f"
-                         "5d1c135787027e6002c703e9")
+SIGMINER_IMAGE_DIGEST = ("sha256:37a5e7d9c61353dd1f40d945fe5ac426214335d01eca97"
+                         "2dea71a99823bbdd98")
 
 
 def test_registry_loads_exactly_the_three_competitors():

@@ -1,0 +1,192 @@
+{
+ "argv": [
+  "--profile",
+  "degraded",
+  "--adapter",
+  "docker",
+  "--competitors",
+  "sigprofiler",
+  "--arms",
+  "nb",
+  "--n-list",
+  "1000",
+  "--reps",
+  "100",
+  "--provider",
+  "synthetic",
+  "--provider-seed",
+  "0",
+  "--floor-gate",
+  "off",
+  "--shard-tag",
+  "cell-argv",
+  "--cachedir",
+  "/var/folders/1w/371ktd8j0fv8mp_dsgtvssnw0000gn/T/m7cellprobe_r_fycvc4/probe_cache",
+  "--outdir",
+  "/var/folders/1w/371ktd8j0fv8mp_dsgtvssnw0000gn/T/m7cellprobe_r_fycvc4/probe_cache/out"
+ ],
+ "arm": "nb",
+ "attestation": {
+  "coex_probe": {
+   "bar_pct": 5.0,
+   "bind": {
+    "campaign": "m7_floor_calibration_p7cap_legacy_20261111-144552",
+    "cell": {
+     "arm": "clock",
+     "cell_argv": [
+      "--params",
+      "/work/in/params.json",
+      "--outdir",
+      "/work/out",
+      "--",
+      "python3",
+      "/work/run_sigprofiler.py",
+      "--counts",
+      "/work/in/counts.csv",
+      "--catalog",
+      "/work/in/catalog.csv",
+      "--params",
+      "/work/in/params.json",
+      "--outdir",
+      "/work/out"
+     ],
+     "n": 1000,
+     "reps": 100,
+     "tool": "sigprofiler"
+    },
+    "host": {
+     "boot_id": "faa54525-b265-49a9-b9a9-04e3a233a6a1",
+     "cgroup": "0::/",
+     "kernel_release": "7.0.14-linuxkit"
+    },
+    "image": {
+     "digest": "sha256:f1b3140eebaa90116e6050ebfc674c74eda4f8a8546d4cca67038e072899167c",
+     "ref": "m7-sigprofiler:spa-1.1.5"
+    },
+    "inspect": [
+     {
+      "container_id": "8d68410d993ee1b1a860c63132786268f4b810975f44cf00638b566e42869026",
+      "finished": "2026-11-11T06:47:03Z",
+      "started": "2026-11-11T06:46:33Z"
+     },
+     {
+      "container_id": "92c552edff3b1325acb1b52fc8f8b4fa25d39274ff60984733151aa208c11025",
+      "finished": "2026-11-11T06:47:05Z",
+      "started": "2026-11-11T06:46:33Z"
+     },
+     {
+      "container_id": "1c634d70ca100cf27708ab36576c25c8a73ed8ccaea602ee6a49c4433e2996e8",
+      "finished": "2026-11-11T06:47:05Z",
+      "started": "2026-11-11T06:46:33Z"
+     }
+    ],
+    "ledger_entry": {
+     "produced_utc": "2026-11-11T06:47:05Z",
+     "rig": "coex-inversion-rig/1"
+    },
+    "rig": "coex-inversion-rig/1"
+   },
+   "deltas_pct": [
+    80.1,
+    89.9,
+    91.5
+   ],
+   "legs": [
+    {
+     "clock": {
+      "start_mono_ns": 3355072697674708,
+      "start_real_ns": 1794379593536063128,
+      "stop_mono_ns": 3355104997631791,
+      "stop_real_ns": 1794379623565736545
+     },
+     "container_id": "8d68410d993ee1b1a860c63132786268f4b810975f44cf00638b566e42869026",
+     "cpu_s": 51.64137,
+     "probe": "coex-cohort-100-1794379593-r0",
+     "wall_s": 30.029673417
+    },
+    {
+     "clock": {
+      "start_mono_ns": 3355072805065250,
+      "start_real_ns": 1794379593654253045,
+      "stop_mono_ns": 3355105051907208,
+      "stop_real_ns": 1794379625320557171
+     },
+     "container_id": "92c552edff3b1325acb1b52fc8f8b4fa25d39274ff60984733151aa208c11025",
+     "cpu_s": 53.748945,
+     "probe": "coex-cohort-100-1794379593-r1",
+     "wall_s": 31.666304126
+    },
+    {
+     "clock": {
+      "start_mono_ns": 3355072918670916,
+      "start_real_ns": 1794379593764246754,
+      "stop_mono_ns": 3355105081917958,
+      "stop_real_ns": 1794379625690680671
+     },
+     "container_id": "1c634d70ca100cf27708ab36576c25c8a73ed8ccaea602ee6a49c4433e2996e8",
+     "cpu_s": 54.068526999999996,
+     "probe": "coex-cohort-100-1794379593-r2",
+     "wall_s": 31.926433917
+    }
+   ],
+   "measured_utc": "2026-11-11T06:47:05Z",
+   "provider": "synthetic",
+   "provider_seed": "0",
+   "record_sha256": "d7f006906fe5e57158fadb14f41b05fd03851472d6d26598a0105424e7d52b3b",
+   "schema": 1,
+   "shape": "coex-inversion/N=3",
+   "solo_legs": [
+    {
+     "clock": {
+      "start_mono_ns": 3355055803332333,
+      "start_real_ns": 1794379576638729676,
+      "stop_mono_ns": 3355072626308083,
+      "stop_real_ns": 1794379593310346462
+     },
+     "container_id": "ef8f4a25764ed94f239a914c2e9a6b13296d990c00f2914dd1fcac2f9ea0b73b",
+     "cpu_s": 38.686491000000004,
+     "probe": "coex-solo-100-1794379576-r0",
+     "wall_s": 16.671616786
+    }
+   ],
+   "solo_mean_s": 16.671617,
+   "verdict": "NOT-FLAT"
+  },
+  "epoch": "cfdcc51dbb9b7041",
+  "law": "attestation-lv1",
+  "preflight": {
+   "cell": "sigprofiler__nb__N1000",
+   "decision": "GO",
+   "live_measurement_containers": 0,
+   "ts": "2026-11-11T06:51:40+00:00"
+  }
+ },
+ "cell": "sigprofiler__nb__N1000",
+ "n": 1000,
+ "provenance": {
+  "image_digest": "sha256:f1b3140eebaa90116e6050ebfc674c74eda4f8a8546d4cca67038e072899167c",
+  "image_ref": "m7-sigprofiler:spa-1.1.5",
+  "name": "sigprofiler",
+  "status": "ready",
+  "version": "v1.1.5"
+ },
+ "reps": 100,
+ "run_rc": 0,
+ "sidecar": {
+  "accounting_version": 2,
+  "cgroup_cpu_usec": 41107804,
+  "cgroup_drain_polls": 2,
+  "cgroup_memory_peak_bytes": 2614603776,
+  "cgroup_reaped_pids": [],
+  "cgroup_source": "v2",
+  "cpu_seconds": 40.846674,
+  "exit_status": 0,
+  "rss_peak_bytes": 1071484928,
+  "ru_stime": 2.401237,
+  "ru_utime": 38.445437
+ },
+ "status_tail": "ok",
+ "tool": "sigprofiler",
+ "verdict": "OK",
+ "wall_seconds": 18.6
+}

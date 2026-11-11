@@ -173,7 +173,12 @@ def _launch_cmd(image_ref: str, runner: str, in_dir: Path, out_dir: Path,
     cmd = [c for c in docker_cmd.build_container_cmd(
         image_ref, runner, in_dir, out_dir, runner_args=argv)
         if c != "--rm"]
-    cmd[1:1] = ["-d", "--name", name]
+    # 2026-11-11: the detach flags rode slot 1 ("docker -d --name X run ...")
+    # since Phase-D 8bd45f8 — invalid on docker 29 (rc 125, "unknown shorthand
+    # flag: 'd'"); this face was never exercised until the 2026-11-11 re-mint
+    # campaign. Detach flags must follow "run".
+    i = cmd.index("run")
+    cmd[i + 1:i + 1] = ["-d", "--name", name]
     return cmd
 
 
@@ -197,19 +202,46 @@ def _leg_from_daemon(name: str, out_dir: Path, t0_mono: int,
     except (OSError, ValueError):
         raise RigError(f"leg {name!r} left no timing sidecar — a leg "
                        "without its measured face is absence, not zero")
-    wall = float(face.get("wall_seconds") or 0.0)
+    # 2026-11-11: m7_entry.py's timing sidecar (accounting_version 2) carries
+    # no wall_seconds key — only cpu_seconds is measured container-side. The
+    # wall duration comes from the daemon clock face above (StartedAt →
+    # FinishedAt); the sidecar keeps owning the CPU column.
+    start_real_ns = _daemon_ts_ns(started)
+    stop_real_ns = _daemon_ts_ns(finished)
+    wall = (stop_real_ns - start_real_ns) / 1e9
     cpu = float(face.get("cpu_seconds") or 0.0)
     if not wall > 0 or not cpu > 0:
-        raise RigError(f"leg {name!r} sidecar face is not positive: {face!r}")
+        raise RigError(f"leg {name!r} measured face is not positive: {face!r}")
     cid = subprocess.run(["docker", "inspect", "--format", "{{.Id}}", name],
                          capture_output=True, text=True,
                          timeout=60).stdout.strip()
-    real0 = int(datetime.fromisoformat(started).timestamp() * 1e9)
-    real1 = int(datetime.fromisoformat(finished).timestamp() * 1e9)
     return {"probe": name, "wall_s": wall, "cpu_s": cpu,
             "container_id": cid,
             "clock": {"start_mono_ns": t0_mono, "stop_mono_ns": t1_mono,
-                      "start_real_ns": real0, "stop_real_ns": real1}}
+                      "start_real_ns": start_real_ns,
+                      "stop_real_ns": stop_real_ns}}
+
+
+def _daemon_ts_ns(stamp: str) -> int:
+    """Docker's RFC3339Nano instant → epoch ns (the fraction may carry 9
+    digits; fromisoformat takes 6, so the fraction is stripped and added)."""
+    s = stamp.strip()
+    had_z = s.endswith("Z")
+    if had_z:
+        s = s[:-1]
+    base, dot, rest = s.partition(".")
+    frac = ""
+    if dot:
+        cut = 0
+        while cut < len(rest) and rest[cut].isdigit():
+            cut += 1
+        frac, tz = rest[:cut], rest[cut:]
+    else:
+        tz = ""
+    if not tz and had_z:
+        tz = "+00:00"          # Z spoke UTC; fromisoformat needs it named
+    dt = datetime.fromisoformat(base + tz)
+    return int(dt.timestamp()) * 1_000_000_000 + int((frac + "000000000")[:9])
 
 
 def measure_legs(*, image_ref: str, runner: str, in_dir: Path,
@@ -230,6 +262,11 @@ def measure_legs(*, image_ref: str, runner: str, in_dir: Path,
                                        name, argv),
                            capture_output=True, text=True, timeout=86400,
                            check=True)
+            # 2026-11-11: a detached launch returns immediately — awaiting
+            # the container before reading its daemon face is what makes
+            # FinishedAt a measured instant instead of the zero date.
+            subprocess.run(["docker", "wait", name], capture_output=True,
+                           text=True, timeout=86400, check=True)
             legs.append(_leg_from_daemon(name, out_dir, t0,
                                         time.monotonic_ns()))
         return legs
@@ -306,11 +343,18 @@ def main(argv: list[str] | None = None) -> int:
         print("coex rig: the deliberate co-tenancy launch is a spoken "
               "decision — pass --yes-cohort", file=sys.stderr)
         return 2
+    # 2026-11-11: the default must speak the m7_entry interface (docker_cmd.
+    # ENTRY_ARGS: --params/--outdir/--), then the adapter's real child argv —
+    # the bare child quad here made m7_entry exit 2 ("the following arguments
+    # are required: --params, --outdir") and the rig refused a leg with no
+    # measured face. Runner default is already m7_entry.py.
     cell_argv = (json.loads(ns.cell_argv) if ns.cell_argv else
-                 ["--counts", "/work/in/counts.csv",
+                 list(docker_cmd.ENTRY_ARGS) +
+                 ["python3", "/work/run_sigprofiler.py",
+                  "--counts", "/work/in/counts.csv",
                   "--catalog", "/work/in/catalog.csv",
-                  "--params", "/work/in/params.json", "--outdir",
-                  "/work/out"])
+                  "--params", "/work/in/params.json",
+                  "--outdir", "/work/out"])
     rec = emit(tool=ns.tool, arm=ns.arm, n=ns.n, reps=ns.reps,
                campaign=ns.campaign,
                image={"ref": ns.image_ref, "digest": ns.image_digest},

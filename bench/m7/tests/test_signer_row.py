@@ -158,21 +158,36 @@ def test_provenance_tells_the_true_story():
     assert _spec().pending_reason == "", "a ready row may not carry a pending reason"
 
 
+def _hierarchy_authority() -> str:
+    """The hierarchy-word authority: the lane card when the bank survives;
+    elsewhere the committed adapter docstring, which speaks the same PI
+    ruling verbatim (its 'Position' block). Measuring the registry row
+    against that separate committed face keeps the law cross-face, not
+    self-referential. The fallback speaks loudly on the report line."""
+    if CARD.is_file():
+        return CARD.read_text(encoding="utf-8")
+    print(f"[c] bank absent ({CARD}) -- hierarchy word forms measured "
+          f"against the committed adapter docstring (the ruling's face)")
+    return _adapter().__doc__ or ""
+
+
 def test_hierarchy_positioning_survives_promotion():
     """PI hierarchy ruling: the table this row sits in names the primary
     comparison target and marks the two R-side rows as secondary objects.
     The registry is that table's machine-readable face; the note rides its
     provenance record. The exact word forms are read from the lane card
-    bytes -- the ruling's authority -- so this law cannot drift from it."""
+    bytes -- the ruling's banked authority -- so this law cannot drift
+    from it; with the bank lost, the committed adapter docstring (the
+    ruling's committed face) stands in via the module fallback idiom."""
     prov = _spec().provenance
     import re
-    card = CARD.read_text(encoding="utf-8") if CARD.is_file() else ""
+    authority = _hierarchy_authority()
     forms = sorted({m.group() for m in
-                    re.finditer(r"[Aa][Uu][Xx][Ii][Ll][Ii]?[Aa][Rr][Yy]", card)})
-    assert forms, "lane card carries no hierarchy word to police against"
+                    re.finditer(r"[Aa][Uu][Xx][Ii][Ll][Ii]?[Aa][Rr][Yy]", authority)})
+    assert forms, "hierarchy authority carries no auxiliary word to police against"
     assert any(f in prov for f in forms), (
-        f"hierarchy word (one of {len(forms)} card forms) missing from the row")
-    prim = re.search(r"[Pp][Rr][Ii][Mm][Aa][Rr][Yy]", card).group()
+        f"hierarchy word (one of {len(forms)} authority forms) missing from the row")
+    prim = re.search(r"[Pp][Rr][Ii][Mm][Aa][Rr][Yy]", authority).group()
     assert prim in prov, "the primary-target designation must ride the row"
 
 
