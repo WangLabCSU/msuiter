@@ -150,3 +150,4 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [Novelty lane-2 verdicts — Xue 2025 / N-of-1-time / ClockShares / Morrill 2025 (reified, paper-grade)](devlog-2026-11-10-novelty-lane2.html) | `devlog-2026-11-10-novelty-lane2` |
 | [R1 — post-P10 full-table parity regeneration design memo (pre-ignition, paper-grade)](devlog-2026-11-10-r1-parity-regen-design.html) | `devlog-2026-11-10-r1-parity-regen-design` |
 | [Build-pin drift attestation — arm-recipe transient-window hardening re-seal (2026-11-11)](devlog-2026-11-11-arm-recipe-transient-hardening.html) | `devlog-2026-11-11-arm-recipe-transient-hardening` |
+| [Generation-4 census erratum — 168/168 @ cfdcc51dbb9b7041 supersedes 147/147 @ f3e894a6933a2ffb, and the PF-forensics re-landing (reified, paper-grade)](devlog-2026-11-14-gen4-census-erratum.html) | `devlog-2026-11-14-gen4-census-erratum` |

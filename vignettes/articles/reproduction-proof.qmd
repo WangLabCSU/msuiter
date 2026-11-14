@@ -16,7 +16,7 @@ Governing house laws restated where they bind this face:
 * SIM-provisioning trust law — the R-side scenario faces must run against a
   build OF THIS TREE, never an ambient stale install. Hence `MSUITER_REPRO_LIB`.
 * Post-cap witness law — timing rows speak the floor-table epoch
-  `f3e894a6933a2ffb` (pinned at `bench/m7/tests/test_p6_floor_governance.py:156`);
+  `cfdcc51dbb9b7041` (pinned at `bench/m7/tests/test_p6_floor_governance.py:169`);
   pre-cap campaigns are quoted with an explicit epoch-mismatch label.
 * Dead-metric law — the yardstick pin verifier and the DOI scanner carry
   planted-corruption controls that must fire for the face to pass; a silent
@@ -36,12 +36,12 @@ Then:
 MSUITER_REPRO_LIB=<stage-dir> bash inst/repro/reproduce.sh --verify
 ```
 
-Attested run of this face, this lane, 2026-10-31 (wall 176 s, rc=0):
+Attested run of this face, this lane, 2026-11-14 (wall 156 s, rc=0):
 
 ```
-FACE m7-tests                 rc=0  ...  PIN  m7-tests   ok  364/364 tests passed.
-FACE o5-parity                rc=0       PIN  o5-parity  ok  lines=147 breaches=147
-                                          PIN  o5-parity  ok  epoch=f3e894a6933a2ffb
+FACE m7-tests                 rc=0  ...  PIN  m7-tests   ok  440/440 tests passed.
+FACE o5-parity                rc=0       PIN  o5-parity  ok  lines=168 breaches=168
+                                          PIN  o5-parity  ok  epoch=cfdcc51dbb9b7041
 FACE bootstrap-campaign       rc=0       PIN  ok  "ok": true
                                           PIN  ok  claimed 15.36600758177 vs
                                                   recomputed 15.36600758176629
@@ -55,7 +55,7 @@ FACE scen-atlas               rc=0  PIN  ok  OVERALL PASS
 FACE scen-hrd                 rc=0  PIN  ok  OVERALL PASS
 FACE scen-treatment           rc=0  PIN  ok  OVERALL PASS
 PIN  seed-master              ok  seed: 20260928 (G0 master
-PIN  seeds-bank               ok  4/4 committed Seeds.txt present
+PIN  seeds-bank               ok  5/5 committed Seeds.txt present
 REPRODUCE-VERDICT PASS
 ```
 
@@ -63,15 +63,15 @@ REPRODUCE-VERDICT PASS
 
 | Face | Command | Sealed claim re-derived | Anchor (bytes on the branch) |
 |---|---|---|---|
-| m7-tests | `python3 -m tests.run_all` (in `bench/m7`) | governance/unit surface green | `bench/m7/tests/*`, spoken at :156 epoch pin |
-| o5-parity | `python3 -m tools.parity_recompute` | O5 census `lines=147 breaches=147`, post-cap epoch | `bench/m7/tools/parity_recompute.py`, witnesses under `bench/results/p6_regen_20261023-044026/` |
+| m7-tests | `python3 -m tests.run_all` (in `bench/m7`) | governance/unit surface green | `bench/m7/tests/*`, spoken at :169 epoch pin |
+| o5-parity | `python3 -m tools.parity_recompute` | O5 census `lines=168 breaches=168`, post-cap epoch | `bench/m7/tools/parity_recompute.py`, witnesses under `bench/m7/cache/m7_floor_calibration_p7cap_20261025-125823/`, `m7_floor_calibration_p7cap_20261104T093543Z/`, `m7_floor_calibration_p7cap_legacy_20261027-083955/`, `m7_floor_calibration_p7cap_legacy_20261111-144552/` |
 | bootstrap-campaign | `python3 -m tools.verify_campaign --campaign ../results/bootstrap_vs_sigminer_20261013T175859Z --host <seal> --hw-profile <seal>` | 15.3660075817662x re-derived from arm witness bytes; MEASURED-false stands; host/hw pins re-checked | `bench/results/bootstrap_vs_sigminer_20261013T175859Z/{result.md,seal.json}` |
 | (pins) sealed-ratio/verdict/secondary | byte greps | `1.536600758177e+01`, `MEASURED-false 15.37x`, `14.2209x` | `.../result.md:4,5`; `vignettes/articles/performance.qmd:88` |
 | yardstick-pins | `python3 tools/verify_yardstick_pins.py` | ratio 1.2323046734094532, iters/seed/threads/k/shape/versions, fixture digest, seconds-pair consistency; planted-corruption control FIRES | `bench/results/p6_regen_20261016-011928/nmf_yardstick_authoritative.json`, `bench/m7/adapters/yardstick_cell/matrix.csv` |
 | commit-objects | `git show -s --format=%B` greps | P10 landing ratio 2.3004 and P-1 MEASURED-FALSE (23.7-32.2x) live in commit-message bytes | commits 2296f49, 8213192 |
 | p1-table | byte grep | sealed P-1 gate table `FAIL — 18 offending class(es)` | `bench/results/p6_regen_20261016-011928/result.md:6` |
 | scen-atlas / scen-hrd / scen-treatment | `Rscript bench/scenarios/run_{atlas,hrd,treatment}.R` | CS-1/CS-2/CS-3 self-adjudicating scenarios OVERALL PASS, rc is the law | `bench/scenarios/*` (PR #56 landing 5530af6) |
-| seeds-bank | file presence | 4/4 campaign `Seeds.txt` committed | listed dirs in `reproduce.sh` Face 8 |
+| seeds-bank | file presence | 5/5 campaign `Seeds.txt` committed | listed dirs in `reproduce.sh` Face 8 |
 
 The exact sealed-number citations, their citation classes, and their
 epoch labels are in the draft's Table 1/Table 2 and Appendix A; this file
@@ -117,16 +117,17 @@ records in `bench/results/docker_m7_PILOT_20261008-200152/image_inspect_*.json`
 
 Master seed 20260928 (G0 synthetic regime) is spoken by the bootstrap
 seal (`result.md`, PIN `seed: 20260928 (G0 master`). Per-campaign seed banks:
-`Seeds.txt` committed under the bootstrap dir, both `p6_regen` dirs, and the
-`docker_m7_degraded` dir; Face 8 refuses if any goes missing.
+`Seeds.txt` committed under the bootstrap dir, all three `p6_regen` dirs
+(`20261023-044026`, `20261111-095635`), the `docker_m7_degraded` dir, and the
+docker-adapter dir; Face 8 refuses if any goes missing.
 
 ## 5. What this face deliberately does not claim
 
 * No real-data result anywhere (G0-PRIMARY gated; the draft prints no
   "first coverage-measured" claim outside its gate block).
-* No <=2x peer-parity row: the O5 census is quoted AS A CENSUS (147/147
-  breach vs the compiled yardstick); the parity headline stays behind
-  CAMPAIGN-R exactly as the commit bytes of 2296f49 state it.
+* No <=2x peer-parity row: the O5 census is quoted AS A CENSUS (168/168
+  breach @ `cfdcc51dbb9b7041` vs the compiled yardstick); the parity headline
+  stays behind CAMPAIGN-R exactly as the commit bytes of 2296f49 state it.
 * No signeR comparison (PI-C unverified): peer slots (a)/(b) only.
 * No campaign regeneration: `--full` prints operator recipes (bootstrap
   one-key shot, container builds, renv restore) and runs none of them.

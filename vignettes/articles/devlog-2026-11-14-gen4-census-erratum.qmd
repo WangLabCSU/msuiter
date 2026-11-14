@@ -1,0 +1,229 @@
+---
+title: "Generation-4 census erratum — 168/168 @ cfdcc51dbb9b7041 supersedes 147/147 @ f3e894a6933a2ffb, and the PF-forensics re-landing (reified, paper-grade)"
+---
+
+Date: 2026-11-14.
+Provenance: **reified, primary-banked**. The generation-4 campaign
+(`p6_regen_20261111-095635`) completed on this host and its artifacts are
+committed in the same change set as this devlog; the census below was
+re-derived by the committed recomputer (`bench/m7/tools/parity_recompute.py`)
+from the sealed floor-table calibration witnesses, and its banked copy is
+committed at `bench/results/p6_regen_20261111-095635/census_regen_20261114.txt`
+(md5 `36ce2ca8fa815ccf4cd64e225c563931`, 169 lines). Every figure below is
+quoted verbatim from those committed bytes, from commit-object `2296f49`
+message bytes, or from the sealed design memo
+`vignettes/articles/devlog-2026-11-10-r1-parity-regen-design.qmd` (§5-§6).
+No figure in this devlog comes from lane lore; the one figure that survives
+only as an internal ruling is marked as such.
+
+## 1. The generation-4 campaign (memo §6 steps 1-3)
+
+Ignition `p6_regen_20261111-095635` per the sealed design memo (§4 ignition
+gates; fresh ignition, not resume). Terminal line:
+
+```
+P6-AUTHORITATIVE-RUN-COMPLETE outdir=../results/p6_regen_20261111-095635 cachedir=cache/p6_regen_20261111-095635
+```
+
+at 03:26:41 UTC 2026-11-14. Wall 2026-11-11 09:56:35 UTC → 2026-11-14
+03:26:41 UTC = **~65.5 h** (vs the memo's ~30.1 h estimate — degraded
+profile, 8 serial shards; the `nb` shard took 2 h14 m). Shard order:
+main → comp_clock_only → comp_mmr → comp_flat_triple → comp_strong_flat →
+nb → clock_sparse → comp_pole. **168/168** adapter-docker cells
+`ok|cached`, 0 skipped, 0 `SHARD FAILURE`.
+
+Campaign env (carried from the memo §4): `M7_COMPETITORS` 8-arm,
+`M7_HW_PROFILE='10 vCPU / 8 GB class'`, floor-gate on, adapter docker,
+provider synthetic, epoch `cfdcc51dbb9b7041`, commit
+`7bc3bd0d460d25bb0d499f2593b060fccccf7a54`.
+
+Committed artifacts under `bench/results/p6_regen_20261111-095635/`:
+
+| file | what it is | size (lines) |
+|---|---|---|
+| `benchmark_m7_20261114-112641.csv` | per-cell benchmark rows | 1764 |
+| `timings_m7_degraded_20261114-112641.csv` | per-cell timings (cpu_seconds + host pins) | 169 |
+| `timings_sharded_master.csv` | sharded-master timings view | 169 |
+| `Seeds.txt` | m7-tool-namespaced seed bank | 2103 |
+| `census_regen_20261114.txt` | parity census bank (this erratum's §2) | 169 |
+| `judgment_m7_degraded_20261114-112641.md` | fairness attestation + scoring verdict | — |
+
+The judgment artifact (`judgment_m7_degraded_20261114-112641.md`) is the
+**FAIRNESS ATTESTATION**: single ground truth (frozen G0 simulator, master
+seed 20260928, data streams bit-identical to G0); documented defaults only
+("zero threshold/parameter overrides (memo §3)"); frozen caps on every
+container cell ("OMP_NUM_THREADS=1, OMP_THREAD_LIMIT=1, R_LIMIT_THREADS=1,
+GOMAXPROCS=1, MSUITER_THREADS=1, STAN_OMP_NUM_THREADS=1,
+OPENBLAS_NUM_THREADS=1, R_PARALLELLY_AVAILABLECORES_METHODS=system,
+R_PARALLELLY_AVAILABLECORES_SYSTEM=1"); one Docker VM per cell (10 vCPU /
+8 GB class). The 8-competitor digest table pins sigminer 2.3.1
+(`msuiter-sigminer:slice3-r5`, sha256:37a5e7d9…bbdd98), sigprofiler v1.1.5
+(`m7-sigprofiler:spa-1.1.5`, sha256:f1b3140e…99167c), and six sigminer
+2.3.3 variant arms with their digest pins. Scoring verdict
+(Hungarian-matched P/R/F1, ARCHITECTURE §8): "**168 cells, 16800 samples,
+13581 matched pairs pooled below**", match tolerance 0.85 (frozen midpoint
+of the 0.80–0.90 robustness band).
+
+## 2. Census supersession (memo §6 step 4)
+
+Re-run in-lane, rc=0 (`cd bench/m7 && python3 -m tools.parity_recompute`),
+bank verbatim:
+
+```
+[parity-recompute] faces=8 classes=21 lines=168 breaches=168 bar=<=2.0x cpu-basis yard=sigprofiler
+```
+
+All 168 lines carry `epoch=cfdcc51dbb9b7041 attestation=pre-law`; **0
+NO-ANCHOR** (189 floor anchors, all witness-present); every line
+MEASURED-then-STATED and PATH-BINDING (both bound witness paths printed per
+ratio). This supersedes the generation-2/3 census
+(`faces=7 classes=21 lines=147 breaches=147 epoch=f3e894a6933a2ffb`) as the
+committed O5 record. All-BREACH remains the known O5 posture — the honest
+committed distance, not a parity claim.
+
+Per-face cpu-basis ratio ranges (re-derived by awk over the 168 lines):
+
+| face | min | max |
+|---|---|---|
+| `sigminer_post_v3_rust_batch` | **8.7963** | 17.7653 |
+| `sigminer_post_v3_rust` | 13.5786 | 19.4991 |
+| `sigminer_post_p1_rust` | 13.7128 | 30.7119 |
+| `sigminer_pre_v3` | 20.2840 | 77.6890 |
+| `sigminer` | 21.9669 | 50.7710 |
+| `sigminer_post_p1` | 23.4899 | 49.6306 |
+| `sigminer_post_p2` | 23.9028 | 72.4077 |
+| `sigminer_post_v3` | 24.5155 | 55.1556 |
+
+Global range **8.7963–77.6890**; best arm
+`sigminer_post_v3_rust_batch` (the generation-3 batch-bridge face, min
+8.7963 = the P10 batch bridge doing its measured work at census scale).
+
+Three worst rows, verbatim from the census bank:
+
+```
+sigminer_pre_v3 comp_clock_only N10000 reps=100 cpu-basis ratio=77.6890 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=2842.147340s .../m7_floor_calibration_p7cap_20261025-125823/witnesses/sigminer_pre_v3__comp_clock_only__N10000__rep100.json || yard=36.583656s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__comp_clock_only__N10000__rep100.json
+sigminer_post_p2 comp_strong_flat N1000 reps=100 cpu-basis ratio=72.4077 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=2591.324770s .../m7_floor_calibration_p7cap_20261025-125823/witnesses/sigminer_post_p2__comp_strong_flat__N1000__rep100.json || yard=35.787957s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__comp_strong_flat__N1000__rep100.json
+sigminer_post_p2 comp_strong_flat N100 reps=100 cpu-basis ratio=67.4512 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=2386.866424s .../m7_floor_calibration_p7cap_20261025-125823/witnesses/sigminer_post_p2__comp_strong_flat__N100__rep100.json || yard=35.386553s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__comp_strong_flat__N100__rep100.json
+```
+
+Three best rows, verbatim (all `sigminer_post_v3_rust_batch`):
+
+```
+sigminer_post_v3_rust_batch nb N1000 reps=100 cpu-basis ratio=8.7963 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=359.298301s .../m7_floor_calibration_p7cap_20261104T093543Z/witnesses/sigminer_post_v3_rust_batch__nb__N1000__rep100.json || yard=40.846674s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__nb__N1000__rep100.json
+sigminer_post_v3_rust_batch clock N1000 reps=100 cpu-basis ratio=9.1965 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=369.834497s .../m7_floor_calibration_p7cap_20261104T093543Z/witnesses/sigminer_post_v3_rust_batch__clock__N1000__rep100.json || yard=40.214871s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__clock__N1000__rep100.json
+sigminer_post_v3_rust_batch comp_flat_triple N100 reps=100 cpu-basis ratio=9.3672 BREACH (bar 2.0) epoch=cfdcc51dbb9b7041 attestation=pre-law | face=367.318614s .../m7_floor_calibration_p7cap_20261104T093543Z/witnesses/sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json || yard=39.213222s .../m7_floor_calibration_p7cap_legacy_20261111-144552/witnesses/sigprofiler__comp_flat_triple__N100__rep100.json
+```
+
+### 2.1 Census-vs-outdir layering (why the census cites calibration witnesses)
+
+The census contains zero references to the generation-4 outdir. This is the
+designed layering, not an omission: the gen-4 outdir banks the *campaign*
+artifacts (benchmark rows, timings, judgment, seeds), while the parity
+census re-derives from the sealed floor-table **calibration witnesses**.
+Witness-dir distribution over the 168 lines (grep+uniq):
+
+| witness dir | refs | serves |
+|---|---|---|
+| `m7_floor_calibration_p7cap_20261025-125823` | 126 | the six gen-2 post-cap faces |
+| `m7_floor_calibration_p7cap_20261104T093543Z` | 21 | `sigminer_post_v3_rust_batch` (gen-3) |
+| `m7_floor_calibration_p7cap_legacy_20261027-083955` | 21 | `sigminer` (pre-law gen-2 face) |
+| `m7_floor_calibration_p7cap_legacy_20261111-144552` | 168 | the yardstick (sigprofiler SS3 re-mint) |
+
+The `attestation=pre-law` stamp on every line is the SS3-era posture:
+witnesses re-stamped in place onto epoch `cfdcc51dbb9b7041` (only
+`attestation.epoch` differs), with the pre-law measurement inadmissibility
+documented in the memo §3 — the witnesses are admissible as floor anchors,
+their timing law predates the cap regime and the census says so on every
+line.
+
+## 3. Site-supersession table (memo §6 step 5, §1.1 work list)
+
+Sealed devlog bodies stay byte-exact; supersession goes through THIS
+devlog only. Current line numbers recorded (the memo's §1.1 numbers
+drifted slightly; drift noted where it matters).
+
+| # | Site | Disposition in this erratum |
+|---|---|---|
+| 1 | `paper-draft.qmd:80` | EDITED: `147/147` → `168/168` |
+| 2 | `paper-draft.qmd:232` | EDITED: epoch → `cfdcc51dbb9b7041`, pin cite `:156` → `:169` |
+| 2b | `paper-draft.qmd:238` | **NOT edited** — the probe quote `"floor_table_epoch f3e894a6933a2ffb unchanged"` is a byte-quote of commit `2296f49`'s own recorded probe; superseded by context around it, never rewritten |
+| 3 | `paper-draft.qmd:247-251` (Table 2 census block; memo said `:248`) | EDITED: `faces=8 classes=21 lines=168 breaches=168` @ `cfdcc51dbb9b7041`; per-face ranges 8.7963–77.6890; best arm `sigminer_post_v3_rust_batch` |
+| 4 | `paper-draft.qmd:586-587` (Appendix A rows; memo said `:581`) | EDITED: census row → 168; epoch row → `cfdcc51dbb9b7041` @ `:169` with re-derivation `sed -n '169p'` |
+| 5 | `reproduction-proof.qmd:19` | EDITED: epoch + pin cite `:169` |
+| 6 | `reproduction-proof.qmd:39-60` | EDITED: fresh attestation block supersedes the 2026-10-31 run (re-verified after the edits, same lane) |
+| 7-9 | sealed: `devlog-2026-11-09-p9-engine-iterations-forensics.qmd:61,80`; `devlog-2026-11-10-novelty-scan.qmd:51` | **NOT edited** (sealed bodies): their `f3e894a6933a2ffb` citations are superseded by this erratum's Table 2 |
+| 10 | `bench/m7/tests/test_coex_producer_law.py:382` | **NOT edited**, per memo §1.1 site-10 ruling verbatim: the assertion "pins the law that a report committed under a *superseded* epoch stays reportable (the epoch transition must not retroactively criminalize old evidence). That assertion is correct as written and must not be edited as part of the epoch update" |
+
+Also edited (part of the same law surface, discovered during site re-verify):
+
+* `reproduce.sh:20` — header epoch-pin cite `:156` → `:169`;
+  `:68-69` — Face 2 assertions `lines=147 breaches=147` / `epoch=f3e894a6933a2ffb` →
+  `lines=168 breaches=168` / `epoch=cfdcc51dbb9b7041`; Face 8 seed roster
+  gains `bench/results/p6_regen_20261111-095635` (4/4 → **5/5**).
+* `reproduce.sh:64` — Face 1 expectation `364/364 tests passed.` →
+  `440/440 tests passed.` (the m7 governance suite grew past the stale
+  pin; surfaced by the fresh `--verify` run in this lane), with the
+  matching attestation-block line in `reproduction-proof.qmd:39-60`.
+* `reproduction-proof.qmd:66-67,74,118-121,127` — face-table epoch/line
+  pins, seed-bank 4/4→5/5, seed-roster prose, census quote.
+* `paper-draft.qmd:255-269` — CAMPAIGN-R blockquote refreshed (campaign
+  complete; gate stays closed on the BREACH row itself, not on missing
+  evidence); `:597` Appendix B CAMPAIGN-R unblock condition refreshed.
+
+The live epoch pins (unchanged, verified):
+`bench/m7/tests/test_p6_floor_governance.py:168`
+(`PRECAP_SEALED_EPOCH = "6b3a66bc9d0224eb"`) and `:169`
+(`POST_CAP_EPOCH_PIN = "cfdcc51dbb9b7041"`). The `:156` cites scattered
+through the prose were a line-number drift, never an epoch dispute.
+
+## 4. PF forensics re-landing under `bench/` (memo §5 ruling)
+
+Memo §5 verbatim ruling: "Ruling: **re-land under `bench/`** as part of the
+same phase as the regeneration, because the paper's forensics-direction
+sentence (paper-draft.qmd:261-263) cites pipeline-floor localization and
+needs committed, path-bound evidence behind it. The re-landing is part of
+the post-ignition erratum phase, not a precondition for ignition itself."
+
+The carrier is committed at `bench/m7/forensics/PF-P10-bridge-landing.md`.
+It carries exactly the committed-anchored figures and nothing else:
+
+* **2.3004x landing** (A0 0.14060 → A3 0.06112 s/run; per-k 2.74/2.43/2.19/
+  2.04; bit-identical) — anchored to commit-object `2296f49` message bytes
+  (the same bytes Face 5 of `reproduce.sh` greps).
+* **476+346 law expectations** (test-kernel-bit-identity.R 476 +
+  test-kernel-batch-bridge.R 346) and the "floors sealed
+  (floor_table_epoch f3e894a6933a2ffb unchanged, probed)" probe line — both
+  from the same commit-object message bytes.
+* **Worst-class 35.0x** (688.16 s vs 19.65 s, five-gate P7-F ruling V1,
+  `vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` §9) —
+  committed carrier: the novelty-scan R1 row
+  (`devlog-2026-11-10-novelty-scan.qmd:114`).
+* **Pipeline-floor ~170 s finding** (five-gate structural section) — same
+  novelty-scan R1 row.
+* **P11 measured ceilings**: 1.223x step-core / 1.107x Full-trace
+  (bit-identical L1-L5 levers) — committed carrier:
+  `devlog-2026-11-09-p11-engine-kl-design.qmd:121-124,140-144`.
+
+Honest un-recoverable statements, P9-pattern: the **kernel-share table**
+(75.0% / 94.9% / 65.8% / 96.2%) and the stub controls have **no committed
+carrier** anywhere in the repository — they are /tmp-lane records and are
+NOT re-quoted as evidence. The bridge-share figure (33.4%) and the
+"2× measured-foreclosed for bit-identical code" characterization exist only
+as the internal ruling at memo `:166` and the novelty-scan R1 row's own
+wording ("re-land it in `bench/` **or cite it only as an internal
+ruling**"); the re-landing file carries them under that internal-ruling
+label, not as committed measurements.
+
+## 5. What this erratum deliberately does not claim
+
+* No parity row: 168/168 BREACH is the census, and CAMPAIGN-R stays closed
+  on the system-level <=2x row (now with 8 faces of committed evidence
+  behind the sentence).
+* No memo edit: the memo's §6 prose epoch `888ce0d4eb7c9635` was itself
+  superseded (by the 2026-11-11 SS3 re-stamp → `cfdcc51dbb9b7041`) before
+  the campaign ran; sealed bodies stay byte-exact and this erratum is the
+  supersession record.
+* No pre-law-witness promotion: gen-2 pre-law timing law stays labeled
+  `attestation=pre-law` on every census line.
+* The novelty-scan R1 stale-epoch citation (`:51`, E11 row) is superseded
+  here, not edited there.
