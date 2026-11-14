@@ -17,7 +17,7 @@
 # Synthetic-only law: every artifact touched here is the frozen G0 synthetic
 # regime (master seed 20260928) or a committed witness table. Post-cap witness
 # law: the O5 face speaks the floor-table epoch pinned at
-# bench/m7/tests/test_p6_floor_governance.py:156; the bootstrap campaign
+# bench/m7/tests/test_p6_floor_governance.py:169; the bootstrap campaign
 # predates that epoch and the draft quotes it labeled epoch-mismatched.
 # Portable to bash 3.2 (no associative arrays).
 set -u
@@ -61,12 +61,12 @@ say "== msuiter reproduce: mode=$MODE repo=$REPO =="
 
 #--- Face 1: bench/m7 unit-test surface --------------------------------------
 runface m7-tests bench/m7 python3 -m tests.run_all
-expectface m7-tests "364/364 tests passed."
+expectface m7-tests "440/440 tests passed."
 
 #--- Face 2: O5 parity census (MEASURED-then-STATED; refuses witness drift) ---
 runface o5-parity bench/m7 python3 -m tools.parity_recompute
-expectface o5-parity "lines=147 breaches=147"
-expectface o5-parity "epoch=f3e894a6933a2ffb"
+expectface o5-parity "lines=168 breaches=168"
+expectface o5-parity "epoch=cfdcc51dbb9b7041"
 
 #--- Face 3: bootstrap campaign, shared oracle over the sealed outdir --------
 # host + hw_profile expectations are read from the campaign's own seal.json,
@@ -114,10 +114,11 @@ SEEDS_OK=1
 for d in "$BOOTDIR" \
          "$REPO/bench/results/p6_regen_20261016-011928" \
          "$REPO/bench/results/p6_regen_20261023-044026" \
+         "$REPO/bench/results/p6_regen_20261111-095635" \
          "$REPO/bench/results/docker_m7_degraded_20261010-202330"; do
   [ -f "$d/Seeds.txt" ] || { say "PIN  seeds-bank MISSING $d/Seeds.txt"; FAILURES=$((FAILURES + 1)); SEEDS_OK=0; }
 done
-[ "$SEEDS_OK" -eq 1 ] && say "PIN  seeds-bank                   ok  4/4 committed Seeds.txt present"
+[ "$SEEDS_OK" -eq 1 ] && say "PIN  seeds-bank                   ok  5/5 committed Seeds.txt present"
 
 if [ "$MODE" = "--full" ]; then
   say "-- full-mode recipes (printed, not executed; operator-gated) -----------"
