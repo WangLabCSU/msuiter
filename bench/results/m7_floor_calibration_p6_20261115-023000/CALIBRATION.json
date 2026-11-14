@@ -1,0 +1,39 @@
+{
+ "attestation_mode": "live",
+ "attestation_sanction": null,
+ "campaign_note": "batch-bridge arm re-mint onto the post-P11 kernel r2 image (2026-11-15, campaign m7_floor_calibration_p6_20261115-023000); 21/21 cells rc=0 verdict OK, coex inversion-probe record bound to this campaign (T5)",
+ "created_utc": "2026-11-14T21:21:19+00:00",
+ "elapsed_seconds_probes_this_invocation": 8599.4,
+ "hash_recorder": "python3 hashlib.sha256 (explicit algorithm, never the platform shasum default)",
+ "law": {
+  "freshness": "fresh per-cell cachedir per probe; a 'cached' replay is DEFECT, never a floor",
+  "gate": "--floor-gate off: a probe measures, it never self-adjudicates",
+  "reps": "all witnesses measured at REP-100 (protocol scale)"
+ },
+ "probes": 21,
+ "registry_sha256_at_mint": "d09975186bbfd82774101d7635e0417bf7f7553c4fc85ba4bb57ea774ead1b9c",
+ "schema": "m7-floor-calibration-1",
+ "witness_sha256": {
+  "sigminer_post_v3_rust_batch__clock__N1000__rep100.json": "125daf8e2a492c7b6c9ee7ba80225db90be31b2a036166333cc9220f5833ebcb",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json": "9bc7fd9100d85399fd622a291cbff8c87c19433e9f86861c262cfd78a5cc1931",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json": "1328197a64326348a2753e03380cae77503c320bde3ca1fe5b69ae8f6b645604",
+  "sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json": "d64205da757d3dd8768de606bdc320699faff9026d95096b15546f2e3a612b03",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json": "9f81c1da0ef1796d3d488f38e91910efab361224cdd6e51dfea074943ffdd2c8",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json": "043db3df80630e28bb5649a9f5980eaa91ca7295a4821ced62165dd6d15bf7ed",
+  "sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json": "a28c6bcac9dfd060e6011d98bb381b89fb1a17e005b1cb6276121ac8bd5115fe",
+  "sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json": "e9f46ef413d64924b8e85964d887780a892b063e00ea2f85f0e20ddd2b825501",
+  "sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json": "ae3c3e4d616bca9f242796f4c50098cdb00264e746f4c5326bd948aade33fca8",
+  "sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json": "655aa9d6c6d393cfedb4b29e0226ee5de0899c2bc6611687fc4aec0fed486784",
+  "sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json": "23d905bcb3a0290d663db3e48e886bed24fb3972ef49c52bb0f9e43c592b4781",
+  "sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json": "aa03a2b0f357729a0e15a39416947eec7805c5f86576083d907da05dbc777c1b",
+  "sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json": "032266d5e22677ce5b28ff44f551417141bb8c885f30b3d312c386997ee96fe2",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json": "ae807a6f1517bdd6711840c22c2623d3491cbe58de3eee839317a5d75c0db68f",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json": "49e2432a3b2fb9ac676d20b78b5a490de84cfe579caaa7c6977ea0806eb1cc0a",
+  "sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json": "8bf052c4e0046ea922ea69b8ebb24173ff23c28a4ff252215e8e2720fb19e0d0",
+  "sigminer_post_v3_rust_batch__main__N10000__rep100.json": "d2483defefb1db0c8834858a1e9bdb51c1e5e4b1f47117480e3b2bae6d427031",
+  "sigminer_post_v3_rust_batch__main__N1000__rep100.json": "46dd50dbce7c52345e6ee25c2a1b5ff87cdcfb9b5e2080982c77abd74b983191",
+  "sigminer_post_v3_rust_batch__main__N100__rep100.json": "c4ed422f1552254370ee5a8a3bf4b8c953e1d4f362b5db7632195894066f617c",
+  "sigminer_post_v3_rust_batch__nb__N1000__rep100.json": "5cf85ce2ada8c1efedf77fa531b23b377e92b39427d5a1bf54f3b084e690646a",
+  "sigminer_post_v3_rust_batch__sparse__N1000__rep100.json": "24f617b486fcc5faed14d8495e244ac2cd8b2929c274d01ff1612255182c7424"
+ }
+}

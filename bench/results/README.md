@@ -16,7 +16,7 @@ House laws that bind this directory:
 * **Epoch law.** Floor-table epochs pinned at
   `bench/m7/tests/test_p6_floor_governance.py:168-169`:
   `PRECAP_SEALED_EPOCH = 6b3a66bc9d0224eb`,
-  `POST_CAP_EPOCH_PIN = cfdcc51dbb9b7041`.
+  `POST_CAP_EPOCH_PIN = b1ce0f176cec2633`.
 
 ## Directory index (chronological)
 
@@ -35,8 +35,9 @@ House laws that bind this directory:
 | `p6_regen_20261023-044026` | regen campaign | gen-2 P6 regen (147-cell era); carries the reissued-scoring addendum |
 | `m7_floor_calibration_p7cap_legacy_20261027-083955` | calibration | gen-2 pre-law `sigminer` face (21 census witness refs) |
 | `accept_rerun_20261028` | calibration fragment | accepted-rerun witnesses (gate-fail era repair) |
-| `m7_floor_calibration_p7cap_20261104T093543Z` | calibration | **gen-3 batch-bridge face** `sigminer_post_v3_rust_batch` (21 census witness refs; pre-P11 kernel) |
-| `m7_floor_calibration_p7cap_legacy_20261111-144552` | calibration | **the yardstick**: sigprofiler SS3 re-mint (168 census witness refs, all 21 classes) |
+| `m7_floor_calibration_p7cap_20261104T093543Z` | calibration | gen-3 batch-bridge face `sigminer_post_v3_rust_batch` — **witnesses withdrawn 2026-11-15** (superseded by the r2 re-mint); ledger + anchors fragment kept as provenance |
+| `m7_floor_calibration_p6_20261115-023000` | calibration | **the batch-bridge r2 re-mint**: `sigminer_post_v3_rust_batch` on the post-P11 kernel (21 census witness refs; epoch re-pin `b1ce0f176cec2633`) |
+| `m7_floor_calibration_p7cap_legacy_20261111-144552` | calibration | **the yardstick**: sigprofiler SS3 re-mint (168 census witness refs, all 21 classes; witnesses re-stamped onto `b1ce0f176cec2633` 2026-11-15) |
 | `p6_regen_20261111-095635` | regen campaign | **gen-4 authoritative run**: 168/168 cells ok, census `census_regen_20261114.txt` (md5 36ce2ca8fa815ccf4cd64e225c563931), epoch `cfdcc51dbb9b7041`, ~65.5 h wall, 8 serial shards; Hungarian P/R/F1 verdict in `judgment_m7_degraded_20261114-112641.md` |
 
 ## Supersession chain (parity censuses)

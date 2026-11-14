@@ -1,0 +1,13 @@
+{
+ "accounting_version": 2,
+ "cgroup_cpu_usec": 453830188,
+ "cgroup_drain_polls": 1,
+ "cgroup_memory_peak_bytes": 297226240,
+ "cgroup_reaped_pids": [],
+ "cgroup_source": "v2",
+ "cpu_seconds": 452.868959,
+ "exit_status": 0,
+ "rss_peak_bytes": 307834880,
+ "ru_stime": 3.879727,
+ "ru_utime": 448.989232
+}

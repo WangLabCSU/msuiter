@@ -804,88 +804,88 @@ _FLOOR_ANCHORS = {
         'reps': 100, 'cpu_seconds': 573.133317, 'wall_seconds': 573.618,
     },
     ('sigminer_post_v3_rust_batch', 'clock', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__clock__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 369.834497, 'wall_seconds': 370.245,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__clock__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 394.063936, 'wall_seconds': 394.496,
     },
     ('sigminer_post_v3_rust_batch', 'comp_clock_only', 100): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json'),
-        'reps': 100, 'cpu_seconds': 645.4458249999999, 'wall_seconds': 646.276,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 402.78874299999995, 'wall_seconds': 403.235,
     },
     ('sigminer_post_v3_rust_batch', 'comp_clock_only', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 364.961585, 'wall_seconds': 365.398,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 401.11796999999996, 'wall_seconds': 401.575,
     },
     ('sigminer_post_v3_rust_batch', 'comp_clock_only', 10000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 370.678194, 'wall_seconds': 371.115,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 403.261049, 'wall_seconds': 403.7,
     },
     ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 100): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json'),
-        'reps': 100, 'cpu_seconds': 367.31861399999997, 'wall_seconds': 367.716,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 396.2091, 'wall_seconds': 396.63,
     },
     ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 368.400612, 'wall_seconds': 368.8,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 398.093485, 'wall_seconds': 398.551,
     },
     ('sigminer_post_v3_rust_batch', 'comp_flat_triple', 10000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 371.27529699999997, 'wall_seconds': 371.677,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 400.58277200000003, 'wall_seconds': 401.032,
     },
     ('sigminer_post_v3_rust_batch', 'comp_mmr', 100): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json'),
-        'reps': 100, 'cpu_seconds': 375.787984, 'wall_seconds': 376.176,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 404.99273, 'wall_seconds': 405.451,
     },
     ('sigminer_post_v3_rust_batch', 'comp_mmr', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 380.039486, 'wall_seconds': 380.459,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 408.377957, 'wall_seconds': 408.758,
     },
     ('sigminer_post_v3_rust_batch', 'comp_mmr', 10000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 379.14343399999996, 'wall_seconds': 379.581,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 406.945396, 'wall_seconds': 407.349,
     },
     ('sigminer_post_v3_rust_batch', 'comp_pole', 100000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 376.878073, 'wall_seconds': 377.263,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 411.249674, 'wall_seconds': 411.711,
     },
     ('sigminer_post_v3_rust_batch', 'comp_pole', 300000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 404.214087, 'wall_seconds': 404.621,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 431.086115, 'wall_seconds': 431.523,
     },
     ('sigminer_post_v3_rust_batch', 'comp_pole', 1000000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 480.12189900000004, 'wall_seconds': 480.533,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 496.778819, 'wall_seconds': 497.213,
     },
     ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 100): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json'),
-        'reps': 100, 'cpu_seconds': 381.573231, 'wall_seconds': 381.952,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 409.413119, 'wall_seconds': 409.841,
     },
     ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 381.36852, 'wall_seconds': 381.787,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 408.233227, 'wall_seconds': 408.653,
     },
     ('sigminer_post_v3_rust_batch', 'comp_strong_flat', 10000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 381.447061, 'wall_seconds': 381.842,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 418.86413899999997, 'wall_seconds': 419.291,
     },
     ('sigminer_post_v3_rust_batch', 'main', 100): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N100__rep100.json'),
-        'reps': 100, 'cpu_seconds': 655.316243, 'wall_seconds': 656.468,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__main__N100__rep100.json'),
+        'reps': 100, 'cpu_seconds': 409.134574, 'wall_seconds': 409.688,
     },
     ('sigminer_post_v3_rust_batch', 'main', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 683.533189, 'wall_seconds': 684.33,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__main__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 398.945962, 'wall_seconds': 399.424,
     },
     ('sigminer_post_v3_rust_batch', 'main', 10000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__main__N10000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 664.263713, 'wall_seconds': 664.982,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__main__N10000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 399.201535, 'wall_seconds': 399.665,
     },
     ('sigminer_post_v3_rust_batch', 'nb', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__nb__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 359.29830100000004, 'wall_seconds': 359.701,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__nb__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 387.970509, 'wall_seconds': 388.397,
     },
     ('sigminer_post_v3_rust_batch', 'sparse', 1000): {
-        'witness': ('m7_floor_calibration_p7cap_20261104T093543Z', 'witnesses', 'sigminer_post_v3_rust_batch__sparse__N1000__rep100.json'),
-        'reps': 100, 'cpu_seconds': 375.29180199999996, 'wall_seconds': 375.679,
+        'witness': ('m7_floor_calibration_p6_20261115-023000', 'witnesses', 'sigminer_post_v3_rust_batch__sparse__N1000__rep100.json'),
+        'reps': 100, 'cpu_seconds': 401.549018, 'wall_seconds': 401.954,
     },
     ('sigminer_pre_v3', 'clock', 1000): {
         'witness': ('m7_floor_calibration_p7cap_20261025-125823', 'witnesses', 'sigminer_pre_v3__clock__N1000__rep100.json'),
@@ -1065,10 +1065,13 @@ PASS_STATUSES = ("ok", "cached")
 # tracks cpu: the A/B legs spoke wall 578.651 / cpu 577.969 (deviation 0.0012)
 # where every pre-cap R-face witness deviates by at least 0.218 -- the bar below
 # sits at 0.10, a 2.2x bite margin against pre-cap bytes. Authority dirs speak
-# the prefix; the legacy-domain re-mint (60 classes) speaks the legacy prefix.
-# Pre-cap bytes (fan-live, wall != cpu) may never satisfy either half.
+# the prefix; the legacy-domain re-mint (60 classes) speaks the legacy prefix;
+# the batch-bridge r2 re-mint (2026-11-15, 21 classes) speaks its own date-
+# scoped prefix -- p6_20261017 (pre-cap) diverges at the date digits and stays
+# excluded. Pre-cap bytes (fan-live, wall != cpu) may never satisfy any half.
 POST_CAP_AUTHORITY_PREFIX = "m7_floor_calibration_p7cap_"
 POST_CAP_LEGACY_PREFIX = "m7_floor_calibration_p7cap_legacy_"
+POST_CAP_R2_REMINT_PREFIX = "m7_floor_calibration_p6_20261115-"
 POST_CAP_WALL_CPU_TOL = 0.10
 
 # -- floor anchor provenance (RB-09(3)(i)/(v)) ------------------------------------

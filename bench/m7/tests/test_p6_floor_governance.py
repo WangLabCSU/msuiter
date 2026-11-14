@@ -35,8 +35,12 @@ RESULTS = HERE.parent / "results"
 def _p6_calibration_dirs():
     """RB-10 re-point: the authority bytes are the post-cap mint dirs. The
     pre-cap p6_* dirs stay committed as frozen provenance but no longer
-    feed the gate's law — only p7cap_* bytes may anchor the table."""
-    return sorted(RESULTS.glob(gov.POST_CAP_AUTHORITY_PREFIX + "*"))
+    feed the gate's law — p7cap_* bytes anchor the campaign+legacy halves,
+    and the batch-bridge r2 re-mint (2026-11-15) anchors the batch face by
+    its own date-scoped prefix."""
+    dirs = list(RESULTS.glob(gov.POST_CAP_AUTHORITY_PREFIX + "*"))
+    dirs += RESULTS.glob(gov.POST_CAP_R2_REMINT_PREFIX + "*")
+    return sorted(dirs)
 
 
 def _grid_classes():
@@ -78,8 +82,9 @@ def test_p6_witnesses_are_reps_matched_ok_and_verbatim():
     dirs = _p6_calibration_dirs()
     if not dirs:
         raise AssertionError(
-            "no m7_floor_calibration_p7cap_* witness dir committed — anchors may "
-            "not exist without their bytes (zero-cached/fabrication law)")
+            "no post-cap witness dir committed (p7cap_* / p6_20261115-*) — "
+            "anchors may not exist without their bytes "
+            "(zero-cached/fabrication law)")
     seen = set()
     for d in dirs:
         for w in (d / "witnesses").glob("*__rep100.json"):
@@ -166,28 +171,30 @@ def test_census_counts_p6_containers_as_ours():
 # attestation land, and they keep biting afterwards (counterfactual-tested).
 
 PRECAP_SEALED_EPOCH = "6b3a66bc9d0224eb"      # measured before the flip
-POST_CAP_EPOCH_PIN = "cfdcc51dbb9b7041"   # measured; set at the 2026-11-11 sigprofiler legacy re-mint (144552)
+POST_CAP_EPOCH_PIN = "b1ce0f176cec2633"   # measured; set at the 2026-11-15 batch-bridge r2 re-mint (r2 anchors registered; supersedes cfdcc51dbb9b7041)
 
 
 def _authority_dirs(*, legacy: bool) -> list[Path]:
-    """The two authority halves carved by prefix. The legacy prefix extends
-    the campaign one, so the campaign listing must exclude legacy members."""
-    prefix = (gov.POST_CAP_LEGACY_PREFIX if legacy
-              else gov.POST_CAP_AUTHORITY_PREFIX)
-    dirs = sorted(RESULTS.glob(prefix + "*"))
-    if not legacy:
-        dirs = [d for d in dirs
-                if not d.name.startswith(gov.POST_CAP_LEGACY_PREFIX)]
-    return dirs
+    """The authority halves carved by prefix. The legacy prefix extends the
+    campaign one, so the campaign listing must exclude legacy members; the
+    r2 re-mint (2026-11-15) is a third, date-scoped campaign-half prefix."""
+    if legacy:
+        return sorted(RESULTS.glob(gov.POST_CAP_LEGACY_PREFIX + "*"))
+    dirs = list(RESULTS.glob(gov.POST_CAP_AUTHORITY_PREFIX + "*"))
+    dirs = [d for d in dirs
+            if not d.name.startswith(gov.POST_CAP_LEGACY_PREFIX)]
+    dirs += RESULTS.glob(gov.POST_CAP_R2_REMINT_PREFIX + "*")
+    return sorted(dirs)
 
 
 def test_post_cap_authority_dirs_are_committed():
     """Both authority halves must exist as committed dirs: the campaign mint
-    (one set per roster tool x 21 classes) and the legacy re-mint (60
-    classes). RED until
+    (one set per roster tool x 21 classes, plus the r2 re-mint) and the
+    legacy re-mint (60 classes). RED until
     the RB-10 mints complete."""
     assert _authority_dirs(legacy=False), (
-        "no m7_floor_calibration_p7cap_<stamp> campaign authority dir")
+        "no campaign authority dir (m7_floor_calibration_p7cap_<stamp> or "
+        "m7_floor_calibration_p6_20261115-*)")
     assert _authority_dirs(legacy=True), (
         "no m7_floor_calibration_p7cap_legacy_<stamp> legacy-domain "
         "authority dir")

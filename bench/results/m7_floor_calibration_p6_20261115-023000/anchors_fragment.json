@@ -1,0 +1,212 @@
+{
+ "sigminer_post_v3_rust_batch|clock|N1000": {
+  "cpu_seconds": 394.063936,
+  "reps": 100,
+  "wall_seconds": 394.496,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__clock__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_clock_only|N100": {
+  "cpu_seconds": 402.78874299999995,
+  "reps": 100,
+  "wall_seconds": 403.235,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_clock_only__N100__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_clock_only|N1000": {
+  "cpu_seconds": 401.11796999999996,
+  "reps": 100,
+  "wall_seconds": 401.575,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_clock_only__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_clock_only|N10000": {
+  "cpu_seconds": 403.261049,
+  "reps": 100,
+  "wall_seconds": 403.7,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_clock_only__N10000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_flat_triple|N100": {
+  "cpu_seconds": 396.2091,
+  "reps": 100,
+  "wall_seconds": 396.63,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_flat_triple__N100__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_flat_triple|N1000": {
+  "cpu_seconds": 398.093485,
+  "reps": 100,
+  "wall_seconds": 398.551,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_flat_triple__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_flat_triple|N10000": {
+  "cpu_seconds": 400.58277200000003,
+  "reps": 100,
+  "wall_seconds": 401.032,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_flat_triple__N10000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_mmr|N100": {
+  "cpu_seconds": 404.99273,
+  "reps": 100,
+  "wall_seconds": 405.451,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_mmr__N100__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_mmr|N1000": {
+  "cpu_seconds": 408.377957,
+  "reps": 100,
+  "wall_seconds": 408.758,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_mmr__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_mmr|N10000": {
+  "cpu_seconds": 406.945396,
+  "reps": 100,
+  "wall_seconds": 407.349,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_mmr__N10000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_pole|N100000": {
+  "cpu_seconds": 411.249674,
+  "reps": 100,
+  "wall_seconds": 411.711,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_pole__N100000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_pole|N1000000": {
+  "cpu_seconds": 496.778819,
+  "reps": 100,
+  "wall_seconds": 497.213,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_pole__N1000000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_pole|N300000": {
+  "cpu_seconds": 431.086115,
+  "reps": 100,
+  "wall_seconds": 431.523,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_pole__N300000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_strong_flat|N100": {
+  "cpu_seconds": 409.413119,
+  "reps": 100,
+  "wall_seconds": 409.841,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_strong_flat__N100__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_strong_flat|N1000": {
+  "cpu_seconds": 408.233227,
+  "reps": 100,
+  "wall_seconds": 408.653,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_strong_flat__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|comp_strong_flat|N10000": {
+  "cpu_seconds": 418.86413899999997,
+  "reps": 100,
+  "wall_seconds": 419.291,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__comp_strong_flat__N10000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|main|N100": {
+  "cpu_seconds": 409.134574,
+  "reps": 100,
+  "wall_seconds": 409.688,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__main__N100__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|main|N1000": {
+  "cpu_seconds": 398.945962,
+  "reps": 100,
+  "wall_seconds": 399.424,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__main__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|main|N10000": {
+  "cpu_seconds": 399.201535,
+  "reps": 100,
+  "wall_seconds": 399.665,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__main__N10000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|nb|N1000": {
+  "cpu_seconds": 387.970509,
+  "reps": 100,
+  "wall_seconds": 388.397,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__nb__N1000__rep100.json"
+  ]
+ },
+ "sigminer_post_v3_rust_batch|sparse|N1000": {
+  "cpu_seconds": 401.549018,
+  "reps": 100,
+  "wall_seconds": 401.954,
+  "witness": [
+   "m7_floor_calibration_p6_20261115-023000",
+   "witnesses",
+   "sigminer_post_v3_rust_batch__sparse__N1000__rep100.json"
+  ]
+ }
+}
