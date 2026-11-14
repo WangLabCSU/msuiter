@@ -63,6 +63,15 @@ is the authoritative coverage checklist.
 The package builds from source: `R CMD INSTALL` compiles the vendored Rust core
 offline (toolchain floor: `rustc >= 1.71`, see `SystemRequirements`).
 
+Prerequisites:
+
+- **R >= 4.3** (see `DESCRIPTION`).
+- **A Rust toolchain** (`rustc >= 1.71`) — install via [rustup](https://rustup.rs)
+  if `cargo --version` fails. The vendored core is compiled during
+  installation; no network access is required beyond the toolchain itself.
+- A C compiler matching your R installation (standard on Linux and macOS with
+  Xcode Command Line Tools; on Windows, [Rtools](https://cran.r-project.org/bin/windows/Rtools/)).
+
 Install the development build from GitHub:
 
 ```r

@@ -1,0 +1,44 @@
+# msuiter package container recipe (Data/Code Availability face).
+#
+# Referenced by inst/repro/AVAILABILITY.md and printed (never executed) by
+# `inst/repro/reproduce.sh --full`. This is a *reproducibility* image: it
+# builds THIS TREE with `R CMD INSTALL`, the same one-command path as a
+# bare-metal install. It is not a measurement image -- the P6 arm images
+# (bench/m7/adapters/Dockerfile.sigminer.tree, FACE=rust) carry the
+# byte-pinned strata and self-witness guards that measurement requires.
+#
+# NETWORK POLICY (memo §5, binding, mirrored from the sibling Dockerfiles):
+# the base pull spells the mirror host explicitly -- docker.io is served by
+# 9f6c5in3dh5vszgdz0.xuanyuan.run. Direct upstream pulls fail on this network
+# (proxy 407) and are prohibited. In-build package fetches (apt/crates.io)
+# follow the G0-established idiom (memo §8): §5 governs image pulls, not
+# fetches, so `R CMD INSTALL` builds the vendored Rust core against
+# crates.io as usual (src/rust/vendor.tar.xz is a packaging-time artifact,
+# not a committed byte).
+#
+# Build (context = repository root):
+#   docker build -f inst/repro/Dockerfile.msuiter -t msuiter:local .
+#   docker run --rm msuiter:local Rscript -e 'msuiter::ms_refdb_bundled'
+#
+# Base: rocker/r-ver:4.3.3, the same stamp as the peer freezes; the
+# floor the package itself declares is R >= 4.3 (DESCRIPTION). The
+# attestation environment's renv stamp (inst/repro/renv.lock, R 4.5.2)
+# is a superset of this base, not a requirement of it.
+FROM 9f6c5in3dh5vszgdz0.xuanyuan.run/rocker/r-ver:4.3.3
+
+# Toolchain: Debian-native rustc/cargo (no cross-stage binary, no glibc
+# wall -- same choice as the FACE=rust arm strata). Version-gated on the
+# package floor, never floated silently: below 1.71 is a build death.
+# The measurement arm pins jammy rustc 1.75.0 exactly; this recipe accepts
+# anything at or above the declared MSRV.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends rustc cargo \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustc --version | awk '{ exit ($2+0 >= 1.71) ? 0 : 1 }' \
+    || (echo "[FATAL] rustc >= 1.71 required (SystemRequirements), got: $(rustc --version 2>/dev/null || echo none)" >&2; exit 1)
+
+COPY . /tmp/msuiter/
+
+RUN export CARGO_REGISTRIES_CRATES_IO_INDEX="sparse+https://index.crates.io/" \
+    && R CMD INSTALL --preclean /tmp/msuiter \
+    && Rscript -e 'if (!requireNamespace("msuiter", quietly = TRUE)) quit(status = 1L); cat("[image] msuiter", as.character(packageVersion("msuiter")), "installed\n")'
