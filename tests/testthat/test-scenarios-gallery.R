@@ -63,7 +63,11 @@
 
 .sg_audit <- function(manifest_lines, root) {
   outdir <- file.path(root, "bench", "scenarios", "out")
-  files <- if (dir.exists(outdir)) sort(list.files(outdir)) else character(0)
+  cand <- if (dir.exists(outdir)) list.files(outdir) else character(0)
+  # the roster law is files-only (tool comment at scg_roster); the audit's
+  # disk walk must speak the same language or a scratch directory reddens
+  files <- sort(cand[!is.na(file.info(file.path(outdir, cand))$isdir) &
+                       !file.info(file.path(outdir, cand))$isdir])
   if (!length(files)) {
     return(list(violations = paste0("vacuous: zero witness files under ", outdir),
                 n = 0L))
