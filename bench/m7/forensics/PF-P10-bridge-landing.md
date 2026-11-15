@@ -31,8 +31,8 @@ f3e894a6933a2ffb unchanged, probed)". That probe quote is a byte-quote of
 the 2296f49 record — the epoch itself has since been superseded to
 `cfdcc51dbb9b7041` and then to `b1ce0f176cec2633` (2026-11-15 batch-bridge
 r2 re-mint; erratum:
-`vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd`); the quote
-stays byte-exact, the supersession is recorded around it.
+`vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd`); the
+quote stays byte-exact, the supersession is recorded around it.
 
 ## 2. System-level distance (census-backed)
 

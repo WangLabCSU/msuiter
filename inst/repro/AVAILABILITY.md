@@ -49,6 +49,6 @@ chain between them.
 
 Every committed witness, census line, and judgment quotes its epoch pin
 (current floor-table epoch: `b1ce0f176cec2633`, pinned at
-`bench/m7/tests/test_p6_floor_governance.py:169`) and its generating
+`bench/m7/tests/test_p6_floor_governance.py:174`) and its generating
 command, so each figure can be re-derived byte-identically from the
 repository alone.

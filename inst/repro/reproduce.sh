@@ -17,7 +17,7 @@
 # Synthetic-only law: every artifact touched here is the frozen G0 synthetic
 # regime (master seed 20260928) or a committed witness table. Post-cap witness
 # law: the O5 face speaks the floor-table epoch pinned at
-# bench/m7/tests/test_p6_floor_governance.py:169; the bootstrap campaign
+# bench/m7/tests/test_p6_floor_governance.py:174; the bootstrap campaign
 # predates that epoch and the draft quotes it labeled epoch-mismatched.
 # Portable to bash 3.2 (no associative arrays).
 set -u

@@ -14,7 +14,7 @@ House laws that bind this directory:
 * **MEASURED-then-STATED.** Every timing figure in the paper quotes one of
   the witness/CSV files here, by path.
 * **Epoch law.** Floor-table epochs pinned at
-  `bench/m7/tests/test_p6_floor_governance.py:168-169`:
+  `bench/m7/tests/test_p6_floor_governance.py:173-174`:
   `PRECAP_SEALED_EPOCH = 6b3a66bc9d0224eb`,
   `POST_CAP_EPOCH_PIN = b1ce0f176cec2633`.
 
@@ -44,8 +44,12 @@ House laws that bind this directory:
 
 `p6_regen_20261023-044026` (147/147 @ `f3e894a6933a2ffb`) → superseded by
 **`p6_regen_20261111-095635`** (168/168 @ `cfdcc51dbb9b7041`, banked
-`census_regen_20261114.txt`). The supersession record is
-`vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd`; sealed
+`census_regen_20261114.txt`) → the batch arm re-anchored onto the post-P11
+kernel r2 re-mint and the census re-banked (168/168 @ `b1ce0f176cec2633`,
+banked `p6_regen_20261111-095635/census_regen_20261115.txt`) — the current
+committed O5 record. The supersession records are
+`vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd` then
+`vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd`; sealed
 devlog bodies are byte-exact and are superseded only through errata.
 
 ## Regeneration
