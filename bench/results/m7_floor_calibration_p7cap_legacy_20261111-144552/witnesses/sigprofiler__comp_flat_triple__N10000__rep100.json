@@ -152,7 +152,7 @@
    "solo_mean_s": 16.671617,
    "verdict": "NOT-FLAT"
   },
-  "epoch": "cfdcc51dbb9b7041",
+  "epoch": "b1ce0f176cec2633",
   "law": "attestation-lv1",
   "preflight": {
    "cell": "sigprofiler__comp_flat_triple__N10000",

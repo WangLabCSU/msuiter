@@ -271,7 +271,8 @@ def test_batch_face_anchors_are_sidecar_backed_post_cap_bytes():
             continue
         anchor = gov._FLOOR_ANCHORS[key]
         caldir = anchor["witness"][0]
-        assert caldir.startswith(gov.POST_CAP_AUTHORITY_PREFIX) and not \
+        assert (caldir.startswith(gov.POST_CAP_AUTHORITY_PREFIX)
+                or caldir.startswith(gov.POST_CAP_R2_REMINT_PREFIX)) and not \
             caldir.startswith(gov.POST_CAP_LEGACY_PREFIX), (
             f"{key}: anchors must ride post-cap authority bytes")
         path = gov.anchor_witness_path(anchor)

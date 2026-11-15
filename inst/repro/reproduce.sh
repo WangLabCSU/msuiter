@@ -17,7 +17,7 @@
 # Synthetic-only law: every artifact touched here is the frozen G0 synthetic
 # regime (master seed 20260928) or a committed witness table. Post-cap witness
 # law: the O5 face speaks the floor-table epoch pinned at
-# bench/m7/tests/test_p6_floor_governance.py:169; the bootstrap campaign
+# bench/m7/tests/test_p6_floor_governance.py:174; the bootstrap campaign
 # predates that epoch and the draft quotes it labeled epoch-mismatched.
 # Portable to bash 3.2 (no associative arrays).
 set -u
@@ -66,7 +66,7 @@ expectface m7-tests "440/440 tests passed."
 #--- Face 2: O5 parity census (MEASURED-then-STATED; refuses witness drift) ---
 runface o5-parity bench/m7 python3 -m tools.parity_recompute
 expectface o5-parity "lines=168 breaches=168"
-expectface o5-parity "epoch=cfdcc51dbb9b7041"
+expectface o5-parity "epoch=b1ce0f176cec2633"
 
 #--- Face 3: bootstrap campaign, shared oracle over the sealed outdir --------
 # host + hw_profile expectations are read from the campaign's own seal.json,

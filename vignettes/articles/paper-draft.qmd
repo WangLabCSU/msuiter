@@ -229,7 +229,7 @@ Table 1 — sealed campaign verdicts.
 | 5 | P10 batch bridge on the product bridge face | landing ratio A0/A3 = 2.3004x (per-k 2.74/2.43/2.19/2.04), **bit-identical** | commit object 2296f49 message bytes (measured block: A0 0.14060 s/run, A3 0.06112 s/run; witness bytes "LANDING RATIO A0/A3 = 2.3004") |
 
 Epoch discipline on quoted timings (post-cap witness law; the post-cap floor
-epoch pins `cfdcc51dbb9b7041`, bench/m7/tests/test_p6_floor_governance.py:169):
+epoch pins `b1ce0f176cec2633`, bench/m7/tests/test_p6_floor_governance.py:174):
 - rows 1-4 derive from campaigns ignited **before** the cap regime
   (2026-10-13 / 2026-10-16 / 2026-10-24) — each is quoted with its
   verdict-class and labeled **epoch-mismatched (pre-cap witness)**; none of
@@ -245,13 +245,14 @@ against the compiled sigprofiler yardstick, per class, on the cpu basis, under
 MEASURED-then-STATED and PATH-BINDING laws (witness bytes must equal table
 bytes or the line is refused). In-lane re-run, rc=0:
 **faces=8 classes=21 lines=168
-breaches=168 bar<=2.0x epoch=cfdcc51dbb9b7041** — i.e. all 168 R-face x class
+breaches=168 bar<=2.0x epoch=b1ce0f176cec2633** — i.e. all 168 R-face x class
 cells currently breach the hard <=2x bar against the compiled yardstick
-(per-face cpu-basis ranges 8.7963–77.6890; best arm
-`sigminer_post_v3_rust_batch`, the isolated-process batch-bridge face). The
+(per-face cpu-basis ranges 9.4409–77.6890; best arm
+`sigminer_post_v3_rust_batch`, the isolated-process batch-bridge face on the
+post-P11 kernel, r2 re-mint). The
 lane card's "168/168 <=2x breach list" is
 this census; the per-row output carries both bound witness paths on every
-printed ratio. Banked: `bench/results/p6_regen_20261111-095635/census_regen_20261114.txt`.
+printed ratio. Banked: `bench/results/p6_regen_20261111-095635/census_regen_20261115.txt`.
 
 > [GATED: CAMPAIGN-R] No parity or Rust-headline sentence may enter the
 > manuscript before the post-P10 full-table regeneration plus the real-data arm
@@ -271,7 +272,12 @@ printed ratio. Banked: `bench/results/p6_regen_20261111-095635/census_regen_2026
 > The regeneration has since COMPLETED (generation-4 campaign
 > `p6_regen_20261111-095635`, 168/168 cells, epoch `cfdcc51dbb9b7041`):
 > Table 2 above is the fresh census, banked and supersession-recorded in
-> vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd. CAMPAIGN-R
+> vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd. The batch
+> arm has since re-anchored onto the post-P11-kernel r2 re-mint (epoch
+> re-pin `b1ce0f176cec2633`, 2026-11-15): Table 2 above is the current
+> census, banked at `census_regen_20261115.txt` and supersession-recorded
+> in vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd.
+> CAMPAIGN-R
 > stays closed: the fresh census is all-BREACH (168/168), and the real-data
 > arm remains open — the gate is closed on the BREACH row itself, not on
 > missing evidence. The PF forensics supporting the forensics-direction
@@ -592,9 +598,9 @@ Every number quoted in a filled slot, with its byte-verifiable anchor:
 | 22.166–67.102, 18 offending classes | bench/results/p6_regen_20261016-011928/result.md:6 | `sed -n '6p' <file>` |
 | 1.2323 (bytes 1.2323046734094532) | bench/results/p6_regen_20261016-011928/nmf_yardstick_authoritative.json:9 | `sed -n '9p' <file>` |
 | 2.3004 (A0 0.14060, A3 0.06112 s/run) | commit object 2296f49 (message bytes) | `git show -s --format=%B 2296f49` |
-| O5 census faces=8 classes=21 lines=168 breaches=168 @ cfdcc51dbb9b7041 | bank `bench/results/p6_regen_20261111-095635/census_regen_20261114.txt` (rc=0 in-lane) | `cd bench/m7 && python3 -m tools.parity_recompute` |
-| epoch pin cfdcc51dbb9b7041 | bench/m7/tests/test_p6_floor_governance.py:169 | `sed -n '169p' <file>` |
-| 476+346 law expectations; 364/364 m7 tests | commit object 2296f49 (message); live re-run bank (rc=0, "364/364 tests passed.") | `cd bench/m7 && python3 -m tests.run_all` |
+| O5 census faces=8 classes=21 lines=168 breaches=168 @ b1ce0f176cec2633 | bank `bench/results/p6_regen_20261111-095635/census_regen_20261115.txt` (rc=0 in-lane) | `cd bench/m7 && python3 -m tools.parity_recompute` |
+| epoch pin b1ce0f176cec2633 | bench/m7/tests/test_p6_floor_governance.py:174 | `sed -n '174p' <file>` |
+| 476+346 law expectations; 440/440 m7 tests | commit object 2296f49 (message); live re-run bank (rc=0, "440/440 tests passed.") | `cd bench/m7 && python3 -m tests.run_all` |
 | 198-cell grid landed | vignettes/articles/roadmap.qmd:175-180 | `sed -n '175,180p' vignettes/articles/roadmap.qmd` |
 | master seed 20260928 | bench/results/bootstrap_vs_sigminer_20261013T175859Z/result.md:8; per-campaign `Seeds.txt` | `sed -n '8p' <file>` |
 
@@ -603,7 +609,7 @@ Every number quoted in a filled slot, with its byte-verifiable anchor:
 | Gate | Blocks | Unblock condition |
 |---|---|---|
 | G0-PRIMARY | abstract headline, title choice A-vs-B, Fig. 1 data panel, any "first coverage-measured intervals" phrasing | operator-side G0 primary run (author-side `G0_CATALOG_PATH`; vignettes/articles/roadmap.qmd:186-191) |
-| CAMPAIGN-R | any parity/Rust headline sentence, any <=2x PASS row | post-P10 full-table regeneration (DONE — gen-4 campaign 168/168, census all-BREACH; vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd) + real-data arm (pending; vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R1) |
+| CAMPAIGN-R | any parity/Rust headline sentence, any <=2x PASS row | post-P10 full-table regeneration (DONE — gen-4 campaign 168/168, census all-BREACH; batch arm re-anchored onto the post-P11-kernel r2 re-mint, epoch `b1ce0f176cec2633`, 2026-11-15; vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd) + real-data arm (pending; vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R1) |
 | PI-C | naming peer (c) / signeR as a comparison target | PI ruling on the signeR hypothesis (executive-review pending item) |
 | G-GATE-COHORT | real-cohort treatment concordance, re-adjudicated published conclusion, clinical framing of pillar 3 | cohort collaboration (vignettes/articles/architecture.qmd §10 pivot trigger; G2 unreached per vignettes/articles/roadmap.qmd:173-180) |
 
