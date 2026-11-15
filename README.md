@@ -5,20 +5,32 @@
 [![Docs](https://github.com/WangLabCSU/msuiter/actions/workflows/pkgdown.yaml/badge.svg)](https://wanglabcsu.github.io/msuiter/)
 <!-- badges: end -->
 
-**Mutational signature analysis with a Rust compute core.**
+**Mutational Signature SUITE in R.**
 
-msuiter is a modern R package for **extracting, fitting, and interpreting mutational
+msuiter is a complete toolkit for **extracting, fitting, and interpreting mutational
 signatures**, built as the successor of [sigminer](https://github.com/ShixiangWang/sigminer).
-Numerical kernels (NMF engines, NNLS, likelihood fitting, channel assignment, resampling,
-consensus, genome-context tallying) live in a Rust workspace exposed through a stateless
-FFI; the R side provides an S7 object model, an engine registry, and a tidy `ms_*()`
-user interface.
-
-One workflow grammar covers the analysis end to end:
+It carries one analysis from raw variant calls to interpreted biology through a single
+workflow grammar:
 
 ```r
 ms_variants() |> ms_tally() |> ms_extract() |> ms_fit() |> ms_compare()
 ```
+
+What sets it apart:
+
+- **A principled extraction pipeline** — an ensemble-plus-consensus design with an
+  adjudicated default rule for the number of signatures, plus cross-validation and
+  stability evidence (`ms_select_k()`) so the choice of K is argued, not guessed.
+- **Calibrated statistics, not point estimates** — the MSU-Fit family measures the
+  *empirical coverage* of exposure intervals and presence calls, giving each verdict
+  an explicit, quantified trust level.
+- **Reproducibility by construction** — frozen random streams, bit-level thread
+  invariance, structured errors (`msuiter_error_*` condition classes) at every
+  boundary, and a provenance-governed bundled COSMIC reference database.
+- **A fast, auditable compute core** — numerical kernels run in Rust behind a
+  stateless FFI under a forbid-unsafe engine contract and a frozen dependency
+  budget, while the R side keeps the S7 object model, the pluggable engine
+  registry, and the tidy `ms_*()` interface.
 
 ## Scope
 
@@ -86,35 +98,41 @@ release yet.
 
 ## Quick start
 
+A complete round trip in about a dozen lines: simulate a small cohort from three
+bundled COSMIC signatures, extract signatures de novo, compare them against the
+ground truth, and refit with the known reference.
+
 ```r
 library(msuiter)
 
-# a small synthetic cohort seeded with three bundled COSMIC signatures
+# 1. simulate a small synthetic cohort seeded with three bundled COSMIC signatures
 ref <- ms_refdb_bundled()$SBS_GRCh38
-S   <- ref@matrices[[1]][, 1:3]
+S   <- ref@matrices[[1]][, 1:3]            # the first three COSMIC signatures
 E   <- matrix(c(0.5, 0.3, 0.2), 3, 24,
               dimnames = list(colnames(S), paste0("S", 1:24)))
 sim <- ms_simulate(S, exposures = E, burden = 2000, seed = 1)
 
-# extraction: de novo signatures from the simulated catalog
-# (tiny synthetic data: the K adjudication warns that its stability evidence
-#  is thin -- real analyses read the ms_select_k() evidence panel)
+# 2. extraction: de novo signatures from the simulated catalog
+#    (tiny synthetic data: the K adjudication warns that its stability evidence
+#     is thin -- real analyses read the ms_select_k() evidence panel)
 ext <- suppressWarnings(ms_extract(sim, k = 3))
 
-# comparison: calibrated similarity against the reference signatures
+# 3. comparison: are the extracted signatures the ones we planted?
+#    null_n / null_n_draws set the size of the analytic-vs-empirical null
+#    simulations (defaults are fine for real data; small here for speed)
 cmp <- ms_compare(ext@signatures, S,
                   exposures_est = ext@exposures, exposures_ref = E,
                   null_n = 200, null_n_draws = 500, seed = 1L)
 cmp
 
-# fitting: exposures against the bundled COSMIC reference
+# 4. fitting: how much of each known signature is present per sample?
 fit <- ms_fit(sim, S, method = "nnls")
 fit
 ```
 
 See [Get started](https://wanglabcsu.github.io/msuiter/articles/get-started.html)
-for the five-minute path against committed fixtures, and the tiered task guides
-for each stage of the grammar.
+for a beginner-friendly five-minute walkthrough that builds the same round trip
+step by step, and the tiered task guides for each stage of the grammar.
 
 ## Documentation
 
@@ -123,10 +141,11 @@ governance corpus) is published at **https://wanglabcsu.github.io/msuiter/**:
 
 | Tier | Contents |
 |---|---|
-| [Get started](https://wanglabcsu.github.io/msuiter/articles/get-started.html) | install, the five-minute path, output anatomy |
+| [Get started](https://wanglabcsu.github.io/msuiter/articles/get-started.html) | install, the beginner walkthrough, output anatomy |
 | [Core workflows](https://wanglabcsu.github.io/msuiter/articles/index.html) | import & formats, catalogs, extraction, fitting |
 | [Statistics & comparison](https://wanglabcsu.github.io/msuiter/articles/comparing-signatures.html) | similarity comparison, calibration statistics |
 | [Applications & QC](https://wanglabcsu.github.io/msuiter/articles/scenarios.html) | scenario atlas, QC faces, visualization gallery |
+| [Extending](https://wanglabcsu.github.io/msuiter/articles/extending.html) | register a third-party fitting engine |
 | [Reference](https://wanglabcsu.github.io/msuiter/reference/index.html) | every exported function, grouped by topic |
 | [Governance corpus](https://wanglabcsu.github.io/msuiter/articles/docs-bridge.html) | architecture, roadmap, performance anchoring, ADRs, research dossiers, devlog |
 

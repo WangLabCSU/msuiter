@@ -1,7 +1,8 @@
 # The pkgdown site face. The user-facing learning path lives in the tiered
 # articles (Get started -> Core workflows -> Statistics -> Applications ->
-# Performance -> the governance corpus, research dossiers, reviews and the
-# campaign devlog, all converted from the former docs/ tree). The site is
+# Extending, all reachable from the navbar; the governance corpus, research
+# dossiers, reviews, the performance/peer-evidence face and the campaign
+# devlog are project-facing and fold behind More articles). The site is
 # built and published by .github/workflows/pkgdown.yaml (GitHub Actions ->
 # GitHub Pages, build_type: workflow).
 url: https://wanglabcsu.github.io/msuiter
@@ -175,7 +176,7 @@ reference:
 articles:
 - title: "Get started"
   navbar: "Get started"
-  desc: "Install, the five-minute path, and the full tour from variants to a reference comparison."
+  desc: "Install, the five-minute ground-truth path, and the full tour from variants to a reference comparison."
   contents:
   - get-started
   - tour
@@ -201,8 +202,7 @@ articles:
   - quality-control
   - visualization-gallery
 - title: "Performance and peer evidence"
-  navbar: "Performance and peer evidence"
-  desc: "Frozen floors, witness censuses and the sealed peer-evidence face."
+  desc: "Frozen floors, witness censuses and the sealed peer-evidence face (campaign-facing; folded behind More articles)."
   contents:
   - performance-anchoring
   - scenarios-gallery

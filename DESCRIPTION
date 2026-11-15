@@ -1,12 +1,20 @@
 Type: Package
 Package: msuiter
-Title: Mutational Signature Analysis with a Rust Compute Core
+Title: Mutational Signature SUITE in R
 Version: 0.1.0.9000
 Authors@R: person("Shixiang", "Wang", email = "wangshx@csu.edu.cn", role = c("aut", "cre", "cph"))
-Description: Tally, extract and fit mutational signatures across modalities
-    (SBS, DBS, indel and beyond). Numerical kernels live in a Rust workspace
-    exposed through a stateless FFI, while the R side provides the object
-    model, the engine registry and the tidy user interface.
+Description: A complete toolkit for mutational signature analysis, following one
+    workflow grammar from raw variant calls to interpreted biology: tally
+    mutation catalogs across modalities (SBS, DBS, indel and beyond), extract
+    de novo signatures with an ensemble-plus-consensus pipeline and an
+    adjudicated default number of signatures, fit known signatures with
+    calibrated statistics that measure the empirical coverage of their
+    intervals, and compare, cluster and visualize signatures with
+    publication-grade figures. A reproducibility-by-construction core --
+    frozen random streams, bit-level thread invariance, structured errors,
+    and a provenance-governed reference database -- keeps results auditable
+    end to end. Numerical kernels are implemented in Rust and reached through
+    a stateless FFI behind the R object model and engine registry.
 License: file LICENSE
 URL: https://github.com/WangLabCSU/msuiter
 BugReports: https://github.com/WangLabCSU/msuiter/issues

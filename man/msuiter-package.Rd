@@ -4,12 +4,20 @@
 \name{msuiter-package}
 \alias{msuiter}
 \alias{msuiter-package}
-\title{msuiter: Mutational Signature Analysis with a Rust Compute Core}
+\title{msuiter: Mutational Signature SUITE in R}
 \description{
-Tally, extract and fit mutational signatures across modalities (SBS,
-DBS, indel and beyond). Numerical kernels live in a Rust workspace
-exposed through a stateless FFI; the R side provides the object model,
-the engine registry and the tidy user interface.
+A complete toolkit for mutational signature analysis, following one
+workflow grammar from raw variant calls to interpreted biology: tally
+mutation catalogs across modalities (SBS, DBS, indel and beyond), extract
+de novo signatures with an ensemble-plus-consensus pipeline and an
+adjudicated default number of signatures, fit known signatures with
+calibrated statistics that measure the empirical coverage of their
+intervals, and compare, cluster and visualize signatures with
+publication-grade figures. A reproducibility-by-construction core --
+frozen random streams, bit-level thread invariance, structured errors,
+and a provenance-governed reference database -- keeps results auditable
+end to end. Numerical kernels are implemented in Rust and reached
+through a stateless FFI behind the R object model and engine registry.
 }
 \seealso{
 Useful links:

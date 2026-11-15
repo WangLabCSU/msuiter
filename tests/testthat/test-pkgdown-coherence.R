@@ -135,9 +135,11 @@
 
 # The audience post-condition. A tier is user-facing by default and must carry
 # the tier-level navbar key; only a tier named here may drop it, because only
-# these four have the project itself as audience.
+# these have the project itself as audience (performance/peer evidence speaks
+# the campaign's frozen-floor and witness language, not a beginner's).
 .coh_internal_tiers <- c("Repository governance corpus", "Research dossiers",
-                         "Independent reviews", "Campaign devlog")
+                         "Independent reviews", "Performance and peer evidence",
+                         "Campaign devlog")
 
 # The bijection runs both ways so a stale allowlist entry is caught too, and an
 # empty tier set is a violation rather than a silent pass.
