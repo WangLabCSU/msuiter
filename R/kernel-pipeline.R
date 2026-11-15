@@ -426,10 +426,13 @@ kp_attest_case <- function(case, out.dir, m, n, k, iters, init, seed,
     }
   }
   if (identical(route, "fast")) {
-    w <- kp_read_matrix_fast(file.path(out.dir, "W.csv"), m, k, "W.csv")
-    h <- kp_read_matrix_fast(file.path(out.dir, "H.csv"), k, n, "H.csv")
-    obj <- kp_read_trace_fast(file.path(out.dir, "trace.csv"), iters,
-                              "trace.csv", shape = trace.shape)
+    # the canonical fast assembly (kp_parse_case_fast, kernel-parse.R);
+    # its meta re-read is discarded -- the validated map above is returned.
+    bundle <- kp_parse_case_fast(out.dir, m, n, k, iters,
+                                 trace.shape = trace.shape)
+    w <- bundle$W
+    h <- bundle$H
+    obj <- bundle$objective
   } else {
     w <- kp_read_matrix_csv(file.path(out.dir, "W.csv"), m, k, "W.csv")
     h <- kp_read_matrix_csv(file.path(out.dir, "H.csv"), k, n, "H.csv")

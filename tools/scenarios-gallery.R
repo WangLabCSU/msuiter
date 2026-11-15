@@ -46,7 +46,12 @@ scg_roster <- function(root) {
   if (!dir.exists(wdir)) {
     .scg_stop(paste0("vacuous: no witness directory at ", wdir))
   }
-  files <- sort(list.files(wdir))
+  # non-recursive list.files still names subdirectories (include.dirs only
+  # governs recursive listings); witnesses are files, so a gitignored scratch
+  # directory under out/ must not enter the roster.
+  cand <- list.files(wdir)
+  files <- sort(cand[!is.na(file.info(file.path(wdir, cand))$isdir) &
+                       !file.info(file.path(wdir, cand))$isdir])
   if (!length(files)) {
     .scg_stop(paste0("vacuous: zero witness files under ", wdir))
   }

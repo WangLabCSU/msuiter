@@ -642,8 +642,6 @@ S7::method(ms_fit_bootstrap, MsCatalog) <- function(catalog, signatures,
     boot <- .ms_bootstrap_draws_rust(prep$counts, prep$signatures, method,
       n_boot, nb_size, zero_threshold, seed, n_threads_resolved, bca)
     draws_flat <- boot$draws
-    boot$n_boot <- boot$n_boot # unchanged; the list members below are
-    # identical to the interval face's wire format.
   } else {
     boot <- .ms_fit_bootstrap_rust(prep$counts, prep$signatures, method,
       n_boot, nb_size, zero_threshold, seed, n_threads_resolved, bca)
