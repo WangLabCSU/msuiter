@@ -88,131 +88,158 @@ yet.
 
 ## Five-minute path
 
-One chain, four faces, end to end: `ms_variants()` validates the typed input
-IR, `ms_tally()` runs it through the Rust kernel over a micro twoBit genome
-into a channel table, `ms_signature()` mounts the committed specimen matrix as
-a signature dictionary pinned to that channel table, and the bundled
-reference face arrives as an `MsRefDb` -- the COSMIC v3.6 dictionaries ship
-inside the package, so the trusted default needs no download.
+Real signature analyses ask two questions: *which* mutational processes
+shaped this cohort, and *how much* did each contribute to each sample? The
+five-minute path answers both on data whose truth is known in advance, so
+every number printed below is a real answer you can check against the ground
+truth that was planted.
 
-The genome is the same synthetic writer the tour uses: a trivial chromosome
-whose bases agree with the variant records base for base, so every printed
-number below is real kernel output over committed bytes.
+The path runs in five faces. It plants a ground truth taken from the bundled
+COSMIC v3.6 reference database -- the reference ships inside the package, so
+the trusted default needs no download -- then discovers signatures from the
+simulation alone, checks the discovery against the truth, refits every sample
+against the known dictionary, and shows how the number of processes is argued
+rather than guessed.
 
-```{r genome}
-.u32le <- function(v) writeBin(as.integer(v), raw(), size = 4L,
-                               endian = "little")
-.pack_bases <- function(bases) {
-  out <- raw((length(bases) + 3L) %/% 4L)
-  acc <- 0L; filled <- 0L; k <- 0L
-  for (b in bases) {
-    acc <- bitwOr(bitwShiftL(acc, 2L), b); filled <- filled + 1L
-    if (filled == 4L) { k <- k + 1L; out[k] <- as.raw(acc); acc <- 0L; filled <- 0L }
-  }
-  if (filled > 0L) out[k + 1L] <- as.raw(bitwShiftL(acc, 2L * (4L - filled)))
-  out
-}
-.write_2bit <- function(path) {
-  chr1 <- rep(c(2L, 1L), 32L)
-  chr2 <- rep(c(3L, 1L), 20L)
-  recs <- list(
-    list(name = "chr1", size = 64L, dna = .pack_bases(chr1),
-         nb = integer(0), nl = integer(0)),
-    list(name = "chr2", size = 40L, dna = .pack_bases(chr2),
-         nb = integer(0), nl = integer(0)))
-  off <- 16L + sum(vapply(recs, function(r) 1L + nchar(r$name) + 4L, 0L))
-  index <- raw(); body <- raw()
-  for (r in recs) {
-    index <- c(index, as.raw(nchar(r$name)), charToRaw(r$name), .u32le(off))
-    rec <- c(.u32le(r$size), .u32le(length(r$nb)), .u32le(r$nb), .u32le(r$nl),
-             .u32le(0L), .u32le(0L), r$dna)
-    body <- c(body, rec); off <- off + length(rec)
-  }
-  bytes <- c(.u32le(0x1A412743L), .u32le(0L), .u32le(length(recs)),
-             .u32le(0L), index, body)
-  con <- file(path, "wb"); on.exit(close(con), add = TRUE)
-  writeBin(bytes, con); invisible(path)
-}
-genome <- file.path(tempdir(), "getstarted-2bit.2bit")
-.write_2bit(genome)
-```
+### Plant a ground truth
 
-```{r variants}
-tab <- data.frame(
-  chrom  = c("chr1", "chr1", "chr1"),
-  start  = c(12L, 22L, 14L),
-  end    = c(12L, 22L, 14L),
-  ref    = c("C", "C", "C"),
-  alt    = c("A", "T", "T"),
-  sample = c("S1", "S1", "S2"))
-v <- ms_variants(tab, "GRCh38", caller = "get-started",
-                 matched_normal = "none")
-v
-```
-
-```{r tally}
-cat1 <- ms_tally(v, genome)
-cat1
-```
-
-The signature dictionary is the committed specimen itself -- read verbatim,
-its first two columns mounted under the channel labels the tally produced,
-so every exposure figure below is the fixture's own number and the channel
-hash is derived from the validated catalog, never hand-forged:
-
-```{r signature}
-raw_spec <- utils::read.delim(FIX, check.names = FALSE,
-                              stringsAsFactors = FALSE)
-labels <- cat1@channels$labels
-spec <- as.matrix(raw_spec[, 2L:3L, drop = FALSE])
-rownames(spec) <- raw_spec[[1L]]
-if (!identical(rownames(spec), labels)) stop("specimen rows must ride the channel labels")
-exposures <- matrix(c(0.6, 0.4), 2L, 1L,
-                    dimnames = list(colnames(spec), "S1"))
-summary1 <- list(
-  n_channels   = length(labels), n_samples = 1L,
-  channel_name = cat1@channels$name, channel_hash = cat1@channels$hash,
-  build = "GRCh38")
-sig <- ms_signature(spec, exposures, summary1, engine = "synthetic", seed = 1L)
-sig
-```
+The bundled reference database carries five dictionaries: small-variant SBS
+and DBS dictionaries for the two human genome builds, plus the indel
+dictionary. Take the human GRCh38 SBS dictionary and keep its first three
+signatures -- these are the processes the rest of the path must recover.
 
 ```{r refdb}
 br <- ms_refdb_bundled()
-db <- br[["SBS_GRCh38"]]
-db
-head(db@matrices[[1L]][, 1L:3L], 3L)
+print(br)
+```
+
+```{r sigs}
+S <- br[["SBS_GRCh38"]]@matrices[[1]][, 1:3]
+colnames(S)
+```
+
+Now the planting pattern: three kinds of simulated samples, each dominated by
+one of the three processes, so the right answer is known before any software
+runs.
+
+```{r plant}
+pat <- matrix(c(0.8, 0.1, 0.1,
+                0.1, 0.8, 0.1,
+                0.1, 0.1, 0.8), 3, 3)
+E <- pat[, rep(1:3, each = 8)]
+colnames(E) <- paste0("S", 1:24)
+```
+
+`ms_simulate()` turns ground truth plus exposures into a catalog a real
+pipeline could have produced -- channels by samples, the shape every
+downstream face speaks:
+
+```{r simulate}
+sim <- ms_simulate(S, exposures = E, burden = 20000, seed = 1)
+sim
+```
+
+### Discover, then check against the truth
+
+```{r extract}
+ext <- ms_extract(sim, k = 3)
+ext
+```
+
+`ms_extract()` ran the ensemble-plus-consensus pipeline and returned three de
+novo signatures, discovered from the catalog alone. We told it how many to
+look for -- in a real analysis you would not know, and `ms_select_k()` below
+is the evidence panel that argues the choice.
+
+`ms_compare()` scores every discovered signature against every reference
+signature, calibrates each score against a null distribution, and assigns
+matches so each reference is claimed at most once:
+
+```{r compare}
+cmp <- ms_compare(ext@signatures, S,
+                  exposures_est = ext@exposures, exposures_ref = E,
+                  null_n = 200, null_n_draws = 500, seed = 1L)
+cmp
+round(cmp@metrics$cosine, 3)
+print(cmp@hungarian)
+```
+
+The diagonal similarities sit near one: all three planted processes were
+recovered, none were confused with one another, and the exposure-level test
+rides along in the same comparison object.
+
+### Refit with the known dictionary
+
+Discovery finds the processes; fitting answers *how much of each* is in
+every sample. `ms_fit()` regresses each sample's catalog on the known
+dictionary under a non-negativity constraint, and the support table flags
+which exposures are statistically real rather than noise:
+
+```{r fit}
+fit <- ms_fit(sim, S, method = "nnls")
+fit
+round(fit@exposures[, c("S1", "S9", "S17")], 1)
+head(fit@support, 4L)
+```
+
+Read one column and the planting comes back: each sample draws about four
+fifths of its mutations from its dominant process, and the support table
+agrees that the two minor contributions are real but small.
+
+### Argue the number of processes
+
+The extraction above was told how many processes to look for; a real
+analysis must argue that number. `ms_select_k()` crosses a grid of candidate
+counts, measures reconstruction error and stability across replicates, and
+vetoes unstable answers -- the evidence table is the argument, and only one
+row survives:
+
+```{r select-k}
+ksel <- ms_select_k(sim, k_grid = 2:4, replicates = 4, k_folds = 3,
+                    n_seeds = 2, seed = 1)
+ksel$k
+ksel$k_evidence[, c("k", "cv_test_mse", "avg_stability",
+                    "min_cluster_stability", "passes_veto", "selected")]
+```
+
+### Bringing real data in
+
+Simulations prove the machinery; real analyses start from files. The
+committed specimen fixture is a SigProfiler-format probability table, and
+`ms_import()` reads it into the same typed object the extraction produced.
+The `kind` argument is the routing rule: a catalog is mutation counts, a
+signature dictionary is probabilities.
+
+```{r import}
+imp <- ms_import(FIX, format = "sigprofiler", kind = "signatures")
+imp
 ```
 
 ## Anatomy of the output
 
-The `MsSignature` above is a typed object, not a loose matrix: the
-signature matrix, the exposure matrix, the pinned channel summary and the
-provenance (engine, seed) are separate slots, each validated at the
-boundary that owns it.
+Every face above returned a typed object, not a loose matrix. The class name
+says what you are holding; the slots carry the pieces -- the matrices, the
+engine and the seed that produced them, the metadata each boundary validated
+on the way in. Print the object for the one-line summary; reach into the
+slots when a figure or a table needs the raw pieces.
 
 ```{r anatomy}
-print(class(sig))
-str(sig)
-print(dim(sig@signatures))
-print(dim(sig@exposures))
-print(sig@engine)
-print(substr(sig@catalog_summary$channel_hash, 1L, 16L))
+print(class(sim))
+print(class(ext))
+print(class(cmp))
+print(class(fit))
+print(ext@engine)
+print(dim(ext@signatures))
 ```
 
-The channel hash printed above is the tamper seal: it is recomputed from the
-validated channel table, and a hand-edited dictionary is refused at
-construction -- the same seal the tour demonstrates from the refusing side.
+The engine face names the registered engine that ran the extraction -- the
+pluggable registry is what third-party packages extend, and the
+[extending guide](extending.html) walks that contract.
 
 ## Where to go next
 
-The concept bridge is
-[vignettes/articles/msu-map.qmd](https://github.com/WangLabCSU/msuiter/blob/main/vignettes/articles/msu-map.qmd)
-(one row per export: concept, pillar, peer counterpart). The narrative tour
-continues in [tour.html](tour.html); the whole docs corpus is navigated from
+The concept bridge is [msu-map.html](msu-map.html) (one row per export:
+concept, pillar, peer counterpart). The narrative tour continues in
+[tour.html](tour.html); the whole docs corpus is navigated from
 [docs-bridge.html](docs-bridge.html); every exported face is documented in
 the [reference index](../reference/index.html).
-
-```{r cleanup, include = FALSE}
-unlink(genome)
-```

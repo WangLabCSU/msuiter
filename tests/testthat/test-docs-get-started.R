@@ -7,8 +7,9 @@
 #      committed renv lockfile). An unwitnessed number in prose is a violation.
 #      Token extraction is a pure char walk (no regex engine -- this base's
 #      tre quirks; the .ds2_cell_split precedent).
-#  (2) the five-minute path exists, really calls the end-to-end faces
-#      (ms_variants -> ms_tally -> ms_signature -> ms_refdb) and names the
+#  (2) the five-minute path exists and really calls the end-to-end faces of
+#      the beginner grammar (ms_refdb -> ms_simulate -> ms_extract ->
+#      ms_compare -> ms_fit -> ms_select_k -> ms_import) and names the
 #      committed specimen fixture it executes against.
 #  (3) registration: the vignette is named in the _pkgdown.yml articles block
 #      and the navbar carries an internal href into the built articles tree.
@@ -109,7 +110,8 @@
   v <- character(0)
   parts <- .gs_split(lines)
   code <- paste0(parts$code, collapse = "\n")
-  for (face in c("ms_variants", "ms_tally", "ms_signature", "ms_refdb")) {
+  for (face in c("ms_refdb", "ms_simulate", "ms_extract", "ms_compare",
+                 "ms_fit", "ms_select_k", "ms_import")) {
     if (!grepl(face, code, fixed = TRUE)) {
       v <- c(v, paste0("five-minute path never calls ", face, "()"))
     }
@@ -316,10 +318,13 @@ test_that("US-1 the constructed-perfect skeleton greens the laws (live control)"
     "## Five-minute path",
     "```{r}",
     "# fixture: fixtures/sigprofiler_sbs96_specimen.txt",
-    "v <- ms_variants(tab)",
-    "cat1 <- ms_tally(v, genome)",
-    "sig <- ms_signature(sigs, exps, summary)",
     "db <- ms_refdb_bundled()",
+    "sim <- ms_simulate(sigs, exposures = exps, burden = 2000, seed = 1)",
+    "ext <- ms_extract(sim, k = 2)",
+    "cmp <- ms_compare(ext@signatures, sigs)",
+    "fit <- ms_fit(sim, sigs)",
+    "ksel <- ms_select_k(sim)",
+    "imp <- ms_import(fixture_path, format = \"sigprofiler\", kind = \"signatures\")",
     "```",
     "The specimen rides the committed fixture named above.",
     "Or fetch it with install.packages from a local tarball.",
