@@ -1,0 +1,7 @@
+"sample","planted_truth","scarhrd_hrd_loh","scarhrd_tai","scarhrd_lst","scarhrd_hrd_sum","ploh_fraction","aneuploidy_count","hrd_score","geometry_scarhrd","geometry_msuiter"
+"B1","clean diploid baseline",0,0,0,0,0,0,0,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"
+"B2","telomeric AI plus partial LOH plus one LST pair; chrX drop-law probe",1,1,1,3,0.0427622178468645,1,0,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"
+"B3","interstitial AI plus partial LOH plus one LST pair",1,1,1,3,0.0170947768077956,1,0,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"
+"B4","whole-chromosome LOH silenced by the scarHRD chrDel exclusion",0,0,0,0,0.0687331281322794,0,0,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"
+"B5","balanced odd state collapsed by shrink to whole-chromosome AI",0,0,0,0,0,1,0,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"
+"B6","six-autosome whole-chrom state-4 LOH: composite-positive, scarHRD-silenced",0,0,0,0,0.428199505016062,6,1,"scarHRD 0.1.1 chrominfo_grch37 centromere-snapped arms","sigminer hg19 arms; pLOH denominator=2881033286 (injected)"

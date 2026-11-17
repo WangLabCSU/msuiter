@@ -422,7 +422,15 @@ ground-truth reference) and sigprofiler (the compiled yardstick face) — named
 and quantified through Tables 1-2 and the O5 census, with the comparison
 harness itself committed (bench/m7/adapters, registry in
 bench/m7/competitors/registry.py listing the 7 R-family faces and the
-python-basis yardstick). The field-landscape citations are the re-pinned
+python-basis yardstick). The HRD competitor arm of that posture (novelty-scan
+§4 R7) is live: the same-input adjudication against the scarHRD 0.1.1 public
+face scored six planted GRCh37 records through the committed runner
+bench/scenarios/run_hrd_baselines.R, its evidence trio
+bench/scenarios/out/hrd_baselines_{cohort.tsv,arms.tsv,witness.csv} carrying
+per-row geometry attribution and hand-traced goldens corroborated byte-exact
+on the first real invocation (vignettes/articles/
+devlog-2026-11-17-r7-hrd-competitor-baselines.qmd). The field-landscape
+citations are the re-pinned
 bibliography (§9), with the novelty scan's [M]/[U] tier honesty attached where
 the scan has not itself re-verified on-page; the 2026-11-10 targeted re-scan
 plus full DOI re-pin (vignettes/articles/devlog-2026-11-10-novelty-rescan.qmd,

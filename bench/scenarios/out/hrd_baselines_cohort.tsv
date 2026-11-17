@@ -1,0 +1,16 @@
+sample	chromosome	start	end	state	minor_cn	caller	assay
+B1	chr1	1	249250621	2	1	ascat	wgs
+B2	chr2	1	120000000	3	1	ascat	wgs
+B2	chr2	120000001	243199373	3	0	ascat	wgs
+B2	chrX	1	155271560	2	1	ascat	wgs
+B3	chr1	1	200000000	3	1	ascat	wgs
+B3	chr1	200000001	249250621	3	0	ascat	wgs
+B4	chr3	1	198022430	2	0	ascat	wgs
+B5	chr2	1	150000000	3	1	ascat	wgs
+B5	chr2	150000001	243199373	3	1	ascat	wgs
+B6	chr1	1	249250621	4	0	ascat	wgs
+B6	chr2	1	243199373	4	0	ascat	wgs
+B6	chr3	1	198022430	4	0	ascat	wgs
+B6	chr4	1	191154276	4	0	ascat	wgs
+B6	chr5	1	180915260	4	0	ascat	wgs
+B6	chr6	1	171115067	4	0	ascat	wgs
