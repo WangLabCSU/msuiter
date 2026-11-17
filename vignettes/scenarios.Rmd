@@ -1,8 +1,8 @@
 ---
-title: "Application scenarios: atlas, HRD and treatment forensics"
+title: "Application scenarios: atlas, HRD, treatment forensics and artifact forensics"
 output: rmarkdown::html_document
 vignette: >
-  %\VignetteIndexEntry{"Application scenarios: atlas, HRD and treatment forensics"}
+  %\VignetteIndexEntry{"Application scenarios: atlas, HRD, treatment forensics and artifact forensics"}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -43,8 +43,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The three executable drivers live under
-`bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`; committed
+persist their evidence tables. The four executable drivers live under
+`bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
+`run_qc_artifacts.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -216,6 +217,42 @@ rationale are documented at the face's manual page
 (`?ms_treatment_report`) and in the Phase-8 design memo under
 `vignettes/articles/devlog-*.qmd`.
 
+## Artifact forensics: built-in sentries against planted spikes
+
+The fourth leg runs the certified artifact-QC faces over the CS-4 planted
+cohort (four C>A oxoG-reading spikes, four C>T FFPE-deamination spikes,
+clean and dead controls, roster-inflated refit exposures) and cross-checks
+every adjudication column against the committed witness bytes, rebuilt
+from the committed plant tables.
+
+```{r qc-artifacts, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  lab <- as.character(msuiter:::.ms_io_channel_tables()$SBS96)
+  counts <- read.csv(file.path(out, "qc_plant_counts.tsv"), header = TRUE,
+                     sep = "\t", check.names = FALSE)
+  samples <- names(counts)[-1L]
+  mat <- matrix(as.integer(unlist(counts[-1L], use.names = FALSE)),
+                nrow = 96L, dimnames = list(lab, samples))
+  cat0 <- ms_catalog(mat, list(name = "SBS96", labels = lab), samples,
+                     provenance = list(genome = "GRCh37"))
+  sen <- ms_qc_sentries(cat0)
+  wit <- read.csv(file.path(out, "qc_sentries.csv"), header = TRUE,
+                  check.names = FALSE)
+  cat("built-in sentries, live vs committed witnesses:",
+      identical(sen$gt_verdict, wit$gt_verdict) &&
+      identical(sen$ct_verdict, wit$ct_verdict) &&
+      identical(sen$qc_flag, wit$qc_flag), "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/qc_sentries.csv`,
+`qc_artifact_share.csv`, `qc_provenance.csv` with their plant tables
+`qc_plant_counts.tsv`, `qc_plant_dict.tsv`, `qc_plant_exposures.tsv`.
+The certified backing and the declined-scope rails are the manual pages
+(`?ms_qc_sentries`, `?ms_qc_roster_share`, `?ms_qc_provenance`) and the
+scenario devlog under `vignettes/articles/devlog-*-p3-cs4-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -225,4 +262,5 @@ OVERALL PASS:
 Rscript bench/scenarios/run_atlas.R
 Rscript bench/scenarios/run_hrd.R
 Rscript bench/scenarios/run_treatment.R
+Rscript bench/scenarios/run_qc_artifacts.R
 ```
