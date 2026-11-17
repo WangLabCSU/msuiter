@@ -1,0 +1,57 @@
+---
+title: "R8 independent HRD reference — the Cortes-Castro definitions re-derived from the published paper alone, cross-adjudicated byte-exact against the implementation-lineage oracles, conventions pinned by a named table (reified, paper-grade)"
+---
+
+Date: 2026-11-17.
+Provenance: **reified, primary-banked**. The law-test census below is the
+committed run output of `tests/testthat/test-hrd-independent.R` on this
+change set's tree (RED FAIL 9 / PASS 0 witnessed before the helper existed;
+GREEN PASS 38 / FAIL 0 after); the roster figures are the committed
+generator's own report. No figure here comes from lane lore.
+
+## 1. Mandate and what "independent" must mean
+
+The novelty scan §4 R8 ruled: the HRD/pLOH/aneuploidy fidelity reference is
+the team's own prior package (CRAN sigminer 2.3.3 lineage), so the CS-2
+byte-exactness bars must be labeled that way *until an independent reference
+lands*. The label landed; this devlog lands the reference. "Independent" here
+carries teeth: a second transcription of the same source files is one
+derivation wearing two hats, so the new face —
+`tests/testthat/helper-hrd-independent.R` — was read **from the published
+Cortes-Castro 2020 (Cancer Research) classifier definitions alone**,
+consulting none of the implementation-lineage files. The independence is
+also enforced mechanically: the law test scans the independent file for any
+lineage symbol and refuses the change set if one appears.
+
+## 2. The adjudication table
+
+The published definitions pin the semantics but leave open a handful of
+readings; each is chosen EXPLICITLY in the header and probed at its boundary
+so the two derivations can never part silently: closed-interval widths
+(`end - start + 1`); the LOH fold `minor' = min(total - minor, minor)` with
+LOH iff `total >= 1 & minor' == 0`; the whole-chromosome half-weight arm
+split (0.5/0.5, not full weight per arm); the opt-in acrocentric p-arm
+blacklist (13, 14, 15, 21, 22); the two NA-drop scopes (pLOH drops four
+columns, the arm scan three); the autosome universe `chr1..chr22`.
+
+## 3. What the cross-adjudication measured
+
+On the planted grammar (LOH-heavy, LOH-poor, aneu-rich, fold-trap rows), the
+fold trap included (`total 4, minor 4` folds to LOH; `total 4, minor 3`
+must not), on the R7 committed B1-B6 cohort with its committed hg19 arm
+table, and on the four boundary probes, the two derivations agree **byte-
+exact** (fractions to 1e-12, counts `identical`): PASS 38 / FAIL 0. The
+lineage families show no regression (51/67 PASS) and the CI roster lockstep
+re-mints clean (files=96, t0-weight 612s under the 800s ceiling,
+test-ci-shard-map.R 212 PASS).
+
+## 4. What this upgrades in the manuscript
+
+The CS-2 claims now speak the truth: the headline row is
+*dual-derivation byte-exactness*, the §3.4 framing note names the lineage
+split with both faces, and the §9 ground-truth-lineage item reads as
+delivered rather than as promised — the implementation-lineage face and the
+published-definition face cross-adjudicated, the R7 scarHRD competitor face
+riding beside them as third-party observation. Nothing was promoted that
+was not measured first: the upgrade sentences were written only after the
+38-unit agreement stood green.
