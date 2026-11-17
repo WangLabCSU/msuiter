@@ -1,0 +1,14 @@
+"sample","exposure_total","artifact_share","artifact_sigs","artifact_flag","planted_roster_hit"
+"QC01",1,0.5,"SBS43,SBS45b","hit",1
+"QC02",1,0.25,"SBS43,SBS45b","hit",1
+"QC03",1,0.1,"SBS43,SBS45b","hit",1
+"QC04",1,0.06,"SBS43,SBS45b","hit",1
+"QC05",1,0.02,"SBS43,SBS45b","ok",0
+"QC06",1,0.02,"SBS43,SBS45b","ok",0
+"QC07",1,0,NA,"ok",0
+"QC08",1,0,NA,"ok",0
+"QC09",1,0.02,"SBS43,SBS45b","ok",0
+"QC10",1,0,NA,"ok",0
+"QC11",1,0,NA,"ok",0
+"QC12",1,0,NA,"ok",0
+"QC13",1,0,NA,"ok",0

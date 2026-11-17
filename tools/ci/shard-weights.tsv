@@ -94,6 +94,7 @@ test-xval-sigminer.R	10	12	T0
 test-scenario-atlas.R	2.2	41	T0
 test-scenario-hrd.R	0.4	28	T0
 test-scenario-hrd-baselines.R	0.5	64	T0
+test-scenario-qc-artifacts.R	1	53	T0
 test-treatment-report.R	13.1	87	T0
 test-kernel-trace-shape.R	1	40	T0
 test-kernel-bit-identity.R	79	476	T0

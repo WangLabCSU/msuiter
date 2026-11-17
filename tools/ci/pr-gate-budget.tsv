@@ -16,6 +16,9 @@
 # addition (the largest committed T0 file weighs 172 s, the keep-as-is
 # kernel batch bridge) crosses it silently, and any real growth forces a
 # re-measure with a witness before the PR gate pays for it.
+# 2026-11-18 deliberate re-seal 612 -> 613: the CS-4 scenario row
+# (test-scenario-qc-artifacts.R, 1 s integer weight, 53 expects) joined the
+# T0 roster; witness: local run nb=53 failed=0, measured manifest sum 613.
 key	value	note
-t0-measured	612	measured 2026-11-05 (integer manifest seconds, tier T0)
+t0-measured	613	measured 2026-11-18 (integer manifest seconds, tier T0; 2026-11-05 seal 612 superseded by the CS-4 row)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

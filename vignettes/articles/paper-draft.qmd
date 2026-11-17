@@ -318,6 +318,22 @@ the three-in-one cohort choice is exercised with its selection below]
   `[attest]` lines declare the two open faces (no public ID83/CN/SV fit path;
   longitudinal relapse-pair differencing named but not fabricated). Design
   authority: vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd.
+- **CS-4 artifact forensics, built-in QC** (`bench/scenarios/run_qc_artifacts.R`,
+#111): the certified mechanism sentries (oxoG C>A reading, FFPE C>T
+deamination) and the COSMIC artifact-roster share adjudicated against a
+pure-arithmetic self-planted cohort -- sentinel recall 1 per certified
+family with the hit sets equal to the planted sets, measured
+false-positive silence on the clean and sub-threshold branches, the
+certified NA branch on the dead sample, roster hits naming the planted
+roster signatures; the law units rebuild the cohort from the committed
+plant bytes and re-derive every witness column through the public faces
+(53 expectations, rerun byte-identical). Zero new machinery: the scenario
+rides the committed `R/ms-qc-sentries.R`/`R/ms-qc-report.R` certified
+faces only, making the research-03 §3/§7 differentiation posture
+(built-in artifact-aware QC replacing ad-hoc external filtering)
+evidence-bearing. Methods-demonstration framing per §4 R6; the declined
+Degasperi tiering and diagnostic-grade claims stay out of scope.
+Authority: vignettes/articles/devlog-2026-11-18-p3-cs4-artifact-forensics.qmd.
 
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
@@ -522,7 +538,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography
