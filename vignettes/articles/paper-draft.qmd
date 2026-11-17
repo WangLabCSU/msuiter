@@ -302,9 +302,11 @@ the three-in-one cohort choice is exercised with its selection below]
   `bench/scenarios/out/` (counts_sbs/counts_dbs/association/presence/prevalence
   /compare_sweep ...); verdict discipline: "every claim is measured here, the
   final line is OVERALL PASS or OVERALL FAIL" (runner header bytes).
-- **CS-2 HRD, dual-oracle byte-exactness** (`bench/scenarios/run_hrd.R`, #56):
+- **CS-2 HRD, dual-derivation byte-exactness** (`bench/scenarios/run_hrd.R`, #56):
   planted pLOH/aneuploidy truth adjudicated byte-exact against the verbatim
-  Cortes-Castro dual oracles (`tests/testthat/helper-hrd.R` as the authority);
+  Cortes-Castro dual oracles (`tests/testthat/helper-hrd.R` as the authority),
+  each independently reproduced from the published definitions
+  (`tests/testthat/helper-hrd-independent.R`, novelty-scan §4 R8);
   the composite truth row calls HRD on exactly the double-positive sample;
   seeded reruns byte-identical; a missing arm table degrades to attestation,
   never fabrication (runner bytes :88-93).
@@ -338,9 +340,11 @@ vignettes/articles/research-03-applications.qmd §3 via the runner's header cita
 > reached (vignettes/articles/roadmap.qmd:173-180). Pillar 3 as shipped is a
 > methods-demonstration pillar, and the manuscript must describe it so
 > (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R6 framing law); it may not be dressed as clinical evidence.
-> Likewise byte-exactness bars in CS-2 are set against the team's own prior
-> package ground truth and must be labeled that way until an independent
-> reference lands (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd §4 R8).
+> Likewise byte-exactness bars in CS-2 carry a named lineage split and are
+> dual-derivation adjudicated: the implementation-lineage oracles (the team's
+> own prior package, labeled as such) cross-checked byte-exact against the
+> independent published-definition derivation (novelty-scan §4 R8 landed
+> 2026-11-17, vignettes/articles/devlog-2026-11-17-r8-independent-hrd-reference.qmd).
 
 ### 3.5 Reproduction and the attestation regime
 
@@ -470,9 +474,15 @@ submission.
    power-state-uncontrolled single sessions, self-declared as such
    (vignettes/articles/performance.qmd:111-130); campaign rows carry host/hw_profile pins so
    their machines are auditable from the tables alone.
-5. **Ground-truth lineage.** CS-2's byte-exactness oracle is the team's own
-   prior package (CRAN sigminer 2.3.3 lineage), labeled as such (vignettes/articles/devlog-2026-11-10-novelty-scan.qmd
-   §4 R8); an independent reference is named follow-up, not fabricated.
+5. **Ground-truth lineage.** CS-2's byte-exactness oracle pair is named by
+   lineage: one face is the team's own prior package (CRAN sigminer 2.3.3
+   lineage, labeled as such), the other an independent derivation read from
+   the published Cortes-Castro 2020 classifier definitions alone
+   (novelty-scan §4 R8 landed 2026-11-17,
+   vignettes/articles/devlog-2026-11-17-r8-independent-hrd-reference.qmd);
+   the two are cross-adjudicated byte-exact, their open conventions pinned
+   by a named table (tests/testthat/helper-hrd-independent.R), and the R7
+   scarHRD face rides as third-party observation — none fabricated.
 6. **Negative-search caveats.** The (a)-class originality labels in the novelty
    scan rested on the scan's self-declared flaky-backends environment; the
    targeted re-scan was executed 2026-11-10 and is reified as the erratum
