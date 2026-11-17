@@ -50,6 +50,7 @@ test-fit-bootstrap.R	3	204	T0
 test-fit.R	0	180	T0
 test-gitignore-hygiene.R	0	14	T0
 test-hrd-reference.R	0	51	T0
+test-hrd-independent.R	0.4	38	T0
 test-hrd-report.R	0	67	T0
 test-io-segments.R	0	223	T0
 test-io-sv.R	0	105	T0
