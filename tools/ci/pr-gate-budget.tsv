@@ -22,6 +22,10 @@
 # 2026-11-18 deliberate re-seal 613 -> 614: the CS-5 scenario row
 # (test-scenario-stratify.R, 1 s integer weight, 88 expects) joined the
 # T0 roster; witness: local run nb=88 failed=0, measured manifest sum 614.
+# 2026-11-18 deliberate re-seal 614 -> 615: the CS-6 scenario row
+# (test-scenario-downsample.R, 1 s integer weight, 116 expects) joined the
+# T0 roster; witness: local run nb=116 failed=0 error=0, measured manifest
+# sum 615 (generator refusal witnessed at the pre-seal re-mint attempt).
 key	value	note
-t0-measured	614	measured 2026-11-18 (integer manifest seconds, tier T0; 2026-11-18 seal 613 superseded by the CS-5 row)
+t0-measured	615	measured 2026-11-18 (integer manifest seconds, tier T0; 2026-11-18 seal 614 superseded by the CS-6 row)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness
