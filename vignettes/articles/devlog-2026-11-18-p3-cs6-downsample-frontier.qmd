@@ -1,0 +1,131 @@
+---
+title: "CS-6 downsample-frontier -- the shipped thinning law adjudicated over a frozen depth ladder: planted-extremes rails, committed frontier, byte laws, certified silence (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-6 downsample-frontier (2026-11-18)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_downsample.R`, law test
+`tests/testthat/test-scenario-downsample.R`, committed evidence under
+`bench/scenarios/out/` (`cs6_plant.csv`, `cs6_ladder.csv`, `cs6_boundary.csv`,
+`cs6_scalars.csv`, `cs6_degenerates.tsv`).
+TDD record: RED watched (10 units, 33 expectations -- 8 red on the
+absent-runner/absent-evidence reasons, the two pure face-pin units green by
+design, recorded as expected) -> GREEN 10 units / 116 expectations /
+0 failures / 0 errors; runner OVERALL PASS (20 adjudications, including two
+pre-write witness-finiteness censuses); double-run witness bytes
+`DET=IDENTICAL` (sha256 census). Face battery unregressed:
+test-ms-downsample-io.R 10/0/0 (91 expects), test-ms-simulate.R 5/0/0
+(42 expects), test-fit.R 16/0/0 (180 expects).
+
+## 1. Mandate
+
+Pillar 3 (application scenarios) required the data-preparation leg: an
+end-to-end driver that adjudicates the common-depth thinner `ms_downsample`
+-- the single wording of the shipped sanity protocol's one thinning law
+(`R/ms-downsample.R`) -- together with its downstream consumer, the
+signature-level pooled presence face `ms_test_presence`
+(`R/fit.R`, likelihood-ratio statistic, Benjamini-Hochberg over the planted
+dictionary at the committed 0.05 level). Both faces were already certified
+and law-tested; what they lacked was a scenario that rides them the way
+CS-1..CS-5 ride theirs: a *measured* frontier of how much evidence a fixed
+dictionary can still recover from catalogs thinned to ever-shallower common
+depths.
+
+Framing law, stated once and enforced throughout: this is a **decision
+record** scenario -- the object is the adjudicated ladder, not an
+estimation procedure. The runner carries five `[attest]` rails: no
+estimation machinery is exercised, no conformal calibration is claimed, the
+real-data calibration face `calibrate-real` is not touched, the dictionary
+is the sealed bundled reference, and every quoted number is a committed
+witness byte. The declined scope is recorded in the work package: a
+coverage-bootstrap calibration of the presence face was **declined** on
+three independent grounds (it would invent an estimation claim the pillar
+does not need; the face's present-versus-absent discrimination under a
+planted-null generative truth is already certified by its own face
+battery with the Benjamini-Hochberg semantics pinned by a pure-R twin; a
+scenario must adjudicate, not tune). Nothing here
+claims the thinning has *happened* to any real cohort -- the ladder is
+synthetic, planted, and self-adjudicating.
+
+## 2. The planted question
+
+The plant is a ten-sample synthetic cohort simulated once from the
+column-normalised four-signature dictionary pulled from the sealed bundled
+GRCh37 reference (SBS1, SBS2, SBS5, SBS18) under the deterministic
+count-scale contract (seed 7): six strong samples (totals 2600..3400)
+carry the SBS1/SBS5 pair at an 80/20 split; two borderline samples carry
+SBS2 at totals 900 and 1100; two sub-threshold samples carry SBS2 at 300
+and 500; SBS18 carries zero exposure everywhere -- the planted-zero
+control. Over this plant the frozen ladder `400, 800, 1200, 1600, 2400,
+3200` is run under the committed ladder seed, and each rung is adjudicated
+by the pooled presence face. Three families of verdicts are demanded:
+
+* **Planted extremes** -- the strong pair must hold pooled recall 1 on
+  *every* rung (24-row ladder census: no miss anywhere); the planted-zero
+  control must speak census 0 on *every* rung (no false positive anywhere).
+* **The frontier** -- the borderline signature's pass verdict must be
+  **monotone** along the ladder (information only grows with depth, so a
+  pass may never revert to a fail), and its **last passing depth is
+  COMMITTED as an observed fact** -- never a fitted parameter. The
+  committed witness records it at 3200: this plant's borderline survives
+  the full frozen ladder.
+* **The thinning's byte laws** -- verbatim-keep at and below the depth
+  boundary, exact clamp above it (`post_total = min(total, depth)` on a
+  dedicated five-row boundary roster), dead columns undisturbed (the all
+  zero "min" column stays dead), honest provenance counts, and the RNG
+  restored so the thinner's seed cannot leak into the session stream.
+
+## 3. Measured results
+
+* Ladder: 24 rows (six rungs x four dictionary signatures), the extremes
+  rails hard above; the borderline monotonicity check re-derives the
+  committed `pass_bh` bits exactly (integers) and the statistic/p-value
+  floats at `1e-9` -- the same dual-derivation posture as CS-5
+  (`cs6_ladder.csv`, `cs6_scalars.csv`).
+* Committed frontier fact: `sbs2_last_pass_depth = 3200` -- observed,
+  committed, and law-pinned; the law re-derives it from the ladder bytes
+  independently of the runner.
+* Boundary roster: totals 1000, 1001, 999, 0, 1000 at depth 1000 --
+  clamped and verbatim rows adjudicated cell by cell; the dead row stays
+  dead (`cs6_boundary.csv`).
+* Seed leg: the same seed thins byte-identically, a different seed thins
+  differently, and the thinner's provenance counts (3 downsampled,
+  1 kept-verbatim, minimum live depth 999) are committed facts
+  (`cs6_degenerates.tsv`).
+* Certified branches speak: the all-dead "min" request aborts for the
+  right reason (the "at least one live sample" wording), and the
+  at-or-above-depth silence column keeps its counts verbatim.
+* Cross-path agreement: the simulated plant and the hand-built 96-channel
+  roster (row sums hitting the frozen totals exactly) deliver one verdict
+  through the same face.
+* Determinism: the five committed files are rerun-IDENTICAL under sha256.
+
+## 4. Governance face
+
+The new law file joined the shard roster with a 1 s T0 weight (116
+expectations), moving the measured T0 sum 614 -> 615 and the file count to
+99; the PR-gate budget **refused** the drift at the pre-seal re-mint
+attempt -- the refusal itself witnessed -- until the deliberate re-seal
+recorded the measured value with a witness note. This is the fourth use of
+the silent-drift refusal channel, and it worked exactly as designed each
+time. The DS-3 gallery auto-admitted the five committed files: witnesses
+31, cards 31, stamps-verified 31, violations 0, derivation stable. The DS-4
+prose law censuses the scenario prose clean: 584 witness tokens, violations
+0. The vignette's sixth live leg was legchecked standalone (all three
+adjudications print TRUE) before the full gate ran.
+
+## 5. What this changes for the paper
+
+Section 3.4 gains the CS-6 bullet and Fig. 5 its sixth panel: the
+application-scenario pillar now demonstrates six end-to-end adjudications
+(atlas, dual-oracle HRD, treatment forensics, artifact forensics,
+stratification, downsample frontier), each one *ruling* on committed
+evidence. The downsample leg contributes what no peer pipeline documents:
+the data-preparation step itself -- the thinning the shipped sanity
+protocol mandates -- placed under measurement, with its failure surface
+(thinning below a signature's recoverable evidence) mapped rung by rung
+instead of assumed. Zero new estimation machinery; the pillar's claim
+remains the governed decision record, witnessed byte for byte.
