@@ -1,0 +1,8 @@
+check	value
+min_depth	999
+min_n_downsampled	3
+min_n_kept_verbatim	1
+alldead_abort_right_reason	1
+same_seed_reproducible	1
+cross_seed_thinning_differs	1
+certified_silence	1

@@ -1,8 +1,8 @@
 ---
-title: "Application scenarios: atlas, HRD, treatment forensics, artifact forensics and stratification"
+title: "Application scenarios: atlas, HRD, treatment forensics, artifact forensics, stratification and downsample frontier"
 output: rmarkdown::html_document
 vignette: >
-  %\VignetteIndexEntry{"Application scenarios: atlas, HRD, treatment forensics, artifact forensics and stratification"}
+  %\VignetteIndexEntry{"Application scenarios: atlas, HRD, treatment forensics, artifact forensics, stratification and downsample frontier"}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -43,9 +43,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The five executable drivers live under
+persist their evidence tables. The six executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
-`run_qc_artifacts.R`, `run_stratify.R`; committed
+`run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -305,6 +305,74 @@ frozen upstream rule, the twin parity battery and the declined-scope rails
 `?plot_hypermutator_burden`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs5-*.qmd`.
 
+## Downsample frontier: the committed thinning ladder adjudicated
+
+The sixth leg runs the common-depth thinner `ms_downsample` -- the data-
+preparation face carrying the shipped sanity protocol's one thinning law --
+across the frozen depth ladder, and adjudicates the pooled presence face
+`ms_test_presence` (likelihood-ratio statistic, Benjamini-Hochberg over the
+planted dictionary) against the planted truth. Strong signatures must hold
+full pooled recall on every rung, the planted-zero control must stay at
+census zero everywhere, and the borderline signature's verdict must be
+monotone along the ladder with its last passing depth COMMITTED as an
+observed fact. The thinning's byte laws adjudicate alongside: verbatim-keep
+at the boundary, exact clamp above it, dead columns undisturbed, honest
+provenance counts. Every check below re-runs live against the committed
+witness bytes.
+
+```{r downsample, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  plant <- read.csv(file.path(out, "cs6_plant.csv"),
+                    header = TRUE, row.names = 1L, stringsAsFactors = FALSE)
+  counts <- as.matrix(plant)
+  lad <- read.csv(file.path(out, "cs6_ladder.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  scal <- read.csv(file.path(out, "cs6_scalars.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  dict_names <- strsplit(scal$dict_roster, ",", fixed = TRUE)[[1L]]
+  refdb <- ms_refdb_bundled(build = "GRCh37")
+  mat <- refdb[["SBS_GRCh37"]]@matrices[[1L]]
+  dict <- sweep(mat[, dict_names, drop = FALSE], 2L,
+                colSums(mat[, dict_names, drop = FALSE]), "/")
+  samples <- names(plant)
+  cat <- ms_catalog(counts = counts,
+                    channels = list(name = "SBS96", labels = rownames(plant)),
+                    samples = samples,
+                    provenance = list(genome = "committed"))
+  depths <- unlist(strsplit(scal$depths, ",", fixed = TRUE))
+  bits_ok <- all(vapply(as.integer(depths), function(d) {
+    pres <- ms_test_presence(ms_downsample(cat, depth = d,
+                                           seed = as.integer(scal$ladder_seed)),
+                             signatures = dict,
+                             nb_size = as.integer(scal$nb_size))
+    witnessed <- as.integer(lad$pass_bh[lad$depth == d])
+    identical(witnessed, as.integer(pres$pass_bh))
+  }, logical(1)))
+  cat("ladder verdicts re-derive the committed bits rung by rung:",
+      bits_ok, "\n")
+  strong_bits <- lad$pass_bh[lad$signature %in% c("SBS1", "SBS5")]
+  ctrl_bits <- lad$pass_bh[lad$signature == "SBS18"]
+  cat("planted-extremes rails hold (full recall, census zero):",
+      all(strong_bits == 1L) && all(ctrl_bits == 0L), "\n")
+  bou <- read.csv(file.path(out, "cs6_boundary.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  cat("boundary witness clamps and keeps as committed:",
+      identical(as.integer(bou$post_total),
+                as.integer(pmin(as.integer(bou$total),
+                                as.integer(scal$bound_depth)))) &&
+        identical(as.integer(bou$is_dead),
+                  as.integer(as.integer(bou$total) == 0L)), "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs6_plant.csv`,
+`cs6_ladder.csv`, `cs6_boundary.csv`, `cs6_scalars.csv` and
+`cs6_degenerates.tsv`. The certified backing -- the thinning law's single
+wording, the presence face's manual and the declined-scope rails -- are the
+manual pages (`?ms_downsample`, `?ms_test_presence`) and the scenario devlog
+under `vignettes/articles/devlog-*-p3-cs6-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -316,4 +384,5 @@ Rscript bench/scenarios/run_hrd.R
 Rscript bench/scenarios/run_treatment.R
 Rscript bench/scenarios/run_qc_artifacts.R
 Rscript bench/scenarios/run_stratify.R
+Rscript bench/scenarios/run_downsample.R
 ```
