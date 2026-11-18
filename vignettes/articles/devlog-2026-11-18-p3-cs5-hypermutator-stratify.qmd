@@ -1,0 +1,105 @@
+---
+title: "CS-5 hypermutator-stratify -- the certified GMM cutoff adjudicated against a self-planted cohort: recall 1, twin parity, strict boundary, certified silence (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-5 hypermutator-stratify (2026-11-18)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_stratify.R`, law test
+`tests/testthat/test-scenario-stratify.R`, committed evidence under
+`bench/scenarios/out/` (`stratify_plant_totals.tsv`, `stratify_partition.csv`,
+`stratify_scalars.csv`, `stratify_floor.csv`, `stratify_degenerate.csv`).
+TDD record: RED watched (10 units, every unit red on the absent-runner /
+absent-evidence reasons) -> GREEN 10 units / 88 expectations / 0 failures /
+0 errors; runner OVERALL PASS; double-run witness bytes `DET=IDENTICAL`
+(sha256 census). Face battery unregressed: test-stratify.R 16/0/0,
+test-viz-batch2.R 25/0/0.
+
+## 1. Mandate
+
+Pillar 3 (application scenarios) required the hypermutator-stratification leg:
+an end-to-end driver that adjudicates the certified SigProfiler-frozen
+stratification face against planted synthetic truth and persists the verdict.
+The face (`R/stratify.R`, FFI kernel `ms_stratify_rust` plus the bit-exact
+pure-R protocol twin `msuiter_stratify_twin`) was already certified and
+law-tested (16 units / 69 expectations, KAT-pinned RNG replication,
+twin-kernel parity battery); what it lacked was a scenario that rides it the
+way CS-1..CS-4 ride theirs -- and, in the paper's terms, a *measured*
+demonstration that the decision pipeline delivers on planted truth.
+
+Framing law, stated once and enforced throughout: the cutoff rule is a
+faithful upstream replication (frozen to SigProfilerExtractor `cc6bf5ef`,
+k=2 GMM, majority-cluster prune below 4 sigma, `trunc(mean + 2 sd)`) under
+**Framing-B** -- *"platform claim; not an algorithmic claim"*
+(`devlog-2026-11-10-novelty-scan`, E9 row). The scenario therefore claims no
+algorithmic originality. The returned object is the **decision record** both
+M2 stages will consume (`R/stratify.R:21-25`); no wording here claims the
+exclusion or the refit has *happened*, because M2 is pending. The declined
+rails (no diagnostic-grade MUTYH/MSI/TMB-high claims; no NA/dead-sample
+branch -- none exists in this face; no majority-high cohorts, the certified
+upstream failure mode at GMM-memo :86) are echoed verbatim as `[attest]`
+lines in the runner itself.
+
+## 2. The planted question
+
+The plant is pure arithmetic (no RNG, byte-stable by construction): a
+44-sample jittered bimodal bulk (the face-proven `bimodal_cohort` shape at
+2x scale, certified-converging under the frozen EM tolerance) plus six
+order-of-magnitude spikes. Three regimes are adjudicated:
+
+* **Primary** -- the frozen rule must catch exactly the six planted
+  hypermutants: recall 1, precision 1, the strict `>` partition holding row
+  by row against the witnessed cutoff.
+* **Floor and boundary** -- a near-unimodal companion cohort where the
+  manual floor *dominates* (`manual_cutoff = 20000` pins the cutoff), with
+  boundary twins planted at exactly `floor` (must stay nonhyper) and
+  `floor + 1` (must turn hyper): the certified strictness of `>` is measured,
+  not assumed. With the floor inert, the derived rule separates the true
+  outliers on its own.
+* **Certified branches** -- a unimodal cohort must speak silence (zero
+  hypermutants); an all-identical cohort must speak the certified degenerate
+  branch (`cutoff == value`, strict `>` keeps everything nonhyper).
+
+## 3. Measured results
+
+* Primary verdict: `cutoff = 27609`, six hypermutants, the caught roster
+  identical to the planted roster (recall/precision 1); partition
+  disjoint-exhaustive; every row obeys the strict inequality
+  (`stratify_scalars.csv`, `stratify_partition.csv`).
+* Dual derivation: the committed witness re-derives *byte-exact* through the
+  public face **and** independently through the protocol twin -- exact on
+  the integer verdicts (cutoff, 0-based rosters), tolerance `1e-9` on the
+  two libm-drift-eligible columns (`retained_mean`, `retained_sd`, the D11
+  law), matching the face battery's own parity posture.
+* Seed invariance holds over seeds 1..8 (identical cutoff and rosters).
+* The catalog path (hand-built 96-channel SBS96 matrix whose column sums hit
+  the witnessed totals exactly) and the named-totals path deliver **one
+  verdict** -- the two doorways into the kernel agree on every slot.
+* Floor regime: cutoff pinned to `20000`, boundary twin `20000` nonhyper,
+  `20001` hyper; inert regime: derived cutoff below the floor, the two true
+  outliers caught (`stratify_floor.csv`).
+* Silence and degenerate branches as certified (`stratify_degenerate.csv`).
+* Determinism: the six committed files are rerun-IDENTICAL under sha256.
+
+## 4. Governance face
+
+The new law file joined the shard roster with a 1 s T0 weight, moving the
+measured T0 sum 613 -> 614; the PR-gate budget refused the drift until the
+**deliberate re-seal** recorded it with a witness note -- the silent-drift
+refusal working exactly as designed (second use in two days, after CS-4).
+The DS-3 gallery auto-admitted the five committed files: witnesses 26,
+cards 26, stamps-verified 26, violations 0, derivation stable.
+
+## 5. What this changes for the paper
+
+Section 3.4 gains the CS-5 bullet and Fig. 5 its fifth panel: the
+application-scenario pillar now demonstrates four adjudications end-to-end
+(atlas, dual-oracle HRD, treatment forensics, artifact forensics) plus this
+stratification leg -- each one *ruling* on committed evidence, none asserting
+capability without a witnessed verdict. The stratification evidence is
+deliberately modest in claim: a faithfully replicated decision rule,
+demonstrated under measurement, with the platform contribution being that it
+runs inside the governed R/S7 pipeline with dual-derivation attestation --
+exactly the posture the novelty scan instructs.
