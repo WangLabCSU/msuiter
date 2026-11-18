@@ -1,8 +1,8 @@
 ---
-title: "Application scenarios: atlas, HRD, treatment forensics and artifact forensics"
+title: "Application scenarios: atlas, HRD, treatment forensics, artifact forensics and stratification"
 output: rmarkdown::html_document
 vignette: >
-  %\VignetteIndexEntry{"Application scenarios: atlas, HRD, treatment forensics and artifact forensics"}
+  %\VignetteIndexEntry{"Application scenarios: atlas, HRD, treatment forensics, artifact forensics and stratification"}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -43,9 +43,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The four executable drivers live under
+persist their evidence tables. The five executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
-`run_qc_artifacts.R`; committed
+`run_qc_artifacts.R`, `run_stratify.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -253,6 +253,58 @@ The certified backing and the declined-scope rails are the manual pages
 (`?ms_qc_sentries`, `?ms_qc_roster_share`, `?ms_qc_provenance`) and the
 scenario devlog under `vignettes/articles/devlog-*-p3-cs4-*.qmd`.
 
+## Stratification decision: the frozen GMM cutoff adjudicated
+
+The fifth leg runs the certified SigProfiler-frozen stratification face
+(a faithful upstream replication under the platform's Framing-B posture --
+the object is the decision record the M2 stages will consume) over the CS-5
+planted cohort: order-of-magnitude hypermutants planted on a jittered
+bimodal bulk must be caught at full recall and precision, the manual floor
+must re-adjudicate with the boundary measured strict, and the certified
+silence and degenerate branches must speak. Every adjudication column is
+cross-checked against the committed witness bytes, rebuilt from the
+committed plant.
+
+```{r stratify, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  plant <- read.csv(file.path(out, "stratify_plant_totals.tsv"),
+                    header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  totals <- setNames(as.numeric(plant$total), plant$sample)
+  st <- ms_stratify_hypermutants(totals, seed = 1)
+  part <- read.csv(file.path(out, "stratify_partition.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  scal <- read.csv(file.path(out, "stratify_scalars.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  caught <- part$sample[as.integer(part$is_hyper) == 1L]
+  cat("planted roster caught at recall/precision 1:",
+      identical(st@hyper, caught) &&
+        identical(st@hyper, plant$sample[as.integer(plant$planted_hyper) == 1L]),
+      "\n")
+  cat("cutoff and partition vs committed witnesses:",
+      identical(st@cutoff, as.numeric(scal$cutoff)) &&
+        identical(as.integer(part$is_hyper),
+                  as.integer(plant$sample %in% st@hyper)), "\n")
+  fl <- read.csv(file.path(out, "stratify_floor.csv"),
+                 header = TRUE, stringsAsFactors = FALSE)
+  ff <- fl[fl$regime == "floored", , drop = FALSE]
+  fb <- setNames(as.numeric(ff$total), ff$sample)
+  stf <- ms_stratify_hypermutants(fb, manual_cutoff = as.integer(ff$manual_cutoff[1L]),
+                                  seed = 1)
+  cat("floored regime re-adjudicates with a strict boundary:",
+      identical(as.integer(ff$is_hyper), as.integer(ff$sample %in% stf@hyper)) &&
+        identical(stf@cutoff, as.numeric(ff$manual_cutoff[1L])), "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/stratify_scalars.csv`,
+`stratify_partition.csv`, `stratify_floor.csv`, `stratify_degenerate.csv`
+with the plant `stratify_plant_totals.tsv`. The certified backing -- the
+frozen upstream rule, the twin parity battery and the declined-scope rails
+-- are the manual pages (`?ms_stratify_hypermutants`,
+`?plot_hypermutator_burden`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs5-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -263,4 +315,5 @@ Rscript bench/scenarios/run_atlas.R
 Rscript bench/scenarios/run_hrd.R
 Rscript bench/scenarios/run_treatment.R
 Rscript bench/scenarios/run_qc_artifacts.R
+Rscript bench/scenarios/run_stratify.R
 ```
