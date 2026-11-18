@@ -1,0 +1,2 @@
+"cutoff","n_hyper","n_nonhyper","retained_mean","retained_sd","retained_n","n_fits","converged","policy","seed"
+27609,6,44,16992.2727272727,5308.39851882945,44,2,TRUE,"exclude_de_novo_then_refit",1

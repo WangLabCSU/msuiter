@@ -19,6 +19,9 @@
 # 2026-11-18 deliberate re-seal 612 -> 613: the CS-4 scenario row
 # (test-scenario-qc-artifacts.R, 1 s integer weight, 53 expects) joined the
 # T0 roster; witness: local run nb=53 failed=0, measured manifest sum 613.
+# 2026-11-18 deliberate re-seal 613 -> 614: the CS-5 scenario row
+# (test-scenario-stratify.R, 1 s integer weight, 88 expects) joined the
+# T0 roster; witness: local run nb=88 failed=0, measured manifest sum 614.
 key	value	note
-t0-measured	613	measured 2026-11-18 (integer manifest seconds, tier T0; 2026-11-05 seal 612 superseded by the CS-4 row)
+t0-measured	614	measured 2026-11-18 (integer manifest seconds, tier T0; 2026-11-18 seal 613 superseded by the CS-5 row)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

@@ -1,0 +1,2 @@
+"cohort","cutoff","n_hyper","converged","policy"
+"degenerate",777,0,TRUE,"exclude_de_novo_then_refit"
