@@ -154,6 +154,9 @@ test_that("the manual floor re-adjudicates and the boundary is strict", {
   if (!is.na(.ms_root)) {
     fl <- .sx_csv("stratify_floor.csv")
     expect_setequal(unique(fl$regime), c("floored", "inert"))
+    expect_true(all(is.finite(fl$total)))
+    expect_identical(as.integer(fl$total[fl$regime == "floored"]), .sx_fb_totals)
+    expect_identical(as.integer(fl$total[fl$regime == "inert"]), .sx_fb_totals)
     expect_identical(as.integer(fl$is_hyper[fl$regime == "floored"]),
                      as.integer(floored@hyper == fl$sample[fl$regime == "floored"]))
     expect_identical(as.integer(fl$is_hyper[fl$regime == "inert"]),

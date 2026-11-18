@@ -343,7 +343,7 @@ the public face and independently through the bit-exact protocol twin
 manual floor re-adjudicating with the boundary measured strict (==floor
 nonhyper, floor+1 hyper), seed invariance over 1..8, catalog and totals
 doorways delivering one verdict, and the certified silence/degenerate
-branches speaking (88 expectations, rerun byte-identical). Framing-B posture:
+branches speaking (91 expectations, rerun byte-identical). Framing-B posture:
 the cutoff rule is a faithful upstream replication, not an algorithmic
 claim, and the object is the decision record the M2 stages will consume
 (claims of executed exclusion/refit stay out of scope). Zero new machinery.

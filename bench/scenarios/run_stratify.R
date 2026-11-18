@@ -144,10 +144,14 @@ write.csv(data.frame(
   retained_n = st@gmm$retained_n, n_fits = st@gmm$n_fits,
   converged = st@gmm$converged, policy = st@policy, seed = st@seed),
   file.path(OUT, "stratify_scalars.csv"), row.names = FALSE)
+fb_rows <- rep(FB_SAMPLES, 2L)
+fb_written_total <- as.integer(unname(FB_TOTALS[fb_rows]))
+.check("committed floor-witness totals are finite on every row",
+       all(is.finite(fb_written_total)))
 write.csv(data.frame(
   regime = rep(c("floored", "inert"), each = 6L),
-  sample = rep(FB_SAMPLES, 2L),
-  total = as.integer(unname(rep(TOTALS[FB_SAMPLES], 2L))),
+  sample = fb_rows,
+  total = fb_written_total,
   manual_cutoff = rep(c(FB_MANUAL, 0L), each = 6L),
   is_hyper = as.integer(c(FB_SAMPLES %in% fb_fl@hyper,
                           FB_SAMPLES %in% fb_in@hyper)),

@@ -12,7 +12,7 @@ Provenance: scenario `bench/scenarios/run_stratify.R`, law test
 `bench/scenarios/out/` (`stratify_plant_totals.tsv`, `stratify_partition.csv`,
 `stratify_scalars.csv`, `stratify_floor.csv`, `stratify_degenerate.csv`).
 TDD record: RED watched (10 units, every unit red on the absent-runner /
-absent-evidence reasons) -> GREEN 10 units / 88 expectations / 0 failures /
+absent-evidence reasons) -> GREEN 10 units / 91 expectations / 0 failures /
 0 errors; runner OVERALL PASS; double-run witness bytes `DET=IDENTICAL`
 (sha256 census). Face battery unregressed: test-stratify.R 16/0/0,
 test-viz-batch2.R 25/0/0.
