@@ -1,0 +1,5 @@
+"arm","cosine_line","median_cosine","share_reasonable","n_na"
+"exact",0.969,1,1,0
+"clean",0.969,0.997655625916571,1,0
+"artifakt",0.969,0.853449939721318,0,0
+"degenerate",0.969,1,1,1

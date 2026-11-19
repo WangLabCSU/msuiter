@@ -1,0 +1,2 @@
+"cosine_line","dict_roster","k","n_samples","totals","weights","plant_seed","cmp_seed","null_n","null_n_draws","rung_values","dead_col","last_pass_rung"
+0.969,"SBS1,SBS2,SBS13,SBS88",4,8,"1600,1800,2000,2200,2400,2600,3000,3600","0.4,0.25,0.2,0.15",9,2,200,200,"0,0.1,0.18,0.25,0.32,0.4,0.5",3,"0.32"
