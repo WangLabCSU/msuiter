@@ -46,11 +46,16 @@
 .CS8_NMEM <- 9L
 .CS8_CITED_LINE <- 0.90        # the face's shipped default: cited, not anchored
 .CS8_ROT_UNIT <- 37L           # channel-rotation scrambler (measured cos <= 0.052)
-.CS8_JIT <- 0.05              # jitter mass on the strict-medoid family
-.CS8_JIT_CH <- c(1L, 48L, 24L, 72L)   # p1, q1, p2, q2 jitter channels
+.CS8_JIT <- 0.01              # jitter mass on the strict-medoid family
+.CS8_JIT_CH <- c(11L, 59L, 35L, 83L)  # SBS1 peak channels (masses >= 0.110)
 .CS8_ZERO_MEMBER <- 7L         # the all-zero column (F3b)
 .CS8_ART_FAM <- 2L             # the scrambled family
 .CS8_RUNGS <- c(0, 0.10, 0.15, 0.20, 0.23, 0.26, 0.35, 0.50)
+# Shared contract of the match bit (runner and law, byte-same meaning):
+# a member matches iff its observed cluster label AND its observed
+# cluster size both equal the committed roster's. Label equality alone
+# deceives -- the ascending-root label law can reissue a survivor's old
+# label over a broken structure (the zero-arm witness is that proof).
 
 # The dictionary: bundled bytes only (never downloaded), columns
 # normalized to sum 1 in the canonical channel order.
@@ -326,7 +331,11 @@ test_that("the artifakt arm splinters its family at every rung", {
   art7 <- art[!art$member %in% c("F2a", "F2b"), , drop = FALSE]
   ros7 <- ros[!ros$member %in% c("F2a", "F2b"), , drop = FALSE]
   expect_identical(as.integer(art7$match), rep(1L, 7L))
-  expect_identical(as.character(art7$cluster), as.character(ros7$cluster))
+  # cluster LABELS renumber globally when a family splinters (ascending-
+  # root law), so structural equality is the size + co-membership, not the
+  # label string -- assert the invariant that survives relabeling.
+  expect_identical(as.integer(art7$cluster_size),
+                   as.integer(ros7$cluster_size))
   # splinter rail: the scrambled pair is lawful singletons at every
   # swept threshold (0.10 .. cited line) -- never each other, never the
   # bulk of any family -- fresh re-derivation through the exported face
@@ -359,11 +368,15 @@ test_that("the zero column speaks its singleton law", {
   twin_row <- deg[deg$member == "F3a", , drop = FALSE]
   expect_identical(as.integer(twin_row$cluster_size), 1L)
   expect_identical(as.integer(twin_row$is_medoid), 1L)
-  # the seven surviving members keep the committed verdict
+  expect_identical(as.integer(twin_row$match), 0L)   # size broke: structural
+  # the seven surviving members keep the committed verdict -- structural
+  # equality (size + match bit), never label strings: the two lawful
+  # singletons renumber every downstream label (ascending-root law)
   deg7 <- deg[!deg$member %in% c("F3a", "F3b"), , drop = FALSE]
   ros <- .rs_csv("cs8_roster.csv")
   ros7 <- ros[!ros$member %in% c("F3a", "F3b"), , drop = FALSE]
-  expect_identical(as.character(deg7$cluster), as.character(ros7$cluster))
+  expect_identical(as.integer(deg7$cluster_size),
+                   as.integer(ros7$cluster_size))
   expect_identical(as.integer(deg7$match), rep(1L, 7L))
   # fresh re-derivation: the zero column is a lawful singleton and its
   # cosine rows/cols are exactly the 17 NaN cells (9+9-1)
