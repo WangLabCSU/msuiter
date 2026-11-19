@@ -1,0 +1,7 @@
+check	value
+same_seed_reproducible	1
+cross_seed_plant_differs	1
+artifakt_share_zero	1
+clean_share_one	1
+exact_share_one	1
+degenerate_n_na_one	1

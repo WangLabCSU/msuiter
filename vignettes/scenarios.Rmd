@@ -43,7 +43,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The six executable drivers live under
+persist their evidence tables. The seven executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
@@ -373,6 +373,83 @@ wording, the presence face's manual and the declined-scope rails -- are the
 manual pages (`?ms_downsample`, `?ms_test_presence`) and the scenario devlog
 under `vignettes/articles/devlog-*-p3-cs6-*.qmd`.
 
+The seventh leg drives the shipped Jiang reconstruction flag of
+`ms_compare` -- the per-sample cosine of every catalog column against the
+reconstruction `signatures_est %*% exposures_est`, censused against the
+cited line 0.969 -- across the five planted arms (exact, stochastic-clean,
+dictionary-rotation artifakt, degenerate zero column, deterministic
+corruption ladder). The clean arms must report share one, the rotation arm
+share zero, the zero column must speak its NA bit, and the ladder's last
+passing rung must re-derive the committed byte. Every check below re-runs
+live through the exported face against the committed witness bytes.
+
+```{r reconstruction, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  per <- read.csv(file.path(out, "cs7_per_sample.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  lad <- read.csv(file.path(out, "cs7_ladder.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  scal <- read.csv(file.path(out, "cs7_scalars.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  roster <- strsplit(scal$dict_roster, ",", fixed = TRUE)[[1L]]
+  refdb <- ms_refdb_bundled(build = "GRCh37")
+  mat <- refdb[["SBS_GRCh37"]]@matrices[[1L]]
+  dict <- sweep(mat[, roster, drop = FALSE], 2L,
+                colSums(mat[, roster, drop = FALSE]), "/")
+  k <- length(roster)
+  n <- as.integer(scal$n_samples)
+  samples <- paste0("R", formatC(seq_len(n), width = 2L, flag = "0"))
+  totals <- as.numeric(strsplit(scal$totals, ",", fixed = TRUE)[[1L]])
+  weights <- as.numeric(strsplit(scal$weights, ",", fixed = TRUE)[[1L]])
+  expo <- matrix(0, nrow = k, ncol = n, dimnames = list(roster, samples))
+  for (j in seq_len(n)) {
+    idx <- ((seq_len(k) - 1L + (j - 1L)) %% k) + 1L
+    expo[, j] <- weights[idx] * totals[j]
+  }
+  exact <- dict %*% expo
+  line <- as.numeric(scal$cosine_line)
+  run_face <- function(est, cat_mat, sig_est) {
+    cmp <- ms_compare(est, dict, metric = "cosine", protocol = "jiang",
+                      exposures_est = expo, exposures_ref = expo,
+                      catalogs = cat_mat, signatures_est = sig_est,
+                      null_n = as.integer(scal$null_n),
+                      null_n_draws = as.integer(scal$null_n_draws),
+                      seed = as.integer(scal$cmp_seed))
+    cmp@jiang$reconstruction
+  }
+  clean <- run_face(dict, exact, dict)
+  rot <- dict[, c(2L, 3L, 4L, 1L), drop = FALSE]
+  art <- run_face(rot, exact, rot)
+  dead <- exact
+  dead[, as.integer(scal$dead_col)] <- 0
+  deg <- run_face(dict, dead, dict)
+  rails_ok <- identical(as.integer(clean$share_reasonable), 1L) &&
+    identical(as.integer(art$share_reasonable), 0L) &&
+    art$median_cosine < line
+  cat("hard rails re-derive through the face (clean share 1, artifakt share 0):",
+      rails_ok, "\n")
+  na_ok <- identical(as.integer(is.na(deg$per_sample)),
+                     as.integer(per$is_na[per$arm == "degenerate"]))
+  cat("the degenerate column re-speaks its committed NA bit:", na_ok, "\n")
+  shares <- as.numeric(lad$share_pass)
+  last_pass <- if (any(lad$is_pass == 1L)) {
+    max(as.numeric(lad$rung[lad$is_pass == 1L]))
+  } else NA_real_()
+  committed <- as.numeric(scal$last_pass_rung)
+  ladder_ok <- all(diff(shares) <= 0) && identical(last_pass, committed)
+  cat("the corruption ladder is monotone and its last-pass rung is the committed byte:",
+      ladder_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs7_plant.csv`,
+`cs7_per_sample.csv`, `cs7_arms.csv`, `cs7_ladder.csv`, `cs7_scalars.csv`
+and `cs7_degenerates.tsv`. The certified backing -- the flag's documented
+contract on the exported face and the declined-scope rails -- are the
+manual page (`?ms_compare`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs7-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -385,4 +462,5 @@ Rscript bench/scenarios/run_treatment.R
 Rscript bench/scenarios/run_qc_artifacts.R
 Rscript bench/scenarios/run_stratify.R
 Rscript bench/scenarios/run_downsample.R
+Rscript bench/scenarios/run_reconstruction.R
 ```
