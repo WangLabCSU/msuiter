@@ -47,6 +47,11 @@
 .CS7_NULL_N <- 200L
 .CS7_NULL_DRAWS <- 200L
 .CS7_COSINE_LINE <- 0.969
+# Census domain ceiling with a one-ulp slack: cos(x, x) measures at
+# 1 + 1 ulp on this platform's sqrt path (probe: cos = 1.0000000000000002
+# on 2 of 8 exact-arm columns), so the domain verdict must not be undone
+# by representation alone.
+.CS7_COSINE_HI <- 1 + 4 * .Machine$double.eps
 .CS7_RUNGS <- c(0, 0.10, 0.18, 0.25, 0.32, 0.40, 0.50)
 .CS7_DEAD_COL <- 3L
 .CS7_ART_ROT <- c(2L, 3L, 4L, 1L)             # planted dictionary rotation
@@ -327,7 +332,7 @@ test_that("the witness payload census: every scored column alive and in-domain",
   expect_true(all(as.character(per$is_na) %in% c("0", "1")))
   vals <- as.numeric(per$per_sample)
   expect_true(all(is.na(vals)[ok_num]))                  # NA cells flagged
-  expect_true(all(vals[!ok_num] >= 0) && all(vals[!ok_num] <= 1))
+  expect_true(all(vals[!ok_num] >= 0) && all(vals[!ok_num] <= .CS7_COSINE_HI))
   expect_identical(as.integer(per$pass[!ok_num]),
                    as.integer(vals[!ok_num] > .CS7_COSINE_LINE))
   arms <- .rs_csv("cs7_arms.csv")
@@ -337,7 +342,7 @@ test_that("the witness payload census: every scored column alive and in-domain",
   expect_true(all(as.numeric(arms$cosine_line) == .CS7_COSINE_LINE))
   expect_true(all(is.finite(as.numeric(arms$median_cosine))))
   expect_true(all(as.numeric(arms$median_cosine) >= 0 &
-                     as.numeric(arms$median_cosine) <= 1))
+                     as.numeric(arms$median_cosine) <= .CS7_COSINE_HI))
   expect_true(all(as.numeric(arms$share_reasonable) >= 0 &
                      as.numeric(arms$share_reasonable) <= 1))
   expect_true(all(is.finite(as.numeric(arms$n_na)) &
