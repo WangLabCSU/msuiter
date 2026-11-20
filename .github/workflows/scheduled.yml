@@ -408,6 +408,19 @@ jobs:
             any::testthat, any::withr, any::ggplot2,
             any::ggalluvial, any::uwot
 
+      # S7 float forensics -- scheduled run 44743033811 (2026-11-20) saw
+      # every vignette-consuming arm of this workflow die
+      # <S7_generic_sentinel> in rlang::fn_env via pkgload::unregister when
+      # Suggests floated S7 to 1.0.0 on R 4.6.x; the ci.yml fan-out twin
+      # carries the same pin since 313bd90. Fail-closed: the pin cannot
+      # silently drop.
+      - name: Harden the S7 install against the 1.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("S7@0.2.2", ask = FALSE)
+          pin <- as.character(utils::packageVersion("S7"))
+          if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
+
       # The displaced serial test phase returns below as K attested shards;
       # the Rd-examples leg rides the check phase of this call and the
       # vignette leg its build phase (phase-marker probes banked with the
@@ -771,6 +784,15 @@ jobs:
         with:
           needs: check
           extra-packages: any::rcmdcheck
+
+      # S7 1.0.0 float hardening, same law and same run as the fan-out arm's
+      # twin step above (witnessed cran-shape red on 44743033811).
+      - name: Harden the S7 install against the 1.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("S7@0.2.2", ask = FALSE)
+          pin <- as.character(utils::packageVersion("S7"))
+          if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
 
       # The monolith itself, verbatim from the retired PR-gate leg: the
       # action's build+install+check runs the FULL test phase in one
