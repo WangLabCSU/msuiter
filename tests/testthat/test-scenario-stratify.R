@@ -42,7 +42,7 @@
 .sx_fb_manual <- 20000L
 
 test_that("the CS-5 runner speaks the committed scenario shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "bench", "scenarios", "run_stratify.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
@@ -56,7 +56,7 @@ test_that("the CS-5 runner speaks the committed scenario shape", {
 })
 
 test_that("the committed plant is the frozen 50-sample arithmetic ramp", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .sx_tsv("stratify_plant_totals.tsv")
   expect_identical(names(plant), c("sample", "total", "planted_hyper"))
   expect_identical(plant$sample, .sx_samples)
@@ -66,7 +66,7 @@ test_that("the committed plant is the frozen 50-sample arithmetic ramp", {
 })
 
 test_that("the committed partition adjudicates the planted truth at 1", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   part <- .sx_csv("stratify_partition.csv")
   expect_identical(part$sample, .sx_samples)
   expect_identical(as.integer(part$total), .sx_totals)
@@ -87,7 +87,7 @@ test_that("the committed partition adjudicates the planted truth at 1", {
 })
 
 test_that("the public face and the protocol twin re-derive the witnesses", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .sx_tsv("stratify_plant_totals.tsv")
   totals <- setNames(as.numeric(plant$total), plant$sample)
   scal <- .sx_csv("stratify_scalars.csv")
@@ -122,7 +122,7 @@ test_that("the public face and the protocol twin re-derive the witnesses", {
 })
 
 test_that("the verdict is seed-invariant across the certified seed range", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .sx_tsv("stratify_plant_totals.tsv")
   totals <- setNames(as.numeric(plant$total), plant$sample)
   scal <- .sx_csv("stratify_scalars.csv")
@@ -138,7 +138,7 @@ test_that("the verdict is seed-invariant across the certified seed range", {
 })
 
 test_that("the manual floor re-adjudicates and the boundary is strict", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   floored <- ms_stratify_hypermutants(
     setNames(.sx_fb_totals, .sx_fb_samples), manual_cutoff = .sx_fb_manual,
     seed = 1)
@@ -165,7 +165,7 @@ test_that("the manual floor re-adjudicates and the boundary is strict", {
 })
 
 test_that("the catalog path and the totals path deliver one verdict", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .sx_tsv("stratify_plant_totals.tsv")
   totals <- as.integer(plant$total)
   lab <- as.character(msuiter:::.ms_io_channel_tables()$SBS96)
@@ -183,7 +183,7 @@ test_that("the catalog path and the totals path deliver one verdict", {
 })
 
 test_that("the burden plot pins the stored cutoff and partition", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   if (!requireNamespace("ggplot2", quietly = TRUE)) skip("ggplot2 unavailable")
   plant <- .sx_tsv("stratify_plant_totals.tsv")
   totals <- setNames(as.numeric(plant$total), plant$sample)
@@ -203,7 +203,7 @@ test_that("the burden plot pins the stored cutoff and partition", {
 })
 
 test_that("the certified silence and degenerate branches speak", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   # unimodal cohort: zero hypermutants (the certified silence branch)
   uni <- setNames(as.numeric(12000L + 130L * (0:19)),
                    paste0("SU", formatC(1:20, width = 2L, flag = "0")))
@@ -225,7 +225,7 @@ test_that("the certified silence and degenerate branches speak", {
 })
 
 test_that("the certified constants are re-pinned, not re-implied", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   expect_identical(msuiter:::msuiter_gmm_var_reg, 1e-6)
   expect_identical(msuiter:::msuiter_gmm_tol, 1e-8)
   expect_identical(msuiter:::msuiter_gmm_max_iter, 200L)

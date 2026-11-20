@@ -130,7 +130,7 @@
 }
 
 test_that("the CS-7 runner speaks the committed scenario shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "bench", "scenarios", "run_reconstruction.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
@@ -151,7 +151,7 @@ test_that("the CS-7 runner speaks the committed scenario shape", {
 })
 
 test_that("the scalars witness pins the frozen scenario constants", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   scal <- .rs_csv("cs7_scalars.csv")
   expect_identical(nrow(scal), 1L)
   expect_identical(as.numeric(scal$cosine_line), .CS7_COSINE_LINE)
@@ -175,7 +175,7 @@ test_that("the scalars witness pins the frozen scenario constants", {
 })
 
 test_that("the planted cohort re-derives byte-exactly at the frozen seed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .rs_csv("cs7_plant.csv")
   expect_identical(names(plant)[1L], "channel")
   expect_identical(names(plant)[-1L], .CS7_SAMPLES)
@@ -189,7 +189,7 @@ test_that("the planted cohort re-derives byte-exactly at the frozen seed", {
 })
 
 test_that("the exact arm reads its own expectation: all-pass, dual-derivation EXACT", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs7_per_sample.csv")
   arms <- .rs_csv("cs7_arms.csv")
   exact <- per[per$arm == "exact", , drop = FALSE]
@@ -214,7 +214,7 @@ test_that("the exact arm reads its own expectation: all-pass, dual-derivation EX
 })
 
 test_that("the stochastic clean arm passes every sample at the frozen seed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs7_per_sample.csv")
   arms <- .rs_csv("cs7_arms.csv")
   clean <- per[per$arm == "clean", , drop = FALSE]
@@ -238,7 +238,7 @@ test_that("the stochastic clean arm passes every sample at the frozen seed", {
 })
 
 test_that("the artifakt arm is censused below the line", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs7_per_sample.csv")
   arms <- .rs_csv("cs7_arms.csv")
   art <- per[per$arm == "artifakt", , drop = FALSE]
@@ -267,7 +267,7 @@ test_that("the artifakt arm is censused below the line", {
 })
 
 test_that("the degenerate column speaks its NA bit", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs7_per_sample.csv")
   arms <- .rs_csv("cs7_arms.csv")
   deg <- per[per$arm == "degenerate", , drop = FALSE]
@@ -293,7 +293,7 @@ test_that("the degenerate column speaks its NA bit", {
 })
 
 test_that("the corruption ladder is monotone and its last-pass rung is committed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   lad <- .rs_csv("cs7_ladder.csv")
   expect_identical(names(lad), c("rung", "share_pass", "is_pass"))
   expect_identical(as.numeric(lad$rung), .CS7_RUNGS)
@@ -324,7 +324,7 @@ test_that("the corruption ladder is monotone and its last-pass rung is committed
 })
 
 test_that("the witness payload census: every scored column alive and in-domain", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs7_per_sample.csv")
   expect_identical(names(per), c("sample", "arm", "per_sample", "is_na", "pass"))
   ok_num <- as.integer(per$is_na) == 1L
@@ -350,7 +350,7 @@ test_that("the witness payload census: every scored column alive and in-domain",
 })
 
 test_that("the degenerate side facts speak", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   deg <- .rs_tsv("cs7_degenerates.tsv")
   expect_identical(names(deg), c("check", "value"))
   vals <- setNames(deg$value, deg$check)

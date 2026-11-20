@@ -65,7 +65,7 @@
 }
 
 test_that("the baselines runner stands executable beside its siblings", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   runner <- file.path(.hrd_bl_root(), "run_hrd_baselines.R")
   expect_true(file.exists(runner))
   src <- paste(readLines(runner, warn = FALSE), collapse = "\n")
@@ -76,7 +76,7 @@ test_that("the baselines runner stands executable beside its siblings", {
 })
 
 test_that("witness carries the hand-traced scarHRD goldens", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .hrd_bl_witness()
   g <- .hrd_bl_scarhrd_goldens()
   w <- w[order(w$sample), , drop = FALSE]
@@ -88,7 +88,7 @@ test_that("witness carries the hand-traced scarHRD goldens", {
 })
 
 test_that("msuiter columns agree end to end with the dual oracles", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .hrd_bl_witness()
   w <- w[order(w$sample), , drop = FALSE]
   rows <- as.data.frame(.hrd_bl_report())
@@ -111,7 +111,7 @@ test_that("msuiter columns agree end to end with the dual oracles", {
 })
 
 test_that("the planted composite arm fires exactly one HRD call", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .hrd_bl_witness()
   w <- w[order(w$sample), , drop = FALSE]
   # Only B6 is double-positive (pLOH >= 0.4 AND aneuploidy >= 4); every
@@ -120,7 +120,7 @@ test_that("the planted composite arm fires exactly one HRD call", {
 })
 
 test_that("geometry attribution columns name each tool's own coordinates", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .hrd_bl_witness()
   expect_true(all(grepl("grch37", w$geometry_scarhrd, fixed = TRUE)))
   expect_true(all(grepl("2881033286", w$geometry_msuiter, fixed = TRUE)))
@@ -128,7 +128,7 @@ test_that("geometry attribution columns name each tool's own coordinates", {
 })
 
 test_that("the arm fixture is self-consistent with the planted cohort spans", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   a <- .hrd_bl_arms()
   c0 <- .hrd_bl_cohort()
   expect_identical(sort(unique(as.character(a$chrom))),
