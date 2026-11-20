@@ -1,0 +1,144 @@
+---
+title: "CS-8 cluster-witness -- the shipped partition face adjudicated over planted truth: the planted family map as hard rail, a splintering artifakt, a strict medoid win, and a committed ladder rung (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-8 cluster-witness (2026-11-20)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_cluster_witness.R`, law test
+`tests/testthat/test-scenario-cluster-witness.R`, committed evidence under
+`bench/scenarios/out/` (`cs8_roster.csv`, `cs8_per_member.csv`,
+`cs8_arms.csv`, `cs8_ladder.csv`, `cs8_scalars.csv`,
+`cs8_degenerates.tsv`). TDD record: RED watched (10 units, nb=10 failed=1
+error=10 -- every red on the absent runner or absent witnesses, zero
+right-reason misses) -> GREEN 10 units / 134 expectations / 0 failures /
+0 errors; runner OVERALL PASS (18 adjudications plus the pre-write
+witness-finiteness census); double-run witness bytes `DET=IDENTICAL`
+(sha256 census behind a hard six-file count gate). Face battery
+unregressed: test-ms-cluster.R 4/0/0 (46 expects).
+
+## 1. Mandate
+
+Pillar 3's eighth decision-record scenario. The scoping pass (a read-only
+survey re-verified line by line against the live tree) selected the one
+shipped decision face with a documented contract and provably zero prior
+coverage in any lane: the exported **partition face**
+`ms_cluster_signatures` (`R/ms-cluster.R`; exported at `NAMESPACE` -- the
+threshold-graph connected components of the cosine matrix with
+mean-cosine medoids). Its zero-coverage finding was established by call-site
+inventory: no benchmark lane, scenario or law constructs it. Rails held:
+decision-record framing only, the exported face only, planted truth as the
+only ground, no new estimation machinery, the whole scenario RNG-free -- no
+seed to pin, no draw to re-roll.
+
+## 2. The planted question
+
+The face answers one question per threshold: which columns belong to the
+same cluster, given the edge law "cosine finite and at least the
+threshold", with which cluster representative (medoid) speaks for each
+cluster -- the member of highest mean within-cluster cosine, SELF-EXCLUSIVE,
+ties falling to the first member, a singleton its own medoid. The shipped
+default threshold (0.90, read from the face's own formals) is CITED, never an
+anchor: the module header law is that cosine above it remains necessary, not
+sufficient, so the scenario records what the face DOES on planted truth,
+never what a clustering means biologically.
+
+The scenario plants a nine-column SBS96-subset cohort of exact-duplicate
+families (bundled bytes; roster SBS1/SBS2/SBS13/SBS88 at family sizes
+3/2/2/2, measured separable: worst cross-family cosine 0.0707) and drives
+five arms through the exported face alone: the clean cohort, a jittered
+family-1 whose center member must win its medoid STRICTLY, a channel-rotated
+artifakt (family 2 scrambled), a degenerate all-zero column, and a
+deterministic corruption ladder blending every member toward its own
+rotated twin across eight rungs.
+
+Two structural laws were MEASURED, not assumed, and the law test mirrors
+the measured behaviour byte for byte:
+
+- **The label law is ascending-root, not size-ordered.** The shipped
+  labeling sorts cluster sizes decreasing but double-indexes -- the label
+  permutation and the name permutation cancel, so the committed labels are
+  the ascending ROOT order and cluster sizes play no role at all. The
+  scoping report's claim that labels follow descending size was REFUTED by
+  a zero-arm measurement (the size-one singleton F3a keeps label C3 ahead
+  of the size-two F4 pair's C5) and the shipped source was then read
+  verbatim to confirm the round-trip. The hand re-derivation engine in the
+  law test implements the MEASURED contract, not the header's intent.
+- **The match bit is structural.** A member matches the committed roster
+  iff its co-membership set and its cluster size both agree -- never on
+  cross-arm label equality, because the ascending-root law renumbers every
+  survivor's label whenever any arm adds or drops a cluster (the artifakt
+  arm's F4 pair renumbering when family 2 splinters is the proof case).
+
+## 3. Measured results
+
+- **Hard rails held.** The clean partition IS the planted family map --
+  labels C1..C4, sizes 3/2/2/2, each family's medoid its first member (the
+  tie law spoken exactly); the scrambled pair are lawful, DISTINCT-label
+  singletons at the cited line and at every swept threshold; the seven
+  untouched members keep the committed verdict under every perturbation;
+  `threshold = 0` aborts on the input topic through the face's own
+  validation (`msuiter_error_input`).
+- **The medoid is won, not tie-won.** The jittered family's center member
+  wins its medoid with a measured margin of 1.96e-04 over both siblings --
+  far beyond the ulp tier -- under the face's self-exclusive mean rule.
+  This arm nearly died at design time: the FIRST jitter design pushed
+  three entries negative and the face's own non-negative input check
+  ABORTED it -- a probe that had bypassed the face would have shipped an
+  untestable plant. The lesson (probes must traverse the real face) is
+  banked with the design: the committed jitter sits on measured peak
+  channels whose masses survive the shift.
+- **The zero column speaks its law.** The all-zero member is a lawful
+  medoid singleton, its former twin becomes a lawful family of one, and
+  the cosine matrix carries exactly 17 NaN cells (9 plus 9 minus the
+  shared corner) -- re-derived, not hardcoded, by both runner and law.
+- **The committed ladder fact.** The corruption ladder is monotone
+  non-increasing, rung 0 reproduces the clean arm, and its last full-pass
+  rung is committed at 0.23 as an OBSERVED fact at the frozen plant --
+  bracketed by probe (at 0.23 every within-family pair still stands at or
+  above 0.9182; at 0.26 five pairs fall below 0.90 while the F4 twin pair
+  survives at 0.9030, taking the cluster count to eight). Never asserted
+  a priori, never generalized.
+- **The one-ulp posture again.** The face's own diagonal cosine measures
+  one ulp BELOW unity (0.99999999999999989) on this platform's sqrt
+  path while duplicated columns read exactly 1.0 -- the mathematically
+  closed domain is not representation-closed, so the pre-write census
+  demands finite in-domain bytes with the 4-eps slack rather than
+  exact-equality floats, per the cross-platform posture (integer verdict
+  bytes byte-frozen, float columns censused and dual-derived).
+- **A false-green DET caught by its own gate.** The first determinism
+  attestation hashed ZERO files -- the witness directory had been cleaned
+  and an empty hash set compares equal to an empty hash set. The attestation
+  now refuses below a hard six-file count before hashing, and the
+  committed `DET=IDENTICAL` is a census over six named witnesses from
+  independent ignitions.
+
+## 4. The governance face
+
+The law row joined the shard roster (weight 1 s, 134 expects); the
+manifest generator REFUSED the first re-mint exactly as the budget law
+requires (the recomputed T0 sum moving off the committed measurement
+without a deliberate re-seal), the refusal was witnessed, and the budget
+was re-sealed 616 -> 617 with the local-run witness
+(`nb=134 failed=0 error=0`) recorded verbatim in
+`tools/ci/pr-gate-budget.tsv` -- the sixth such deliberate re-seal on the
+ledger, each one witnessed, none silent. The manifest re-minted at k=6,
+files=101, t0=617 under the 800 ceiling; the shard-map law re-ran green
+(19/212) and `tools/ci-selfcheck.py` PASSes end-to-end.
+
+## 5. The paper face
+
+The scenario enters the paper as the eighth §3.4 bullet and the eighth
+Fig. 5 panel, pre-referenced to the PR number verified from the issue-PR
+number space before citation (#116). The scenarios page gains the eighth
+live leg -- four adjudications re-run through the exported face against
+the committed bytes (clean partition against the roster bytes, artifakt
+splinter, zero-column singleton with its committed NaN census, monotone
+ladder with its committed rung) -- and the eighth register row; the docs
+bridge and the pkgdown article list each gain their row. The
+declined-scope rails are spoken by the runner's own `[attest]` lines and
+grepped by the law: decision-record only, cited-default-not-anchor, no
+bootstrap, no intervals, no conformal framing, the sanity harness
+untouched, bundled dictionary only, exported face only.
