@@ -101,7 +101,7 @@
 }
 
 test_that("the CS-6 runner speaks the committed scenario shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "bench", "scenarios", "run_downsample.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
@@ -119,7 +119,7 @@ test_that("the CS-6 runner speaks the committed scenario shape", {
 })
 
 test_that("the committed plant is the seeded generator at the frozen seed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   plant <- .ds_csv("cs6_plant.csv")
   expect_identical(names(plant)[1L], "channel")
   expect_identical(names(plant)[-1L], .DS_SAMPLES)
@@ -133,7 +133,7 @@ test_that("the committed plant is the seeded generator at the frozen seed", {
 })
 
 test_that("the ladder witnesses dual-derive bit-exactly through the faces", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   lad <- .ds_csv("cs6_ladder.csv")
   expect_identical(names(lad), c("depth", "signature", "stat", "p_bh", "pass_bh"))
   expect_identical(nrow(lad), length(.DS_DEPTHS) * length(.DS_SIG))
@@ -159,7 +159,7 @@ test_that("the ladder witnesses dual-derive bit-exactly through the faces", {
 })
 
 test_that("the planted extremes adjudicate: recall-1 and census-0", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   lad <- .ds_csv("cs6_ladder.csv")
   for (s in .DS_STRONG) {
     bits <- as.integer(lad$pass_bh[lad$signature == s])
@@ -172,7 +172,7 @@ test_that("the planted extremes adjudicate: recall-1 and census-0", {
 })
 
 test_that("the borderline bit is monotone and its flip depth is committed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   lad <- .ds_csv("cs6_ladder.csv")
   bits <- as.integer(lad$pass_bh[lad$signature == .DS_BORD])
   expect_true(all(diff(bits) >= 0))                      # non-decreasing in depth
@@ -196,7 +196,7 @@ test_that("the borderline bit is monotone and its flip depth is committed", {
 })
 
 test_that("the boundary cohort speaks the thinning byte laws", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   bou <- .ds_csv("cs6_boundary.csv")
   expect_identical(names(bou),
                    c("sample", "total", "is_verbatim", "is_dead", "post_total"))
@@ -229,7 +229,7 @@ test_that("the boundary cohort speaks the thinning byte laws", {
 })
 
 test_that("the seed leg: laws are seed-free, bytes are not", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   cat <- .ds_plant()
   clamped <- as.integer(pmin(c(.DS_T_STRONG, .DS_T_BORD, .DS_T_SUB), .DS_SEED_RUNG))
   for (s in .DS_SEEDS) {
@@ -247,7 +247,7 @@ test_that("the seed leg: laws are seed-free, bytes are not", {
 })
 
 test_that("min-depth, all-dead abort, and certified silence", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   hand <- .ds_hand(.DS_BOUND_TOT, .DS_BOUND_SAMPLES)
   ds <- ms_downsample(hand, depth = "min", seed = .DS_BOUND_SEED)
   prov <- ds@provenance$downsample
@@ -266,7 +266,7 @@ test_that("min-depth, all-dead abort, and certified silence", {
 })
 
 test_that("the degenerate witness carries the side facts", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   deg <- .ds_tsv("cs6_degenerates.tsv")
   expect_identical(names(deg), c("check", "value"))
   vals <- setNames(deg$value, deg$check)
@@ -280,7 +280,7 @@ test_that("the degenerate witness carries the side facts", {
 })
 
 test_that("the scalars witness pins the frozen scenario constants", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   scal <- .ds_csv("cs6_scalars.csv")
   expect_identical(scal$depths, paste0(.DS_DEPTHS, collapse = ","))
   expect_identical(as.integer(scal$plant_seed), as.integer(.DS_PLANT_SEED))

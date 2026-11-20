@@ -193,7 +193,7 @@
 }
 
 test_that("the CS-8 runner speaks the committed scenario shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "bench", "scenarios", "run_cluster_witness.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
@@ -213,7 +213,7 @@ test_that("the CS-8 runner speaks the committed scenario shape", {
 })
 
 test_that("the scalars witness pins the frozen scenario constants", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   scal <- .rs_csv("cs8_scalars.csv")
   expect_identical(nrow(scal), 1L)
   expect_identical(as.character(scal$sigs), paste(.CS8_SIG, collapse = ","))
@@ -237,7 +237,7 @@ test_that("the scalars witness pins the frozen scenario constants", {
 })
 
 test_that("the planted cohort re-derives byte-exactly, dual-derivation EXACT", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   ros <- .rs_csv("cs8_roster.csv")
   expect_identical(names(ros),
                    c("member", "cluster", "is_medoid", "cluster_size"))
@@ -264,7 +264,7 @@ test_that("the planted cohort re-derives byte-exactly, dual-derivation EXACT", {
 })
 
 test_that("the clean arm holds its hard rail: every member matches the roster", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs8_per_member.csv")
   arms <- .rs_csv("cs8_arms.csv")
   clean <- per[per$arm == "clean", , drop = FALSE]
@@ -286,7 +286,7 @@ test_that("the clean arm holds its hard rail: every member matches the roster", 
 })
 
 test_that("the jitter arm wins its medoid strictly, not by tie", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs8_per_member.csv")
   jit <- per[per$arm == "jitter", , drop = FALSE]
   expect_identical(as.character(jit$member), .CS8_MEMBERS)
@@ -318,7 +318,7 @@ test_that("the jitter arm wins its medoid strictly, not by tie", {
 })
 
 test_that("the artifakt arm splinters its family at every rung", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs8_per_member.csv")
   arms <- .rs_csv("cs8_arms.csv")
   art <- per[per$arm == "artifakt", , drop = FALSE]
@@ -355,7 +355,7 @@ test_that("the artifakt arm splinters its family at every rung", {
 })
 
 test_that("the zero column speaks its singleton law", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs8_per_member.csv")
   arms <- .rs_csv("cs8_arms.csv")
   deg <- per[per$arm == "degenerate", , drop = FALSE]
@@ -391,7 +391,7 @@ test_that("the zero column speaks its singleton law", {
 })
 
 test_that("the corruption ladder is monotone and its last-pass rung is committed", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   lad <- .rs_csv("cs8_ladder.csv")
   expect_identical(names(lad),
                    c("rung", "n_clusters", "n_medoids", "share_pass", "is_pass"))
@@ -418,7 +418,7 @@ test_that("the corruption ladder is monotone and its last-pass rung is committed
 })
 
 test_that("the witness payload census: every column alive and in-domain", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   per <- .rs_csv("cs8_per_member.csv")
   expect_identical(names(per),
                    c("member", "arm", "cluster", "is_medoid",
@@ -450,7 +450,7 @@ test_that("the witness payload census: every column alive and in-domain", {
 })
 
 test_that("the degenerate side facts speak", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   deg <- .rs_tsv("cs8_degenerates.tsv")
   expect_identical(names(deg), c("check", "value"))
   vals <- setNames(deg$value, deg$check)

@@ -33,7 +33,7 @@
 .qa_roster_planted <- paste0("QC", formatC(1:4, width = 2L, flag = "0"))
 
 test_that("the CS-4 runner speaks the committed scenario shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "bench", "scenarios", "run_qc_artifacts.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
@@ -48,7 +48,7 @@ test_that("the CS-4 runner speaks the committed scenario shape", {
 })
 
 test_that("the committed plant is the frozen 96-channel SBS96 shape", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   counts <- .qa_tsv("qc_plant_counts.tsv")
   expect_identical(counts[[1L]], as.character(msuiter:::.ms_io_channel_tables()$SBS96))
   expect_identical(names(counts)[-1L], .qa_samples)
@@ -62,7 +62,7 @@ test_that("the committed plant is the frozen 96-channel SBS96 shape", {
 })
 
 test_that("the sentries catch exactly the planted spike families", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .qa_csv("qc_sentries.csv")
   expect_identical(w$sample, .qa_samples)
   expect_identical(w$planted_family,
@@ -79,7 +79,7 @@ test_that("the sentries catch exactly the planted spike families", {
 })
 
 test_that("the roster share hits exactly the planted roster exposures", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .qa_csv("qc_artifact_share.csv")
   expect_identical(w$sample, .qa_samples)
   expect_equal(sort(w$sample[w$artifact_flag == "hit"]), sort(.qa_roster_planted))
@@ -93,7 +93,7 @@ test_that("the roster share hits exactly the planted roster exposures", {
 })
 
 test_that("fresh public-face calls re-derive the committed witness bytes", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   counts <- .qa_tsv("qc_plant_counts.tsv")
   labels <- as.character(msuiter:::.ms_io_channel_tables()$SBS96)
   mat <- matrix(as.integer(unlist(counts[-1L], use.names = FALSE)),
@@ -121,7 +121,7 @@ test_that("fresh public-face calls re-derive the committed witness bytes", {
 })
 
 test_that("the clean and sub-threshold branches speak measured silence", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .qa_csv("qc_sentries.csv")
   unspiked <- w[w$planted_family %in% c("clean", "dead"), , drop = FALSE]
   expect_equal(sum(unspiked$gt_verdict == "hit"), 0)
@@ -131,7 +131,7 @@ test_that("the clean and sub-threshold branches speak measured silence", {
 })
 
 test_that("the certified constants and rosters stay pinned under the scenario", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   d <- msuiter:::.ms_qc_defaults
   expect_equal(d$artifact_share_flag, 0.05)
   expect_equal(d$gt_share_flag, 0.30)
@@ -146,7 +146,7 @@ test_that("the certified constants and rosters stay pinned under the scenario", 
 })
 
 test_that("the provenance checklist is complete and speaks no failure", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   w <- .qa_csv("qc_provenance.csv")
   expect_identical(w$check, c("catalog.class", "channel.space", "provenance.genome",
     "provenance.keys", "refdb.pin", "roster.pin", "thresholds.declared",

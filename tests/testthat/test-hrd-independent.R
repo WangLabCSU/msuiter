@@ -49,7 +49,7 @@
 }
 
 test_that("the independent pLOH derivation agrees with the lineage oracle on the planted grammar", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   p <- .hi_planted()
   for (s in unique(as.character(p$sample))) {
     sub <- p[p$sample == s, , drop = FALSE]
@@ -60,7 +60,7 @@ test_that("the independent pLOH derivation agrees with the lineage oracle on the
 })
 
 test_that("the independent aneuploidy derivation agrees on the planted grammar", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   p <- .hi_planted()
   for (s in unique(as.character(p$sample))) {
     sub <- p[p$sample == s, , drop = FALSE]
@@ -74,7 +74,7 @@ test_that("the independent aneuploidy derivation agrees on the planted grammar",
 })
 
 test_that("dual derivation agrees byte-exactly on the R7 committed cohort", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   c0 <- .hi_r7_cohort()
   arms <- read.csv(file.path(.ms_root, "bench", "scenarios", "out",
                              "hrd_baselines_arms.tsv"),
@@ -93,7 +93,7 @@ test_that("dual derivation agrees byte-exactly on the R7 committed cohort", {
 })
 
 test_that("the minor-fold convention is adjudicated identically", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   # state 4, minor 3: folded minor = min(4-3, 3) = 1 -> NOT an LOH under the
   # paper's fold reading; a raw-minor==0 reading would also miss nothing here,
   # so the discriminating row is state 4 minor 4 (folded min(0,4)=0 -> LOH).
@@ -108,14 +108,14 @@ test_that("the minor-fold convention is adjudicated identically", {
 })
 
 test_that("the closed-interval width convention is adjudicated identically", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   full <- .hi_seg("C1", "chr1", 1, .hi_chr_size, 1, 0)
   expect_equal(.hrd_ind_ploh(full, .hi_chr_size), 1, tolerance = 1e-12)
   expect_equal(.hrd_ref_ploh(full, .hi_chr_size), 1, tolerance = 1e-12)
 })
 
 test_that("the blacklist p-arm-only skip is adjudicated identically", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   # chr13 covered on its (blacklisted 13) p-arm only: the adjudicated reading
   # SKIPS the chromosome rather than scoring the lone arm.
   solo <- .hi_seg("B1", "chr13", 1, .hi_chr_size / 2, 5, 2)
@@ -128,7 +128,7 @@ test_that("the blacklist p-arm-only skip is adjudicated identically", {
 })
 
 test_that("the NA-drop scope is adjudicated identically", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   good <- .hi_seg("N1", "chr1", 1, 500000, 2, 0)
   bad <- good
   bad$state <- as.integer(NA_integer_)
@@ -138,7 +138,7 @@ test_that("the NA-drop scope is adjudicated identically", {
 })
 
 test_that("the independent face shares no lineage symbol and names its source", {
-  if (is.na(.ms_root)) skip("repository checkout not locatable")
+  if (is.na(.ms_root)) skip("repository checkout not locatable (R CMD check context)")
   f <- file.path(.ms_root, "tests", "testthat", "helper-hrd-independent.R")
   expect_true(file.exists(f))
   src <- paste(readLines(f, warn = FALSE), collapse = "\n")
