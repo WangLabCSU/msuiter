@@ -385,6 +385,27 @@ alone and the internal reach-in idiom is barred from the scenario. Zero new
 machinery.
 Authority: vignettes/articles/devlog-2026-11-19-p3-cs7-reconstruction-witness.qmd.
 
+- **CS-8 cluster witness, decision record** (`bench/scenarios/run_cluster_witness.R`,
+#116): the shipped partition face `ms_cluster_signatures` -- connected
+components of the cosine graph at the face's shipped default 0.90,
+ascending-root labels, self-exclusive mean-cosine medoids -- adjudicated on
+a nine-column cohort of exact duplicate families (sizes 3/2/2/2) planted
+from the bundled reference bytes, measured separable (worst cross-family
+cosine 0.0707). Hard rails: the clean partition IS the planted family map,
+each family's medoid its first member under the tie law; the
+channel-rotated artifakt pair splinters to lawful distinct singletons at
+every swept threshold; the jittered family's center member wins its medoid
+STRICTLY (measured margin, never tie-won); the zero column speaks its
+singleton law and its 17-cell NaN census, and the face's own input
+validation aborts the degenerate threshold; the deterministic corruption
+ladder's last full-pass rung is COMMITTED as an observed fact (0.23 at the
+frozen plant), never asserted a priori (134 expectations, rerun
+byte-identical). Decision-record posture: 0.90 is the face's shipped
+default cited from its formals, not an anchor -- cosine above it remains
+necessary, not sufficient; the exported face is composed alone and the
+internal reach-in idiom is barred from the scenario. Zero new machinery.
+Authority: vignettes/articles/devlog-2026-11-20-p3-cs8-cluster-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -588,7 +609,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography

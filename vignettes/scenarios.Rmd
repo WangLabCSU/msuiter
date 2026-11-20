@@ -43,9 +43,10 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The seven executable drivers live under
+persist their evidence tables. The eight executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
-`run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`; committed
+`run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
+`run_reconstruction.R`, `run_cluster_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -450,6 +451,93 @@ contract on the exported face and the declined-scope rails -- are the
 manual page (`?ms_compare`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs7-*.qmd`.
 
+The eighth leg drives the shipped partition face `ms_cluster_signatures`
+-- connected components of the cosine graph at the face's shipped default
+threshold, with mean-cosine medoids -- across five planted arms: a clean
+cohort of exact duplicate families drawn from the bundled dictionary
+(96 channels, measured separable), a jittered family whose center member
+must win its medoid strictly, a channel-rotated artifakt, an all-zero
+column, and a deterministic corruption ladder. The clean partition must
+re-derive the committed roster byte for byte, the scrambled pair must
+splinter to lawful distinct singletons at every swept threshold, the zero
+column must speak its singleton law together with its committed 17-cell
+NaN census, and the ladder's last full-pass rung must re-derive the
+committed byte 0.23. Every check below re-runs live through the exported
+face against the committed witness bytes.
+
+```{r cluster-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  ros <- read.csv(file.path(out, "cs8_roster.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  lad <- read.csv(file.path(out, "cs8_ladder.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  deg <- read.table(file.path(out, "cs8_degenerates.tsv"),
+                    header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  scal <- read.csv(file.path(out, "cs8_scalars.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  sigs <- strsplit(scal$sigs, ",", fixed = TRUE)[[1L]]
+  copies <- as.integer(strsplit(scal$copies, ",", fixed = TRUE)[[1L]])
+  members <- strsplit(scal$members, ",", fixed = TRUE)[[1L]]
+  line <- as.numeric(scal$cited_line)
+  rot_unit <- as.integer(scal$rot_unit)
+  zm <- as.integer(scal$zero_member)
+  refdb <- ms_refdb_bundled(build = "GRCh37")
+  mat <- refdb[["SBS_GRCh37"]]@matrices[[1L]]
+  dict <- sweep(mat[, sigs, drop = FALSE], 2L,
+                colSums(mat[, sigs, drop = FALSE]), "/")
+  rot <- function(v, r) {
+    n <- length(v)
+    v[((seq_len(n) + r - 1L) %% n) + 1L]
+  }
+  cols <- list()
+  for (f in seq_along(sigs)) for (k in seq_len(copies[f])) {
+    cols[length(cols) + 1L] <- list(dict[, sigs[f], drop = TRUE])
+  }
+  S <- do.call(cbind, cols)
+  dimnames(S) <- list(rownames(dict), members)
+  cl <- ms_cluster_signatures(S, threshold = line)
+  rails_ok <- identical(as.character(cl$cluster), as.character(ros$cluster)) &&
+    identical(as.integer(cl$cluster_size), as.integer(ros$cluster_size)) &&
+    identical(as.integer(cl$is_medoid), as.integer(ros$is_medoid))
+  cat("the clean partition re-derives through the face against the committed roster bytes:",
+      rails_ok, "\n")
+  Sa <- S
+  base2 <- dict[, sigs[2L], drop = TRUE]
+  Sa[, "F2a"] <- rot(base2, rot_unit)
+  Sa[, "F2b"] <- rot(base2, 2L * rot_unit)
+  ca <- ms_cluster_signatures(Sa, threshold = line)
+  spl_ok <- identical(as.integer(ca$cluster_size[4L:5L]), c(1L, 1L)) &&
+    ca$cluster[4L] != ca$cluster[5L]
+  cat("the scrambled pair splinters to lawful distinct singletons through the face:",
+      spl_ok, "\n")
+  Sz <- S
+  Sz[, zm] <- 0
+  cz <- ms_cluster_signatures(Sz, threshold = line)
+  nan_committed <- as.integer(deg$value[deg$check == "zero_nan_cells"])
+  zero_ok <- identical(as.integer(cz$cluster_size[zm]), 1L) &&
+    isTRUE(cz$is_medoid[zm]) &&
+    identical(as.integer(sum(is.nan(attr(cz, "cosines")))), nan_committed)
+  cat("the zero column re-speaks its singleton law and committed NaN census:",
+      zero_ok, "\n")
+  shares <- as.numeric(lad$share_pass)
+  last_pass <- if (any(lad$is_pass == 1L)) {
+    max(as.numeric(lad$rung[lad$is_pass == 1L]))
+  } else NA_real_()
+  ladder_ok <- all(diff(shares) <= 0) &&
+    identical(last_pass, as.numeric(scal$last_full_pass_rung))
+  cat("the corruption ladder is monotone and its last full-pass rung is the committed byte:",
+      ladder_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs8_roster.csv`,
+`cs8_per_member.csv`, `cs8_arms.csv`, `cs8_ladder.csv`, `cs8_scalars.csv`
+and `cs8_degenerates.tsv`. The certified backing -- the face's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual page (`?ms_cluster_signatures`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs8-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -463,4 +551,5 @@ Rscript bench/scenarios/run_qc_artifacts.R
 Rscript bench/scenarios/run_stratify.R
 Rscript bench/scenarios/run_downsample.R
 Rscript bench/scenarios/run_reconstruction.R
+Rscript bench/scenarios/run_cluster_witness.R
 ```

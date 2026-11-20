@@ -1,0 +1,7 @@
+check	value
+clean_share_one	1
+artifakt_never_merge	1
+jitter_medoid_strict	1
+zero_col_singleton	1
+zero_nan_cells	17
+thr_abort_input	1

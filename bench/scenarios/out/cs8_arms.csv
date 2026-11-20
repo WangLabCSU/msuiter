@@ -1,0 +1,5 @@
+"arm","threshold_line","n_clusters","n_medoids","roster_share","rail_pass"
+"clean",0.9,4,4,1,1
+"jitter",0.9,4,4,1,1
+"artifakt",0.9,5,5,0.777777777777778,1
+"degenerate",0.9,5,5,0.777777777777778,1

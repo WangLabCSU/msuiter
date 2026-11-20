@@ -466,6 +466,25 @@ jobs:
           needs: check
           extra-packages: any::rcmdcheck
 
+      # Dependency-float hardening (2026-11-20, forensics of run 44664194981):
+      # the S7 1.0.0 major floated into the macos arm between the green
+      # install of run 44526650298 and this one -- the install-surface diff
+      # speaks S7 as the only new download, and the arm log carries the
+      # crash: pkgload::load_all dies in rlang::fn_env on an
+      # <S7_generic_sentinel> in EVERY vignette setup chunk (R 4.6.2, the
+      # RSPM-latest feed; the same R was green yesterday, and the local R
+      # 4.5.2/S7 0.2.2 gate is green, so the break is the float, not the
+      # lane). The attested-good release is 0.2.2 -- what the pre-float
+      # install and the local gate ran. pak delivers the pin; the assertion
+      # is fail-closed so a pin that cannot be delivered reddens this step
+      # at once instead of hiding downstream in the CRAN-shape gate.
+      - name: Harden the S7 install against the 1.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("S7@0.2.2", ask = FALSE)
+          pin <- as.character(utils::packageVersion("S7"))
+          if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
+
 
       # The displaced serial test phase returns below as K attested shards;
       # the Rd-examples leg rides the check phase of this call and the
