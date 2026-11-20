@@ -1,0 +1,11 @@
+check	value
+no_cache_no_error	1
+no_cache_hint_names_update	1
+artefakt_flip_offset	0
+artefakt_flip_before	123
+artefakt_flip_after	122
+kernels_all_equal	1
+memo_noncontamination	1
+clean_rails_closed	1
+drift_is_not_clean	1
+sidecar_expected_differs	1

@@ -1,0 +1,6 @@
+"rung","defect","verdict","findings_n","version_state"
+1,"none","ok",0,"current"
+2,"zeroed-sidecar-digests","drift",0,"current"
+3,"plus-artefakt-byte-flip","corrupt",0,"unknown"
+4,"plus-manifest-findings-1","inconsistent",1,"current"
+5,"all-defects","inconsistent",4,"unknown"
