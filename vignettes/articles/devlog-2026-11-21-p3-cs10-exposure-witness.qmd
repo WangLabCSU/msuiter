@@ -1,0 +1,136 @@
+---
+title: "CS-10 exposure-witness -- the shipped two-group exposure face adjudicated over a planted arithmetic capture: the BH family ladder, the NA face, and the measured family-size modulation (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-10 exposure-witness (2026-11-21)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_exposure_witness.R`, law test
+`tests/testthat/test-scenario-exposure-witness.R`, committed evidence under
+`bench/scenarios/out/` (`cs10_arms.csv`, `cs10_ladder.csv`,
+`cs10_scalars.csv`, `cs10_degenerates.tsv`). TDD record: RED watched
+(11 units, nb=59 failed=9 error=9 -- every red on the absent runner or
+absent witnesses; the plant-re-derivation and input-law units speak
+MEASURED laws and were green by design) -> GREEN 11 units / 161
+expectations / 0 failures / 0 errors / 0 warnings; runner OVERALL PASS
+(37 adjudications plus the pre-write witness-finiteness census);
+double-run witness bytes `DET=IDENTICAL` (4/4 sha256 files, all non-empty,
+behind the hard four-file count gate).
+
+## 1. Mandate
+
+Pillar 3's tenth decision-record scenario. The scoping pass selected the
+exported two-group exposure-differentiation face `ms_exposure_test()`
+(`R/ms-embed.R`, the per-signature Wilcoxon with BH family correction and
+the alpha gate) -- a face whose unit suite speaks the machinery (the
+BH-vs-correction identity, the all-tied NA face, the error paths) but
+never renders the shipped decision over a planted differential matrix:
+the full-family semantics -- pass bits, flip vectors across family sizes,
+the NA face, the input-law set -- had never been committed as a decision
+record by any lane. Everything here is closed-form by construction: the
+plant is pure arithmetic, the executed path touches no RNG and no network,
+and there is no seed to pin. The face is called FRESH per arm; zero
+global state, no injected-manifest seam.
+
+## 2. The plant and the six arms
+
+The plant is six signature legs over 24 samples in two 12-sample groups
+(A/B), every leg closed-form arithmetic from the base ramp
+`v = (0..11)/12` -- D3 law: synthetic `9.x/2.x` leg labels and arithmetic
+bytes only, zero COSMIC numeric matrices, zero downloads. The six arms,
+every one driven through the EXPORTED face alone (no hand-rolled
+rank-sum test and no hand-rolled family correction is invoked anywhere in
+the lane):
+
+- **designed** -- legs `9.4` (B-high) and `2.6` (A-high) pass `pass_bh`
+  at the frozen alpha 0.05; the wilcoxon statistic, both medians and both
+  p-columns are committed per leg from the live face.
+- **decoy** -- leg `9.1` mirrors its second half: the SAME distribution,
+  not element-wise equal (it escapes the NA face), speaks `p = 1`, and
+  stays negative.
+- **tied/NA face** -- leg `2.2`: `statistic`/`p_raw`/`p_bh` all NA (NOT a
+  fabricated p), `pass_bh` FALSE, and the medians are still spoken.
+- **borderline** -- leg `9.8` at the frozen delta 0.18: a rank-plateau
+  was measured across the tuning sweep (deltas 0.10-0.16 share one p,
+  0.18-0.20 the next), and 0.18 was chosen so the leg fails the frozen
+  alpha while the ladder admits it at alpha 0.2 -- an observed
+  bracketing witness.
+- **BH ladder** -- family rosters {six legs} x {five legs (the family-size
+  leg dropped)} across alphas {0.001, 0.05, 0.2}: the committed flip
+  vector per rung. The designed legs never flip across the meaningful
+  range; the borderline leg's admission at 0.2 is a COMMITTED OBSERVED
+  fact, and the fold-back law (`p_bh >= p_raw`, cap at 1) is censused at
+  every rung.
+- **input-law set** -- seven probes (three-group design, alphas 0/1/2,
+  groups-length mismatch, character matrix, list groups): every one
+  ABORTS with class `msuiter_error_input` and the committed clause,
+  verbatim -- including the two-group law's caller's-decision clause.
+
+The label-fallback law (NULL rownames -> `sig1..sigk`) and the
+MsSignature-equivalence arm (an object input built the sanctioned way --
+`ms_catalog()` -> `msuiter_catalog_summary()` so the channel hash stays
+DERIVED, never hand-forged -- is `all.equal` to the raw-matrix input)
+close the face.
+
+## 3. The measured laws this scenario commits
+
+- **The family-size modulation record.** Dropping the fifth passing leg
+  re-weights the BH ladder: the borderline leg's corrected p moves from
+  0.1488 (six-leg family) to 0.1587 (five-leg family) -- MORE
+  conservative with a SMALLER family, because the passing rank beneath it
+  disappeared -- while still failing 0.05 on both sides. The flip vectors
+  are committed per rung: six-leg family passes {9.4, 2.6, 2.9} at 0.05
+  and gains 9.8 at 0.2; five-leg family passes {9.4, 2.6} at 0.05.
+  Nothing here is derived from BH theory -- these are OBSERVED facts about
+  the shipped face, spoken by measurement.
+- **The NA face speaks zero fabrications.** Across all 33 ladder rungs
+  the tied leg is the only NA, it never carries a pass, and the
+  no-fabrication rail (`pass == 1 & is.na(p_bh)` counts zero) holds
+  everywhere.
+- **Instrument failures caught fail-closed, twice more.** (i) The
+  witness-finiteness census refused the first commit: this base renders
+  `as.character(NA)` as a REAL `NA` character, not the string `"NA"`, so
+  the intended "NA" token entered the degenerates witness as a poisoned
+  cell and the pre-write census (correctly) denied the commit -- fixed by
+  routing the float render through `paste0`, which speaks the literal.
+  (ii) The zero-warning pristineness law then exposed a census trap: 18
+  coercion warnings inside `expect_equal` calls were being double-counted
+  as results (a first green printed nb=179 where the literal expect count
+  is 161 -- 179 = 161 + 18 warns); the readers now take `na.strings = ""`
+  and a reserved-token converter maps `"NA"` back to a real NA BEFORE any
+  coercion. The final green is 161/161 with zero warnings -- a count the
+  file itself can be audited against. Both events are
+  OBSERVATION-instrument failures caught by the project's own laws before
+  any verdict was committed, never verdict failures.
+
+## 4. Hard rails and postures
+
+The hard rails: the committed pass bits and statistic vector; the decoy's
+`p = 1` and finite statistic; the tied leg's triple-NA with spoken
+medians; the six committed flip vectors; the fold-back and cap laws at
+every rung; the seven input-law classes and clauses; the label fallback;
+the MsSignature equivalence; the plant-checksum dual-kernel identity (the
+canonical pure-R SHA-256 and the `digest` accelerator agree on the
+plant's bytes); and the pre-write witness-finiteness census. Postures:
+DECISION RECORD only -- no calibration, no coverage claim, no intervals,
+no bootstrap, no conformal framing (the declined words are spoken by the
+runner itself); the D11 float posture is honored in full -- the witness
+byte-freezes integer and label verdicts only, the float columns are
+re-derived LIVE through the same face at tolerance, never sealed as
+cross-platform bytes; the pillar-2 namespace-reach idiom is banned in the
+law file and grepped away.
+
+## 5. Governance touch
+
+The law file joined the T0 shard roster (1 s integer weight, 161 expects);
+the deliberate re-seal `618 -> 619` was executed in the attested order --
+the generator refusal witnessed verbatim at the pre-seal re-mint ("T0
+weight moved to 619 s but the committed measurement says 618 s"), then the
+dated re-seal of `tools/ci/pr-gate-budget.tsv`, then the re-mint
+(`k=6`, `files=103`, `t0-weight=619s`). The pinned witnesses
+`test-ci-shard-map.R`, `test-scenarios-gallery.R` and the CS-9 currency
+law re-ran green over the re-minted map (624 expectations, 0 failures,
+0 errors, 0 warnings; the single skip is the sanctioned lane-site-tree
+skip in the local context).

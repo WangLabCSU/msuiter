@@ -429,6 +429,29 @@ are cited live from the committed sidecar, never re-typed. Zero new
 machinery. Authority:
 vignettes/articles/devlog-2026-11-21-p3-cs9-currency-witness.qmd.
 
+- **CS-10 exposure witness, decision record** (`bench/scenarios/run_exposure_witness.R`,
+#120): the shipped two-group exposure-differentiation face
+`ms_exposure_test()` -- per-signature rank-sum verdicts, BH family
+correction, alpha gate -- adjudicated over a six-leg planted arithmetic
+capture (synthetic 9.x/2.x labels, pure closed-form ramps, zero RNG, zero
+downloads, zero COSMIC numeric matrices). Hard rails: the designed
+legs pass at the frozen alpha and never flip across the meaningful
+ladder; the same-distribution decoy escapes the NA face, speaks p = 1,
+and stays negative; the tied leg is NA-valued (statistic and both
+p-columns) with its medians still spoken and never a fabricated pass;
+the seven input laws abort with the committed class and clause verbatim,
+the two-group law including its caller's-decision clause; the
+MsSignature object input is all.equal to the raw-matrix input; and the
+BH ladder commits the flip vector at every rung -- the measured
+family-size modulation where dropping the fifth passing leg moves the
+borderline leg's corrected p from 0.1488 UP to 0.1587, still failing the
+frozen gate on both sides (161 expectations, rerun byte-identical 4/4).
+Decision-record posture: the witness byte-freezes integer and label
+verdicts only -- float columns re-derive live through the face at
+tolerance, never sealed as cross-platform bytes. Zero new machinery.
+Authority:
+vignettes/articles/devlog-2026-11-21-p3-cs10-exposure-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -632,7 +655,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography

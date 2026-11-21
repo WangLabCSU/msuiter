@@ -43,11 +43,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The nine executable drivers live under
+persist their evidence tables. The ten executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
 `run_reconstruction.R`, `run_cluster_witness.R`,
-`run_currency_witness.R`; committed
+`run_currency_witness.R`, `run_exposure_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -590,6 +590,49 @@ rails -- are the manual pages (`?ms_catalog_currency`,
 `?ms_catalog_currency_update`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs9-*.qmd`.
 
+The tenth leg drives the shipped two-group exposure-differentiation face
+-- `ms_exposure_test()` with its per-signature rank-sum verdicts, BH
+family correction and alpha gate -- over a six-leg planted arithmetic
+capture: designed differentials, a same-distribution decoy that escapes
+the NA face, an all-tied leg that must speak NA rather than a fabricated
+p, a borderline leg at a measured delta, and the BH ladder over two
+family rosters across three alphas. The designed legs must pass and never
+flip across the meaningful alpha range, the decoy must speak p = 1, the
+tied leg must be the only NA at every rung and never carry a pass, and
+the ladder must re-speak the committed flip vectors -- including the
+measured family-size modulation, where dropping the fifth passing leg
+pushes the borderline leg's corrected p upward, not down. Everything is
+closed-form arithmetic: no RNG, no network, no hand-rolled test is
+invoked -- the verdicts are the exported face's own.
+
+```{r exposure-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  arms <- read.csv(file.path(out, "cs10_arms.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  lad <- read.csv(file.path(out, "cs10_ladder.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  pass_ok <- identical(as.integer(arms$pass_bh), c(1L, 1L, 0L, 0L, 0L, 1L))
+  na_ok <- sum(is.na(as.numeric(arms$p_raw))) == 1L &&
+    sum(is.na(as.integer(arms$pass_bh))) == 0L
+  flip <- function(r, a) as.character(lad$signature[
+    lad$roster == r & lad$alpha == a & lad$pass == "1"])
+  ladder_ok <- identical(flip("R6", "0.05"), c("9.4", "2.6", "2.9")) &&
+    identical(flip("R6", "0.2"), c("9.4", "2.6", "9.8", "2.9")) &&
+    identical(flip("R5", "0.05"), c("9.4", "2.6"))
+  cat("the six legs re-speak the committed pass bits:", pass_ok,
+      "| the NA face is singular and unpassed:", na_ok,
+      "| the ladder flip vectors are committed:", ladder_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs10_arms.csv`,
+`cs10_ladder.csv`, `cs10_scalars.csv` and `cs10_degenerates.tsv`. The
+certified backing -- the face's documented contract on the exported
+surface and the declined-scope rails -- are the manual page
+(`?ms_exposure_test`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs10-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -604,4 +647,6 @@ Rscript bench/scenarios/run_stratify.R
 Rscript bench/scenarios/run_downsample.R
 Rscript bench/scenarios/run_reconstruction.R
 Rscript bench/scenarios/run_cluster_witness.R
+Rscript bench/scenarios/run_currency_witness.R
+Rscript bench/scenarios/run_exposure_witness.R
 ```
