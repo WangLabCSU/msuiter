@@ -1,0 +1,131 @@
+---
+title: "CS-9 currency-witness -- the shipped catalog-currency face adjudicated over a planted capture: the verdict lattice, the precedence ladder, a byte-true artefakt, and the measured version_key collision law (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-9 currency-witness (2026-11-21)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_currency_witness.R`, law test
+`tests/testthat/test-scenario-currency-witness.R`, committed evidence under
+`bench/scenarios/out/` (`cs9_arms.csv`, `cs9_hexes.csv`, `cs9_precedence.csv`,
+`cs9_version_ladder.csv`, `cs9_scalars.csv`, `cs9_degenerates.tsv`). TDD
+record: RED watched (10 units, nb=23 failed=2 error=10 -- every red on the
+absent runner or absent witnesses; the constants-and-kernels re-derivation
+unit speaks a MEASURED law and was green by design) -> GREEN 10 units /
+126 expectations / 0 failures / 0 errors; runner OVERALL PASS (32 adjudications
+plus the pre-write witness-finiteness census); double-run witness bytes
+`DET=IDENTICAL` (6/6 sha256 files behind the hard five-file count gate).
+Unit battery unregressed: `test-catalog-currency.R` 30 test_that / 140
+expects, green in the same local pass.
+
+## 1. Mandate
+
+Pillar 3's ninth decision-record scenario. The scoping pass selected the
+offline catalog-currency face family -- `ms_catalog_currency()` (the
+versioned-cache verdict engine, `R/catalog-currency.R`), its injected-
+source deriver `ms_catalog_currency_update(source =, offline = TRUE)` and
+the committed-sidecar reader `ms_catalog_registry()` -- a governed face
+whose unit suite speaks the machinery (form gates, precedence internals,
+the harvest parsers) but never renders the shipped sidecar against
+planted bytes: the drift-versus-shipped decision record this scenario
+commits had never been made by any lane. Everything here is OFFLINE by
+construction: with a `source` injected the update leg never attempts a
+download, and the harvest sampling branch is not on the executed path --
+no network, no RNG, no seed to pin.
+
+## 2. The plant and the five arms
+
+The plant is a nine-release synthetic capture (`3.6`, then a `2.9..2.2`
+tail -- the 9.x/2.x synthetic band per the `.CC_FIXTURE_RELEASES`
+precedent; D3 law: capture labels and `profile_count` shape facts from
+`{1,2,3}` only, zero COSMIC numeric matrices anywhere). Its head label
+equals the committed sidecar's pinned `3.6`, so the clean arm reads
+`ok`/`current`, and the availability document carries a structure cell for
+every label the version ladder will inject. The five arms, every one
+driven through the exported faces alone:
+
+- **clean** -- lay the capture through `ms_catalog_currency_update()`
+  into a temp cache, adjudicate with the candidate sidecar: verdict `ok`,
+  `version_state` `current`, both documents `ok`, and the hex triads
+  close byte-for-byte (`cached == record_sha == expected`).
+- **drift** -- the same cache read against the SHIPPED committed sidecar:
+  the synthetic bytes exist and parse but are not the bytes the committed
+  registry vouches for, so the verdict is `drift` -- not `ok`, not
+  `corrupt` -- and, by the doc-state law, drift keeps the cache TRUSTED.
+  The shipped expectations re-read as the live committed digests.
+- **artefakt** -- one committed byte flipped in a cached
+  `reference_data.json` (offset 0, `{` 123 -> `z` 122): verdict `corrupt`,
+  and corruption POISONS the version channels -- `latest`/`available`
+  speak `unmeasured`, `version_state` `unknown`.
+- **degenerate** -- an absent cache speaks an actionable `no-cache` with a
+  hint naming the update face and NO error raised.
+- **precedence ladder** -- defects accumulate over five rungs (zeroed
+  sidecar digests, then the byte flip, then a governed-manifest version
+  defect, then all three): the committed verdict vector is
+  `ok, drift, corrupt, inconsistent, inconsistent` with the findings
+  column monotone `0,0,0,1,4` -- findings outrank digests, corrupt
+  outranks drift, exactly the committed precedence law.
+- **version ladder** -- injected `latest` labels `3.4, 3.5, 3.6, 3.6.0,
+  3.6.1, 3.7` around the pinned `3.6`: `ahead, ahead, current, current,
+  behind, behind`, with verdict `ok` standing through `ahead` and only
+  `behind` degrading it.
+
+## 3. The measured laws this scenario commits
+
+- **The key-collision law.** `3.6` and `3.6.0` share the 3-slot
+  `version_key`, so an injected latest of `3.6.0` reads `current` against
+  the pinned `3.6` -- MEASURED through the face, committed as a decision
+  record with `last_current = 3.6.0` and `first_behind = 3.6.1` as the
+  observed boundary rungs. This is the documented semantics of the face,
+  spoken here by observation, never by assertion.
+- **The dual-kernel identity.** The capture re-hashes identically through
+  the canonical pure-R `.ms_fit_sha256`, the governed dispatcher
+  `.ms_cc_sha256_file`, and the `digest` accelerator -- one hash, three
+  paths, committed as hexes in the scalars witness and re-checked live in
+  the law file (a silent byte-rot reddens the suite, not the print).
+- **Byte-true observation, twice bitten, twice legislated.** Three
+  instrument-side defects were caught by the project's own laws before
+  any verdict was committed: (i) this base's `readBin(path, "raw")`
+  WITHOUT the element-count argument silently returns ONE byte -- the
+  first artefakt and kernel measurements spoke the SHA-256 of `{`, and
+  only the size census (`length(raw) == file.info(path)$size`) exposed
+  it; every byte read in the lane now passes the size explicitly.
+  (ii) The all-defects rung first ABORTed on the form gate: the injected
+  governance manifest must satisfy the manifest-shape validator, and a
+  defect commit built `paste0`-wise came out a length-39 vector -- the
+  committed rung now builds a true 40-hex scalar. (iii) The hex-column
+  census first read every column dead because the scalar predicate was
+  applied to whole columns (`&&` short-circuits on `length == 1`);
+  the predicate was vectorized through `vapply` and the census then
+  witnessed live columns. All three are OBSERVATION-instrument failures
+  caught fail-closed, never verdict failures.
+
+## 4. Hard rails and postures
+
+The hard rails: the clean hex triads; the drift arm's trustworthiness and
+its shipped-digest expectations (re-read live from
+`ms_catalog_registry()`, so the provenance rail cannot die silently); the
+corrupt arm's poisoned version channels and its committed flipped-hash
+observation; the no-cache arm's silence-as-verdict; the monotone findings
+column; the committed ladder vectors on both sides; and the pre-write
+witness-finiteness census refusing to commit a dead column. Postures:
+DECISION RECORD only -- no calibration, no coverage claim, no intervals,
+no bootstrap, no conformal framing (the declined words are spoken by the
+runner itself); the shipped default digests and the pinned label are
+cited from the committed sidecar, never re-typed from memory; the memo
+seam is probed for contamination (after every injected-manifest rung the
+plain face re-reads the governed manifest and still speaks zero findings).
+
+## 5. Governance touch
+
+The law file joined the T0 shard roster (1 s integer weight, 126 expects);
+the deliberate re-seal `617 -> 618` was executed in the attested order --
+the generator refusal witnessed verbatim at the pre-seal re-mint ("T0
+weight moved to 618 s but the committed measurement says 617 s"), then the
+dated re-seal of `tools/ci/pr-gate-budget.tsv`, then the byte-identical
+re-mint (`k=6`, `files=102`, `t0-weight=618s`). The pinned witnesses
+`test-ci-shard-map.R`, `test-scenarios-gallery.R` and the `ci-*` law
+family re-ran green over the re-minted map (478 expectations, 0 failures,
+0 errors).
