@@ -34,6 +34,11 @@
 # (test-scenario-cluster-witness.R, 1 s integer weight, 134 expects) joined the
 # T0 roster; witness: local run nb=134 failed=0 error=0, measured manifest
 # sum 617 (generator refusal witnessed at the pre-seal re-mint attempt).
+# 2026-11-21 deliberate re-seal 617 -> 618: the CS-9 scenario row
+# (test-scenario-currency-witness.R, 1 s integer weight, 126 expects) joined the
+# T0 roster; witness: local run nb=126 failed=0 error=0, measured manifest
+# sum 618 (generator refusal witnessed at the pre-seal re-mint attempt, the
+# verbatim DEFECT line naming 618 against the sealed 617).
 key	value	note
-t0-measured	617	measured 2026-11-20 (integer manifest seconds, tier T0; 2026-11-19 seal 616 superseded by the CS-8 row)
+t0-measured	618	measured 2026-11-21 (integer manifest seconds, tier T0; 2026-11-20 seal 617 superseded by the CS-9 row)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

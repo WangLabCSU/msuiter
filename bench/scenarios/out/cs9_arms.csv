@@ -1,0 +1,5 @@
+"arm","verdict","version_state","latest_status","latest_release","available_status","docs_states","findings_n","present","trusted"
+"clean","ok","current","measured","3.6","measured","ok,ok",0,1,1
+"drift","drift","current","measured","3.6","measured","drift,drift",0,1,1
+"artefakt","corrupt","unknown","unmeasured",NA,"unmeasured","corrupt,ok",0,1,0
+"degenerate","no-cache","unknown","unmeasured",NA,"unmeasured","",0,0,0

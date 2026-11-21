@@ -406,6 +406,29 @@ necessary, not sufficient; the exported face is composed alone and the
 internal reach-in idiom is barred from the scenario. Zero new machinery.
 Authority: vignettes/articles/devlog-2026-11-20-p3-cs8-cluster-witness.qmd.
 
+- **CS-9 currency witness, decision record** (`bench/scenarios/run_currency_witness.R`,
+#119): the shipped offline catalog-currency family --
+`ms_catalog_currency_update(source =, offline = TRUE)` as the injected
+capture deriver, `ms_catalog_currency()` as the verdict engine,
+`ms_catalog_registry()` as the live committed sidecar -- adjudicated on a
+planted nine-release synthetic capture (the 9.x/2.x band, zero COSMIC
+numeric matrices). Hard rails: the clean arm's hex triads close
+byte-for-byte; the synthetic cache against the SHIPPED sidecar speaks
+DRIFT and keeps its trustworthiness (the decision record the unit suite
+never made); one committed byte flips the arm to CORRUPT and poisons the
+version channels to unmeasured/unknown; an absent cache speaks an
+actionable no-cache, never an error; the precedence ladder's verdict
+vector is committed with its findings column monotone 0->4 (findings
+outrank digests, corrupt outranks drift); and the version ladder commits
+the MEASURED key-collision law -- 3.6 and 3.6.0 share the 3-slot
+version_key and read current, with the observed boundary rungs
+last_current 3.6.0 and first_behind 3.6.1 (126 expectations, rerun
+byte-identical 6/6). Decision-record posture: offline by construction --
+no download leg exists on the executed path -- and the shipped digests
+are cited live from the committed sidecar, never re-typed. Zero new
+machinery. Authority:
+vignettes/articles/devlog-2026-11-21-p3-cs9-currency-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -609,7 +632,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography

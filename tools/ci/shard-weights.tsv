@@ -115,3 +115,4 @@ test-scenario-stratify.R	1	91	T0
 test-scenario-downsample.R	1	116	T0
 test-scenario-reconstruction.R	1	92	T0
 test-scenario-cluster-witness.R	1	134	T0
+test-scenario-currency-witness.R	1	126	T0

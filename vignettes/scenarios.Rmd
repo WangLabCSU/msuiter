@@ -43,10 +43,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The eight executable drivers live under
+persist their evidence tables. The nine executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
-`run_reconstruction.R`, `run_cluster_witness.R`; committed
+`run_reconstruction.R`, `run_cluster_witness.R`,
+`run_currency_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -537,6 +538,57 @@ and `cs8_degenerates.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_cluster_signatures`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs8-*.qmd`.
+
+The ninth leg drives the shipped offline catalog-currency family --
+`ms_catalog_currency_update(source =, offline = TRUE)` as the injected
+capture deriver and `ms_catalog_currency()` as the versioned-cache
+verdict engine -- across five planted arms: a clean synthetic capture
+(the 9.x/2.x band, head at the pinned 3.6), the same cache read against
+the SHIPPED committed sidecar, a single committed byte flipped in a
+cached source document, an absent cache, and the accumulating-defect
+precedence ladder, plus a version ladder around the pinned label. The
+clean arm must close its hex triads byte for byte, the drift arm must
+speak the shipped expectations and keep its trustworthiness, the corrupt
+arm must poison the version channels, the absent-cache arm must speak an
+actionable no-cache without an error, and the ladders must re-derive the
+committed verdict vectors -- including the MEASURED key-collision law,
+3.6 == 3.6.0 reading current. Everything here is offline by construction:
+the injected-source update leg never attempts a download.
+
+```{r currency-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  scal <- read.csv(file.path(out, "cs9_scalars.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  arms <- read.csv(file.path(out, "cs9_arms.csv"),
+                   header = TRUE, stringsAsFactors = FALSE)
+  lad <- read.csv(file.path(out, "cs9_precedence.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  vl <- read.csv(file.path(out, "cs9_version_ladder.csv"),
+                 header = TRUE, stringsAsFactors = FALSE)
+  ver_ok <- identical(as.character(arms$verdict),
+                      c("ok", "drift", "corrupt", "no-cache"))
+  prec_ok <- identical(as.character(lad$verdict),
+                       c("ok", "drift", "corrupt", "inconsistent",
+                         "inconsistent")) &&
+    all(diff(as.integer(lad$findings_n)) >= 0L)
+  collision_ok <- identical(as.character(vl$version_state),
+                            c("ahead", "ahead", "current", "current",
+                              "behind", "behind"))
+  cat("the five arms re-speak the committed verdict lattice:",
+      ver_ok, "| the precedence ladder is committed and monotone:",
+      prec_ok, "| the measured key-collision law holds:",
+      collision_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs9_arms.csv`,
+`cs9_hexes.csv`, `cs9_precedence.csv`, `cs9_version_ladder.csv`,
+`cs9_scalars.csv` and `cs9_degenerates.tsv`. The certified backing -- the
+faces' documented contract on the exported surface and the declined-scope
+rails -- are the manual pages (`?ms_catalog_currency`,
+`?ms_catalog_currency_update`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs9-*.qmd`.
 
 ## Reproducing the full verdicts
 
