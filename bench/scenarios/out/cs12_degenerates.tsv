@@ -1,0 +1,18 @@
+name	value
+default_noargs_abort	1
+default_noargs_class	msuiter_error_engine
+default_noargs_clause	the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)
+volume_certified_ok	1
+certified_class	msuiter::MsSparse
+volume_mu_gap_ok	1
+volume_mu_gap_echo	0.5
+delta_sentinel_ok	1
+delta_sentinel_echo	0
+precedence_generic_wins	1
+precedence_l1_law_alive	1
+typed_variant_gate	1
+typed_lambda_gate	1
+tol_na_gate	1
+tol_na_real_engine	1
+rng_before	FALSE
+rng_after	FALSE

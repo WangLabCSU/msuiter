@@ -1,0 +1,4 @@
+arm,variant,mu,fired,clause
+volume-mu-neg,volume,-1,generic-ge0,`mu` must be a single finite number >= 0
+l1-mu-neg,l1,-1,generic-ge0,`mu` must be a single finite number >= 0
+l1-mu-zero,l1,0,l1-mu-law,the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)

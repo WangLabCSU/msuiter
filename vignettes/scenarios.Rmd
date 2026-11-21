@@ -43,12 +43,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The eleven executable drivers live under
+persist their evidence tables. The twelve executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
 `run_reconstruction.R`, `run_cluster_witness.R`,
 `run_currency_witness.R`, `run_exposure_witness.R`,
-`run_calibration_verdict.R`; committed
+`run_calibration_verdict.R`, `run_sparse_spec_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -674,6 +674,51 @@ contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_calibration_verdict`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs11-*.qmd`.
 
+The twelfth leg drives the shipped engine-spec factory --
+`ms_sparse()` with its S7 property gates, its variant enum, its
+finite-nonnegative penalty loop, its l1-positive-mu law and its whole-number
+`max_iter` and seed windows -- over planted scalar arguments. The headline
+is a shipped quirk read from the live face: the documented default variant
+ABORTS on its own l1 law while the certified variant accepts; when both the
+generic nonnegative bullet and the l1 law are triggered the GENERIC bullet
+fires first (loop-before-law, witnessed from both sides); and the two NA
+tolerances split across the two gates -- the logical one refused by the
+property gate, the real one one level down by the validator. Every echo,
+class token and clause is the OBSERVED byte; the accepted property values
+ride as their fixed `format()` renderings. The plant is closed-form scalar
+rationals: no RNG (measured at both ends), no network, no data objects; the
+R-bound benchmark runner and the FFI shim are never invoked.
+
+```{r sparse-spec-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  sp <- read.csv(file.path(out, "cs12_specs.csv"), header = TRUE,
+                 stringsAsFactors = FALSE, quote = "")
+  pr <- read.csv(file.path(out, "cs12_precedence.csv"), header = TRUE,
+                 stringsAsFactors = FALSE, quote = "")
+  dq <- read.csv(file.path(out, "cs12_degenerates.tsv"), sep = "\t",
+                 header = TRUE, stringsAsFactors = FALSE, quote = "")
+  dv <- setNames(as.character(dq$value), as.character(dq$name))
+  headline_ok <- identical(dv[["default_noargs_abort"]], "1") &&
+    identical(dv[["volume_certified_ok"]], "1")
+  prec_ok <- identical(as.character(pr$fired),
+                       c("generic-ge0", "generic-ge0", "l1-mu-law"))
+  echo_ok <- identical(as.character(sp$tol[sp$arm == "seed-max-ok"]),
+                       "1e-07") &&
+    identical(as.character(sp$seed[sp$arm == "seed-max-ok"]), "2147483647")
+  cat("the documented default aborts while the certified variant accepts:",
+      headline_ok, "| the generic bullet outranks the l1 law:", prec_ok,
+      "| the accepted echoes carry the measured bytes:", echo_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs12_specs.csv`,
+`cs12_laws.tsv`, `cs12_precedence.csv`, `cs12_scalars.csv` and
+`cs12_degenerates.tsv`. The certified backing -- the factory's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual page (`?ms_sparse`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs12-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -691,4 +736,5 @@ Rscript bench/scenarios/run_cluster_witness.R
 Rscript bench/scenarios/run_currency_witness.R
 Rscript bench/scenarios/run_exposure_witness.R
 Rscript bench/scenarios/run_calibration_verdict.R
+Rscript bench/scenarios/run_sparse_spec_witness.R
 ```
