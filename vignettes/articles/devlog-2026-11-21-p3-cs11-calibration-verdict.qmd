@@ -1,0 +1,130 @@
+---
+title: "CS-11 calibration-verdict-witness -- the shipped coverage-verdict face adjudicated over planted rational plants: the both-ends-inclusive boundary law, the three-source precedence ladder, and the degenerate-shape census (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-11 calibration-verdict-witness (2026-11-21)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_calibration_verdict.R`, law test
+`tests/testthat/test-scenario-calibration-verdict.R`, committed evidence under
+`bench/scenarios/out/` (`cs11_arms.csv`, `cs11_lattice.csv`,
+`cs11_precedence.csv`, `cs11_scalars.csv`, `cs11_degenerates.tsv`). TDD
+record: RED watched (10 units, nb=87 failed=11 error=8 -- every red on the
+absent runner or absent witnesses; the plant self-consistency and live
+input-law units speak MEASURED laws and were green by design) -> GREEN
+10 units / 248 expectations / 0 failures / 0 errors / 0 warnings; runner
+OVERALL PASS (51 adjudications plus the pre-write witness-finiteness census);
+double-run witness bytes `DET=IDENTICAL` (5/5 sha256 files, all non-empty,
+behind the hard four-file count gate).
+
+## 1. Mandate
+
+Pillar 3's eleventh decision-record scenario. The scoping pass selected the
+exported coverage-verdict face `ms_calibration_verdict()`
+(`R/calibrate.R` -- the per-cell inclusivity lattice over the frozen
+acceptance window `c(lo = 0.930, hi = 0.970)`, the ascending failing-cell
+census, the all-in bit and the three-source window precedence) -- a face
+whose unit suite speaks the machinery (the guard aborts, the shape of the
+returned list) but never rendered the shipped decision -- the exact lattice
+over planted fractions, the census order, the precedence ladder's two
+flips -- as a decision record by any lane. Everything here is closed-form by
+construction: the plant is hand-picked rational arithmetic, the executed
+path touches no RNG and no network, and there is no seed to pin. The face
+is called FRESH per arm; zero global state. The lane never invokes the
+seeded grid/bootstrap estimators of the calibration module -- the declined
+scope stays declined; the verdict face is the whole scope.
+
+## 2. The plant and the six arms
+
+The plant is `mean_coverage` tables whose values are exact rational source
+labels (`0.935`, `0.930`, `0.929999`, ... -- the committed witnesses carry
+the source TEXT, so the trailing zeros are law, not rendering), labelled
+`cell1..n` -- D3 law: synthetic coverage fractions from hand-picked
+rationals only, zero COSMIC numeric matrices, zero real calibration bytes,
+zero downloads. The six arms, every one driven through the EXPORTED face
+alone (the lattice bits, the census vectors and the all-in bits are the
+face's own; no hand-rolled windowing is invoked anywhere in the lane):
+
+- **all-in** -- three cells deep inside the frozen window: a full-TRUE
+  lattice, the all-in bit lit, an empty census.
+- **boundary-inclusive** -- cells EXACTLY at `0.930` and `0.970` flanked
+  by `0.929999`/`0.970001`: the both-ends-inclusive law read from the
+  live face, ends IN and epsilon flanks OUT.
+- **flip-pair** -- one low failer `0.9299` and one high failer `0.9701`
+  in one table: the ascending census `c(2, 4)` with per-cell bits.
+- **precedence** -- one table, three band sources that DISAGREE: the
+  explicit `window` argument outranks the recorded `window` attribute,
+  which outranks the frozen default; both flips are MEASURED -- the attr
+  rung condemns cell 2, the arg rung admits it again.
+- **degenerates** -- an all-out table (the census names every cell,
+  ascending), a single-cell table, the face's own shape laws (the lattice
+  speaks UNNAMED, the window speaks NAMED `lo,hi`), and a committed
+  `cs11_precedence.csv` ladder witness.
+- **input-law set** -- nine probes (NA-bearing column, missing column,
+  non-data.frame, zero rows, reversed window, non-finite window,
+  length-1 window, character window -- plus the degenerate closed window):
+  the eight guards ABORT with class `msuiter_error_input` and the two
+  committed clauses verbatim; the ninth probe is an OBSERVED no-abort (see
+  below).
+
+## 3. The measured laws this scenario commits
+
+- **The both-ends-inclusive boundary law.** `mean_coverage` equal to the
+  frozen end reads IN -- at `0.930` and at `0.970` alike -- while the
+  one-epsilon flanks read OUT. The witness commits the four bits and the
+  two inclusivity pins; no off-by-one may ever enter this face silently.
+- **The precedence ladder, both directions.** default -> attr flips the
+  verdict (cell 2 condemned); attr -> arg flips it back (cell 2
+  admitted). The committed `cs11_precedence.csv` carries the three rungs'
+  window echoes verbatim.
+- **The degenerate closed window is LEGAL.** `window = c(0.9, 0.9)` with
+  `lo == hi` does NOT abort -- the guard's law is `lo <= hi`, an observed
+  boundary of the input contract, committed as a witnessed no-abort
+  rather than re-typed as a design claim.
+- **The face's shape laws.** The per-cell lattice is unnamed; the window
+  echo is named `lo,hi`; the census ascends in every arm; the all-in bit
+  agrees with the census by construction, censused per arm.
+- **Instrument failures caught fail-closed, twice again.** (i) The law's
+  byte-exact label rail refused the first green (8 failures): this base's
+  `read.csv` type-coerces look-alike-numeric columns, and the witness
+  reader would have silently rendered `"0.930"` as `"0.93"` -- the
+  committed rational SOURCE bytes are the law, so the readers now pin
+  every column with `colClasses = "character"` (this base's `read.csv`
+  predates `type.convert`) and the second green is the literal
+  248/248. (ii) The same run exposed a law-side column-vs-scalar
+  comparison in the all-bit expect, fixed with `rep_len` before commit.
+  Both events are OBSERVATION-instrument failures caught by the project's
+  own laws before any verdict was committed, never verdict failures.
+
+## 4. Hard rails and postures
+
+The hard rails: the per-arm committed lattice bits, census vectors and
+all-in bits; the four boundary bits and the two inclusivity pins; the
+three-rung precedence witness with its measured flips; the face's shape
+laws; the eight input-law classes and the two verbatim clauses; the
+witnessed no-abort of the degenerate closed window; the plant-checksum
+dual-kernel identity (the canonical pure-R SHA-256 and the `digest`
+accelerator agree on the plant's bytes -- the plant text is the rational
+label string itself, so the checksum rides over source text, never a
+float rendering); and the pre-write witness-finiteness census. Postures:
+DECISION RECORD only -- no coverage claim, no calibration claim, no
+threshold-fit claim; no bootstrap, no intervals, no conformal framing (the
+declined words are spoken by the runner itself); the D11 float posture is
+honored by construction -- the witnesses byte-freeze integer and label
+verdicts and the exact rational source labels, and no ill-conditioned
+float rendering is ever committed; the pillar-2 namespace-reach idiom is
+banned in the law file and grepped away.
+
+## 5. Governance touch
+
+The law file joined the T0 shard roster (1 s integer weight, 248 expects);
+the deliberate re-seal `619 -> 620` was executed in the attested order --
+the generator refusal witnessed verbatim at the pre-seal re-mint ("T0
+weight moved to 620 s but the committed measurement says 619 s"), then the
+dated re-seal of `tools/ci/pr-gate-budget.tsv`, then the re-mint
+(`k=6`, `files=104`, `t0-weight=620s`, double-mint byte-identical). The
+pinned witnesses `test-ci-shard-map.R`, `test-scenarios-gallery.R` and the
+docs-coherence pair re-ran green over the re-minted map and the extended
+scenario prose.
