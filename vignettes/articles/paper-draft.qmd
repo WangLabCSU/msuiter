@@ -452,6 +452,28 @@ tolerance, never sealed as cross-platform bytes. Zero new machinery.
 Authority:
 vignettes/articles/devlog-2026-11-21-p3-cs10-exposure-witness.qmd.
 
+- **CS-11 calibration witness, decision record** (`bench/scenarios/run_calibration_verdict.R`,
+#121): the shipped coverage-verdict face `ms_calibration_verdict()` --
+per-cell inclusivity lattice over the frozen acceptance window
+`c(lo = 0.930, hi = 0.970)`, ascending failing-cell census, all-in bit,
+three-source window precedence -- adjudicated over planted tables of
+hand-picked rational coverage fractions (exact rational SOURCE labels
+committed as text, zero RNG, zero downloads, zero COSMIC numeric
+matrices, the seeded grid/bootstrap estimators never invoked). Hard
+rails: the both-ends-inclusive boundary law -- cells exactly at the
+frozen ends read IN while the epsilon flanks read OUT; the precedence
+ladder's two measured flips -- the recorded window attribute condemns
+cell 2 against the frozen default, the explicit argument admits it
+again; the all-out census names every cell, ascending; the face's shape
+laws (unnamed lattice, named `lo,hi` window); the eight input laws
+abort with the committed class and the two verbatim clauses, while the
+degenerate closed window (`lo == hi`) is a witnessed NO-abort -- the
+guard's law is `lo <= hi` (248 expectations, rerun byte-identical 5/5).
+Decision-record posture: the witnesses byte-freeze integer and label
+verdicts and the exact rational source labels; no ill-conditioned float
+rendering is ever committed. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-21-p3-cs11-calibration-verdict.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -655,7 +677,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography
