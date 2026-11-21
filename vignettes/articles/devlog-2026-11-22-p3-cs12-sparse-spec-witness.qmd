@@ -1,0 +1,140 @@
+---
+title: "CS-12 sparse-spec-witness -- the shipped engine-spec factory adjudicated over planted scalar plants: the degenerate-default headline, the loop-before-law validator precedence, the double-gate NA split, and the measured integer windows (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-12 sparse-spec-witness (2026-11-22)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_sparse_spec_witness.R`, law test
+`tests/testthat/test-scenario-sparse-spec-witness.R`, committed evidence under
+`bench/scenarios/out/` (`cs12_specs.csv`, `cs12_laws.tsv`,
+`cs12_precedence.csv`, `cs12_scalars.csv`, `cs12_degenerates.tsv`). TDD
+record: RED watched (10 units, nb=107 failed=11 error=8 -- nine units red on
+the absent runner or absent witnesses; the plant self-consistency and the
+live double-gate units speak MEASURED laws and were green by design; the
+self-consistency unit itself caught a dropped law arm before any runner
+existed) -> GREEN 10 units / 323 expectations / 0 failures / 0 errors /
+0 warnings; runner OVERALL PASS (55 adjudications plus the pre-write
+witness-finiteness census); double-run witness bytes `DET=IDENTICAL`
+(5/5 files, all non-empty, behind the hard five-file count gate).
+
+## 1. Mandate
+
+Pillar 3's twelfth decision-record scenario. The scoping pass selected the
+exported engine-spec factory `ms_sparse()` (`R/engines-sparse.R` -- the
+S7 property gates plus `msuiter_validate_sparse`: the variant enum, the
+four-property finite-nonnegative loop, the l1-positive-mu law, the whole
+`max_iter` floor and the whole `[0, 2^31 - 1]` seed window) -- a face that
+carries a SHIPPED, acknowledged quirk: the documented default variant cannot
+be constructed, because the default `l1` arrives with `mu = 0` and the
+validator rejects exactly that, while the in-house benchmark driver
+concedes in writing that "the sparse factory's l1 default fails its own
+validator; the volume variant is the penalty-free certified default". No
+lane had ever rendered the factory's shipped contract -- the accepted
+echoes, the abort classes, the fired bullets, the precedence -- as a
+decision record. Everything here is closed-form by construction: the plant
+is hand-picked scalar rationals, the executed path touches no RNG (measured
+at both ends), no network, no data objects, and there is no seed to pin.
+The R-bound benchmark runner, the FFI shim and the declined calibration
+estimators are DECLINED scope and are never invoked here.
+
+## 2. The plant and the six arms
+
+The plant is scalar call arguments to the EXPORTED factory alone (the
+internal validator is never reached; no hand-rolled re-validation exists
+anywhere in the lane) -- D3 law: hand-picked scalar rationals only, zero
+COSMIC numeric matrices, zero real-data bytes, zero data objects. The six
+arms:
+
+- **degenerate-default headline** -- `ms_sparse()` NO-ARGS ABORTS on the
+  l1 clause with class `msuiter_error_engine` while
+  `ms_sparse(variant = "volume")` is accepted: the documented default
+  fails its own validator and the certified default is the variant the
+  in-house driver says it is -- both halves observed, committed together.
+- **enum and precedence** -- a coined variant is rejected on the committed
+  enum clause; and when BOTH the generic nonnegative bullet and the
+  l1-positive law are triggered (`l1`, `mu = -1`) the generic bullet
+  FIRES, while at `mu = 0` the l1 law fires -- the validator's
+  loop-before-law order, witnessed from both sides.
+- **penalty ladder** -- each of `lambda`, `mu`, `delta`, `tol` against
+  `-1`, `NaN`, `Inf`: 12 rejects, each on its own committed per-property
+  bullet; `lambda = 0` accepted.
+- **integer ladders** -- `max_iter` at `0` and `0.5` rejected, `1`
+  accepted; `seed` at `-1`, `2^31` (`2147483648`), `1.5`, `Inf` rejected
+  and `0`, `2^31 - 1` (`2147483647`) accepted -- the window boundaries
+  MEASURED, not derived.
+- **argument-face gaps** -- the certified variant accepts-and-ECHOES a `mu`
+  its kernel-side posture never consults, and the `delta = 0` sentinel is
+  accepted and echoed as `0`: committed as observed acceptance round-trips,
+  never re-typed claims about the kernel.
+- **typed gates** -- a numeric variant and a string penalty are caught by
+  the S7 property gate itself, class `simpleError`, and so is a LOGICAL
+  `NA` tolerance -- while an `NA_real_` tolerance passes the gate and dies
+  one level down on the validator's finite bullet.
+
+## 3. The measured laws this scenario commits
+
+- **The degenerate-default headline.** The no-args construction aborts on
+  `"the l1 variant requires mu > 0 (mu = 0 degenerates the exposure
+  scale)"`; the volume construction accepts. The two committed halves
+  together are the record; the concession already in the benchmark driver
+  and the default advertised in the docstring are cited bytes, not our
+  claims.
+- **Loop-before-law precedence.** The `l1`/`mu = -1` arm fires the GENERIC
+  "`mu` must be a single finite number >= 0" bullet and must NOT speak the
+  l1 clause; the `l1`/`mu = 0` arm fires the l1 law and must NOT speak the
+  generic bullet. Both directions are rails; the ordering cannot silently
+  swap.
+- **The double-gate NA split.** `tol = NA` (logical) is refused by the S7
+  property gate (`simpleError`, `"@tol must be <integer> or <double>, not
+  <logical>"`); `tol = NA_real_` passes the gate and is refused by the
+  validator (`msuiter_error_engine`, the finite bullet, `got: NA`). The two
+  classes are committed as OBSERVED tokens for every one of the 27 reject
+  arms -- 24 validator rejects, 3 property-gate rejects.
+- **The measured windows.** The object class prints as `"msuiter::MsSparse"`
+  (committed byte-for-byte, never re-typed as a bare name); the seed window
+  is exactly `0 ... 2147483647` with the first integer past it rejected;
+  the property echoes freeze as their fixed `format()` renderings
+  (`1e-07`, `2000`, `0.5`, `0.25`).
+- **Instrument failures caught fail-closed, again twice.** (i) Before any
+  runner existed, the law's own self-consistency unit reddened the census:
+  the frozen table had silently dropped the precedence arm
+  (`prec-l1-mu-neg`) and the counts refused to agree -- the dropped arm was
+  restored from the probe ledger. (ii) The first green run exposed two
+  `vapply`-preserves-names versus nameless witness-column comparisons in
+  tail expects, fixed with `unname()` before commit. Both are
+  OBSERVATION-instrument failures caught by the project's own laws before
+  any verdict was committed, never verdict failures.
+
+## 4. Hard rails and postures
+
+The hard rails: the ten accepted arms with byte-exact seven-property
+echoes and the observed class label; the 27 rejects with observed class
+tokens and verbatim clauses, split 24/3 exactly as measured; the
+precedence discriminator in both directions; the RNG purity rail measured
+at both ends of the runner's own process; the plant-checksum dual-kernel
+identity (the canonical pure-R SHA-256 and the `digest` accelerator agree
+on the plant's bytes -- the plant text is the frozen echo table itself, so
+the checksum rides over committed bytes, never a float rendering); and the
+pre-write witness-finiteness census (no cell empty, NA-bearing,
+delimiter-carrying or quote-opening). Postures: DECISION RECORD only -- the
+factory's contract behavior on planted truth, no extraction claim, no
+benchmark claim, no convergence claim; the D11 float posture honored by
+construction -- every committed column is an integer, a label or a fixed
+`format()` rendering; the pillar-2 namespace-reach idiom is banned in the
+law file and grepped away, as are the declined-family names and the FFI
+shim.
+
+## 5. Governance touch
+
+The law file joined the T0 shard roster (1 s integer weight, 323 expects);
+the deliberate re-seal `620 -> 621` was executed in the attested order --
+the generator refusal witnessed verbatim at the pre-seal re-mint ("T0
+weight moved to 621 s but the committed measurement says 620 s"), then the
+dated re-seal of `tools/ci/pr-gate-budget.tsv`, then the re-mint (`k=6`,
+`files=105`, `t0-weight=621s`, double-mint byte-identical). The pinned
+witnesses `test-ci-shard-map.R`, `test-scenarios-gallery.R` and the
+docs-coherence pair re-ran green over the re-minted map and the extended
+scenario prose.

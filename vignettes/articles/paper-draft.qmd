@@ -474,6 +474,31 @@ verdicts and the exact rational source labels; no ill-conditioned float
 rendering is ever committed. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-21-p3-cs11-calibration-verdict.qmd.
 
+- **CS-12 sparse-spec witness, decision record** (`bench/scenarios/run_sparse_spec_witness.R`,
+#122): the shipped engine-spec factory `ms_sparse()` -- S7 property gates,
+variant enum, four-property finite-nonnegative penalty loop, the
+l1-positive-mu law, whole-number `max_iter` and `[0, 2^31 - 1]` seed
+windows -- adjudicated over planted scalar arguments (hand-picked scalar
+rationals, zero RNG measured at both ends, zero downloads, zero data
+objects; the R-bound benchmark runner and the FFI shim never invoked).
+Hard rails: the degenerate-default headline -- the documented default
+variant ABORTS on its own l1 clause while the certified variant accepts,
+both halves committed from the live face; the loop-before-law precedence --
+with both bullets triggered the GENERIC nonnegative bullet fires and must
+not speak the l1 clause, while at the zero boundary the l1 law fires and
+must not speak the generic bullet; the double-gate NA split -- the logical
+tolerance is refused by the property gate (`simpleError`) and the real
+tolerance one level down by the validator (`msuiter_error_engine`), with
+all 27 reject arms carrying their OBSERVED class tokens (24/3 exactly as
+measured); the measured windows -- the seed window closes at
+`2147483647` with the first integer past it rejected, and the object class
+commits as the observed byte string `"msuiter::MsSparse"` (323
+expectations, rerun byte-identical 5/5). Decision-record posture: the
+factory's contract behavior on planted truth -- no extraction, benchmark or
+convergence claim; every committed column an integer, a label or a fixed
+`format()` rendering. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-22-p3-cs12-sparse-spec-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -677,7 +702,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography

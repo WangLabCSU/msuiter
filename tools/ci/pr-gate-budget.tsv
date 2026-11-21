@@ -49,6 +49,11 @@
 # the T0 roster; witness: local run nb=248 failed=0 error=0 warning=0, measured
 # manifest sum 620 (generator refusal witnessed at the pre-seal re-mint
 # attempt, the verbatim DEFECT line naming 620 against the sealed 619).
+# 2026-11-22 deliberate re-seal 620 -> 621: the CS-12 scenario row
+# (test-scenario-sparse-spec-witness.R, 1 s integer weight, 323 expects) joined
+# the T0 roster; witness: local run nb=323 failed=0 error=0 warning=0, measured
+# manifest sum 621 (generator refusal witnessed at the pre-seal re-mint
+# attempt, the verbatim DEFECT line naming 621 against the sealed 620).
 key	value	note
-t0-measured	620	measured 2026-11-21 (integer manifest seconds, tier T0; 2026-11-21 seal 619 superseded by the CS-11 row)
+t0-measured	621	measured 2026-11-22 (integer manifest seconds, tier T0; 2026-11-22 seal 620 superseded by the CS-12 row)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

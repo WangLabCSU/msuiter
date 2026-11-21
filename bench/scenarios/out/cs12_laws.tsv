@@ -1,0 +1,28 @@
+arm	cls	clause
+default-noargs	msuiter_error_engine	the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)
+l1-default-mu0	msuiter_error_engine	the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)
+l1-mu-zero	msuiter_error_engine	the l1 variant requires mu > 0 (mu = 0 degenerates the exposure scale)
+variant-elastic	msuiter_error_engine	`variant` must be "volume" or "l1"
+prec-l1-mu-neg	msuiter_error_engine	`mu` must be a single finite number >= 0
+lambda-neg	msuiter_error_engine	`lambda` must be a single finite number >= 0
+lambda-nan	msuiter_error_engine	`lambda` must be a single finite number >= 0
+lambda-inf	msuiter_error_engine	`lambda` must be a single finite number >= 0
+mu-neg	msuiter_error_engine	`mu` must be a single finite number >= 0
+mu-nan	msuiter_error_engine	`mu` must be a single finite number >= 0
+mu-inf	msuiter_error_engine	`mu` must be a single finite number >= 0
+delta-neg	msuiter_error_engine	`delta` must be a single finite number >= 0
+delta-nan	msuiter_error_engine	`delta` must be a single finite number >= 0
+delta-inf	msuiter_error_engine	`delta` must be a single finite number >= 0
+tol-neg	msuiter_error_engine	`tol` must be a single finite number >= 0
+tol-nan	msuiter_error_engine	`tol` must be a single finite number >= 0
+tol-inf	msuiter_error_engine	`tol` must be a single finite number >= 0
+tol-na-real	msuiter_error_engine	`tol` must be a single finite number >= 0
+maxiter-0	msuiter_error_engine	`max_iter` must be a single positive whole number
+maxiter-half	msuiter_error_engine	`max_iter` must be a single positive whole number
+seed-neg	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1]
+seed-max-plus	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1]
+seed-half	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1]
+seed-inf	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1]
+tol-na	simpleError	@tol must be <integer> or <double>, not <logical>
+variant-numeric-typed	simpleError	@variant must be <character>, not <double>
+lambda-character-typed	simpleError	@lambda must be <integer> or <double>, not <character>

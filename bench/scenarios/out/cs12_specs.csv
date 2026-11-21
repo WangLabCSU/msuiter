@@ -1,0 +1,11 @@
+arm,variant,lambda,mu,delta,tol,max_iter,seed,cls
+volume-certified,volume,0,0,0,1e-07,2000,1,msuiter::MsSparse
+l1-with-mu,l1,0,0.5,0,1e-07,2000,1,msuiter::MsSparse
+volume-mu-gap,volume,0,0.5,0,1e-07,2000,1,msuiter::MsSparse
+volume-delta-sentinel,volume,0,0,0,1e-07,2000,1,msuiter::MsSparse
+volume-delta-val,volume,0,0,0.5,1e-07,2000,1,msuiter::MsSparse
+lambda-zero,volume,0,0,0,1e-07,2000,1,msuiter::MsSparse
+l1-mu-rational,l1,0,0.25,0,1e-07,2000,1,msuiter::MsSparse
+maxiter-1,volume,0,0,0,1e-07,1,1,msuiter::MsSparse
+seed-0,volume,0,0,0,1e-07,2000,0,msuiter::MsSparse
+seed-max-ok,volume,0,0,0,1e-07,2000,2147483647,msuiter::MsSparse

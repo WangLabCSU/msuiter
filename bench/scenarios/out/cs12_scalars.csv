@@ -1,0 +1,16 @@
+key,value
+scenario_shape,cs12-sparse-spec-witness
+face,ms_sparse
+default_variant,l1
+certified_variant,volume
+default_tol,1e-07
+default_max_iter,2000
+default_seed,1
+seed_hi,2147483647
+seed_reject,2147483648
+accept_count,10
+reject_count,27
+engine_count,24
+gate_count,3
+precedence_rows,3
+plant_checksum,6af9536eba88fc6d1ecbaf0342f3088094d8ed0251fad39e7f8bfe49ba7929dd
