@@ -43,11 +43,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The ten executable drivers live under
+persist their evidence tables. The eleven executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
 `run_reconstruction.R`, `run_cluster_witness.R`,
-`run_currency_witness.R`, `run_exposure_witness.R`; committed
+`run_currency_witness.R`, `run_exposure_witness.R`,
+`run_calibration_verdict.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -633,6 +634,46 @@ surface and the declined-scope rails -- are the manual page
 (`?ms_exposure_test`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs10-*.qmd`.
 
+The eleventh leg drives the shipped coverage-verdict face --
+`ms_calibration_verdict()` with its per-cell inclusivity lattice over the
+frozen window, its ascending failing-cell census and its three-source
+window precedence -- over planted tables of hand-picked rational coverage
+fractions. The exact frozen ends must read IN while the epsilon flanks
+read OUT, the all-out table's census must name every cell in ascending
+order, and the precedence ladder must flip both ways -- the recorded
+window attribute condemning cell 2 against the frozen default, the
+explicit argument admitting it again. The degenerate closed window
+(`lo == hi`) is a witnessed no-abort: the guard's law is `lo <= hi`.
+Everything is closed-form rational arithmetic: no RNG, no network, no
+hand-rolled windowing is invoked -- the verdicts are the exported face's
+own, and the lane never calls the declined seeded estimators.
+
+```{r calibration-verdict, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  lat <- read.csv(file.path(out, "cs11_lattice.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  pre <- read.csv(file.path(out, "cs11_precedence.csv"),
+                  header = TRUE, stringsAsFactors = FALSE)
+  edge_ok <- identical(as.character(lat$lattice[lat$arm == "boundary"]),
+                       "1,1,0,0")
+  census_ok <- identical(as.character(lat$failing[lat$arm == "allout"]),
+                         "1,2,3")
+  ladder_ok <- identical(as.character(pre$all),
+                         c("TRUE", "FALSE", "TRUE"))
+  cat("the frozen ends read inclusive:", edge_ok,
+      "| the all-out census ascends over every cell:", census_ok,
+      "| the precedence ladder flips both ways:", ladder_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs11_arms.csv`,
+`cs11_lattice.csv`, `cs11_precedence.csv`, `cs11_scalars.csv` and
+`cs11_degenerates.tsv`. The certified backing -- the face's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual page (`?ms_calibration_verdict`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs11-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -649,4 +690,5 @@ Rscript bench/scenarios/run_reconstruction.R
 Rscript bench/scenarios/run_cluster_witness.R
 Rscript bench/scenarios/run_currency_witness.R
 Rscript bench/scenarios/run_exposure_witness.R
+Rscript bench/scenarios/run_calibration_verdict.R
 ```

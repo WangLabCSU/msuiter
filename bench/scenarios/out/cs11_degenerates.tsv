@@ -1,0 +1,21 @@
+name	value
+allout_all	FALSE
+allout_failing	1,2,3
+single_all	TRUE
+single_failing	
+all2x_failing	1,2
+lattice_names_null	TRUE
+window_names	lo,hi
+boundary_lo_inclusive	1
+boundary_hi_inclusive	1
+win_eq_ends_noabort	1
+na_column_abort	1
+missing_col_abort	1
+not_df_abort	1
+zero_rows_abort	1
+win_reversed_abort	1
+win_nonfinite_abort	1
+win_len1_abort	1
+win_char_abort	1
+law_form_clause	calibration must be a data.frame with an NA-free numeric mean_coverage column
+law_window_clause	window must be c(lo, hi): two finite numbers in [0, 1] with lo <= hi
