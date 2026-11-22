@@ -1,0 +1,10 @@
+key	value
+roster	SBS96=96,SBS192=192,SBS384=384,SBS1536=1536,DBS78=78
+formats	cosmic,sigprofiler
+headers	cosmic=Type,sigprofiler=MutationType
+fid-n-diff	24
+fid-first-diff-row	1
+fid-max-absdiff	1.3877787807814456755e-17
+plant-checksum	7527c376a37c3697a68642a2d57485ab3e1f1bd2c44f1707fef64e1e7ece8d64
+rng-before	FALSE
+rng-after	FALSE

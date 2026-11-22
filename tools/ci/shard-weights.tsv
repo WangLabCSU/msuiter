@@ -118,4 +118,5 @@ test-scenario-cluster-witness.R	1	134	T0
 test-scenario-currency-witness.R	1	126	T0
 test-scenario-exposure-witness.R	1	161	T0
 test-scenario-calibration-verdict.R	1	248	T0
+test-scenario-io-interop-witness.R	1	254	T0
 test-scenario-sparse-spec-witness.R	1	323	T0

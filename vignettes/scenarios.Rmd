@@ -719,6 +719,75 @@ contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_sparse`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs12-*.qmd`.
 
+The thirteenth leg drives the shipped disk-interoperability pair --
+`ms_import()` / `ms_export()` with its format enum and deferred-WTSI
+clause, its file gate, header-anchor law, channel-label three-way, cell law
+and whole-number law -- over hand-written TSV plants of scalar rationals
+(zero RNG measured at both ends, zero downloads, zero COSMIC numeric
+matrices; the two format names ride solely as NAMES). The headlines are
+committed from the live face: the reader-coercion law split (the
+`NaN`/`NA`/`""`/`Inf` literals are type-converted by `read.delim` and die
+on the whole-number law while only non-coercible `'abc'` reaches the cell
+law), the WTSI deferral verbatim, the locked provenance trio
+(`imported:sha256=<64 hex>` / `n_samples = 0` / the `k x 0` exposures
+companion) with its dual-kernel SHA-256 agreement, and the
+17-significant-digit round-trip drill whose beyond-precision renderings
+ride as census columns only.
+
+```{r io-interop-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  rd <- function(f) read.table(file.path(out, f), header = TRUE, sep = "\t",
+                               quote = "", colClasses = "character",
+                               na.strings = "", stringsAsFactors = FALSE)
+  lw <- rd("cs13_laws.tsv"); sp <- rd("cs13_specs.tsv")
+  fid <- rd("cs13_fidelity.tsv"); sc <- rd("cs13_scalars.tsv")
+  sv <- setNames(as.character(sc$value), as.character(sc$key))
+  cls <- tabulate(match(lw$cls, c("msuiter_error_option", "msuiter_error_input",
+                                  "msuiter_error_signature", "simpleError")))
+  split_ok <- identical(as.integer(cls), c(4L, 24L, 5L, 3L)) &&
+    nrow(lw) == 36L
+  wtsi_ok <- all(vapply(c("deferred pending an upstream specimen",
+                          "received: 'wtsi'; verified: cosmic, sigprofiler"),
+                        function(p) grepl(p, lw$clause[lw$arm == "opt-e-wtsi"],
+                                          fixed = TRUE), logical(1L)))
+  wn <- lw$clause[!is.na(match(lw$arm,
+                c("wn-nan", "wn-inf", "wn-allna", "wn-frac")))]
+  cell <- lw$clause[lw$arm == "cell-nonnum-abc"]
+  coe_ok <- length(wn) == 4L &&
+    all(vapply(wn, function(w) grepl("whole-number counts", w, fixed = TRUE),
+               logical(1L))) &&
+    grepl("must be numeric", cell, fixed = TRUE) &&
+    !identical(cell, wn[1L])
+  det <- sp$detail[sp$arm == "i-sig"]
+  prov_ok <- length(det) == 1L &&
+    all(vapply(c("build=imported:sha256=", "n_samples=0;",
+                  "exposures=2x0;", "exporownames=sA,sB;",
+                  "hashes-agree=TRUE"),
+               function(p) grepl(p, det, fixed = TRUE), logical(1L)))
+  fid_ok <- nrow(fid) == 4L && all(fid$allequal == "TRUE") &&
+    all(fid$eqdirect == "TRUE") &&
+    identical(sv[["fid-n-diff"]], "24") &&
+    identical(sv[["rng-before"]], "FALSE") &&
+    identical(sv[["rng-after"]], "FALSE") &&
+    nchar(sv[["plant-checksum"]]) == 64L
+  cat("the 36-arm class census splits 4/24/5/3 exactly as committed:",
+      split_ok, "| the WTSI deferral rides verbatim:", wtsi_ok,
+      "| coerced literals and non-coercible cells die on different laws:",
+      coe_ok, "\n")
+  cat("the provenance trio and dual-kernel agreement lock:",
+      prov_ok, "| the 17-digit drill holds with an RNG-free process:",
+      fid_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs13_specs.tsv`,
+`cs13_laws.tsv`, `cs13_precedence.tsv`, `cs13_scalars.tsv` and
+`cs13_fidelity.tsv`. The certified backing -- the pair's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual pages (`?ms_import`, `?ms_export`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs13-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -737,4 +806,5 @@ Rscript bench/scenarios/run_currency_witness.R
 Rscript bench/scenarios/run_exposure_witness.R
 Rscript bench/scenarios/run_calibration_verdict.R
 Rscript bench/scenarios/run_sparse_spec_witness.R
+Rscript bench/scenarios/run_io_interop_witness.R
 ```

@@ -1,0 +1,188 @@
+---
+title: "CS-13 io-interop-witness -- the shipped import/export face adjudicated over planted TSV plants: the WTSI deferral clause, the reader-coercion law split, the locked provenance pair, and the 17-significant-digit round-trip drill (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-13 io-interop-witness (2026-11-22)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_io_interop_witness.R`, law test
+`tests/testthat/test-scenario-io-interop-witness.R`, committed evidence under
+`bench/scenarios/out/` (`cs13_specs.tsv`, `cs13_laws.tsv`,
+`cs13_precedence.tsv`, `cs13_scalars.tsv`, `cs13_fidelity.tsv`). TDD
+record: RED watched (10 units, RED=9, nb=134 failed=42, error column lit on
+8 units -- the nine red units reddened on the absent runner and absent
+witnesses, their frozen-mirror expectations having nothing to compare
+against; the provenance-pair replay unit alone was green by design, needing
+neither) -> GREEN 10 units / 253 expectations / 0 failures /
+0 errors / 0 warnings (final committed count 254 after the windows-fan-out
+reformation of section 3 item (v)); runner OVERALL PASS (159 adjudications,
+including the pre-write witness-finiteness census and the dual-kernel
+SHA-256 agreement);
+double-mint witness bytes `DET` 5/5 (all files non-empty, behind the hard
+five-file shape gates).
+
+## 1. Mandate
+
+Pillar 3's thirteenth decision-record scenario. The scoping pass selected
+the exported disk-interoperability pair `ms_import()` / `ms_export()`
+(`R/io-catalog.R` -- the format enum with its deferred-WTSI clause, the file
+gate, the header-anchor law, the channel-label three-way, the cell law, the
+whole-number law, and the downstream signature validator) -- the face every
+real COSMIC/SigProfiler round-trip rides on, adjudicated as a decision
+record for the first time. The format enum carries a documented deferral:
+`wtsi` is a KNOWN format whose long layout is deferred pending an upstream
+specimen (the [V] discipline), so it aborts with the enum clause naming
+exactly the verified pair `cosmic, sigprofiler` -- committed verbatim,
+both bullet legs and the received-rendering. Everything here is closed-form
+by construction: the plants are hand-written TSV bytes over scalar rationals,
+the executed path touches no RNG (measured at both ends), no network, no
+data objects, and there is no seed to pin. The R-bound benchmark runner, the
+FFI shim and the declined calibration estimators are DECLINED scope and are
+never invoked here.
+
+## 2. The plant and the arms
+
+The plant is hand-written TSV files and in-memory S7 objects fed to the
+EXPORTED pair alone (the internal resolver table and the file-hash helper
+are never reached directly; the dual-kernel hash check calls the shipped
+canonical deriver exactly as the face itself does) -- D3 law: synthetic
+plants only, zero COSMIC numeric matrices, zero real-data bytes; "COSMIC"
+and "sigprofiler" appear solely as FORMAT NAMES. The 36-arm frozen law
+roster splits by observed class exactly as measured: 4
+`msuiter_error_option` (the format enum and its case/unknown variants),
+24 `msuiter_error_input` (the file gate, the header anchor, the
+channel-label three-way, the cell law and the whole-number law), 5
+`msuiter_error_signature` (the validator's nonnegativity, NA/finite and
+all-NA arms downstream of a syntactically clean import), and 3 base
+`simpleError` arms whose messages are locale-variable (the `kind`
+match.arg rejects, the empty file, the directory-as-file) -- committed
+CLASS-ONLY so the law never freezes a translator's wording. Two witness
+arms ride the stable3 mode (every frozen bullet must be found inside the
+live message, in any locale, without verbatim equality). The 13-arm spec
+witness covers the accepted round-trips end to end; a 3-arm precedence
+witness and a 4-token fidelity drill commit the discriminators below.
+
+## 3. The measured laws this scenario commits
+
+- **The reader-coercion law split.** `read.delim` type-converts before any
+  validator sees a cell: the literals `NaN`, `NA`, `""` and `Inf` are
+  COERCED into numeric NAs and die on the whole-number law, while only the
+  non-coercible `'abc'` reaches the cell law -- the two laws never trade an
+  arm, and the split is committed per arm from the observed class and
+  clause.
+- **The locked provenance pair.** An imported object's
+  `build` is `"imported:sha256=<64 hex>"`, its `n_samples` is the integer
+  `0L` and its `exposures` matrix is the `k x 0` companion -- committed as
+  one locked trio, plus the channel-hash chain: the 64-hex
+  `channel_hash`, the recomputed `msuiter_hash_labels` byte, the
+  `hashes-agree` bit and the `build-carries-filehash` bit.
+- **The dual-kernel SHA-256 agreement.** The canonical pure-R deriver
+  (`.ms_fit_sha256`, the very helper the face itself uses) and the
+  `digest` accelerator agree on the plant bytes -- both hex strings and the
+  agreement bit committed; the plant text is the frozen echo table itself,
+  so the checksum rides over committed bytes, never a float rendering.
+- **The 17-significant-digit round-trip drill.** Four planted rationals
+  render through the sanctioned R printer to four 17-significant-digit
+  tokens committed as a SEALING-PLATFORM CENSUS RECORD (the windows
+  fan-out leg later witnessed that these renderings drift by an ULP across
+  platforms and are not round-trip secure even within one process -- see
+  item (v); they are therefore never live byte-equality targets). The
+  live-side law compares STRUCTURE (each token is a 22-character glyph)
+  and NUMERIC identity (`all.equal` at the base's natural tolerance)
+  against the freshly exported bytes; the reader-faithfulness bit -- the
+  96-row column is the four as-read token doubles recycled identically 24
+  times -- rides `identical()` over same-parser bytes. The `%.20g`
+  renderings and the drift bits beyond the 17th digit are committed as
+  payload CENSUS only (finite, in-domain), never as equality targets: the
+  D11 posture -- full-precision float equality seals platform DETs, not
+  laws.
+- **The precedence discriminators.** Where two laws could speak, the
+  committed winner is named: the file gate outranks the format enum when
+  both are violated; the header-anchor law outranks the label three-way
+  when the plant breaks both; coercibility decides cell-vs-whole-number
+  (above). Each discriminator carries its anti-arm so the ordering can
+  never silently swap.
+- **Instrument failures caught fail-closed, again threefold.** (i) The
+  harness/standalone split: the 31 full-mode message arms reddened inside
+  `test_file` while the identical bytes were green standalone -- the
+  LocationReporter census spoke zero diff blocks (a silent census), so the
+  adjudication was re-armed through the SummaryReporter, which named the
+  survivor: a bullet riding the live message. (ii) The bullet bytes were
+  then measured at both ends -- the harness renders `"i "` (`69 20`), the
+  standalone Rscript renders `"ℹ "` (`e2 84 b9 20`) -- and the strip's
+  ASCII leg was found dead: on this base `sub(fixed = TRUE)` is a LITERAL
+  SUBSTRING op, so the anchored pattern `"^i "` can never match, silently;
+  the careteless glyph leg had masked it outside the harness. The strip now
+  tests explicit prefixes (`startsWith` + `substring`). (iii) The fidelity
+  unit's `all.equal(...)$equal` aborted `"$ operator is invalid for atomic
+  vectors"` -- on this base `all.equal()` returns an ATOMIC verdict -- and
+  the law was repaired to `isTRUE(all.equal(x, y))`. Earlier in the same
+  chain: empty witness cells read back as `NA` under `na.strings = ""`,
+  so absent renderings ride the explicit `"(none)"` sentinel behind the
+  finiteness census. (iv) The installed-context split: the full local
+  `devtools::check` gate reddened 18 while every pkgload-mode census was
+  green -- under check the seven checkout-reading units met an
+  unlocatable root and FAILED instead of skipping. They now open with the
+  sanctioned `is.na(.ms_root)` skip idiom (the CS-12/gallery pattern);
+  both worlds verified -- repo-mode census unchanged at 253/0/0/0,
+  NA-root simulation skips the seven with zero failures. (v) The ubuntu
+  AND windows fan-out legs each reddened three arms (same root causes on
+  both sides), and the forensics found TWO real
+  defects on our side of the D11 line: (va) the plant files were written
+  through the TEXT channel, so platform EOL bytes leaked into the file
+  SHA-256 provenance (darwin-sealed `5350e3..` vs windows-minted
+  `84cfbd..`) --
+  repaired by a binary-channel writer (`open = "wb"` around `writeLines`)
+  at all four plant sites, pinning EOL so the hash is platform-invariant;
+  (vb) the fidelity law byte-compared LIVE 17-digit printer renderings --
+  itself a D11 violation, witnessed when windows rendered `..68` where
+  darwin committed `..69` (and `..00` vs `..02` on a second token). The
+  reformation makes the token column a committed-vs-committed census
+  record and moves every live comparison to structure (`nchar == 22`) plus
+  `all.equal`; the re-export identity bit that repair had briefly added
+  then failed even on darwin -- a probe witnessed the `..69` glyph
+  re-exporting as `..68` in the SAME process (the 17-digit rendering of
+  a halfway double is not round-trip secure on this base) -- so it was
+  deleted as structurally unsound rather than platform-specific. Net law:
+  no live float-byte equality anywhere in the drill; final census
+  254/0/0/0, runner `OVERALL PASS (159)` with the five witnesses
+  double-minted `DET` 5/5. All are
+  OBSERVATION-instrument failures caught by the
+  project's own laws before any verdict was committed, never verdict
+  failures.
+
+## 4. Hard rails and postures
+
+The hard rails: the ten banned-token greps in the law file (no
+`msuiter:::` namespace reach, no internal resolver table, no
+`.ms_io_file_sha256`, no validator-by-name, no `expect_` in the runner, no
+declined-calibration trio, no benchmark driver, no `set.seed`/`sample(`,
+no `download.file`/`http`); the hard shape gates (13/36/3/4/9 rows over
+the five witnesses); the RNG-purity rail measured at both ends of the
+runner's own process via `.Random.seed` presence (the `sample.kind`
+accessor does not exist on this base); the plant-checksum dual-kernel
+identity; and the pre-write witness-finiteness census (no cell empty,
+NA-bearing, delimiter-carrying or quote-opening). Postures: DECISION RECORD
+only -- the face's contract behavior on planted truth, no extraction claim,
+no benchmark claim, no format-conformance claim about the deferred WTSI
+layout; the D11 float posture honored by construction (byte-freezes are
+integer, label, class and clause bytes only; the 17-digit token column is a
+committed sealing-platform census record, never a live equality target);
+the pillar-2 namespace-reach
+idiom is banned in the law file and grepped away, as are the
+declined-family names and the FFI shim.
+
+## 5. Governance touch
+
+The law file joined the T0 shard roster (1 s integer weight against a
+measured 1.1 s wall, 254 expects); the deliberate re-seal `621 -> 622`
+was executed in the attested order -- the generator refusal witnessed
+verbatim at the pre-seal re-mint ("T0 weight moved to 622 s but the
+committed measurement says 621 s"), then the dated re-seal of
+`tools/ci/pr-gate-budget.tsv`, then the re-mint (`k=6`, `files=106`,
+`t0-weight=622s`, double-mint byte-identical). The pinned witnesses
+`test-ci-shard-map.R` (212 expects green), `test-scenarios-gallery.R` and
+the docs-coherence pair re-ran green over the re-minted map and the
+extended scenario prose.
