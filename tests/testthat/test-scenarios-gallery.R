@@ -228,7 +228,7 @@ test_that("US-G1 every card names its witness and its stamps match the disk byte
                                                       "out", f)),
                      info = paste0("stamp off disk: ", f))
   }
-  rowstamps <- .sg_between_all(text, "rows=", " ")
+  rowstamps <- .sg_between_all(text, ">rows=", " ")
   expect_identical(length(rowstamps), length(roster))
   for (i in seq_along(roster)) {
     f <- file.path(root, "bench", "scenarios", "out", roster[i])
@@ -319,4 +319,27 @@ test_that("US-G1 an empty witness tree is vacuous-red, never empty-green", {
   r <- .sg_cli(fake, out)
   expect_true(r$status != 0L, info = "the CLI accepted an empty witness tree")
   expect_true(grepl("vacuous", r$out, fixed = TRUE))
+})
+
+test_that("US-G1 an observed cell carrying a rows= literal cannot inject a stamp", {
+  # Firing positive control for the stamp-extraction boundary: witness cells
+  # are HTML-escaped, so a bare ">" cannot arrive from data -- the card stamp
+  # rides ">rows=" (markup-anchored). An unanchored "rows=" read would be
+  # injected by cell content (e.g. a shape rendering carrying skiprows=0),
+  # positionally shifting every stamp pairing after the injection point.
+  cards <- c(
+    '<div class="witness-card" data-witness="a.tsv">', "<h3>a.tsv</h3>",
+    '<p><code class="witness-sha">', strrep("0", 64L), "</code></p>",
+    "<p>rows=3 cols=2</p>", '<table class="witness-excerpt">',
+    "<tr><th>k</th><th>v</th></tr>",
+    "<tr><td>skiprows=0</td><td>1</td></tr>", "</table>", "</div>",
+    '<div class="witness-card" data-witness="b.tsv">', "<h3>b.tsv</h3>",
+    '<p><code class="witness-sha">', strrep("1", 64L), "</code></p>",
+    "<p>rows=5 cols=2</p>", '<table class="witness-excerpt">',
+    "<tr><th>k</th><th>v</th></tr>", "</table>", "</div>")
+  text <- paste0(cards, collapse = "\n")
+  naive <- .sg_between_all(text, "rows=", " ")
+  expect_length(naive, 3L)   # the injection IS visible to the unanchored read
+  anchored <- .sg_between_all(text, ">rows=", " ")
+  expect_identical(anchored, c("3", "5"))
 })
