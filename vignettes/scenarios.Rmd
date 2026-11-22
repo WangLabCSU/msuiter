@@ -788,6 +788,66 @@ contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_import`, `?ms_export`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs13-*.qmd`.
 
+```{r segments-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  rd <- function(f) read.table(file.path(out, f), header = TRUE, sep = "\t",
+                               quote = "", colClasses = "character",
+                               na.strings = "", stringsAsFactors = FALSE)
+  lw <- rd("cs14_laws.tsv"); sp <- rd("cs14_specs.tsv")
+  pc <- rd("cs14_precedence.tsv"); dg <- rd("cs14_degenerates.tsv")
+  sc <- rd("cs14_scalars.tsv")
+  sv <- setNames(as.character(sc$value), as.character(sc$key))
+  cls <- tabulate(match(lw$cls, c("msuiter_error_input", "msuiter_error_io",
+                                  "msuiter_error_parse",
+                                  "msuiter_error_segments",
+                                  "msuiter_error_unsupported")))
+  split_ok <- identical(as.integer(cls), c(15L, 12L, 1L, 12L, 1L)) &&
+    nrow(lw) == 41L
+  roster_ok <- all(vapply(c("ASCAT", "ASCAT_NGS", "ABSOLUTE", "PCAWG",
+                            "FACETS", "BATTENBERG", "PURPLE", "SEQUENZA"),
+                          function(n) grepl(n, sv[["caller-roster"]],
+                                            fixed = TRUE), logical(1L))) &&
+    grepl("declared", sv[["declared-callers"]], fixed = TRUE) &&
+    grepl("documented-limited", sv[["cnvkit-clause"]], fixed = TRUE) &&
+    grepl(".tsv", sv[["extension-law"]], fixed = TRUE) &&
+    grepl(".txt", sv[["extension-law"]], fixed = TRUE)
+  pr <- pc[pc$arm == "prec-parse-before-caller", ]
+  rag <- lw$clause[lw$arm == "rej-ragged"]
+  prec_ok <- nrow(pc) == 4L && length(rag) == 1L &&
+    grepl(pr$fires_anchor, rag, fixed = TRUE) &&
+    !grepl(pr$anti_anchor, rag, fixed = TRUE)
+  dg_ok <- nrow(dg) == 6L &&
+    sum(dg$cls == "accept") == 3L &&
+    grepl("ACCEPTED-TABLE", dg$observed[dg$arm == "obs-bat-all-na"],
+          fixed = TRUE)
+  det <- sp$detail[sp$arm == "acc-PCAWG"]
+  loh <- sp$detail[sp$arm == "acc-facets-loh"]
+  spec_ok <- nrow(sp) == 17L && length(det) == 1L && length(loh) == 1L &&
+    grepl("mm1=1/2", det, fixed = TRUE) &&
+    grepl("minor=0", loh, fixed = TRUE)
+  rng_ok <- identical(sv[["rng-before"]], "FALSE") &&
+    identical(sv[["rng-after"]], "FALSE") &&
+    nchar(sv[["plant-checksum"]]) == 64L &&
+    nchar(sv[["spec-checksum"]]) == 64L
+  cat("the 41-arm class census splits 15/12/1/12/1 exactly as committed:",
+      split_ok, "| the caller roster, declared-role, CNVkit and extension",
+      "clauses speak verbatim:", roster_ok, "\n")
+  cat("the precedence pair cannot trade clauses:", prec_ok,
+      "| the six degenerate pairs stand (3 accepted, 3 refused):", dg_ok,
+      "| PCAWG split and FACETS-LOH facts hold:", spec_ok,
+      "| the process is RNG-free and the plants carry a 64-hex dual-kernel",
+      "checksum:", rng_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs14_specs.tsv`,
+`cs14_laws.tsv`, `cs14_precedence.tsv`, `cs14_degenerates.tsv` and
+`cs14_scalars.tsv`. The certified backing -- the face's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual pages (`?ms_segments`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs14-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on

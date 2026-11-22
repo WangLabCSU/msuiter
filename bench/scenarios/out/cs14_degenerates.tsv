@@ -1,0 +1,7 @@
+edge	arm	cls	observed
+zero-row file path vs canonical	obs-bat-all-na	accept	ACCEPTED-TABLE nrow=0;cols=sample,chrom,start,end,minor,major;nrec=0;nskip=1;skiprows=1
+zero-row file path vs canonical	rej-can-zero	msuiter_error_input	the canonical segment table has no rows
+missing values: LOH caller vs strict caller	acc-facets-loh	accept	1;minor=0;major=3
+missing values: LOH caller vs strict caller	rej-cn-na-strict	msuiter_error_io	the copy-number column must not contain missing values
+coordinates beyond int32 are carried, not refused	obs-end-out-of-range	accept	ACCEPTED-TABLE nrow=1;end1=9999999999;end1.class=numeric
+auto-detection on a zero-signature plant	rej-auto-nosig	msuiter_error_io	caller = "auto" could not identify the copy-number caller

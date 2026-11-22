@@ -1,0 +1,18 @@
+arm	face	cls	detail
+acc-ASCAT	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=ASCAT;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/3
+acc-ASCAT_NGS	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=ASCAT_NGS;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/2
+acc-ABSOLUTE	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=ABSOLUTE;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/3
+acc-PCAWG	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=PCAWG;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/2
+acc-FACETS	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=FACETS;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/2
+acc-BATTENBERG	ms_segments	data.frame	nrow=3;cols=sample,chrom,start,end,minor,major;caller=BATTENBERG;format=segments;nlines=2;nrec=3;nexp=1;nskip=1;skiprows=1;mm1=1/3
+acc-PURPLE	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=PURPLE;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/3
+acc-SEQUENZA	ms_segments	data.frame	nrow=2;cols=sample,chrom,start,end,minor,major;caller=SEQUENZA;format=segments;nlines=2;nrec=2;nexp=0;nskip=0;skiprows=0;mm1=1/3
+acc-auto-pcawg	ms_segments	data.frame	PCAWG
+acc-auto-sequenza	ms_segments	data.frame	SEQUENZA
+acc-txt	ms_segments	data.frame	ASCAT
+acc-gz	ms_segments	character	ASCAT;nrow=2
+acc-canonical	ms_segments	data.frame	1;synthetic
+acc-facets-loh	ms_segments	data.frame	1;minor=0;major=3
+acc-chrom-col	ms_segments	data.frame	chrom1=c7c;chrom2=c8c
+obs-bat-all-na	ms_segments	data.frame	ACCEPTED-TABLE nrow=0;cols=sample,chrom,start,end,minor,major;nrec=0;nskip=1;skiprows=1
+obs-end-out-of-range	ms_segments	data.frame	ACCEPTED-TABLE nrow=1;end1=9999999999;end1.class=numeric
