@@ -1,0 +1,90 @@
+---
+title: "P3-CS-14 segments-witness: the shipped segment face adjudicated over planted bytes"
+format: html-vignette
+---
+
+## Decision record: what the segment face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-14 is a witness, not a specification: it freezes what
+`ms_segments()` actually adjudicates over planted bytes, so future drift
+speaks immediately. It commits only machine-stable facts: the error CLASS
+always, the message CLAUSES where they are machine-stable, and a
+path-free bullet subset for the two arms whose text carries a temp path
+(`stable3`, the CS-13 posture extended).
+:::
+
+### The face
+
+`ms_segments(path, caller = "auto", chrom_col = NULL, ...)` is the exported
+mutation-catalogue importer for the eight caller ecosystems
+(ASCAT, ASCAT_NGS, ABSOLUTE, PCAWG, FACETS, BATTENBERG, PURPLE, SEQUENZA)
+plus the in-memory `synthetic` contract. CS-14 fires 200 rails at it
+over 34 binary-channel-planted TSV/TXT/GZ files (41 law arms, 17
+acceptance specs, 4 precedence discriminators, 6 degenerate pairs,
+8 scalars), every plant written through
+the single sanctioned `open = "wb"` channel (the CS-13 windows EOL lesson:
+bytes that ride committed hashes never touch a text-mode write).
+
+### The laws the face demonstrates
+
+* **Caller-routed column law** — each caller's authoritative column set is
+  enforced at parse; a wrong caller against right bytes fails on the
+  MISSING-COLUMNS clause naming what is absent (and the pair-declared
+  two-block shapes for ASCAT/PURPLE are rejected, not silently reordered).
+* **Declared-role law** — ASCAT, BATTENBERG, FACETS and PURPLE are declared
+  but NOT implemented as auto-signature formats; `caller = "auto"` on their
+  shapes reports them under DECLARED-BUT-NOT-IMPLEMENTED, and only an
+  explicit caller argument speaks.
+* **The extension law** — `*.bin` is refused by name before any bytes are
+  read; the refusal names `*.tsv`, `*.txt`, `*.csv` as the contract.
+* **The CNVkit documented limit** — the roster refusal names CNVkit as
+  supported in the DESCRIPTION yet unimplemented: a gap recorded with its
+  own clause, not laundered into the generic refusal.
+* **mutation_type legality law (PCAWG)** — the four illegal class/ Copy-Number
+  combinations (gain@2, copy neutral LOH@4, loss@1, LOH@0) are refused at
+  parse with the combination spelled out; legal rows gain their
+  minor = floor(CN/2) split (LOH rows minor = 0, CN = 2m).
+* **The Battenberg block law** — dual-block rows missing half their
+  `nMaj*_A/nMin*_A` columns are skipped with an explicit skip ledger
+  (`skip_reasons = "missing_cn_block"`), not failed whole-file; a
+  fully-NA row likewise yields a zero-row witness with n_skipped = 1.
+* **The Sequenza sum law** — A + B must equal CNt per row; the refusal
+  reports the offending arithmetic.
+* **The ASCAT_NGS acn law** — acn = TCN − BCN with BCN ≤ TCN enforced at
+  parse; violations name the arithmetic and the row.
+
+### Precedence discriminators
+
+Four arms decide which law speaks when two could: parse before caller
+(a ragged file with a bogus caller reports the PARSE failure, not the
+caller roster); caller law on clean bytes; integer-parse before value
+validation (a non-numeric CN reports the integer failure); and the block
+law before integer parse on Battenberg halves. Each freezes a fires-anchor
+present and an anti-anchor absent — the two clauses that could trade places
+are each pinned on the correct side.
+
+### The degenerate pairs
+
+Six asymmetry pairs the face draws on its own, each with the observed
+behavior recorded: zero-row file paths are accepted as empty tables while
+zero-row canonical frames are refused; missing values are LOH law for
+FACETS and a strict refusal for PCAWG; coordinates beyond int32 are
+carried as numerics, not refused; auto-detection on a zero-signature plant
+speaks the roster clause.
+
+### Receipts
+
+Five committed witnesses under `bench/scenarios/out/`: `cs14_specs.tsv`
+(17), `cs14_laws.tsv` (41), `cs14_precedence.tsv` (4),
+`cs14_degenerates.tsv` (6), `cs14_scalars.tsv` (8) — 200 rails, 0 failed,
+byte-rerun-identical attestation over all five digests. The plant corpus
+(34 files) and the spec roster each carry a dual-kernel SHA-256 (package
+`.ms_fit_sha256` and `digest::digest` agreeing to the byte), and the RNG
+rails prove the scenario never perturbs the stream. The law file
+`tests/testthat/test-scenario-segments-witness.R` re-pays every committed
+byte and replays every adjudication live (10 units, 1704 expects,
+failed/error/warning = 0); the runner `bench/scenarios/run_segments_witness.R`
+refuses to rewrite a witness unless its recomputation is identical to
+what is on disk. T0 weight resealed 622 → 623 with the generator refusal
+witnessed verbatim.

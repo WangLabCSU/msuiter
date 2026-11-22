@@ -1,0 +1,5 @@
+arm	fires_cls	fires_anchor	anti_anchor
+prec-parse-before-caller	msuiter_error_parse	the segmentation file has ragged data line(s)	unsupported copy-number caller
+prec-caller-on-clean	msuiter_error_input	unsupported copy-number caller	the segmentation file has ragged data line(s)
+prec-intparse-before-validate	msuiter_error_io	the column must contain non-negative integers	minor copy number exceeds major copy number
+prec-blocklaw-before-intparse	msuiter_error_io	the Battenberg subclonal block is incomplete	the column must contain non-negative integers

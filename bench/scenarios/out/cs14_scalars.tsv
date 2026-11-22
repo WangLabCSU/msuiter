@@ -1,0 +1,9 @@
+key	value
+caller-roster	supported callers: ASCAT, ASCAT_NGS, ABSOLUTE, PCAWG, FACETS, BATTENBERG, PURPLE, SEQUENZA
+declared-callers	the typed pair is ordered minor <= major (CnSegment contract, src/rust/catalog/src/cn48.rs); the callers with declared roles (ASCAT, BATTENBERG, FACETS, PURPLE) are rejected instead of reordered
+extension-law	ms_segments() reads tab-separated segmentation files: .tsv, .txt (optionally .gz)
+cnvkit-clause	CNVkit is documented-limited: SPMG has no CNVkit branch and .cns/.cnr output is total-CN (log2), not allele-specific; run an allele-specific caller
+plant-checksum	c4ffb5d24318433013450a07b7ffbbd52b1708a41a32d53bd08a319165f81d67
+spec-checksum	eeaae52785d1a1747c58a0ced4f2ea56f62a810ff51aef8786b36c5ec1a1e563
+rng-before	FALSE
+rng-after	FALSE
