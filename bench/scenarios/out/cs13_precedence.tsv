@@ -1,0 +1,4 @@
+arm	fires_cls	fires_anchor	anti_anchor
+prec-wtsi-first	msuiter_error_option	WTSI long format is deferred	must be a path to an existing file
+prec-cell-vs-whole-abc	msuiter_error_input	data cells must be numeric	needs finite non-negative whole-number counts
+prec-cell-vs-whole-nan	msuiter_error_input	needs finite non-negative whole-number counts	data cells must be numeric

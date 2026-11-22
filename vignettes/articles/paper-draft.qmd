@@ -499,6 +499,36 @@ convergence claim; every committed column an integer, a label or a fixed
 `format()` rendering. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-22-p3-cs12-sparse-spec-witness.qmd.
 
+- **CS-13 io-interop witness, decision record** (`bench/scenarios/run_io_interop_witness.R`,
+#123): the shipped disk-interoperability pair `ms_import()` / `ms_export()`
+-- format enum with its deferred-WTSI clause, file gate, header-anchor law,
+channel-label three-way, cell law, whole-number law, downstream signature
+validator -- adjudicated over hand-written TSV plants of scalar rationals
+(zero RNG measured at both ends, zero downloads, zero data objects, zero
+COSMIC numeric matrices -- the two format names appear solely as NAMES; the
+R-bound benchmark runner and the FFI shim never invoked). Hard rails: the
+reader-coercion law split -- `read.delim` type-converts first, so the
+`NaN`/`NA`/`""`/`Inf` literals die on the whole-number law while only the
+non-coercible `'abc'` reaches the cell law, the two laws never trading an
+arm; the WTSI deferral committed verbatim -- the enum clause naming the
+verified pair `cosmic, sigprofiler` with the [V]-discipline deferral bullet;
+the locked provenance trio -- `build = "imported:sha256=<64 hex>"`,
+`n_samples = 0L` and the `k x 0` exposures companion, plus the dual-kernel
+SHA-256 agreement (canonical pure-R deriver and `digest` accelerator
+consisting on the plant bytes); the 17-significant-digit round-trip drill --
+the four 17-digit tokens (22 characters each) committed as a
+sealing-platform CENSUS record, never live byte-equality targets (D11),
+the live law riding glyph-structure plus `all.equal`, the
+reader-faithfulness bit riding `identical()` over same-parser bytes, and
+the `%.20g` renderings and beyond-17th-digit drift bits
+are payload CENSUS only under the D11 posture; the 36-arm law roster
+committing OBSERVED class tokens 4/24/5/3 exactly as measured, the three
+locale-variable `simpleError` arms class-only and two arms stable3-bullet
+(254 expectations, rerun byte-identical 5/5). Decision-record posture: the
+face's contract behavior on planted truth -- no extraction, benchmark or
+format-conformance claim. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-22-p3-cs13-io-interop-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -702,7 +732,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography
