@@ -595,6 +595,18 @@ jobs:
           needs: coverage
           extra-packages: any::covr
 
+      # S7 float hardening, per the #118 law (each workflow carries its own
+      # dependency steps, so every Suggests-consuming job must pin). The
+      # un-pinned coverage leg of scheduled run 45023770204 resolved S7
+      # 1.0.0 and died <S7_generic_sentinel> on all ten covr vignette
+      # rebuilds. Fail-closed: the pin cannot silently drop.
+      - name: Harden the S7 install against the 1.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("S7@0.2.2", ask = FALSE)
+          pin <- as.character(utils::packageVersion("S7"))
+          if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
+
       # Test-phase coverage, sharded: one instrumented package_coverage
       # (type="tests") per manifest shard, in parallel. covr's
       # instrumentation can break individual tests without implying a
@@ -723,6 +735,18 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           needs: soft # Suggests (testthat, withr): the heavy face runs testthat
+
+      # Same #118 pin as the fan-out, cran-shape and coverage jobs: the
+      # un-pinned heavy battery of scheduled run 45023770204 rode the S7
+      # 1.0.0 float and ERRORed the class-registration unit of
+      # test-engines-registry.R (fail=0 err=1, outside every expect).
+      # Fail-closed: the pin cannot silently drop.
+      - name: Harden the S7 install against the 1.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("S7@0.2.2", ask = FALSE)
+          pin <- as.character(utils::packageVersion("S7"))
+          if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
 
       - name: Attest the R version banner (fail-closed)
         shell: bash
