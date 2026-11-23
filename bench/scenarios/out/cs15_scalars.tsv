@@ -1,0 +1,9 @@
+key	value
+governance-fields	governance fields: version, class, build, schema_version, sha256, license, build_independent, availability
+label-key-law	labels are the only legal matching key (never position)
+ffi-no-na-clause	the FFI contract rejects NA
+sha-pin-clause	the digest pins the reference content (A13 manifest)
+plant-checksum	2ee99b67b38c7238357da9033b5a4bee1e4ab7845bd138fe0487c916afc50e37
+spec-checksum	29166e1729d5191f56f449091231cef02568d9587c0f8bde787c4dc3927462b5
+rng-before	FALSE
+rng-after	FALSE

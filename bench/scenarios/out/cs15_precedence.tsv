@@ -1,0 +1,5 @@
+arm	fires_cls	fires_anchor	anti_anchor
+prec-first-matrix-authority	msuiter_error_refdb	reference matrices must share the same channel labels	matrix 'core' disagrees
+prec-field-before-a13	msuiter_error_refdb	metadata field 'version' must be a single non-empty string	must be declared via build_independent
+prec-matrix-before-metadata	msuiter_error_refdb	reference matrix 'core' must be non-negative	is missing governance fields
+prec-sha-before-availability	msuiter_error_refdb	metadata field 'sha256' must be a sha256 hex digest	'availability' must be

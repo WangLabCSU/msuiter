@@ -530,7 +530,7 @@ format-conformance claim. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-22-p3-cs13-io-interop-witness.qmd.
 
 - **CS-14 segments-witness, decision record** (`bench/scenarios/run_segments_witness.R`,
-#124): the shipped segment face `ms_segments()` -- the exported mutation-
+#125): the shipped segment face `ms_segments()` -- the exported mutation-
 catalogue importer for the eight caller ecosystems plus the in-memory
 `synthetic` contract -- adjudicated over 34 binary-channel-planted TSV/TXT/GZ
 witnesses (60 adjudications: 41 law arms, 17 acceptance specs, 4 precedence
@@ -553,6 +553,26 @@ exactly as measured, the two path-carrying io arms stable3-bullet
 face's contract behavior on planted truth -- no extraction, benchmark or
 caller-conformance claim. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-23-p3-cs14-segments-witness.qmd.
+
+- **CS-15 refdb-witness, decision record** (`bench/scenarios/run_refdb_witness.R`):
+the shipped reference-container factory `ms_refdb()` -- the governance gate
+for reference signature matrices and their eight-field metadata --
+adjudicated over six frozen deparse-text plants. The double-gate split is
+committed as measured (43 validator arms speak `msuiter_error_refdb`, the
+3 property-gate arms die as `simpleError` before any validator runs); the
+label-key law ("labels are the only legal matching key (never position)")
+with its zero-column sharpest witness; the finite-cell ban carrying the
+FFI no-NA clause; the first-matrix channel authority blaming offenders
+against the first matrix's space and never mistaking the second for the
+authority; the A13 cross-field clause (an NA build is legal ONLY together
+with a declared build_independent = TRUE); the lowercase-only digest
+policy refusing uppercase hex; four precedence discriminators each pinned
+fires-anchor-present/anti-anchor-absent; four degenerate boundary pairs
+(273 expectations across 10 units, rerun byte-identical 5/5, zero
+failures/errors/warnings/skips). Decision-record posture: the factory's
+contract behavior on planted truth -- no extraction, benchmark or
+reference-content claim. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-23-p3-cs15-refdb-witness.qmd.
 
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
@@ -757,7 +777,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness, CS-15 refdb-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography
