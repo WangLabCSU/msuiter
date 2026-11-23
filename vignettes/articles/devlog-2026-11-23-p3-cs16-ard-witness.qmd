@@ -1,0 +1,172 @@
+---
+title: "P3-CS-16 ard-witness: the shipped ARD engine face adjudicated over planted constructor calls"
+format: html-vignette
+---
+
+## Decision record: what the engine face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-16 is a witness, not a specification: it freezes what the
+exported `ms_ard()` factory and the `MsArd` constructor actually
+adjudicate over planted calls, so future drift speaks immediately. It
+commits only machine-stable facts: the error CLASS always, and the message
+CLAUSES verbatim -- every one of them. The face is pure R with no path,
+clock, RNG or locale in its output, so the ledger was DET-proved
+byte-stable across probe reruns and no arm needed the `stable3`
+bullet-subset posture that CS-13/CS-14 required for their file paths.
+:::
+
+### The face
+
+`ms_ard(a0, b0, tol, max_iter, seed)` is the exported constructor of the
+ARD-NMF engine descriptor: an S7 class (eleven ALL-defaulted properties,
+`label` speaking "ARD-NMF (SignatureAnalyzer semantics)") behind TWO
+admission gates -- the S7 property gates and the validators (the shared
+engine validator, then `msuiter_validate_ard`). CS-16 fires 57 observation
+arms at it plus seven boundary pairs: 40 law arms, 9 acceptance specs,
+8 precedence discriminators, 7 degenerate pairs (14 rows), 9 scalars. The
+committed lane replays every arm live: the law file adjudicates 246
+expectations across 10 units (0 failed, 0 errors, 0 warnings) and the
+runner rails every row against the frozen block before any witness byte
+is written.
+
+### The double gate -- measured, and its surprise third voice
+
+The property gates and the validator split is committed as measured: of
+the 40 law arms, 12 die as `simpleError` at the property gates ("<char>
+is not <integer> or <double>" for the five numeric hyper-properties,
+"@params must be <list>", "@deterministic must be <logical>"), 26 speak
+the validator's own `msuiter_error_engine`, and TWO arms uncovered a
+third voice: a length-2 vector for `a0` or `seed` passes the property
+gate (numeric vector), reaches the validator's whole-number clause -- and
+dies inside the abort machinery itself as `msuiter_error_internal`:
+"msuiter_abort: bullet 'i' must be a non-empty string", because the
+got:/format(v) bullet vectorises with the two-element value. The face
+still refuses the input; it refuses it from the plumbing, and the witness
+records that too rather than laundering it.
+
+### The laws the face demonstrates
+
+- **Shared engine laws.** The name must be a single lower-case snake_case
+  string; the mode is one of {extract, fit}; `params` must be a list --
+  and MEASURED, the "(named)" in the clause is permissive: a fully
+  unnamed list passes (the `names()` short-circuit), a PARTIALLY named
+  one is refused. `deterministic` is a bare TRUE/FALSE; `packages` a
+  character vector without NA and no empty names; `label` a single
+  string, empty allowed.
+- **The ARD priors.** `a0`/`b0` must be single finite numbers > 0 (zero,
+  negative, Inf, NaN, NA each refused with the got:/value bullet); `tol`
+  the same positive-finite law -- closing at exactly the kernel's domain,
+  so an R-side pass can never hand the Rust kernel an illegal tolerance;
+  `max_iter` a single positive WHOLE number; `seed` a whole number in
+  [0, 2^31 - 1], the boundary pair committing both ends (0 and
+  2147483647 accepted, -1 and 2147483648 refused).
+- **Precedence.** Eight discriminators with fires AND anti anchors:
+  name before mode, mode before params, deterministic before packages,
+  packages before label (the shared roster, and a defective object whose
+  SHARED fields are wrong proves the shared validator runs over the ARD
+  fields), then a0 before b0, tol before max_iter, max_iter before seed.
+- **The format contract.** The accepted rendering is the format method's
+  own line, `<MsEngine> ARD-NMF (SignatureAnalyzer semantics) (ard) |
+  mode: extract | deterministic ...`, carried verbatim in the specs
+  witness; the replay-identity spec welds two renders of one object with
+  `==`.
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs16_specs.tsv` | 9 accepted arms: class token `s7:msuiter::MsArd` plus the shape rendering (roster, hyper values, format line), and the `s7:character` replay identity |
+| `cs16_laws.tsv` | 40 arms: class census MEASURED 26 validator + 12 property-gate + 2 internal-plumbing, every clause verbatim, every mode `reject` |
+| `cs16_precedence.tsv` | 8 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
+| `cs16_degenerates.tsv` | 7 boundary pairs (14 rows): max_iter floor, seed floor and ceiling, tol floor, empty label, mode domain, finite a0 ceiling -- hi accepts, lo rejects, by the committed law |
+| `cs16_scalars.tsv` | 9 keys: the validator's own class token, five clause re-fires, the canonical shape, and both RNG-purity rails (the adjudication core never seeds) |
+
+The 71-row class census (41 engine, 12 simpleError, 2 internal, 15
+MsArd, 1 character) is recomputed from the frozen vectors inside the law
+file -- a silent class shift reddens the lane, not the reader. All five
+witnesses byte-reproduce on consecutive runner invocations, the plant and
+spec corpora hash identically under BOTH governed SHA-256 kernels
+(`.ms_fit_sha256` and digest), and the lane never touches the RNG, the
+network, the benchmark driver, the declined calibration family, the
+registry face, or any unexported internal (banned-word rails over the
+hand-written region, marker-scoped and grepped).
+
+### What the lane-building itself caught (the honest section)
+
+The live replay is not decoration -- it killed an entire defect family
+before one witness byte was trusted. (1) The minter's thunk-body
+extractor took the LAST slot of a parsed function literal; on this base
+that slot is an extra NULL, so all 57 arm texts minted as the string
+"NULL" -- and both existing self-checks passed VACUOUSLY (parse("NULL")
+is one expression; the double-mint determinism only proved the garbage
+was stable). The live-replay mirror caught it as an arm rejecting with
+`@params` on NULL. The extractor now pins slot [[3]] by measurement and
+every arm text must speak a face token to mint. (2) The fire wrapper
+projected `$v` off a tryCatch result that had taken the ERROR branch --
+a condition object has no `$v`, so rejects were silently demoted to
+accepts-of-NULL; fixed by branching on `inherits(., "error")` first.
+(3) The fires-anchor derivation ran `regexpr` over a VECTOR and pulled
+`attr(., "match.start")`, which is NULL there, feeding
+`ifelse(logical(0), .)` -- the whole 8-entry anchor vector evaporated to
+`character(0)` and emit minted an empty roster silently; the runner's own
+fire-check died on the invalid pattern, and the minter now asserts each
+fires anchor is a substring of its own message. (4) Three fork-semantics
+rails fell over loudly instead of quietly: `vapply` refuses
+logical-to-character coercion (the fires/anti columns are minted as
+"TRUE"/"FALSE" strings at source), `vapply`'s names attribute made
+`identical()` reddle against the nameless witness columns (row builders
+now strip), and `grepl` takes only pattern element one of a vector
+pattern (face-token guards speak three explicit tests). (5) The
+banned-word rails initially hit the face's OWN quoted bytes inside the
+frozen block (the internal clause names msuiter_abort; the packages
+clause cites required_pkgs()) -- rails govern the hand-written region;
+the minted regions are observed data, sliced out before the absence
+scan, with marker integrity itself rail-checked. (6) The governance-file
+surgery caught its own tooling twice: a sub() backreference landed a raw
+0x01 control byte into the sealed row, and the line-multiset guard
+refused two successive editor bugs of mine before letting the file
+settle. The T0 seal moved 624 -> 625 with the generator's refusal
+witnessed verbatim (the DEFECT line naming 625 against the sealed 624)
+before the deliberate re-seal, per the budget law; the reified manifest
+carries 109 files, the new law file on shard 5, byte-deterministic on
+re-mint.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the audited probe ledger (audit green: 57 arms, 14
+degen rows, 9 scalars, 8/8 anti anchors); neither is ever hand-edited in
+place. The plants' canonical texts hash to the committed dual-kernel
+checksum; reifying the lane reproduces every witness byte for byte.
+Differentiation from CS-12 (the engine-spec factory): CS-12 adjudicated
+the SPEC-CONSTRUCTION factory surface; CS-16 adjudicates the descriptor
+CLASS itself -- its property gates, its validator chain and the
+abort-plumbing class beneath both.
+
+### Gate forensics -- one self-caught leg defect and one exempted NOTE
+
+The first full local burn reddened inside the vignette build: the new
+scenarios leg reached for two precedence-witness columns that the committed
+TSV never carried (`fires_anchor`/`anti_anchor` live only in the frozen
+roster, and the vignette cannot source it -- self-containedness law). On this
+base a missing data.frame column reads NULL and surfaced at the call site as
+an invalid `pattern` argument. The fix re-expresses the precedence
+adjudication over committed bytes only -- witness-row equality
+(`identical(pr$msg, sh)`) plus literals read off the table dump -- and both
+the standalone render and a direct chunk evaluation print all seven
+adjudications TRUE before the gate was re-ignited. The parse-only pre-check
+passed while render caught it: the pre-ignition render gate is mandatory
+procedure, not the full burn's job.
+
+The second burn completed clean (exit 0) but its Status carried a second
+NOTE: `checking for future file timestamps ... unable to verify current
+time`. Forensics located the carrier (`tools:::.check_packages`): the probe
+verifies mtimes against an EXTERNAL clock fetched over HTTP from
+worldclockapi.com, which currently answers empty on both endpoints, so the
+probe self-declares inability. It reproduced identically across two full
+burns while the same posture said OK earlier the same day -- the external
+service changed state, not the tree -- and every CS-16 mtime is proven
+strictly past. The sealed baseline stays the frozen 2W/1N; the NOTE receives
+a documented environmental exemption, evidence-anchored, reported not
+suppressed: a probe that admits it could not verify never becomes a green.

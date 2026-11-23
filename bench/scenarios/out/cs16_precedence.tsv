@@ -1,0 +1,9 @@
+arm	mode	cls	msg	fires_ok	anti_ok
+prec-name-over-mode	reject	msuiter_error_engine	engine name must be a single lower-case snake_case string | engine names are registry keys (D9) | received: 'ARD' | use e.g. name = "nmf_kl"	TRUE	TRUE
+prec-mode-over-params	reject	msuiter_error_engine	engine mode must be one of the known modes | known modes: extract, fit | received: 'transform' | declare whether the engine extracts signatures or fits exposures	TRUE	TRUE
+prec-det-over-pkgs	reject	msuiter_error_engine	deterministic must be a single TRUE or FALSE | determinism is part of the engine contract (thread invariance) | received: 'NA' | declare whether the engine is seeded and thread invariant	TRUE	TRUE
+prec-pkgs-over-label	reject	msuiter_error_engine	packages must be a character vector of package names without NA | required_pkgs() reports these before an engine runs | received: 'rlang', 'NA' | list package names, or pass character(0)	TRUE	TRUE
+prec-shared-over-ard	reject	msuiter_error_engine	label must be a single string (empty allowed) | the label is an optional human-readable engine name | received: 'NA' | pass a short label, or leave it empty	TRUE	TRUE
+prec-a0-over-b0	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: 0 | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values	TRUE	TRUE
+prec-tol-over-mi	reject	msuiter_error_engine	`tol` must be a single finite number > 0 | got: 0 | the ARD convergence-tolerance property `tol` | construct with a finite positive tolerance	TRUE	TRUE
+prec-mi-over-seed	reject	msuiter_error_engine	`max_iter` must be a single positive whole number | got: 1.5 | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter	TRUE	TRUE

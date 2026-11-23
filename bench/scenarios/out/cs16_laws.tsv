@@ -1,0 +1,41 @@
+arm	mode	cls	msg
+lj-name-upper	reject	msuiter_error_engine	engine name must be a single lower-case snake_case string | engine names are registry keys (D9) | received: 'ARD' | use e.g. name = "nmf_kl"
+lj-name-hyphen	reject	msuiter_error_engine	engine name must be a single lower-case snake_case string | engine names are registry keys (D9) | received: 'a-b' | use e.g. name = "nmf_kl"
+lj-name-empty	reject	msuiter_error_engine	engine name must be a single lower-case snake_case string | engine names are registry keys (D9) | received: '' | use e.g. name = "nmf_kl"
+lj-name-na	reject	msuiter_error_engine	engine name must be a single lower-case snake_case string | engine names are registry keys (D9) | received: 'NA' | use e.g. name = "nmf_kl"
+lj-mode-unknown	reject	msuiter_error_engine	engine mode must be one of the known modes | known modes: extract, fit | received: 'transform' | declare whether the engine extracts signatures or fits exposures
+lj-params-partial	reject	msuiter_error_engine	engine params must be a (named) list | params carry the hyper-parameters of the spec | received: list | pass hyper-parameters as a named list
+lj-params-null	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @params must be <list>, not <NULL>
+lj-det-na	reject	msuiter_error_engine	deterministic must be a single TRUE or FALSE | determinism is part of the engine contract (thread invariance) | received: 'NA' | declare whether the engine is seeded and thread invariant
+lj-pkgs-na	reject	msuiter_error_engine	packages must be a character vector of package names without NA | required_pkgs() reports these before an engine runs | received: 'rlang', 'NA' | list package names, or pass character(0)
+lj-pkgs-empty	reject	msuiter_error_engine	packages must be a character vector of package names without NA | required_pkgs() reports these before an engine runs | received: '' | list package names, or pass character(0)
+lj-label-na	reject	msuiter_error_engine	label must be a single string (empty allowed) | the label is an optional human-readable engine name | received: 'NA' | pass a short label, or leave it empty
+lj-name-num	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @name must be <character>, not <double>
+lj-mode-num	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @mode must be <character>, not <double>
+lj-params-vec	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @params must be <list>, not <character>
+lj-det-string	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @deterministic must be <logical>, not <character>
+lj-pkgs-list	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @packages must be <character>, not <list>
+lj-label-num	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @label must be <character>, not <double>
+lj-a0-zero	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: 0 | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-a0-neg	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: -1 | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-a0-inf	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: Inf | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-a0-nan	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: NaN | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-a0-na	reject	msuiter_error_engine	`a0` must be a single finite number > 0 | got: NA | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-a0-len2	reject	msuiter_error_internal	msuiter_abort: bullet 'i' must be a non-empty string
+lj-a0-str	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @a0 must be <integer> or <double>, not <character>
+lj-b0-zero	reject	msuiter_error_engine	`b0` must be a single finite number > 0 | got: 0 | the ARD prior property `b0` | construct with ms_ard(a0 = , b0 = ) using positive values
+lj-b0-str	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @b0 must be <integer> or <double>, not <character>
+lj-tol-zero	reject	msuiter_error_engine	`tol` must be a single finite number > 0 | got: 0 | the ARD convergence-tolerance property `tol` | construct with a finite positive tolerance
+lj-tol-neg	reject	msuiter_error_engine	`tol` must be a single finite number > 0 | got: -1e-05 | the ARD convergence-tolerance property `tol` | construct with a finite positive tolerance
+lj-tol-inf	reject	msuiter_error_engine	`tol` must be a single finite number > 0 | got: Inf | the ARD convergence-tolerance property `tol` | construct with a finite positive tolerance
+lj-tol-str	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @tol must be <integer> or <double>, not <character>
+lj-mi-zero	reject	msuiter_error_engine	`max_iter` must be a single positive whole number | got: 0 | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter
+lj-mi-frac	reject	msuiter_error_engine	`max_iter` must be a single positive whole number | got: 1.5 | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter
+lj-mi-neg	reject	msuiter_error_engine	`max_iter` must be a single positive whole number | got: -3 | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter
+lj-mi-inf	reject	msuiter_error_engine	`max_iter` must be a single positive whole number | got: Inf | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter
+lj-mi-str	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @max_iter must be <integer> or <double>, not <character>
+lj-seed-neg	reject	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1] | got: -1 | the ARD initializer-seed property `seed` | construct with a whole-number seed in range
+lj-seed-frac	reject	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1] | got: 1.5 | the ARD initializer-seed property `seed` | construct with a whole-number seed in range
+lj-seed-above	reject	msuiter_error_engine	`seed` must be a single whole number in [0, 2^31 - 1] | got: 2147483648 | the ARD initializer-seed property `seed` | construct with a whole-number seed in range
+lj-seed-str	reject	simpleError	<msuiter::MsArd> object properties are invalid: | - @seed must be <integer> or <double>, not <character>
+lj-seed-len2	reject	msuiter_error_internal	msuiter_abort: bullet 'i' must be a non-empty string
