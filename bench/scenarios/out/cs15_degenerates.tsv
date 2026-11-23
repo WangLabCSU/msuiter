@@ -1,0 +1,9 @@
+edge	arm	cls	observed
+NA build: declared vs undeclared (A13)	sp-na-declared	accept	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=NA;indep=TRUE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+NA build: declared vs undeclared (A13)	rej-a13-undeclared	msuiter_error_refdb	a missing build must be declared via build_independent = TRUE
+availability: zero-length vs NA entry	sp-availability-zero	accept	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+availability: zero-length vs NA entry	rej-avail-na	msuiter_error_refdb	metadata field 'availability' must be a character vector without NA
+colnames: duplicates ride, absence falls	sp-dup-colnames	accept	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+colnames: duplicates ride, absence falls	rej-mat-colnames	msuiter_error_refdb	reference matrix 'core' must carry rownames and colnames
+column space: 1x1 accepted, 0-col refused	sp-1x1	accept	nmat=1;names=one;nrow=1;ncol=1;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+column space: 1x1 accepted, 0-col refused	obs-zero-cols-rejected	msuiter_error_refdb	reference matrix 'core' must carry rownames and colnames

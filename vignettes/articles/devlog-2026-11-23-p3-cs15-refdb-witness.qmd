@@ -1,0 +1,102 @@
+---
+title: "P3-CS-15 refdb-witness: the shipped reference-container face adjudicated over planted R objects"
+format: html-vignette
+---
+
+## Decision record: what the container face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-15 is a witness, not a specification: it freezes what the
+exported `ms_refdb()` factory actually adjudicates over planted R objects,
+so future drift speaks immediately. It commits only machine-stable facts:
+the error CLASS always, and the message CLAUSES verbatim -- every one of
+them. The face is pure R with no path, clock or locale in its output, so
+the ledger was DET-proved byte-stable across probe reruns and no arm
+needed the `stable3` bullet-subset posture that CS-13/CS-14 required for
+their file paths.
+:::
+
+### The face
+
+`ms_refdb(matrices, metadata)` is the exported governance container for
+reference signature matrices: an S7 class with TWO admission gates -- the
+property gates (non-list `matrices`/`metadata` die as `simpleError`
+before any validator runs) and the container validator (43 distinct
+`msuiter_error_refdb` laws). CS-15 fires 58 observation arms at it over
+six frozen deparse-text plants (two 4x2 channel matrices, the eight-field
+governance metadata, the channel and sample labels, a 64-hex digest):
+46 law arms, 8 acceptance specs, 4 precedence discriminators, 4 degenerate
+boundary pairs (8 rows), 8 scalars. The committed lane replays every arm
+live: the law file adjudicates 273 expectations across 10 units
+(0 failed, 0 errors, 0 warnings, 0 skipped) and the runner passes
+188 rails before any witness byte is written.
+
+### The laws the face demonstrates
+
+- **Admission shape.** Empty, unnamed, partly-named or non-list containers
+  are refused by name; vectors, character and data.frame payloads are
+  refused as "not a numeric matrix" -- the container holds numeric
+  matrices only (integer ones ride, `is.numeric` accepts them).
+- **The label-key law.** Every matrix must carry BOTH rownames and
+  colnames: "labels are the only legal matching key (never position)".
+  The zero-column observation is its sharpest witness -- a matrix with a
+  row-name vector but an empty column roster is refused exactly there.
+- **Finite, non-negative cells.** NA, NaN and Inf are refused with the
+  clause "the FFI contract rejects NA"; negative cells are refused as
+  "non-negative by definition", each with the offending cell printed.
+- **Channel authority.** All matrices are projected onto the FIRST
+  matrix's channel labels -- the disagreement report names the offender
+  against the first matrix's space ("matrix 'alt' disagrees; offending
+  labels: 'X[C>X]X'"), and the precedence arm proves the second matrix is
+  never mistaken for the authority.
+- **Governance metadata.** The eight required fields are rostered
+  verbatim ("version, class, build, schema_version, sha256, license,
+  build_independent, availability"); the four identity fields demand a
+  single non-empty string; `build_independent` demands a bare TRUE/FALSE
+  (an integer or string is refused); `build` is a single string or NA;
+  and the **A13 cross-field clause** welds them: "an NA build must be
+  declared via build_independent = TRUE" -- the declared NA build is
+  accepted, the undeclared one is refused.
+- **The digest policy.** `sha256` must match `^[0-9a-f]{64}$` --
+  uppercase hex is REFUSED, a deliberate lowercase-only commitment so the
+  same bytes hash identically on every platform.
+- **Availability.** A character vector without NA entries; the zero-length
+  vector is legal (no availability claim), a vector containing NA is not.
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs15_specs.tsv` | 8 accepted arms: the class token `msuiter::MsRefDb` plus the shape rendering (names, dims, governance fields, the format method's own line) |
+| `cs15_laws.tsv` | 46 arms: class census MEASURED 43 validator + 3 property-gate `simpleError`, every clause verbatim, every mode `full` |
+| `cs15_precedence.tsv` | 4 discriminators: first-matrix authority, field-before-A13, matrix-before-metadata, sha-before-availability -- each with its fires anchor AND anti anchor |
+| `cs15_degenerates.tsv` | 4 asymmetry pairs (8 rows): declared vs undeclared NA build, zero-length vs NA availability, duplicate vs absent colnames, 1x1 vs zero-column space |
+| `cs15_scalars.tsv` | 8 keys: four face-spoken clauses (governance roster, label-key law, FFI no-NA, A13 digest pin), the dual-kernel plant and spec SHA-256s, both RNG rails |
+
+All five witnesses byte-reproduce on a re-run (DET 5/5), the plant and
+spec checksums agree under BOTH governed SHA-256 kernels, and the lane
+never touches the RNG, the network, the benchmark driver, the declined
+calibration family, or any unexported internal (banned-word rails,
+grepped).
+
+### What the lane-building itself caught (the honest section)
+
+The live replay is not decoration -- it caught three real defects before
+any witness was trusted: (1) the plant reconstruction `eval(parse(x))[[1L]]`
+indexes the RESULT, not the PARSED EXPRESSION -- a list plant silently
+became its first element, and the rails screamed before the mint;
+(2) a top-level `on.exit(close(con))` in the injector never fires on this
+base, so the parse-verification read a half-written host file; (3) a
+misplaced FUN.VALUE argument in the plant-text joiner. All three died in
+the rails, not in the record. The gallery roster had also drifted twice
+(CS-13/CS-14 never updated the driver count or the reproduction list):
+this commit repairs it to fifteen drivers with the full list. The T0 seal
+moved 623 -> 624 with the generator's refusal witnessed verbatim before
+the deliberate re-seal, per the budget law.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the probe ledger; neither is ever hand-edited. The
+plants' canonical deparse texts hash to the committed dual-kernel
+checksum; reifying the lane reproduces every witness byte for byte.

@@ -1,0 +1,9 @@
+arm	face	cls	detail
+sp-canonical	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-two-matrices	ms_refdb	msuiter::MsRefDb	nmat=2;names=core,ext;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 2 matrices
+sp-na-declared	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=NA;indep=TRUE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-availability-zero	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-availability-multi	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38+GRCh37;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-integer-matrix	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-1x1	ms_refdb	msuiter::MsRefDb	nmat=1;names=one;nrow=1;ncol=1;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
+sp-dup-colnames	ms_refdb	msuiter::MsRefDb	nmat=1;names=core;nrow=4;ncol=2;class=SBS;version=1;build=GRCh38;indep=FALSE;avail=GRCh38;fmt=<MsRefDb> class: SBS | version: 1 | 1 matrices
