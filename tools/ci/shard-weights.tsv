@@ -122,3 +122,4 @@ test-scenario-io-interop-witness.R	1	254	T0
 test-scenario-sparse-spec-witness.R	1	323	T0
 test-scenario-segments-witness.R	1	1704	T0
 test-scenario-refdb-witness.R	1	273	T0
+test-scenario-ard-witness.R	1	246	T0

@@ -1,0 +1,10 @@
+key	value
+validator-class	msuiter_error_engine
+clause-a0	`a0` must be a single finite number > 0 | got: 0 | the ARD prior property `a0` | construct with ms_ard(a0 = , b0 = ) using positive values
+clause-b0	`b0` must be a single finite number > 0 | got: 0 | the ARD prior property `b0` | construct with ms_ard(a0 = , b0 = ) using positive values
+clause-tol	`tol` must be a single finite number > 0 | got: 0 | the ARD convergence-tolerance property `tol` | construct with a finite positive tolerance
+clause-mi	`max_iter` must be a single positive whole number | got: 1.5 | the ARD iteration-cap property `max_iter` | construct with a positive whole-number max_iter
+clause-seed	`seed` must be a single whole number in [0, 2^31 - 1] | got: -1 | the ARD initializer-seed property `seed` | construct with a whole-number seed in range
+canonical-shape	name=ard;mode=extract;np=0;pnames=;det=TRUE;npkg=0;pkgs=;label=ARD-NMF (SignatureAnalyzer semantics);a0=10;b0=5;tol=1e-05;mi=2000;seed=1;fmt=<MsEngine> ARD-NMF (SignatureAnalyzer semantics) (ard) | mode: extract | deterministic
+rng-before	FALSE
+rng-after	FALSE
