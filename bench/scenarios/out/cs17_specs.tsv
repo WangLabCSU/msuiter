@@ -1,0 +1,7 @@
+arm	mode	cls	msg
+A1-accept-core	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples
+A2-accept-skipped-tail-int	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples; skipped 7/42 variants
+A3-accept-skipped-tail-dbl	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples; skipped 7/42 variants
+A5-accept-1x1-minimal	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|1|1|double|TRUE|TRUE|e10fea09c4590dfbcf05149c6d3157db|<MsCatalog> CS17T: 1 channels x 1 samples
+A4-accept-int-plant	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|integer|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples
+sp-replay-identity	accept	s7:character	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples==msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples

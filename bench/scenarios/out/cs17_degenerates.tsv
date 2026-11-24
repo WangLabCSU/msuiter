@@ -1,0 +1,9 @@
+pair	side	arm	mode	cls	msg
+empty-boundary	hi	empty-queue-hi	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|0|double|TRUE|FALSE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 0 samples
+empty-boundary	lo	zero-channels-lo	reject	msuiter_error_catalog	counts must carry both channel labels (rownames) and sample labels (colnames) | labels are the only legal matching key (never position) | rownames missing: TRUE; colnames missing: FALSE | name the matrix dimensions before constructing MsCatalog
+rowlaw-split	hi	rowlabel-uniqueness-hi	reject	msuiter_error_catalog	channel and sample labels must be unique | duplicated labels make label matching ambiguous | duplicated channel labels: 'CH1'; duplicated sample labels: (none) | de-duplicate or rename labels
+rowlaw-split	lo	rownames-missing-lo	reject	msuiter_error_catalog	counts must carry both channel labels (rownames) and sample labels (colnames) | labels are the only legal matching key (never position) | rownames missing: TRUE; colnames missing: FALSE | name the matrix dimensions before constructing MsCatalog
+minimal-vs-empty	hi	minimal-1x1-hi	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|1|1|double|TRUE|TRUE|e10fea09c4590dfbcf05149c6d3157db|<MsCatalog> CS17T: 1 channels x 1 samples
+minimal-vs-empty	lo	empty-4x0-lo	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|0|double|TRUE|FALSE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 0 samples
+skipped-tail	hi	skipped-tail-hi	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples; skipped 7/42 variants
+skipped-tail	lo	core-nontail-lo	accept	s7:msuiter::MsCatalog	msuiter::MsCatalog|4|2|double|TRUE|TRUE|d3b77a574c1e6afda429f0e14afcf4d1|<MsCatalog> CS17T: 4 channels x 2 samples

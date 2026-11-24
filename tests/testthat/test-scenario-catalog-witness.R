@@ -790,7 +790,7 @@ test_that("boundary contrast pairs hold on both sides", {
   expect_identical(dg$mode[match("minimal-1x1-hi", dg$arm)], "accept")
   expect_identical(dg$mode[match("empty-4x0-lo", dg$arm)], "accept")
   expect_true(grepl("|1|1|", w("minimal-1x1-hi"), fixed = TRUE))
-  expect_true(grepl("|4|0|TRUE|FALSE|", w("empty-4x0-lo"), fixed = TRUE))
+  expect_true(grepl("|4|0|double|TRUE|FALSE|", w("empty-4x0-lo"), fixed = TRUE))
   ## skipped-tail pair: the tail rides the hi side only
   expect_true(grepl("; skipped 7/42 variants", w("skipped-tail-hi"), fixed = TRUE))
   expect_false(grepl("; skipped 7/42 variants", w("core-nontail-lo"), fixed = TRUE))
