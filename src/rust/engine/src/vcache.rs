@@ -6,7 +6,7 @@
 //! a fifty-case batch otherwise asks the kernel to decode and validate
 //! byte-identical inputs fifty times. This module shares the decoded read
 //! inside one batch process: cache identity is the FILE identity (device,
-//! inode, byte length, and the kernel-reported mtime/ctime seconds --
+//! inode, byte length, and the kernel-reported mtime second --
 //! `std::os::unix`, no content hashing), and a hit hands back a clone of
 //! the same `Rc`.
 //!
@@ -16,12 +16,16 @@
 //!     CLI's reader is a thin delegate to it, so fault TEXT cannot drift;
 //!   * faults are fail-closed and never cached;
 //!   * any move of the bytes under a name (length, or the kernel's
-//!     mtime/ctime seconds, moved) forces a fresh decode. The same-inode,
-//!     same-length, same-clock-second rewrite is the one theoretical stale
-//!     window: unreachable under the serving law that case bytes are
-//!     written once and then read-only (campaign law, attested input
-//!     hashes), and every emitted byte is gated downstream by the P2
-//!     bit-identity family regardless;
+//!     mtime second, moved) forces a fresh decode. ctime is deliberately
+//!     not in the key: it also rises on byte-less metadata events such as
+//!     link(), so keying on it would buy no staleness protection a bytes
+//!     move does not already give (a bytes move moves mtime with it) and
+//!     would trade in spurious misses on the bridge's own late-linked
+//!     layout; the same-inode, same-length, same-clock-second rewrite is
+//!     the one theoretical stale window: unreachable under the serving law
+//!     that case bytes are written once and then read-only (campaign law,
+//!     attested input hashes), and every emitted byte is gated downstream
+//!     by the P2 bit-identity family regardless;
 //!   * two distinct files never fold together, even when their bytes are
 //!     equal (content hashing would fold them -- identity must not).
 
@@ -81,7 +85,6 @@ struct Key {
     ino: u64,
     len: u64,
     mtime: i64,
-    ctime: i64,
 }
 
 /// The per-process V memo. One instance per batch (the batch entry builds
@@ -131,7 +134,6 @@ impl VCache {
                     ino: md.ino(),
                     len: md.len(),
                     mtime: md.mtime(),
-                    ctime: md.ctime(),
                 };
                 if let Some(hit) = self.entries.get(&key) {
                     return Ok(hit.clone());
