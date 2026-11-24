@@ -21,7 +21,11 @@
 //!      sharing, the point of the exercise) with the naive-parse bytes
 //!      bit-for-bit (`assert_eq!` on the Vec);
 //!   2. a hard-linked alias of that path shares the same Rc (that is the
-//!      bridge's layout, so it is the contract that must work);
+//!      bridge's layout, so it is the contract that must work) — including
+//!      an alias linked AFTER the base's first decode: POSIX `link()`
+//!      bumps the shared inode's ctime, and a ctime bump with untouched
+//!      bytes is not a move (law 4 keys on mtime), so the clock second the
+//!      link lands in must not cost the shared entry;
 //!   3. a distinct file with equal bytes does NOT share (identity is the
 //!      key, not content hashing — no false aliasing across cases);
 //!   4. any move of the bytes under a name (length or mtime moved) forces
@@ -176,6 +180,47 @@ fn hardlinked_aliases_decode_correctly_and_independently() {
         let got = c.decode(&alias, M, N, K).expect("decode alias");
         assert_eq!(*got, naive_read(&alias, MN), "hard-linked name {i} must decode to the bytes on disk through its own fresh read");
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn a_hardlink_after_a_clock_tick_still_shares_the_decoding() {
+    // Law 2's timed face, and the sanitizer-leg race made deterministic:
+    // the bridge links case names after the base may already have been
+    // decoded, POSIX `link()` bumps the shared inode's ctime, and the key
+    // is a whole-second clock -- so when the link crosses a tick the two
+    // stats disagree on ctime while no byte ever moved. The sleep mirrors
+    // `bytes_moved_under_a_name_force_a_fresh_decode`: the crossing is
+    // forced, never flaked.
+    let t = Tmp::new("late-link");
+    let p = t.join("shared.csv");
+    write_grid(&p, M, N, 0);
+    let mut c = VCache::new();
+    let a = c.decode(&p, M, N, K).expect("decode base");
+    std::thread::sleep(std::time::Duration::from_millis(1_100)); // base stat first, tick second, link last
+    let alias = t.join("late.csv");
+    fs::hard_link(&p, &alias).expect("hard_link");
+    let got = c.decode(&alias, M, N, K).expect("decode late alias");
+    assert!(Rc::ptr_eq(&a, &got), "a link that crossed a clock tick is not a bytes move and must share the base decoding");
+    assert_eq!(*got, *a, "late alias bytes");
+}
+
+#[cfg(not(unix))]
+#[test]
+fn a_hardlink_after_a_clock_tick_decodes_fresh_and_correctly() {
+    // Fail-closed twin of `a_hardlink_after_a_clock_tick_still_shares_the_decoding`:
+    // there is no key to disagree about here, so every late alias is its
+    // own fresh read of the bytes on disk.
+    let t = Tmp::new("late-link");
+    let p = t.join("shared.csv");
+    write_grid(&p, M, N, 0);
+    let mut c = VCache::new();
+    let a = c.decode(&p, M, N, K).expect("decode base");
+    assert_eq!(*a, naive_read(&p, MN), "base bytes");
+    let alias = t.join("late.csv");
+    fs::hard_link(&p, &alias).expect("hard_link");
+    let got = c.decode(&alias, M, N, K).expect("decode late alias");
+    assert_eq!(*got, naive_read(&alias, MN), "the late alias must decode to the bytes on disk through its own fresh read");
 }
 
 #[test]
