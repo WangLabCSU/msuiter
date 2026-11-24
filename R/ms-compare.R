@@ -387,6 +387,7 @@
     msuiter_abort(
       "input",
       "n_draws must be a single whole number >= 200",
+      i = "n_draws is the Monte Carlo draw count for the null tail",
       j = paste0("received: ", msuiter_quote_trunc(n_draws)),
       c = "the add-one tail estimate needs a usable denominator"
     )

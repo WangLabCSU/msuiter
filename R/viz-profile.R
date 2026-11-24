@@ -205,7 +205,9 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
     msuiter_abort(
       "input",
       "counts and signatures must share the canonical channel order",
-      j = sprintf("rows: %d vs %d", length(pc$labels), length(ps$labels))
+      i = "observed and fitted profiles must share one channel axis",
+      j = sprintf("rows: %d vs %d", length(pc$labels), length(ps$labels)),
+      c = "pass counts and signatures over the same channel table"
     )
   }
   exposures <- as.matrix(exposures)
@@ -213,8 +215,10 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
     msuiter_abort(
       "input",
       "exposures rows must match the signature columns",
+      i = "the fitted profile multiplies signatures by exposures",
       j = sprintf("exposures rows: %d; signatures: %d",
-                  nrow(exposures), ncol(ps$matrix))
+                  nrow(exposures), ncol(ps$matrix)),
+      c = "pass exposures with one row per signature column"
     )
   }
   fitted <- as.numeric(ps$matrix %*% exposures)
@@ -289,6 +293,7 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
     msuiter_abort(
       "input",
       "profile input must be a numeric matrix (or named vector, or MsSignature)",
+      i = "the profile faces read one numeric m x k matrix",
       j = paste0("received: ", class(matrix)[1L]),
       c = "pass m x k with canonical registry rownames"
     )
@@ -355,8 +360,10 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
       msuiter_abort(
         "input",
         "column index out of range",
+        i = "column selects one profile column",
         j = sprintf("requested: %s; columns: %d",
-                    msuiter_quote_trunc(idx), ncol(matrix))
+                    msuiter_quote_trunc(idx), ncol(matrix)),
+        c = "pass an index in [1, ncol]"
       )
     }
     return(idx)
@@ -367,7 +374,9 @@ plot_reconstruction_panel <- function(counts, signatures, exposures,
       msuiter_abort(
         "input",
         "requested column names are absent",
-        j = paste0("missing: ", msuiter_quote_trunc(missing))
+        i = "columns are addressed by the matrix colnames",
+        j = paste0("missing: ", msuiter_quote_trunc(missing)),
+        c = "pass existing colnames or integer indices"
       )
     }
     return(match(columns, cn))

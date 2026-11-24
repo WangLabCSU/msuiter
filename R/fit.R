@@ -921,6 +921,7 @@ S7::method(ms_fit_bootstrap, S7::class_any) <- function(catalog, signatures,
     msuiter_abort(
       "input",
       "bca must be a single TRUE or FALSE",
+      i = "bca selects the bias-corrected accelerated bootstrap interval",
       j = paste0("received: ", msuiter_quote_trunc(bca)),
       c = "leave the default FALSE for the percentile interval only"
     )

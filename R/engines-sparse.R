@@ -163,7 +163,9 @@ ms_sparse <- function(variant = "l1", lambda = 0, mu = 0,
     msuiter_abort(
       "input",
       "counts must be a numeric matrix",
-      i = "the sparse kernel consumes the MsCatalog counts slot (transposed to t(counts) for the FFI)"
+      i = "the sparse kernel consumes the MsCatalog counts slot (transposed to t(counts) for the FFI)",
+      j = paste0("received: ", class(counts)[1L]),
+      c = "pass a channels x samples numeric matrix"
     )
   }
   if (!is.numeric(k) || length(k) != 1L || is.na(k) || k < 1 ||
@@ -171,7 +173,9 @@ ms_sparse <- function(variant = "l1", lambda = 0, mu = 0,
     msuiter_abort(
       "input",
       "`k` must be a single positive whole number",
-      i = paste0("got: ", format(k))
+      i = "k is the number of components the sparse kernel estimates",
+      j = paste0("got: ", format(k)),
+      c = "pass a whole number k >= 1"
     )
   }
   ms_sparse_rust(

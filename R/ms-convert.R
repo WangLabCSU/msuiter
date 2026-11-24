@@ -104,6 +104,7 @@ ms_convert <- S7::new_generic(
     msuiter_abort(
       "input",
       sprintf("%s must be a frequency vector over the 96 channels", arg_nm),
+      i = "an opportunity vector is one frequency per registry channel",
       j = sprintf("received length: %d", length(opps)),
       c = "name it by the registry labels or pass a bundled table name"
     )
