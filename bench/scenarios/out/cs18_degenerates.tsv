@@ -1,0 +1,9 @@
+pair	side	arm	mode	cls	msg
+zero-column-glyph	hi	zero-col-hi	accept	s7:matrix	matrix|96x3|double|TRUE|S1,S2,S3|1,0,1
+zero-column-glyph	lo	full-col-lo	accept	s7:matrix	matrix|96x3|double|TRUE|S1,S2,S3|1,1,1
+onecol-vs-multicol	hi	onecol-matrix-hi	accept	s7:matrix	matrix|96x3|double|TRUE|S1,S2,S3|1,1,1
+onecol-vs-multicol	lo	multicol-matrix-lo	reject	msuiter_error_input	from matrix must have exactly one frequency column | the opportunity is a single 96-vector, not per-signature | received: 2 columns | repeat the column yourself for per-signature opportunities
+fromopt-vs-toopt	hi	from-bad-hi	reject	msuiter_error_option	from must be a bundled table or a custom frequency vector | panel opportunities are expected as a custom 96-vector ([V] discipline: no bundled panel table) | received: 'nope'; bundled: human-genome, human-exome | pass a named numeric vector for custom opportunities
+fromopt-vs-toopt	lo	to-bad-lo	reject	msuiter_error_option	to must be a bundled table or a custom frequency vector | panel opportunities are expected as a custom 96-vector ([V] discipline: no bundled panel table) | received: 'nada'; bundled: human-genome, human-exome | pass a named numeric vector for custom opportunities
+shape-vs-names	hi	nonmatrix-hi	reject	msuiter_error_input	signatures must be a numeric matrix | ms_convert() re-expresses SBS96 signatures between opportunities | received: character | pass 96 x k with registry rownames (or an MsSignature)
+shape-vs-names	lo	wrongnames-lo	reject	msuiter_error_input	from names must equal the SBS96 registry labels | opportunities are matched by label, never by position | first names: 'Y1', 'Y2', 'Y3' | set names(opps) to the registry labels
