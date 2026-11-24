@@ -1,0 +1,11 @@
+key	value
+gate-class	simpleError
+storage-double	double
+storage-integer	integer
+hash-canonical	d3b77a574c1e6afda429f0e14afcf4d1
+hash-minimal	e10fea09c4590dfbcf05149c6d3157db
+format-core	<MsCatalog> CS17T: 4 channels x 2 samples
+tail-int	<MsCatalog> CS17T: 4 channels x 2 samples; skipped 7/42 variants
+tail-dbl	<MsCatalog> CS17T: 4 channels x 2 samples; skipped 7/42 variants
+rng-before	FALSE
+rng-after	FALSE

@@ -1,0 +1,204 @@
+---
+title: "P3-CS-17 catalog-witness: the shipped governance-container face adjudicated over planted catalog calls"
+format: html-vignette
+---
+
+## Decision record: what the governance-container face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-17 is a witness, not a specification: it freezes what the
+exported `ms_catalog()` factory and the `MsCatalog` constructor actually
+adjudicate over planted calls, so future drift speaks immediately. It
+commits only machine-stable facts: the error CLASS always, and the message
+CLAUSES verbatim -- every one of them. The container is pure R -- no file
+path, clock or RNG touches its verdicts, and the label digest is hex --
+so the ledger was DET-proved byte-stable across probe reruns, and no arm
+needed the `stable3` bullet-subset posture that CS-13/CS-14 required for
+their file paths or the payload-census posture that CS-6 required for its
+ill-conditioned floats. The lane also refuses its own sketches: the
+census and ordering claims below are read from the committed witnesses,
+not from the build plan -- three times this page's draft numbers were
+corrected against the committed bytes (37/2/3 not 39/1/3; five accepted
+boundary rows not four) before anything was burned.
+:::
+
+### The face
+
+`ms_catalog(counts, channels, samples, provenance)` is the exported
+constructor of the governance container: an S7 class (four properties --
+`counts`, `channels`, `samples`, `provenance`) behind TWO admission gates
+-- the S7 property gates, then the seventeen-arm `msuiter_validate_catalog`
+validator -- with a second error class, `msuiter_error_input`, reachable
+only through the shared label-digest helper the snapshot path consults.
+CS-17 fires 60 observation arms at it plus eight boundary-pair rows: 42
+law arms, 6 acceptance specs, 10 precedence discriminators, 8 degenerate
+rows (4 pairs), 10 scalars. The committed lane replays every arm live:
+the law file adjudicates 265 expectations across 10 units (0 failed, 0
+errors, 0 warnings) and the runner rails every row against the frozen
+block before any witness byte is written.
+
+### The double gate -- measured at its true boundary
+
+The property-gate/validator split is committed as measured, and the
+measurement moved the boundary once: three arms (`channels`, `samples`,
+`provenance` with the wrong type) die as `simpleError` at the property
+gates -- `<msuiter::MsCatalog> object properties are invalid: | - @channels
+must be <list>, not <character>` and its two siblings -- before any
+validator arm runs. The fourth property, `counts`, is gated
+`class_any`: a character matrix and a bare numeric vector both REACH the
+validator and are refused there as `msuiter_error_catalog` ("counts must
+be a numeric matrix (channels x samples)"). The lane caught the planned
+expectation mid-build: a scalar-count gate arm had been drafted as a
+fourth `simpleError`, and the live fire refused that claim -- the gate
+accepts, the validator speaks. It was committed as the measured 42-arm
+census 37 validator + 3 property-gate + 2 shared-digest-input instead. The
+two
+`msuiter_error_input` arms are the discovery worth naming: the CS-13-era
+fixture trick of feeding the label field as `as.character(NA_integer_)`
+REVERSES on this face. The real typed NA survives `as.character`, rides
+into the factory's auto-hash path, and the shared digest helper refuses
+it -- "channel labels to hash must be a character vector without NA".
+The face keeps the old trap as a live acceptance; the witness commits
+both halves (the accepting twin and the refusing twin) side by side.
+
+### The laws the face demonstrates
+
+- **The snapshot law.** The channel snapshot must be a list with exactly
+  the fields `name`, `labels`, `hash`; an empty list, a missing field and
+  an extra field each refuse with their own bullet ("received fields:
+  ..." names what arrived). The stored `hash` is checked against the
+  stored `labels` -- "snapshot hashes must be derived, not asserted" --
+  so a foreign digest cannot impersonate canonical labels.
+- **The digest law.** The label digest is the same
+  `msuiter_hash_labels` the registry face (CS-15) commits: the witness
+  carries its two canonical digests as scalars (`d3b77a57...` for the
+  four-label plant, `e10fea09...` for the 1x1 minimal) and a hand-hash
+  arm proves the shape-vs-truth ordering (a non-hex string dies on
+  shape before a foreign hex dies on truth).
+- **The identity laws.** Row names must exist, be unique and match the
+  label roster in order (a permutation of the labels is a decoy, refused
+  by its own clause); column names must equal the `samples` roster;
+  counts must be finite, non-negative, integral-valued cells (NA, Inf,
+  NaN, negative each refused with its received-shape bullet).
+- **Precedence.** Ten discriminators, each with its fires anchor pinned
+  PRESENT and its anti anchor pinned ABSENT in the same live message --
+  gate before validator, dimensions before label-match, uniqueness before
+  dimensions and before finiteness, hash-shape before hash-truth, the
+  named-snapshot law before the genome law. One ordering was committed
+  against the lane's own plan: with BOTH a mismatched colnames roster and
+  an NA sample planted, the column-vs-samples law fires first and the
+  sample-sanity clause never surfaces -- the plan had expected the
+  reverse, and the measurement outranks the expectation.
+- **The acceptance specs.** The canonical 4x2 double container renders
+  its full identity line (`msuiter::MsCatalog|4|2|double|TRUE|TRUE|<hex>|
+  <format line>`) -- the boolean pair committing that row names match
+  labels and colnames match samples; the skipped tail (`n_skipped` 7 of
+  `n_variants` 42) renders in the format line IDENTICALLY under an
+  integer and a double provenance payload (the dual-kernel tail rail);
+  the integer plant commits its storage-mode glyph (`|integer|`) exactly
+  where a silent coercion would erase it; and replaying the committed
+  spec through `ms_catalog()` reproduces it byte-for-byte -- the
+  replay-identity spec welds two renders with `==`.
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs17_specs.tsv` | 6 accepted arms: class token `s7:msuiter::MsCatalog` plus the full identity rendering (shape, storage glyph, both identity bits, digest, format line), and the `s7:character` replay identity |
+| `cs17_laws.tsv` | 42 arms: class census MEASURED 37 validator + 3 property-gate + 2 shared-digest-input, every clause verbatim, every mode `reject` |
+| `cs17_precedence.tsv` | 10 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
+| `cs17_degenerates.tsv` | 4 boundary pairs (8 rows): the legal 4x0 empty queue against the zero-channel container, the row-uniqueness law against the row-existence law, the 1x1 minimal against the empty queue, the skipped tail against its absence -- hi and lo committed side by side |
+| `cs17_scalars.tsv` | 10 keys: the gate-boundary class token, both storage glyphs, the two canonical digests, the format line, the dual-kernel tail pair, and both RNG-purity rails (the adjudication core never seeds) |
+
+The 66-row class census (`msuiter_error_catalog=49`,
+`msuiter_error_input=2`, `simpleError=4`, `s7:character=1`,
+`s7:msuiter::MsCatalog=10`, over the four committing rosters) is
+recomputed from the frozen vectors inside the law file -- a silent class
+shift reddens the lane, not the reader. All five witnesses byte-reproduce
+on consecutive runner invocations, the plant and spec corpora hash
+identically under BOTH governed SHA-256 kernels (`.ms_fit_sha256` and
+digest), and the lane never touches the RNG, the network, the benchmark
+driver, the declined calibration family, or any unexported internal
+(banned-word rails over the hand-written region, marker-scoped and
+grepped).
+
+### The single-source build, and the audit that became the minter
+
+Both hosts -- law file and runner -- carry one byte-identical frozen
+block and one byte-identical shared code block, each injected from a
+single source between BEGIN/END markers; the splice rail demands the
+exact marker counts (the law file legitimately quotes each marker three
+times, twice inside its own runtime region-scan literals) and compares
+the two regions across the files byte for byte. The minter IS the audit:
+every one of the 60 roster plants and the 8 text-twins is re-fired LIVE
+through the canonical pipeline against the audited probe ledger
+(60 rows, 53 rejects / 7 accepts, DET across two probe runs); each of
+the 22 precedence-path arms carries an explicit decision-record path
+whose FIRES/ANTI alignment is asserted order-invariantly; every scalar is
+re-fireable and re-fired; and a final RE-AUDIT re-sources the EMITTED
+block into a cleared namespace and re-compares every committed literal
+against the ledger -- so emitter drift, chunking drift and quoting drift
+all die at mint time, not at read time. The committed clause bytes in
+this page are read from the committed witnesses, never re-typed from
+plan.
+
+### What the lane-building itself caught (the honest section)
+
+The live replay killed a whole family of would-be-innocent bugs before
+one witness byte was trusted. (1) The base's `vapply` is `sapply`: it
+attaches value-names to a character result, and the frozen-block
+comparisons then failed on an ATTRIBUTE that no printed byte showed --
+identical() reddled while both sides looked the same in every dump; the
+comparands now strip. (2) The base's `read.csv` is camelCase-gated:
+`stringsasfactors`/`colclasses` in the committed idiom died as
+"unused argument"; the ledger's first mint carried a phantom sixth
+column before the arg casing was fixed -- and the 5-column census was
+already on the wall to catch it. (3) The rail needle for the
+zero-column-identity pair had been drafted from the plan sketch
+(`|4|0|TRUE|FALSE|`) and the measurement put the storage-mode glyph INSIDE
+the pair (`|4|0|double|TRUE|FALSE|`); the runner rail and the law
+assertion were both corrected against the measured bytes, not the
+sketch. (4) `R --slave -f` does not inject `--file=` the way `Rscript`
+does (the CLI-face law again): the runner's self-located ROOT silently
+fell back to the working directory, the provisioning probe missed
+DESCRIPTION, and the `library(msuiter)` fallback loaded a stale
+installed build -- whose counts gate was a DIFFERENT face (a
+`simpleError` where the tree's face speaks `msuiter_error_catalog`). A
+provisioning drift was minutes from being committed as a finding about
+the face; the fix is invocation discipline (`Rscript`, sanctioned form),
+and the incident is why the provisioning block and its rails ride the
+runner verbatim from the CS-16 idiom. (5) The minter's chunker index
+math truncated committed clauses (33 committed bytes against a 99-byte
+message) while every visible comparison passed -- the emitted-bytes
+re-audit now sources the produced file itself and re-verifies every
+literal, so a truncation cannot survive the mint. (6) The compiler-tool
+probe (a darwin-27 CLT gap, banked law) reddened the local install
+path; the C inputs were attested unchanged against the built `.so`
+before its timestamp was advanced to restore the skip path -- the
+provisioning-trust law honored, not evaded.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the audited probe ledger (audit green: 60 arms
+byte-exact on live re-fire, 8 degen twins, 10/10 fires-and-anti anchors,
+10 scalars re-fired); neither is ever hand-edited in place. The plants'
+canonical texts hash to the committed dual-kernel checksum
+(`plant_sha256=e9e9de78eb43ec9d...`, `spec_sha256=57c4e33e01cea364...`);
+reifying the lane reproduces every witness byte for byte. Differentiation
+from CS-15 (the reference-container face): CS-15 adjudicated the factory
+with its registry-file and cache-path rails; CS-17 adjudicates the
+plain in-memory governance container -- its 17-arm validator, the
+property-gate boundary MEASURED at three, the digest law shared with the
+registry, and the input-class law the snapshot path reaches.
+
+### Gate forensics
+
+The scenarios leg for this lane (the sixteenth) was render-verified
+STANDALONE before the full local burn -- the CS-16 lesson applied as
+procedure, its columns read off committed bytes only, its adjudication
+lines printed TRUE for the record. The T0 seal moved 625 -> 626 with
+the generator's refusal witnessed verbatim (the DEFECT line naming 626
+against the sealed 625) before the deliberate re-seal, per the budget
+law; the reified manifest carries 110 files, the new law file on shard
+4, byte-deterministic on re-mint.
