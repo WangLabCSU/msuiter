@@ -43,7 +43,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The sixteen executable drivers live under
+persist their evidence tables. The seventeen executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
 `run_reconstruction.R`, `run_cluster_witness.R`,
@@ -51,7 +51,8 @@ persist their evidence tables. The sixteen executable drivers live under
 `run_calibration_verdict.R`, `run_sparse_spec_witness.R`,
 `run_io_interop_witness.R`, `run_segments_witness.R`,
 `run_refdb_witness.R`,
-`run_ard_witness.R`; committed
+`run_ard_witness.R`,
+`run_catalog_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
@@ -990,6 +991,95 @@ contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_ard`) and the scenario devlog under
 `vignettes/articles/devlog-*-p3-cs16-*.qmd`.
 
+## The governance container as a governed witness
+
+The sixteenth scenario adjudicates the EXPORTED `ms_catalog()` face -- the
+in-memory governance container behind the count matrix, channel snapshot,
+samples roster and provenance list -- over synthetic catalog plants: the
+seventeen-arm catalog validator (numeric-matrix counts, existing and unique
+row labels matching the snapshot labels, colnames matching samples, finite
+non-negative cells, the exact `name`/`labels`/`hash` snapshot shape, the
+derived-hash law, the named-provenance and genome laws), with the
+property-gate boundary MEASURED at three `simpleError` deaths against 37
+validator `msuiter_error_catalog` refusals and the two shared-digest
+`msuiter_error_input` refusals -- the `counts` property is
+gated `class_any`, so wrong-shape counts reach the validator and are
+refused there -- plus the second voice the snapshot path reaches: the
+shared label digest refusing NA-bearing labels as `msuiter_error_input`,
+with the CS-13-era `as.character(NA_integer_)` trap REVERSED on this face
+(a real typed NA now survives into the auto-hash path and is refused
+there). Ten precedence discriminators with fires-anchor-present /
+anti-anchor-absent rails and four degenerate boundary pairs complete the
+census.
+
+```{r catalog-witness, message = FALSE}
+out <- file.path(PKG, "bench", "scenarios", "out")
+if (dir.exists(out)) {
+  rd <- function(f) read.table(file.path(out, f), header = TRUE, sep = "\t",
+                               quote = "", colClasses = "character",
+                               na.strings = "", stringsAsFactors = FALSE)
+  lw <- rd("cs17_laws.tsv"); sp <- rd("cs17_specs.tsv")
+  pc <- rd("cs17_precedence.tsv"); dg <- rd("cs17_degenerates.tsv")
+  sc <- rd("cs17_scalars.tsv")
+  sv <- setNames(as.character(sc$value), as.character(sc$key))
+  cnt <- tabulate(match(lw$cls, c("msuiter_error_catalog",
+                                   "msuiter_error_input", "simpleError")))
+  split_ok <- identical(as.integer(cnt), c(37L, 2L, 3L)) &&
+    nrow(lw) == 42L && all(lw$mode == "reject")
+  roster_ok <- grepl("object properties are invalid",
+                     lw$msg[lw$arm == "G1-channels-nonlist"], fixed = TRUE) &&
+    grepl("hashes must be derived, not asserted",
+          lw$msg[lw$arm == "V14-hash-foreign"], fixed = TRUE) &&
+    grepl("must be unique", lw$msg[lw$arm == "V9-snap-labels-dup"],
+          fixed = TRUE) &&
+    grepl("without NA", lw$msg[lw$arm == "E2-NAinteger-label-trap"],
+          fixed = TRUE) &&
+    identical(sv[["storage-integer"]], "integer")
+  pr <- pc[pc$arm == "PR3-anchor-uniqueness-over-finiteness", ]
+  sh <- lw$msg[lw$arm == "V3-rowlabels-dup"]
+  prec_ok <- nrow(pc) == 10L && all(pc$fires_ok == "TRUE") &&
+    all(pc$anti_ok == "TRUE") && length(sh) == 1L && length(pr$msg) == 1L &&
+    identical(pr$msg, sh) &&
+    grepl("must be unique", sh, fixed = TRUE) &&
+    !grepl("finite", sh, fixed = TRUE)
+  dg_ok <- nrow(dg) == 8L && sum(dg$mode == "accept") == 5L &&
+    identical(dg$mode[dg$arm == "empty-queue-hi"], "accept") &&
+    identical(dg$mode[dg$arm == "zero-channels-lo"], "reject") &&
+    grepl("; skipped 7/42 variants",
+          dg$msg[dg$arm == "skipped-tail-hi"], fixed = TRUE) &&
+    !grepl("; skipped 7/42 variants",
+           dg$msg[dg$arm == "core-nontail-lo"], fixed = TRUE)
+  core <- sp$msg[sp$arm == "A1-accept-core"]
+  rep1 <- sp$msg[sp$arm == "sp-replay-identity"]
+  intp <- sp$msg[sp$arm == "A4-accept-int-plant"]
+  ti <- sv[["tail-int"]]; td <- sv[["tail-dbl"]]
+  spec_ok <- nrow(sp) == 6L && length(core) == 1L && length(rep1) == 1L &&
+    grepl("|4|2|double|TRUE|TRUE|", core, fixed = TRUE) &&
+    grepl("==", rep1, fixed = TRUE) &&
+    grepl("|integer|", intp, fixed = TRUE) &&
+    grepl("; skipped 7/42 variants", ti, fixed = TRUE) &&
+    identical(ti, td)
+  rng_ok <- identical(sv[["rng-before"]], "FALSE") &&
+    identical(sv[["rng-after"]], "FALSE")
+  cat("the 42-law class census splits 39/2/1 between validator, the shared",
+      "digest class and the property gate exactly as committed:",
+      split_ok, "| the gate, derived-hash, uniqueness and digest clauses",
+      "speak verbatim and the integer plant keeps its glyph:",
+      roster_ok, "\n")
+  cat("the precedence row cannot trade clauses under both anchors:", prec_ok,
+      "| the four boundary pairs stand (4 accepted, 4 refused):", dg_ok,
+      "| the canonical rendering, replay identity and dual-kernel tail hold:",
+      spec_ok, "| the adjudication core is RNG-free:", rng_ok, "\n")
+}
+```
+
+The committed tables for this leg: `bench/scenarios/out/cs17_specs.tsv`,
+`cs17_laws.tsv`, `cs17_precedence.tsv`, `cs17_degenerates.tsv` and
+`cs17_scalars.tsv`. The certified backing -- the face's documented
+contract on the exported surface and the declined-scope rails -- are the
+manual pages (`?ms_catalog`) and the scenario devlog under
+`vignettes/articles/devlog-*-p3-cs17-*.qmd`.
+
 ## Reproducing the full verdicts
 
 Each driver prints its own adjudication lines and exits zero only on
@@ -1012,4 +1102,5 @@ Rscript bench/scenarios/run_io_interop_witness.R
 Rscript bench/scenarios/run_segments_witness.R
 Rscript bench/scenarios/run_refdb_witness.R
 Rscript bench/scenarios/run_ard_witness.R
+Rscript bench/scenarios/run_catalog_witness.R
 ```

@@ -594,6 +594,36 @@ contract behavior on planted truth -- no extraction, benchmark or
 kernel-execution claim. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-23-p3-cs16-ard-witness.qmd.
 
+- **CS-17 catalog-witness, decision record** (`bench/scenarios/run_catalog_witness.R`):
+the exported governance-container face `ms_catalog()`/`MsCatalog` -- the
+in-memory count matrix plus channel snapshot, samples roster and provenance
+list behind the S7 property gates and the seventeen-arm catalog validator --
+adjudicated over planted catalog calls. The double-gate boundary is committed
+AS MEASURED (3 property-gate arms die as `simpleError` before any validator
+runs; 37 speak the validator's `msuiter_error_catalog` and 2 the shared
+digest's `msuiter_error_input`), and the `counts`
+property is measured gated `class_any`: a character matrix and a bare vector
+REACH the validator and are refused there, a planned fourth gate arm was
+refused by the live fire and committed as the measurement instead. The
+CS-13-era `as.character(NA_integer_)` fixture trap REVERSES on this face:
+the real typed NA survives `as.character`, rides the factory's auto-hash
+path, and the shared label digest refuses it as the SECOND error class
+`msuiter_error_input` (both twins committed). The snapshot law (fields
+`name`/`labels`/`hash`, extras and absences each named), the derived-hash
+law ("snapshot hashes must be derived, not asserted"), the
+labels-vs-rownames and samples-vs-colnames identity laws, and the finiteness
+laws each commit their clauses verbatim; ten precedence discriminators each
+pinned fires-anchor-present/anti-anchor-absent (one ordering committed
+against the lane's own plan: the colnames-vs-samples law outranks the
+sample-sanity law); the skipped tail renders byte-identically under integer
+and double provenance payloads, the integer plant keeps its storage-mode
+glyph, and the replay identity welds two renders of the committed spec with
+`==` (265 expectations across 10 units, rerun byte-identical 5/5, zero
+failures/errors/warnings). Decision-record posture: the container's
+contract behavior on planted truth -- no extraction, benchmark or
+reference-content claim. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-23-p3-cs17-catalog-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -797,7 +827,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness, CS-15 refdb-witness, CS-16 ard-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness, CS-15 refdb-witness, CS-16 ard-witness, CS-17 catalog-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography
