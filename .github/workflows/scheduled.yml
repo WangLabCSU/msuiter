@@ -120,7 +120,15 @@ jobs:
           retention-days: 14
 
   sanitizer:
-    runs-on: ubuntu-latest
+    # Pinned, never `-latest` (issue #74 ruling, same law as `valgrind`
+    # above): the leg's verdicts must be observed over a still environment.
+    # Its 2026-11-23 red was exactly an image-float class race -- the
+    # VCache identity key held a ctime whole-second stamp that a late
+    # hard_link could bump between two stats; the defect is now pinned
+    # out by law in src/rust/engine/tests/batch_v_cache.rs (late-link
+    # twin), and the image pin keeps the observation window from moving
+    # underneath it.
+    runs-on: ubuntu-24.04
     # Hard gate: the 22 s/12 s archived legs (D1) died at target discovery.
     timeout-minutes: 90
     strategy:
