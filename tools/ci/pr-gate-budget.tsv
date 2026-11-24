@@ -85,6 +85,12 @@
 # (test-abort-contract.R, 0 s integer weight, 5 expects) joined the T0
 # roster; witness: local run nb=5 failed=0 error=0 warning=0, elapsed 0.4 s,
 # so the measured manifest sum stays 626 (a zero-weight row moves no seal).
+# 2026-11-25 deliberate re-seal 626 -> 627: the CS-18 scenario row
+# (test-scenario-convert-witness.R, 1 s integer weight, 233 expects) joined
+# the T0 roster; witness: local run nb=233 failed=0 error=0 skipped=0
+# warning=0, measured manifest sum 627 (generator refusal witnessed at the
+# pre-seal re-mint attempt, the verbatim DEFECT line naming 627 against the
+# sealed 626).
 key	value	note
-t0-measured	626	measured 2026-11-24 (integer manifest seconds, tier T0; 2026-11-24 abort-contract row joins at 0 s, sum unchanged)
+t0-measured	627	measured 2026-11-25 (integer manifest seconds, tier T0; 2026-11-25 CS-18 convert-witness row joins at 1 s, 626 -> 627)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

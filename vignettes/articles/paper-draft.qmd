@@ -624,6 +624,37 @@ contract behavior on planted truth -- no extraction, benchmark or
 reference-content claim. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-23-p3-cs17-catalog-witness.qmd.
 
+- **CS-18 convert-witness, decision record** (`bench/scenarios/run_convert_witness.R`):
+the exported opportunity-converter face `ms_convert()` -- the S7 generic that
+re-expresses SBS96 signatures between mutation-opportunity vectors (divide by
+the source, multiply by the target, re-normalize), accepting a registry-named
+`96 x k` numeric matrix or an `MsSignature` under the two option arguments
+`from`/`to` -- adjudicated over planted signature-and-opportunity calls. One
+validator serves both option names: the ten-arm resolver runs twice, so a bad
+bundled name speaks `msuiter_error_option` under the leading head "from must be
+a bundled table or a custom frequency vector" or its "to must be..." twin
+(sharing the [V]-discipline panel bullet verbatim), and every shape, length,
+label, positivity and signature-matrix law speaks `msuiter_error_input`; the
+degenerate `fromopt-vs-toopt` pair pins the two heads apart by `head1()` so a
+collapse reddens the lane. Ten precedence discriminators each pin
+fires-anchor-present/anti-anchor-absent (signature-shape outranks both option
+laws, rownames outranks the `to` law, `from` resolves before `to`, length
+outranks labels, the multi-column law outranks labels); four boundary pairs
+commit the accepted zero-column glyph (`1,0,1`) against the restored full
+column (`1,1,1`), the accepted one-column `from` matrix against the two-column
+refusal, and the two option laws by their own heads. Because the accepted arms
+return a real float matrix (kernel round-trip error ~1e-16), the D11
+cross-platform posture commits a DISCRETE column-sum glyph in place of the
+payload -- the first witness in the series to commit a glyph rather than a
+class token for its accepting arms -- with the canonical matrix render
+(`matrix|96x3|double|TRUE|S1,S2,S3|1,1,1`), the S7 branch render
+(`MsSignature|96x3|double|1,1,1|3x2`) and the `s7:character` replay identity
+welding two renders of the committed spec with `==` (233 expectations across 10
+units, zero failures/errors/skips/warnings). Decision-record posture: the
+converter's contract behavior on planted truth -- no extraction, benchmark or
+reference-content claim. Zero new machinery. Authority:
+vignettes/articles/devlog-2026-11-25-p3-cs18-convert-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an

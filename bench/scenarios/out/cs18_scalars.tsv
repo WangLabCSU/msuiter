@@ -1,0 +1,11 @@
+key	value
+abort-class	msuiter_error_input
+matrix-render	matrix|96x3|double|TRUE|S1,S2,S3|1,1,1
+msgsig-render	MsSignature|96x3|double|1,1,1|3x2
+glyph-full	1,1,1
+glyph-zero	1,0,1
+roundtrip-under-tol	TRUE
+same-under-tol	TRUE
+storage-double	double
+rng-before	FALSE
+rng-after	FALSE

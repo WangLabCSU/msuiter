@@ -1,0 +1,200 @@
+---
+title: "P3-CS-18 convert-witness: the shipped opportunity-converter face adjudicated over planted signature calls"
+format: html-vignette
+---
+
+## Decision record: what the converter face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-18 is a witness, not a specification: it freezes what the
+exported `ms_convert()` generic and its `MsSignature` method actually
+adjudicate over planted signature-and-opportunity calls, so future drift
+speaks immediately. It commits only machine-stable facts: the error CLASS
+always, and the message CLAUSES verbatim -- every one of them. The
+converter is pure R over a bundled frequency table -- no file path beyond
+the packaged extdata, no clock and no RNG touches its verdicts -- so the
+ledger was DET-proved byte-stable across probe reruns. But the ACCEPTED
+arms return a real float matrix: the face divides by the source
+opportunities and multiplies by the target ones, so the return is a
+`double` matrix whose kernel round-trip error measures ~1e-16. Under the
+D11 cross-platform posture no float payload can ride a byte-committed
+column, so the accepted renders commit a DISCRETE column-sum GLYPH
+(`0`/`1`/`?` at a 1e-9 threshold, seven orders above the observed float
+error) instead of the numbers themselves; integer, label, logical, class
+and clause bytes are byte-committed, floats are censused finite/in-domain
+only. The lane also refuses its own sketches: the census and ordering
+claims below are read from the committed witnesses, not from the build
+plan -- the runner's own degen rail caught a clause-head literal that had
+been drafted one word short (see the honest section) before any witness
+byte was burned.
+:::
+
+### The face
+
+`ms_convert(signatures, from = "human-genome", to = "human-exome")` is the
+exported S7 generic that re-expresses SBS96 signatures relative to a
+different mutation-opportunity vector (the sigfit `convert_signatures`
+semantics: divide by the source opportunities, multiply by the target
+ones, re-normalize each column). It accepts a `96 x k` numeric matrix with
+SBS96 registry rownames, or an `MsSignature`; the `from`/`to` arguments
+each accept a bundled table name (`"human-genome"`, `"human-exome"`) or a
+custom numeric vector of 96 positive finite frequencies, named by the
+registry labels or matching the signature rownames. The resolver
+`.ms_convert_resolve_opps()` runs TWICE -- once for `from`, once for `to`
+-- so the two option arguments carry the same ten-arm validator under two
+argument names, and the two abort classes split cleanly: a bad bundled
+name is `msuiter_error_option`, everything else (shape, length, label
+match, positivity, the signature matrix itself) is `msuiter_error_input`.
+CS-18 fires 38 observation arms at it plus eight boundary-pair rows: 10
+law arms, 10 acceptance specs, 10 precedence discriminators, 8 degenerate
+rows (4 pairs), 10 scalars. The committed lane replays every arm live: the
+law file adjudicates 233 expectations across 10 units (0 failed, 0 errors,
+0 skipped, 0 warnings) and the runner rails every row against the frozen
+block before any witness byte is written.
+
+### The two option laws -- one validator, two argument names
+
+The `from`-and-`to` split is the face's signature move, and the witness
+commits it as measured. The unknown-bundled-name arm fires the SAME clause
+body under each name, differing only in the leading head -- "from must be
+a bundled table or a custom frequency vector" against "to must be a
+bundled table or a custom frequency vector" -- and both speak the shared
+[V]-discipline bullet ("panel opportunities are expected as a custom
+96-vector ([V] discipline: no bundled panel table)"). The degenerate
+`fromopt-vs-toopt` pair pins the two by their own clause HEADS (the
+boundary contrast assertion reads `head1()` of each, split on `" | "`),
+so a drift that collapsed the two heads into one reddens the lane. The
+precedence roster measures the resolution ORDER: `from` resolves before
+`to` (PR3), and each option law is outranked by the signature-shape law
+(PR1) and the rownames law (PR2) -- the signature matrix is checked before
+either opportunity argument is touched.
+
+### The laws the face demonstrates
+
+- **The bundled-name law.** A character scalar that is not one of the two
+  bundled tables refuses as `msuiter_error_option`, naming the bundled
+  roster it saw ("received: 'nope'; bundled: human-genome, human-exome").
+  The panel bullet carries the [V]-discipline clause verbatim: panel
+  opportunities must ride as a custom 96-vector, there is no bundled panel
+  table.
+- **The single-column law.** A numeric MATRIX argument with more than one
+  column refuses as `msuiter_error_input` -- "from matrix must have exactly
+  one frequency column" / "the opportunity is a single 96-vector, not
+  per-signature" -- with the received column count ("received: 2 columns")
+  and the repeat-it-yourself remedy. A one-column matrix is dropped to a
+  vector and rides the acceptance path (the `onecol-vs-multicol` degen
+  pair).
+- **The length law.** A vector whose length is not 96 refuses -- "from must
+  be a frequency vector over the 96 channels" -- carrying the received
+  length ("received length: 10") and the name-or-table remedy.
+- **The label law.** Names that are present but do not equal the registry
+  labels refuse -- "from names must equal the SBS96 registry labels" --
+  naming the first three received names and the by-label-never-by-position
+  bullet. Names absent entirely are ACCEPTED (the resolver aligns by
+  position when `names(opps)` is `NULL`).
+- **The positivity law.** A non-finite or non-positive entry refuses --
+  "from must be positive and finite" -- counting the offending entries
+  against the "an opportunity of 0 makes the division undefined" bullet.
+- **The signature laws.** A non-numeric or non-matrix `signatures`
+  argument refuses -- "signatures must be a numeric matrix" -- naming the
+  received class and the `96 x k` remedy; a matrix whose rownames are
+  missing or out of canonical order refuses -- "signatures must carry the
+  SBS96 registry rownames in canonical order" -- naming the first three
+  rownames (or "rownames missing") and the by-label bullet.
+- **Precedence.** Ten discriminators, each with its fires anchor pinned
+  PRESENT and its anti anchor pinned ABSENT in the same live message --
+  signature-shape before the `from` option law, rownames before the `to`
+  option law, `from` before `to`, length before labels, and the
+  multi-column law before the label law.
+- **The acceptance specs.** The canonical `96 x 3` matrix render commits
+  its full identity line (`matrix|96x3|double|TRUE|S1,S2,S3|1,1,1`) -- the
+  `TRUE` committing that rownames are present and canonical, the
+  `S1,S2,S3` the column roster, and `1,1,1` the discrete column-sum glyph
+  (every column still sums to 1). A zero column commits its `0` glyph
+  (`1,0,1`); an integer-vector plant commits the `double` storage glyph
+  exactly where a silent coercion would erase it; and replaying the
+  committed spec through `ms_convert()` reproduces it byte-for-byte -- the
+  replay-identity spec welds two renders with `==`. The `MsSignature`
+  method commits the S7 branch (`MsSignature|96x3|double|1,1,1|3x2`, the
+  `3x2` being the exposure shape carried through untouched).
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs18_specs.tsv` | 10 accepted arms: class token `s7:matrix` (eight matrix accepts) or `s7:msuiter::MsSignature` (the S7 branch) plus the full identity rendering (shape, storage glyph, canonical-rownames bit, column roster, discrete glyph) and the `s7:character` replay identity |
+| `cs18_laws.tsv` | 10 arms: class split `msuiter_error_option` (the two bundled-name arms) and `msuiter_error_input` (the eight shape/length/label/positivity/signature arms), every clause verbatim, every mode `reject` |
+| `cs18_precedence.tsv` | 10 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
+| `cs18_degenerates.tsv` | 4 boundary pairs (8 rows): the accepted zero-column glyph against the restored full column, the accepted one-column `from` matrix against the two-column one, the `from`-option law against the `to`-option law by their own heads, the shape law against the label law -- hi and lo committed side by side |
+| `cs18_scalars.tsv` | 10 keys: the abort class, both renders, both storage glyphs, the round-trip-under-tolerance and same-under-tolerance verdicts, and both RNG-purity rails (the adjudication core never seeds) |
+
+The 38-row class census (`msuiter_error_input=17`, `msuiter_error_option=8`,
+`s7:matrix=11`, `s7:msuiter::MsSignature=1`, `s7:character=1`, over the four
+committing rosters) is recomputed from the frozen vectors inside the law
+file -- a silent class shift reddens the lane, not the reader. All five
+witnesses byte-reproduce on consecutive runner invocations, the plant and
+spec corpora hash identically under BOTH governed SHA-256 kernels
+(`.ms_fit_sha256` and digest), and the lane never touches the RNG, the
+network, the benchmark driver, the declined calibration family, or any
+unexported internal (banned-word rails over the hand-written region,
+marker-scoped and grepped).
+
+### The single-source build, and the audit that became the minter
+
+Both hosts -- law file and runner -- carry one byte-identical frozen block
+and one byte-identical shared code block, each injected from a single
+source between BEGIN/END markers; the splice rail demands the exact marker
+counts and compares the two regions across the files byte for byte. The
+minter IS the audit: every one of the 38 roster plants and the 8
+text-twins is re-fired LIVE through the canonical pipeline against the
+audited probe ledger (38 rows, 20 rejects / 18 accepts, DET across two
+probe runs); each of the 10 precedence-path arms carries an explicit
+decision-record path whose FIRES/ANTI alignment is asserted
+order-invariantly; every scalar is re-fireable and re-fired; and a final
+RE-AUDIT re-sources the EMITTED block into a cleared namespace and
+re-compares every committed literal against the ledger -- so emitter
+drift, chunking drift and quoting drift all die at mint time, not at read
+time. The committed clause bytes in this page are read from the committed
+witnesses, never re-typed from plan.
+
+### What the lane-building itself caught (the honest section)
+
+The live replay killed a would-be-innocent bug before one witness byte was
+trusted. The runner's degenerate rail for the `fromopt-vs-toopt` pair had
+been drafted to compare `head1(.w("from-bad-hi"))` against the literal
+`"from must be a bundled table"` -- one clause short. But `head1()` splits
+the message on `" | "` and returns the WHOLE first clause, which is "from
+must be a bundled table or a custom frequency vector". The first runner
+invocation died on the rail's own `stopif` ("degen: the from-option head
+moved") -- the rail caught its own draft, exactly as intended. The fix was
+applied to BOTH the runner tail and the U7 unit in the assemblers (never
+hand-edited in place) and the lane regenerated: the boundary contrast now
+compares the true clause heads, and the runner reached `OVERALL PASS`. The
+incident is why the boundary-contrast assertions are split `" | "`-aware
+rather than substring-based: a substring rail would have passed the short
+literal vacuously.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the audited probe ledger (audit green: 38 arms
+byte-exact on live re-fire, 8 degen twins, 10/10 fires-and-anti anchors,
+10 scalars re-fired); neither is ever hand-edited in place. The plants'
+canonical texts hash to the committed dual-kernel checksum
+(`plant_sha256=8956916dfe9065c5...`, `spec_sha256=82469f962fbe4a3b...`);
+reifying the lane reproduces every witness byte for byte. Differentiation
+from CS-17 (the governance-container face): CS-17 adjudicated an in-memory
+container behind S7 property gates; CS-18 adjudicates a converter whose
+accepted arms return a real matrix and whose two option arguments carry
+one validator under two names -- the D11 posture therefore rides a DISCRETE
+column-sum glyph, the first witness class in the series that had to commit
+a glyph rather than a class token for its accepting arms.
+
+### Gate forensics
+
+The scenarios leg for this lane (the seventeenth) was render-verified
+before the full local burn. The T0 seal moved 626 -> 627 with the
+generator's refusal witnessed verbatim (the DEFECT line naming 627 against
+the sealed 626, run against a doctored budget) before the deliberate
+re-seal, per the budget law; the reified manifest carries 112 files, the
+new law file on shard 4, byte-deterministic on re-mint.
