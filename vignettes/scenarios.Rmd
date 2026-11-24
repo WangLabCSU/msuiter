@@ -1061,13 +1061,13 @@ if (dir.exists(out)) {
     identical(ti, td)
   rng_ok <- identical(sv[["rng-before"]], "FALSE") &&
     identical(sv[["rng-after"]], "FALSE")
-  cat("the 42-law class census splits 39/2/1 between validator, the shared",
+  cat("the 42-law class census splits 37/2/3 between validator, the shared",
       "digest class and the property gate exactly as committed:",
       split_ok, "| the gate, derived-hash, uniqueness and digest clauses",
       "speak verbatim and the integer plant keeps its glyph:",
       roster_ok, "\n")
   cat("the precedence row cannot trade clauses under both anchors:", prec_ok,
-      "| the four boundary pairs stand (4 accepted, 4 refused):", dg_ok,
+      "| the four boundary pairs stand (5 accepted, 3 refused):", dg_ok,
       "| the canonical rendering, replay identity and dual-kernel tail hold:",
       spec_ok, "| the adjudication core is RNG-free:", rng_ok, "\n")
 }

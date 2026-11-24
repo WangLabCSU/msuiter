@@ -105,7 +105,7 @@ both halves (the accepting twin and the refusing twin) side by side.
 | receipt | committed bytes |
 |---|---|
 | `cs17_specs.tsv` | 6 accepted arms: class token `s7:msuiter::MsCatalog` plus the full identity rendering (shape, storage glyph, both identity bits, digest, format line), and the `s7:character` replay identity |
-| `cs17_laws.tsv` | 42 arms: class census MEASURED 39 validator + 3 property-gate, every clause verbatim, every mode `reject` |
+| `cs17_laws.tsv` | 42 arms: class census MEASURED 37 validator + 3 property-gate + 2 shared-digest-input, every clause verbatim, every mode `reject` |
 | `cs17_precedence.tsv` | 10 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
 | `cs17_degenerates.tsv` | 4 boundary pairs (8 rows): the legal 4x0 empty queue against the zero-channel container, the row-uniqueness law against the row-existence law, the 1x1 minimal against the empty queue, the skipped tail against its absence -- hi and lo committed side by side |
 | `cs17_scalars.tsv` | 10 keys: the gate-boundary class token, both storage glyphs, the two canonical digests, the format line, the dual-kernel tail pair, and both RNG-purity rails (the adjudication core never seeds) |
