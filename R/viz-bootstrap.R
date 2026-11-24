@@ -237,7 +237,8 @@ plot_boot_stability <- function(fit, sample = 1L) {
     "input",
     "sample must be an index or a column name",
     i = "one sample per CI face",
-    j = paste0("received: ", msuiter_quote_trunc(sample))
+    j = paste0("received: ", msuiter_quote_trunc(sample)),
+    c = "pass an in-range index or an existing colname"
   )
 }
 

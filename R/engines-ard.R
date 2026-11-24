@@ -144,7 +144,9 @@ ms_ard <- function(a0 = 10, b0 = 5, tol = 1e-5, max_iter = 2000, seed = 1) {
     msuiter_abort(
       "input",
       "counts must be a numeric matrix",
-      i = "the ARD kernel consumes the MsCatalog counts slot (transposed to t(counts) for the FFI)"
+      i = "the ARD kernel consumes the MsCatalog counts slot (transposed to t(counts) for the FFI)",
+      j = paste0("received: ", class(counts)[1L]),
+      c = "pass a channels x samples numeric matrix"
     )
   }
   if (!is.numeric(k0) || length(k0) != 1L || is.na(k0) || k0 < 1 ||
@@ -152,7 +154,9 @@ ms_ard <- function(a0 = 10, b0 = 5, tol = 1e-5, max_iter = 2000, seed = 1) {
     msuiter_abort(
       "input",
       "`k0` must be a single positive whole number",
-      i = paste0("got: ", format(k0))
+      i = "k0 is the number of components the ARD kernel estimates",
+      j = paste0("got: ", format(k0)),
+      c = "pass a whole number k0 >= 1"
     )
   }
   ms_ard_rust(

@@ -166,14 +166,17 @@ plot_calibration_curve <- function(calibration_df, window = NULL, se = TRUE) {
       "calibration_df$pass_window must be logical without NAs",
       i = "hand-built tables must pass the kernel verdict column verbatim",
       j = paste0("class: ", paste(class(df$pass_window), collapse = "/"),
-                 "; NAs: ", sum(is.na(df$pass_window)))
+                 "; NAs: ", sum(is.na(df$pass_window))),
+      c = "carry the logical pass_window column through unchanged"
     )
   }
   if (se && anyNA(df$se)) {
     msuiter_abort(
       "input",
       "calibration_df$se must be non-missing when se = TRUE",
-      j = paste0("NAs: ", sum(is.na(df$se)))
+      i = "se = TRUE requests the standard-error ribbon",
+      j = paste0("NAs: ", sum(is.na(df$se))),
+      c = "populate the se column or pass se = FALSE"
     )
   }
   fail <- df[!df$pass_window, , drop = FALSE]

@@ -81,6 +81,10 @@
 # the T0 roster; witness: local run nb=265 failed=0 error=0 warning=0, measured
 # manifest sum 626 (generator refusal witnessed at the pre-seal re-mint
 # attempt, the verbatim DEFECT line naming 626 against the sealed 625).
+# 2026-11-24 roster addition at constant 626: the abort-contract law row
+# (test-abort-contract.R, 0 s integer weight, 5 expects) joined the T0
+# roster; witness: local run nb=5 failed=0 error=0 warning=0, elapsed 0.4 s,
+# so the measured manifest sum stays 626 (a zero-weight row moves no seal).
 key	value	note
-t0-measured	626	measured 2026-11-24 (integer manifest seconds, tier T0; 2026-11-24 seal 625 superseded by the CS-17 row)
+t0-measured	626	measured 2026-11-24 (integer manifest seconds, tier T0; 2026-11-24 abort-contract row joins at 0 s, sum unchanged)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness

@@ -20,6 +20,7 @@ shard	file	seconds	tier
 4	test-viz-batch2.R	2	T0
 4	test-viz-first-batch.R	11	T0
 4	test-xval-sigminer.R	10	T0
+5	test-abort-contract.R	0	T0
 5	test-calibrate-real.R	1	T0
 5	test-calibrate.R	0	T0
 5	test-capability-matrix-truth.R	0	T0
