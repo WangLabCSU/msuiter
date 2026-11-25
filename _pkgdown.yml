@@ -180,6 +180,11 @@ articles:
   contents:
   - get-started
   - tour
+- title: "Concepts"
+  navbar: "Concepts"
+  desc: "What mutational signatures are, the channel systems msuiter tallies, and where the statistical discipline enters."
+  contents:
+  - articles/mutation-signatures
 - title: "Core workflows"
   navbar: "Core workflows"
   desc: "The task guides: bring data in, build catalogs, extract de novo, fit and test."
