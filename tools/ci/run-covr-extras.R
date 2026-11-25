@@ -18,6 +18,14 @@
 # usage: run-covr-extras.R [--types=examples,vignettes] [--out-srt-prefix=/tmp]
 #                          [--root=<dir>] [--selftest]
 # The merge step's glob contract: <prefix>msuiter-extras-<type>.srt.
+#
+# Production snapshots the tree exactly like run-covr-shard.R does. The
+# extras leg once ran package_coverage() in place on the shared checkout
+# while the K shards ran their own instrumented installs beside it, and the
+# trampled compile state surfaced twice as an opaque "cannot open the
+# connection" in the extras child (scheduled runs @fb9e732 2026-11-25 and
+# the REV33-era cycle) while every shard stayed green. The shards snapshot
+# for precisely this reason; the extras leg now does too.
 
 .args <- local({
   ca <- try(commandArgs(trailingOnly = TRUE), silent = TRUE)
@@ -78,6 +86,31 @@
     if (is.na(root)) quit(status = 2L)
   }
   source(file.path(root, "tools", "ci", "covr-srt-shape.R"))
+
+  # Snapshot the tree (run-covr-shard.R idiom): covr's instrumented install
+  # writes mutable state into the checkout itself -- src/*.o, src/*.gcno, the
+  # generated src/Makevars -- and the K shards compile beside this leg in the
+  # same checkout. One snapshot serves both types; the vignette rebuild writes
+  # into the snapshot, never into the shared tree.
+  stamp <- format(Sys.time(), "%Y%m%dT%H%M%S")
+  snap <- file.path(tempdir(), paste0("covr-tree-extras-", Sys.getpid(), "-", stamp))
+  dir.create(snap, recursive = TRUE)
+  entries <- list.files(root, all.files = TRUE, include.dirs = FALSE)
+  entries <- setdiff(entries, c(".git", ".Rproj"))
+  for (e in entries) {
+    ok <- suppressWarnings(system2("cp", c("-Rc", file.path(root, e), snap),
+                                   stdout = NULL, stderr = NULL))
+    if (!identical(as.integer(ok), 0L))
+      suppressWarnings(system2("cp", c("-R", file.path(root, e), snap),
+                               stdout = NULL, stderr = NULL))
+  }
+  unlink(file.path(snap, "src/rust/target"), recursive = TRUE)
+  unlink(file.path(snap, "src/rust/.cargo"), recursive = TRUE)
+  unlink(list.files(file.path(snap, "src"), pattern = "[.](gcda|gcno|o|so|dll)$",
+                    full.names = TRUE))
+  unlink(file.path(snap, "src/Makevars"))
+  on.exit(unlink(snap, recursive = TRUE), add = TRUE)
+
   types <- strsplit(.kv("types", "examples,vignettes"), ",", fixed = TRUE)[[1L]]
   prefix <- .dir.prefix(.kv("out-srt-prefix", "/tmp"))
   attest <- function(ty, status, why = NULL, lines = NULL) {
@@ -88,7 +121,7 @@
     cat(line, "\n", sep = "", file = stderr())
   }
   for (ty in types) {
-    cov <- tryCatch(covr::package_coverage(path = root, type = ty, quiet = TRUE,
+    cov <- tryCatch(covr::package_coverage(path = snap, type = ty, quiet = TRUE,
                                            install_path = tempfile("covr-lib-"),
                                            pre_clean = FALSE),
                     error = function(e) e)
