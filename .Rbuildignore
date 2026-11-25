@@ -19,3 +19,5 @@
 ^bench$
 ^tools/kl-crosscheck/driver/target$
 ^paper$
+^docs$
+vignettes/[.]quarto$
