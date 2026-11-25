@@ -177,9 +177,16 @@ test_that("US-H3 the articles-prefixed roster entries join the auditable set", {
   yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
   pref <- grep("^  - articles/", yml, value = TRUE)
   # Post-split census: the paper corpus (devlogs, research dossiers, reviews)
-  # moved to the top-level paper/ tree, leaving 10 governance qmd articles.
-  expect_gte(length(pref), 10L)
+  # moved to the top-level paper/ tree, leaving the governance qmd articles.
+  # The floor is pinned to the tree, not to a frozen literal: a hard number
+  # here sat at exactly 10 with zero headroom, so a deleted qmd article would
+  # have reddened on the count rather than on the roster law that owns it.
   stems <- sub("^  - articles/", "", pref)
+  qmds <- sort(sub("[.]qmd$", "",
+                   list.files(file.path(.ms_root, "vignettes", "articles"),
+                              pattern = "[.]qmd$")))
+  expect_identical(sort(stems), qmds,
+                   info = "articles/ roster and vignettes/articles/*.qmd diverged")
   set <- ctx$e$ef_article_set(.ms_root)
   hidden <- setdiff(stems, set)
   expect_identical(hidden, character(0),
