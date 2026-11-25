@@ -10,7 +10,7 @@
 //! deterministic text rendering); R-side provenance wiring is the
 //! assembly unit's job.
 //!
-//! # Routing table (SPMG semantics, `vignettes/articles/research-04-source-audit.qmd` section 1)
+//! # Routing table (SPMG semantics, `paper/research-04-source-audit.qmd` section 1)
 //!
 //! | input event                                          | destination        |
 //! |------------------------------------------------------|--------------------|

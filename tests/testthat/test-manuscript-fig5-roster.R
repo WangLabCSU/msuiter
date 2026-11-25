@@ -35,7 +35,7 @@
 
 test_that("the committed Fig. 5 row names every section-3.4 witness lane", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
-  manuscript <- .ms_roster_file("vignettes/articles/paper-draft.qmd")
+  manuscript <- .ms_roster_file("paper/paper-draft.qmd")
   res <- .roster_run(script, manuscript)
 
   expect_match(res$msgs, "script-truth: 20 cited run_\\*\\.R present")
@@ -45,7 +45,7 @@ test_that("the committed Fig. 5 row names every section-3.4 witness lane", {
 
 test_that("a Fig. 5 row that drops a narrated lane is DRIFT (CS-18 witness)", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
-  src <- .ms_roster_file("vignettes/articles/paper-draft.qmd")
+  src <- .ms_roster_file("paper/paper-draft.qmd")
   # Rewind the row to its pre-CS-18 state: strip the three appended clauses.
   tampered <- .roster_tamper(src, function(lines) {
     sub(", CS-18 convert-witness, CS-19 compare-witness, CS-20 kselect-witness\\)", ")", lines)
@@ -58,7 +58,7 @@ test_that("a Fig. 5 row that drops a narrated lane is DRIFT (CS-18 witness)", {
 
 test_that("a section-3.4 lane with no Fig. 5 panel is DRIFT (extra panel)", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
-  src <- .ms_roster_file("vignettes/articles/paper-draft.qmd")
+  src <- .ms_roster_file("paper/paper-draft.qmd")
   # Append a phantom lane to the row that section 3.4 never narrates.
   tampered <- .roster_tamper(src, function(lines) {
     sub("CS-20 kselect-witness\\)", "CS-20 kselect-witness, CS-21 phantom-witness)", lines)
@@ -71,7 +71,7 @@ test_that("a section-3.4 lane with no Fig. 5 panel is DRIFT (extra panel)", {
 
 test_that("a section-3.4 bullet citing an uncommitted witness script is DRIFT", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
-  src <- .ms_roster_file("vignettes/articles/paper-draft.qmd")
+  src <- .ms_roster_file("paper/paper-draft.qmd")
   # Point one citation at a script that is not in the tree.
   tampered <- .roster_tamper(src, function(lines) {
     sub("bench/scenarios/run_kselect_witness\\.R", "bench/scenarios/run_no_such_witness.R", lines)
@@ -84,7 +84,7 @@ test_that("a section-3.4 bullet citing an uncommitted witness script is DRIFT", 
 
 test_that("a manuscript with no Fig. 5 row is a structural error, not silent green", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
-  src <- .ms_roster_file("vignettes/articles/paper-draft.qmd")
+  src <- .ms_roster_file("paper/paper-draft.qmd")
   tampered <- .roster_tamper(src, function(lines) {
     grep("^\\|\\s*Fig\\.\\s*5\\s*\\|", lines, invert = TRUE, value = TRUE)
   })

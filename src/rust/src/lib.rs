@@ -1630,7 +1630,7 @@ fn ms_match_solutions_rust(estimated: Robj, reference: Robj, dim: i32, threshold
 // ---------------------------------------------------------------------------
 // U-M4-01 null-distribution face: the memo §5 `ms_compare_null_rust` —
 // the frozen null families behind `ms_compare()`'s zero-calibrated cosine
-// (vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd §2/§5). The kernel
+// (paper/devlog-2026-10-04-M4-01-design-memo.qmd §2/§5). The kernel
 // (compare.rs) reports mean/sd/mc_se/quantiles; the frozen MC-SE
 // tolerance is enforced at the R face.
 // ---------------------------------------------------------------------------

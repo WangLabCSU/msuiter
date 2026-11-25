@@ -3,7 +3,7 @@ title: "msuiter roadmap (ROADMAP) -- v3 (dual-track versioning + organizational 
 ---
 
 > v3 (2026-09-28): restructured per the five-expert review adjudication
-> ([vignettes/articles/review-00-synthesis.qmd](https://wanglabcsu.github.io/msuiter/articles/review-00-synthesis.html)) -- the original M0-M8
+> ([paper/review-00-synthesis.qmd](https://github.com/WangLabCSU/msuiter/blob/main/paper/review-00-synthesis.qmd)) -- the original M0-M8
 > estimates were systematically underestimating by ~3x and carried no
 > minimal-shareable-version cut line; this revision adopts the **dual-track
 > versioning scheme** and makes the organizational action items that require
@@ -228,8 +228,8 @@ build_independent declaration, fully offline tests).
 
 ### M7 -- benchmark completeness + paper (8-10 weeks)
 
-- [x] full scenario grid (ARCH section 8 upgraded edition: purity / caller / co-adversarial / out-of-catalog / hypermutator arms / category-count intervals) + three-layer scenario isolation + protocol freeze (**the prerequisite design memo is frozen** vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd -- API / scenario axes / scoring contracts / acceptance anchors / PI adjudications D1+D2 adopted (TP-only) 2026-10-05 -- driver v1 delivered) (evidence: vignettes/articles/devlog-2026-10-05-benchmark-design-memo.qmd:3 frozen entry; bench/results/docker_m7_degraded_20261009-184833/ the full 42-cell authoritative run; main@f90ea1d #13)
-- [x] competitor-container harness (bench/ only); the hardware-pinned bench full table; `ms_benchmark()` end-to-end (evidence: bench/m7/competitor-container harness [U-M7-02 #10-#12, bench/ domain only]; NAMESPACE:21 `ms_benchmark` export + tests/testthat/test-ms-benchmark-driver.R + man/ms_benchmark.Rd; the hardware-pinned full table bench/results/docker_m7_degraded_20261010-202330/timings_sharded_master.csv 42 rows all ok, zero cached [authoritative single shot, shard pass with zero cache hits], reader validator rc=0 with an empty-bucket verdict, vignettes/articles/devlog-2026-10-10-m7-hardware-pin.qmd:144 the status-column census, and its "Fresh ignition -- verbatim attestation" section)
+- [x] full scenario grid (ARCH section 8 upgraded edition: purity / caller / co-adversarial / out-of-catalog / hypermutator arms / category-count intervals) + three-layer scenario isolation + protocol freeze (**the prerequisite design memo is frozen** paper/devlog-2026-10-05-benchmark-design-memo.qmd -- API / scenario axes / scoring contracts / acceptance anchors / PI adjudications D1+D2 adopted (TP-only) 2026-10-05 -- driver v1 delivered) (evidence: paper/devlog-2026-10-05-benchmark-design-memo.qmd:3 frozen entry; bench/results/docker_m7_degraded_20261009-184833/ the full 42-cell authoritative run; main@f90ea1d #13)
+- [x] competitor-container harness (bench/ only); the hardware-pinned bench full table; `ms_benchmark()` end-to-end (evidence: bench/m7/competitor-container harness [U-M7-02 #10-#12, bench/ domain only]; NAMESPACE:21 `ms_benchmark` export + tests/testthat/test-ms-benchmark-driver.R + man/ms_benchmark.Rd; the hardware-pinned full table bench/results/docker_m7_degraded_20261010-202330/timings_sharded_master.csv 42 rows all ok, zero cached [authoritative single shot, shard pass with zero cache hits], reader validator rc=0 with an empty-bucket verdict, paper/devlog-2026-10-10-m7-hardware-pin.qmd:144 the status-column census, and its "Fresh ignition -- verbatim attestation" section)
 - [x] bootstrap-vs-sigminer authoritative campaign closed: the >=100x targets row MEASURED-false at 15.37x, tier B, secondary A1/A3 14.2209x (single authoritative ignition under the co-tenancy bar, data seal re-verified byte-identical) (evidence: bench/results/bootstrap_vs_sigminer_20261013T175859Z/result.md:4; vignettes/articles/performance.qmd:68; bench/results/bootstrap_vs_sigminer_20261013T175859Z/witnesses/host_census.jsonl:1)
 - [ ] paper draft (headline A or B per the G0 outcome) + renv/Docker/seed
   one-command reproduction + bioRxiv co-posting
@@ -270,7 +270,7 @@ G3 (quarterly competitive review) ───────────────�
 ## SigProfiler parity campaign (P0-P7) and the P8 face: mapping onto the M/G vocabulary
 
 The parity campaign is specified in
-`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` section 5 (one
+`paper/research-09-sigminer-v3-parity-plan.qmd` section 5 (one
 phase, one issue, one PR) and its phases are named P0-P7 there. That is a
 campaign vocabulary, not a milestone vocabulary; this section is the single
 index between the two, so a phase can be located in the version track above
@@ -297,7 +297,7 @@ stops at its own PR and does not block the others.
 
 P8 is not a plan phase. It is Pillar 3's case-study face, carried in `NEWS.md`
 ("P8 - Application-scenario case studies") and designed in
-`vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd`; in
+`paper/devlog-2026-10-28-p8-treatment-forensics-design.qmd`; in
 this roadmap it is documentation-plus-fixtures work under M7 and M8. Its CS-3
 face ships `ms_treatment_report()`, and the deferred list above names
 "therapy forensics" as a hard v1.x non-goal. Controller ruling recorded here

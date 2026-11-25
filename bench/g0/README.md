@@ -2,7 +2,7 @@
 
 > All the own components that are independent of the competitor environment: the simulation generation, the seed discipline, the coverage-rate computation, the own presence
 > LRT, the grid configuration, the container adapter layer and the orchestrator. The protocol was frozen on 2026-09-28
-> ([pi-adjudication](../../vignettes/articles/devlog-2026-09-28-G0-pi-adjudication.qmd)
+> ([pi-adjudication](../../paper/devlog-2026-09-28-G0-pi-adjudication.qmd)
 > F1–F4); this harness is the runnable implementation of the frozen protocol, **it does not alter any frozen parameter**.
 >
 > Status: the harness initial build is complete and passed the independent-audit repairs (2026-09-28: the NB-branch EM-mathematics error P0-1, the sensitivity-arm leakage P0-2, the frozen-space shrinkage P0-3 and the P1/P2 batches all landed);

@@ -1,5 +1,5 @@
 # MsComparison: the result container of ms_compare() (U-M4-01;
-# CAPABILITY-MATRIX L-F, design memo vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd).
+# CAPABILITY-MATRIX L-F, design memo paper/devlog-2026-10-04-M4-01-design-memo.qmd).
 #
 # metrics:   named list of k_est x k_ref similarity matrices (dimnames kept);
 # hungarian: data.frame sweep (one row per threshold) + classification table

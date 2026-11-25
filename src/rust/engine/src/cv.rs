@@ -1,5 +1,5 @@
 //! SUITOR-style cross-validation kernel (U-M2-02; `vignettes/articles/architecture.qmd` §2,
-//! design memo `vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd` §2/§5).
+//! design memo `paper/devlog-2026-09-30-M2-pipeline-design-memo.qmd` §2/§5).
 //!
 //! # Upstream semantics (pinned to source, D11/D13)
 //!

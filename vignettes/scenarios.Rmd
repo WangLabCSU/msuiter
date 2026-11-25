@@ -228,7 +228,7 @@ The committed tables for this leg:
 `treatment_timing.csv`. The recognition anchors and the adjudication-floor
 rationale are documented at the face's manual page
 (`?ms_treatment_report`) and in the Phase-8 design memo under
-`vignettes/articles/devlog-*.qmd`.
+`paper/devlog-*.qmd`.
 
 ## Artifact forensics: built-in sentries against planted spikes
 
@@ -264,7 +264,7 @@ The committed tables for this leg: `bench/scenarios/out/qc_sentries.csv`,
 `qc_plant_counts.tsv`, `qc_plant_dict.tsv`, `qc_plant_exposures.tsv`.
 The certified backing and the declined-scope rails are the manual pages
 (`?ms_qc_sentries`, `?ms_qc_roster_share`, `?ms_qc_provenance`) and the
-scenario devlog under `vignettes/articles/devlog-*-p3-cs4-*.qmd`.
+scenario devlog under `paper/devlog-*-p3-cs4-*.qmd`.
 
 ## Stratification decision: the frozen GMM cutoff adjudicated
 
@@ -316,7 +316,7 @@ with the plant `stratify_plant_totals.tsv`. The certified backing -- the
 frozen upstream rule, the twin parity battery and the declined-scope rails
 -- are the manual pages (`?ms_stratify_hypermutants`,
 `?plot_hypermutator_burden`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs5-*.qmd`.
+`paper/devlog-*-p3-cs5-*.qmd`.
 
 ## Downsample frontier: the committed thinning ladder adjudicated
 
@@ -384,7 +384,7 @@ The committed tables for this leg: `bench/scenarios/out/cs6_plant.csv`,
 `cs6_degenerates.tsv`. The certified backing -- the thinning law's single
 wording, the presence face's manual and the declined-scope rails -- are the
 manual pages (`?ms_downsample`, `?ms_test_presence`) and the scenario devlog
-under `vignettes/articles/devlog-*-p3-cs6-*.qmd`.
+under `paper/devlog-*-p3-cs6-*.qmd`.
 
 The seventh leg drives the shipped Jiang reconstruction flag of
 `ms_compare` -- the per-sample cosine of every catalog column against the
@@ -461,7 +461,7 @@ The committed tables for this leg: `bench/scenarios/out/cs7_plant.csv`,
 and `cs7_degenerates.tsv`. The certified backing -- the flag's documented
 contract on the exported face and the declined-scope rails -- are the
 manual page (`?ms_compare`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs7-*.qmd`.
+`paper/devlog-*-p3-cs7-*.qmd`.
 
 The eighth leg drives the shipped partition face `ms_cluster_signatures`
 -- connected components of the cosine graph at the face's shipped default
@@ -548,7 +548,7 @@ The committed tables for this leg: `bench/scenarios/out/cs8_roster.csv`,
 and `cs8_degenerates.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_cluster_signatures`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs8-*.qmd`.
+`paper/devlog-*-p3-cs8-*.qmd`.
 
 The ninth leg drives the shipped offline catalog-currency family --
 `ms_catalog_currency_update(source =, offline = TRUE)` as the injected
@@ -599,7 +599,7 @@ The committed tables for this leg: `bench/scenarios/out/cs9_arms.csv`,
 faces' documented contract on the exported surface and the declined-scope
 rails -- are the manual pages (`?ms_catalog_currency`,
 `?ms_catalog_currency_update`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs9-*.qmd`.
+`paper/devlog-*-p3-cs9-*.qmd`.
 
 The tenth leg drives the shipped two-group exposure-differentiation face
 -- `ms_exposure_test()` with its per-signature rank-sum verdicts, BH
@@ -642,7 +642,7 @@ The committed tables for this leg: `bench/scenarios/out/cs10_arms.csv`,
 certified backing -- the face's documented contract on the exported
 surface and the declined-scope rails -- are the manual page
 (`?ms_exposure_test`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs10-*.qmd`.
+`paper/devlog-*-p3-cs10-*.qmd`.
 
 The eleventh leg drives the shipped coverage-verdict face --
 `ms_calibration_verdict()` with its per-cell inclusivity lattice over the
@@ -682,7 +682,7 @@ The committed tables for this leg: `bench/scenarios/out/cs11_arms.csv`,
 `cs11_degenerates.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_calibration_verdict`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs11-*.qmd`.
+`paper/devlog-*-p3-cs11-*.qmd`.
 
 The twelfth leg drives the shipped engine-spec factory --
 `ms_sparse()` with its S7 property gates, its variant enum, its
@@ -727,7 +727,7 @@ The committed tables for this leg: `bench/scenarios/out/cs12_specs.csv`,
 `cs12_degenerates.tsv`. The certified backing -- the factory's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual page (`?ms_sparse`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs12-*.qmd`.
+`paper/devlog-*-p3-cs12-*.qmd`.
 
 The thirteenth leg drives the shipped disk-interoperability pair --
 `ms_import()` / `ms_export()` with its format enum and deferred-WTSI
@@ -796,7 +796,7 @@ The committed tables for this leg: `bench/scenarios/out/cs13_specs.tsv`,
 `cs13_fidelity.tsv`. The certified backing -- the pair's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_import`, `?ms_export`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs13-*.qmd`.
+`paper/devlog-*-p3-cs13-*.qmd`.
 
 ```{r segments-witness, message = FALSE}
 out <- file.path(PKG, "bench", "scenarios", "out")
@@ -856,7 +856,7 @@ The committed tables for this leg: `bench/scenarios/out/cs14_specs.tsv`,
 `cs14_scalars.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_segments`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs14-*.qmd`.
+`paper/devlog-*-p3-cs14-*.qmd`.
 
 ## The reference-container face as a governed witness
 
@@ -925,7 +925,7 @@ The committed tables for this leg: `bench/scenarios/out/cs15_specs.tsv`,
 `cs15_scalars.tsv`. The certified backing -- the factory's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_refdb`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs15-*.qmd`.
+`paper/devlog-*-p3-cs15-*.qmd`.
 
 ## The ARD engine descriptor as a governed witness
 
@@ -995,7 +995,7 @@ The committed tables for this leg: `bench/scenarios/out/cs16_specs.tsv`,
 `cs16_scalars.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_ard`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs16-*.qmd`.
+`paper/devlog-*-p3-cs16-*.qmd`.
 
 ## The governance container as a governed witness
 
@@ -1084,7 +1084,7 @@ The committed tables for this leg: `bench/scenarios/out/cs17_specs.tsv`,
 `cs17_scalars.tsv`. The certified backing -- the face's documented
 contract on the exported surface and the declined-scope rails -- are the
 manual pages (`?ms_catalog`) and the scenario devlog under
-`vignettes/articles/devlog-*-p3-cs17-*.qmd`.
+`paper/devlog-*-p3-cs17-*.qmd`.
 
 ## Reproducing the full verdicts
 

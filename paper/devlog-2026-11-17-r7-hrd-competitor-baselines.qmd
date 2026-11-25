@@ -1,0 +1,105 @@
+---
+title: "R7 competitor baselines — the same-input HRD adjudication against scarHRD 0.1.1: six planted GRCh37 records expose the chrDel-silence and composite gaps, adjudicated by hand-traced goldens corroborated byte-exact on the first real invocation (reified, paper-grade)"
+---
+
+Date: 2026-11-17.
+Provenance: **reified, primary-banked**. The competitor face ran locally
+against the installed scarHRD 0.1.1 public entry point `scar_score()`
+(`reference="grch37"`, `chr.in.names=TRUE`); the msuiter face ran
+`ms_hrd_report()` under injected sigminer-hg19 geometry on the identical
+cohort bytes. Every figure below is quoted verbatim from the committed
+evidence trio `bench/scenarios/out/hrd_baselines_{cohort.tsv,arms.tsv,
+witness.csv}` as re-minted by the committed runner
+`bench/scenarios/run_hrd_baselines.R` on this change set's tree, or from the
+committed law-test transcript. The hand-traced goldens were derived from the
+scarHRD 0.1.1 sources read verbatim (all seven R files) plus a discriminating
+probe, before any competitor invocation; the first real invocation
+reproduced all six records byte-exact. No figure in this devlog comes from
+lane lore.
+
+## 1. Mandate
+
+The novelty scan (paper/devlog-2026-11-10-novelty-scan.qmd §4
+R7) rules: *"HRD must be benchmarked against HRDetect/SigProfiler-assignment
+on identical inputs."* This devlog lands the first competitor arm of that
+mandate on identical inputs — the scarHRD caller-side trio
+(HRD-LOH/TAI/LST), the public face of scarHRD 0.1.1, scored on the same
+planted segmentation as the msuiter Cortes-Castro-composite face.
+
+## 2. Expedition and law separation
+
+The runner plants a six-record cohort (B1-B6) on real GRCh37 coordinates,
+converts to scarHRD's 8-column TSV grammar (`total_cn`, `A_cn` written as
+the caller-side major, `B_cn`, written ploidy), and calls the competitor's
+public face per record. The law test
+(`tests/testthat/test-scenario-hrd-baselines.R`) never imports scarHRD —
+the committed scarHRD columns are adjudicated against hand-traced goldens,
+and the msuiter columns are adjudicated end to end: witness must equal a
+fresh `ms_hrd_report()` scoring of the committed cohort, which must equal
+the verbatim Cortes-Castro dual oracles in `helper-hrd.R`. Geometry
+attribution travels inside the witness itself: each row names which
+centromere table and which pLOH denominator scored it
+(scarHRD: `chrominfo_grch37`, centromere-snapped LST arms; msuiter:
+sigminer hg19 arms, denominator 2881033286, injected). CI carries the law;
+the competitor face is a local expedition requirement, never a CI
+dependency.
+
+## 3. The hand-trace law and its corroboration
+
+The goldens were derived column-by-column from the verbatim 0.1.1 sources:
+the `read.table`+shift path (cols 7/8/9 take the written A/B/ploidy),
+`preprocess.hrd` (sex-chromosome drop, major/minor swap, adjacency shrink on
+the post-swap pair), `calc.hrd` (whole-chromosome `chrDel` detection
+*before* the major-cap, `>15e6` strict LOH gate, chrDel-arm exclusion),
+`calc.ai_new` (`>=1e6` inclusive min-size gate before shrink; per-chromosome
+ploidy grouped by the **written A column** — probe-confirmed, not the total
+column; even/odd branch imbalance tests; centromere-proximity downgrades of
+interstitial to telomeric calls; single-segment-chromosome whole-chromosome
+rule), and `calc.lst` (per-arm shrink, arm snapping, strict `<3e6`
+segment-removal iterations, `>=10e6` flags, strict `<3e6` gap pairing). The
+first real invocation of the public face reproduced all six planted records
+exactly as hand-derived — the source law, the probe verdict, and the
+committed bytes agree to the digit.
+
+## 4. What the identical inputs say (verbatim from the committed witness)
+
+| record | scarHRD HRD-LOH | TAI | LST | HRD-sum | msuiter pLOH | aneu | composite |
+|--------|-----------------|-----|-----|---------|--------------|------|-----------|
+| B1 clean diploid | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| B2 telomeric AI + partial LOH + LST pair | 1 | 1 | 1 | 3 | 0.0427622178 | 1 | 0 |
+| B3 interstitial AI + partial LOH + LST pair | 1 | 1 | 1 | 3 | 0.0170947768 | 0 | 0 |
+| B4 whole-chromosome LOH | **0** | 0 | 0 | **0** | **0.0687331281** | 0 | 0 |
+| B5 balanced odd state, shrink-collapsed | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| B6 six-autosome whole-chrom state-4 LOH | **0** | 0 | 0 | **0** | **0.4281995050** | **6** | **1** |
+
+Three findings, each fired by a planted record:
+
+1. **The chrDel silence.** B4 carries a whole-chromosome LOH of 6.87% of
+   the haploid genome; scarHRD's `calc.hrd` detects every-chromosome
+   minor-loss *before* capping and then excludes those arms, reporting
+   zero LOH — and the AI face files it as a whole-chromosome event that
+   the reported telomeric count never sees. The Cortes-Castro composite
+   measures the same bytes as pLOH 0.0687. This is not a scoring error in
+   either package; it is two different questions.
+2. **The composite gap.** B6 is the record the paper needs: 42.8% pLOH
+   with six aneuploid chromosomes calls the composite HRD-positive in the
+   Cortes-Castro frame, while the scarHRD trio reports a pristine 0/0/0 —
+   the same genome is silent under the LOH/TAI/LST currency and positive
+   under the composite currency, on identical segment bytes.
+3. **Estimand currency on the concordant rows.** B2/B3 are captured by
+   both faces, but in different currencies: scarHRD counts gated segments
+   (half-open widths, strict `>15e6`), msuiter integrates a fraction of an
+   exact 2881033286-bp denominator (closed widths, no size floor). The
+   witness therefore ships its geometry-attribution columns beside every
+   number: a comparison that does not name its estimand is not a benchmark.
+
+## 5. Governance ledger
+
+TDD ran watched: the law test stood at FAIL 7 / PASS 0 before the runner
+and evidence existed, at PASS 64 / FAIL 0 after. The DS-3 gallery audit
+re-derives clean over the enlarged roster (witnesses=15, stamps-verified=15,
+violations=0, two-run byte-stable). The runner is executable-local
+(`[ ok ]` face + census line + exit status); the committed trio re-mints
+deterministically from it. D3 law untouched (no COSMIC matrices); G0
+sampling constants untouched; sealed evidence untouched — this change set
+adds, it does not supersede.

@@ -1,6 +1,6 @@
 # Engine registry (U-M0-04; ARCHITECTURE.md section 3.4, decisions A14/A17).
 #
-# The registry is data, not a class explosion (vignettes/articles/research-06-s7-class-system.qmd
+# The registry is data, not a class explosion (paper/research-06-s7-class-system.qmd
 # section 6): rows keyed by engine name carry the spec class, the fit function
 # and the governance fields (engine_version / contract_version / certified).
 # MsEngine objects are the first-class citizens of the API (A14); strings are

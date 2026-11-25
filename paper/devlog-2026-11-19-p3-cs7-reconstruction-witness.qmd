@@ -1,0 +1,117 @@
+---
+title: "CS-7 reconstruction-witness -- the shipped Jiang reconstruction flag adjudicated over planted truth: hard share rails, a committed ladder rung, and a one-ulp domain law (reified, paper-grade)"
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{CS-7 reconstruction-witness (2026-11-19)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Provenance: scenario `bench/scenarios/run_reconstruction.R`, law test
+`tests/testthat/test-scenario-reconstruction.R`, committed evidence under
+`bench/scenarios/out/` (`cs7_plant.csv`, `cs7_per_sample.csv`,
+`cs7_arms.csv`, `cs7_ladder.csv`, `cs7_scalars.csv`, `cs7_degenerates.tsv`).
+TDD record: RED watched (10 units -- 9 reddened on the absent-witness reads,
+the tenth on the absent-runner shape gate; zero right-reason misses) ->
+GREEN 10 units / 92 expectations / 0 failures / 0 errors; runner OVERALL PASS
+(14 adjudications plus the pre-write witness-finiteness census); double-run
+witness bytes `DET=IDENTICAL` (sha256 census). Face battery unregressed:
+test-ms-compare.R 14/0/0 (180 expects), test-ms-compare-boundary.R 5/0/0
+(15 expects), test-ms-simulate.R 5/0/0 (42 expects), test-refdb.R 8/0/0
+(138 expects).
+
+## 1. Mandate
+
+Pillar 3's seventh decision-record scenario. The scoping pass (a read-only
+survey re-verified line by line against the live tree) selected the one
+shipped decision face with a documented contract and provably zero prior
+coverage in the benchmark lanes: the **Jiang reconstruction flag** of
+`ms_compare`. The zero-coverage finding was established three ways -- the
+scenario lanes consume the face only on its hungarian half
+(`bench/scenarios/run_atlas.R`), the pillar-2 jiang lane reaches the
+internal helper with `catalogs = NULL, signatures_est = NULL` so the flag
+branch provably never executes in any lane, and the m1s/SBS lane carries
+no cosine or `ms_compare` content at all (a banked note claiming it did was
+refuted against the live tree and corrected here, per the
+verify-by-command protocol). Rails held: decision-record framing only,
+exported faces only, planted truth as the only ground, no new estimation
+machinery.
+
+## 2. The planted question
+
+The shipped flag (`R/ms-compare.R`, gated block at 337-356 reading the
+defaults `reconstruction_cosine = 0.969` at 37, scalar at 359-366) answers
+one question per catalog column: does the reconstruction
+`signatures_est %*% exposures_est` reproduce that column's shape within the
+cited cosine line? The face contract is documented on the exported
+generic (`@param catalogs` / `@param signatures_est`, `NAMESPACE` export);
+the shape and protocol gates (583-621) are spoken through the face, not
+bypassed. The provenance law is load-bearing for the reading: 0.969 is a
+CITED upstream median, never an anchor -- `bbaf042` (research-02,
+`paper/research-02-fitting-inference.qmd` lines 54 and 129)
+establishes that cosine above it still tolerates thousands of distinct
+attributions, so the flag is necessary, not sufficient. The scenario
+therefore records what the flag DOES on planted truth, never what the line
+means about real fits.
+
+The scenario plants a four-signature SBS96-subset dictionary (bundled bytes,
+measured pairwise separable: maximum off-diagonal cosine 0.0707) and eight
+count-scale samples with a circulant full-support weight design (every
+signature carries a strict fraction of every sample's total), then drives
+five arms through the exported face alone: the linear-expectation twin
+(exact), the seeded stochastic cohort (clean), a committed dictionary
+rotation (artifakt), a zeroed column (degenerate), and a deterministic
+corruption ladder blending the exposures toward their own rotated twin.
+
+## 3. Measured results
+
+- **Hard rails held.** Both clean arms (exact and stochastic) report
+  `share_reasonable == 1`; the rotation arm reports `share_reasonable == 0`
+  with its median below the line; the zeroed column speaks exactly one NA
+  bit at the planted column while the survivors keep the clean verdict.
+  The dual-derivation legs pin the flag's per-sample floats EXACTLY against
+  a hand-written cosine expression (portable arithmetic only -- this is the
+  cross-platform posture: integer verdict bytes are byte-frozen, the float
+  columns are censused and dual-derived, never demanded as foreign-platform
+  bytes).
+- **The committed ladder fact.** The corruption ladder is monotone
+  non-increasing in the blend weight, rung 0 reads the clean verdict, and
+  its last passing rung is committed at 0.32 as an observed fact at the
+  frozen plant -- never asserted a priori, never generalized.
+- **A domain law earned, not assumed.** The pre-write finiteness census
+  REFUSED the first ignition: `cos(x, x)` measures at one ulp above unity
+  (1.0000000000000002) on two of eight columns of this platform's sqrt
+  path -- the mathematically closed domain [0, 1] is not representation-
+  closed. The census now demands `<= 1 + 4 * .Machine$double.eps`, a
+  one-ulp domain slack with the probe recorded, so an alive column can
+  never be reddeed by representation alone and no off-domain byte can slip
+  through. The refusal-and-repair is the law working, and it is banked
+  with the CS-5 finiteness incident as the same family.
+- Determinism: the flag path is RNG-free; the always-on null Monte Carlo
+  (659 onward) is seed-frozen at the committed `cmp_seed`; both arms' bytes
+  reproduce identically across independent ignitions (`DET=IDENTICAL`).
+
+## 4. The governance face
+
+The law row joined the shard roster (weight 1 s, 92 expects); the manifest
+generator REFUSED the first re-mint exactly as the budget law requires
+("T0 weight moved to 616 s but the committed measurement says 615 s"), the
+refusal was witnessed, and the budget was re-sealed 615 -> 616 with the
+local-run witness (`nb=92 failed=0 error=0`) recorded verbatim in
+`tools/ci/pr-gate-budget.tsv` -- the fifth such deliberate re-seal on the
+ledger, each one witnessed, none silent. The manifest re-minted at k=6,
+files=100, t0=616 under the 800 ceiling; the shard-map law re-ran green
+(19/212) and `tools/ci-selfcheck.py` PASSes end-to-end.
+
+## 5. The paper face
+
+The scenario enters the paper as the seventh §3.4 bullet and the seventh
+Fig. 5 panel, pre-referenced to the PR number verified from the issue-PR
+number space before citation (#115). The scenarios page gains the seventh
+live leg -- three adjudications re-run through the exported face against
+the committed bytes (hard rails, NA bit, monotone ladder with its committed
+rung) -- and the seventh register row; the docs bridge and the pkgdown
+article list each gain their row. The declined-scope rails are spoken by the
+runner's own `[attest]` lines and grepped by the law: decision-record only,
+cited-line-not-anchor, no bootstrap, no intervals, no conformal framing,
+sanity harness untouched, bundled dictionary only, exported face only.

@@ -3,7 +3,7 @@
 Every directory here is a **committed, immutable measurement campaign**:
 benchmarks, floor-table calibrations, parity censuses, and their fairness
 attestations. These bytes are the anchors the paper cites
-(`vignettes/articles/paper-draft.qmd` Tables 1–2, Appendix A) and the
+(`paper/paper-draft.qmd` Tables 1–2, Appendix A) and the
 reproduction face re-derives (`vignettes/articles/reproduction-proof.qmd`).
 
 House laws that bind this directory:
@@ -48,8 +48,8 @@ House laws that bind this directory:
 kernel r2 re-mint and the census re-banked (168/168 @ `b1ce0f176cec2633`,
 banked `p6_regen_20261111-095635/census_regen_20261115.txt`) — the current
 committed O5 record. The supersession records are
-`vignettes/articles/devlog-2026-11-14-gen4-census-erratum.qmd` then
-`vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd`; sealed
+`paper/devlog-2026-11-14-gen4-census-erratum.qmd` then
+`paper/devlog-2026-11-15-batch-bridge-r2-remint.qmd`; sealed
 devlog bodies are byte-exact and are superseded only through errata.
 
 ## Regeneration

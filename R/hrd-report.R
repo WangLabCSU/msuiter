@@ -1,6 +1,6 @@
 # U-M6s-01 -- ms_hrd_report(): the HRD (homologous-recombination-deficiency)
 # report face. Public API and the two hard gates are the design memo's
-# (vignettes/articles/devlog-2026-10-07-m6s-hrd-report-design.qmd section 2); the verbatim
+# (paper/devlog-2026-10-07-m6s-hrd-report-design.qmd section 2); the verbatim
 # scorers and every frozen constant live in R/hrd-reference.R (single
 # ground truth: cran/SigMiner get_pLOH_score.R / get_Aneuploidy_score.R).
 # All violations raise `msuiter_error_*` conditions via msuiter_abort().

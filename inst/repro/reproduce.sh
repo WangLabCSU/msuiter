@@ -2,7 +2,7 @@
 # msuiter paper reproduction face (PP-1 lane; vignettes/articles/reproduction-proof.qmd).
 #
 #   --verify  (default) dry-run verification of every sealed number quoted in
-#             vignettes/articles/paper-draft.qmd against committed bytes: no container,
+#             paper/paper-draft.qmd against committed bytes: no container,
 #             no network, no long campaign. Each face prints FACE <name> rc=<n>;
 #             any FAIL exits non-zero.
 #   --full    additionally prints the operator-side regeneration recipes (and

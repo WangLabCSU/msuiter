@@ -7,12 +7,16 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This page navigates the repository's governance and technical corpus, which
-lives on this site as the articles listed below (converted from the former
-`docs/` tree; a handful of cross-references in older records still cite the
-historical paths). It links, never copies: the roster is re-derived from the
-repository bytes by the governing test, so an article added or renamed
-without a bridge row reddens the suite.
+This page navigates the repository's governance corpus, which lives on this
+site as the articles listed below (converted from the former `docs/` tree).
+It links, never copies: the roster is re-derived from the repository bytes
+by the governing test, so an article added or renamed without a bridge row
+reddens the suite.
+
+The paper corpus -- the manuscript spine, the campaign devlogs, the research
+dossiers and the independent-review round -- is not part of this site. It
+lives in the top-level `paper/` tree of the repository, self-contained and
+outside the package build; start from `paper/README.md` there.
 
 For the user-facing learning path (install, first analysis, and the task
 guides), start at [Get started](get-started.html) and the [tour](tour.html).
@@ -37,46 +41,12 @@ guides), start at [Get started](get-started.html) and the [tour](tour.html).
 | [ADR 0001: the 2bit reader selection — adopting the `twobit` crate (over `Cursor<Mmap>`)](adr-0001-twobit-reader-choice.html) | `adr-0001-twobit-reader-choice` |
 | [ADR 0002: the vendor size budget and the MSRV build proof (the U-M0-02 spike)](adr-0002-vendor-budget.html) | `adr-0002-vendor-budget` |
 
-## Research dossiers (the pre-implementation survey corpus)
+## Reproduction attestation
 
 | Article | What it is |
 |---|---|
-| [msuiter research executive summary (Executive Summary)](research-00-executive-summary.html) | `research-00-executive-summary` |
-| [Research report 01: the de novo signature-extraction method panorama and the NMF compute engines](research-01-extraction-methods.html) | `research-01-extraction-methods` |
-| [Research report 02: fitting/attribution, exposure statistical inference and post-processing analysis](research-02-fitting-inference.html) | `research-02-fitting-inference` |
-| [Research report 03: the application literature and the application-scenario panorama (2012–2026)](research-03-applications.html) | `research-03-applications` |
-| [Research report 04: the per-repository deep source audit](research-04-source-audit.html) | `research-04-source-audit` |
-| [Research report 05: the data standards, the licenses, the genome readers, the visualization, the benchmarks and the engineering practice](research-05-standards-data.html) | `research-05-standards-data` |
-| [Research report 06: the state of play of the S7 class system, the design patterns and the method-framework blueprint](research-06-s7-class-system.html) | `research-06-s7-class-system` |
-| [Research report 07: the complete algorithm-zoo inventory and the self-development opportunity list](research-07-algorithm-zoo.html) | `research-07-algorithm-zoo` |
-| [Research report 08: the fact-check audit report of the existing research documents](research-08-fact-check-audit.html) | `research-08-fact-check-audit` |
-| [09 · sigminer v3 parity plan — closing the SigProfiler result-performance gap via msuiter asset integration](research-09-sigminer-v3-parity-plan.html) | `research-09-sigminer-v3-parity-plan` |
-
-## Independent reviews (the five-expert adversarial round)
-
-| Article | What it is |
-|---|---|
-| [The five-expert review synthesis adjudication (Synthesis, 2026-09-28)](review-00-synthesis.html) | `review-00-synthesis` |
-| [The review 01: the computational biologist (an independent review, 2026-09-28)](review-01-computational-biologist.html) | `review-01-computational-biologist` |
-| [The review 02: the Rust/R systems-development expert (an independent review, 2026-09-28)](review-02-rust-r-engineer.html) | `review-02-rust-r-engineer` |
-| [The review 03: the machine-learning/statistics expert (an independent review, 2026-09-28)](review-03-ml-statistician.html) | `review-03-ml-statistician` |
-| [The review 04: the software-development expert (an independent review, 2026-09-28)](review-04-software-engineer.html) | `review-04-software-engineer` |
-| [The review 05: the Nature journal-editor perspective (an independent assessment, 2026-09-28)](review-05-nature-editor.html) | `review-05-nature-editor` |
-
-## Paper lane
-
-| Article | What it is |
-|---|---|
-| [msuiter — manuscript spine (PP-1 draft)](paper-draft.html) | `paper-draft` |
 | [Reproduction proof — msuiter paper lane (PP-1)](reproduction-proof.html) | `reproduction-proof` |
 
-## Release engineering
-
-| Article | What it is |
-|---|---|
-| [v0.1 release-engineering preparation checklist (the non-blocking preparation batch)](release-v0.1-checklist.html) | `release-v0.1-checklist` |
-
-## Campaign devlog (the dated decision & delivery records)
 
 | Article | What it is |
 |---|---|

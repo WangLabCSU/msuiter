@@ -6,7 +6,7 @@
 //!
 //! SigProfilerExtractor handles hypermutated cohorts through a GMM-derived
 //! "normalization cutoff". The design memo
-//! `vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd` pins the rule to upstream
+//! `paper/devlog-2026-09-30-GMM-stratify-memo.qmd` pins the rule to upstream
 //! master `cc6bf5ef` (tag v1.5.0; line numbers below refer to
 //! `SigProfilerExtractor/subroutines.py` = Sub and `sigpro.py` = Sig):
 //!
@@ -345,7 +345,7 @@ pub fn fit_gmm1d_with_rng(
 }
 
 /// Apply the frozen SigProfiler hypermutant normalization-cutoff rule
-/// (`vignettes/articles/devlog-2026-09-30-GMM-stratify-memo.qmd` §1.3) to per-sample
+/// (`paper/devlog-2026-09-30-GMM-stratify-memo.qmd` §1.3) to per-sample
 /// mutation totals.
 ///
 /// Protocol (upstream `cc6bf5ef`, Sub:149-200, Sig:913-921):

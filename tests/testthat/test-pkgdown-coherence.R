@@ -137,9 +137,8 @@
 # the tier-level navbar key; only a tier named here may drop it, because only
 # these have the project itself as audience (performance/peer evidence speaks
 # the campaign's frozen-floor and witness language, not a beginner's).
-.coh_internal_tiers <- c("Repository governance corpus", "Research dossiers",
-                         "Independent reviews", "Performance and peer evidence",
-                         "Campaign devlog")
+.coh_internal_tiers <- c("Performance and peer evidence",
+                         "Repository governance corpus")
 
 # The bijection runs both ways so a stale allowlist entry is caught too, and an
 # empty tier set is a violation rather than a silent pass.

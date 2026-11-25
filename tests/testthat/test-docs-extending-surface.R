@@ -176,7 +176,9 @@ test_that("US-H3 the articles-prefixed roster entries join the auditable set", {
   ctx <- .ef_run()
   yml <- readLines(file.path(.ms_root, "_pkgdown.yml"), warn = FALSE)
   pref <- grep("^  - articles/", yml, value = TRUE)
-  expect_gte(length(pref), 91L)
+  # Post-split census: the paper corpus (devlogs, research dossiers, reviews)
+  # moved to the top-level paper/ tree, leaving 10 governance qmd articles.
+  expect_gte(length(pref), 10L)
   stems <- sub("^  - articles/", "", pref)
   set <- ctx$e$ef_article_set(.ms_root)
   hidden <- setdiff(stems, set)

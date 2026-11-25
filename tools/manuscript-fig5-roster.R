@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # manuscript-fig5-roster: the section-8 Fig. 5 panel roster must equal the
-#     section-3.4 witness bullet roster (vignettes/articles/paper-draft.qmd).
+#     section-3.4 witness bullet roster (paper/paper-draft.qmd).
 #
 # Contract. Section 8's figure manifest enumerates Fig. 5's scenario
 # adjudication panels in one `(CS-1 ..., CS-N ...)` parenthetical; section 3.4
@@ -33,7 +33,7 @@ options(warn = 1)
   if (length(hit) == 0L) default else sub(paste0("^--", key, "="), "", a[hit[1]])
 }
 
-.md <- function(...) file.path(.repo_root, "vignettes", "articles", ...)
+.md <- function(...) file.path(.repo_root, "paper", ...)
 
 # Structural defects (missing artifact, unparsable row) are producer errors:
 # exit 2 so they never read as the drift verdict they are not.

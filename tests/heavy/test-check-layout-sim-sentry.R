@@ -8,7 +8,7 @@
 #
 # CI shard-sentry unit (moved out of test-check-layout-sim.R verbatim,
 # 2026-10-21 shard restructure; the campaign devlog under
-# `vignettes/articles/devlog-*.qmd`). It is the full-simulate half
+# `paper/devlog-*.qmd`). It is the full-simulate half
 # of the GO-04D instrument: build the real check layout from the real
 # tarball (real .Rbuildignore semantics), execute the REAL test files from
 # inside it, and require SIM-VERDICT: PASS with zero unauthorized skips.

@@ -17,7 +17,7 @@
 //!   replicate (the final KL objective). Semantics frozen since U-M1s-05.
 //! * [`nmf_ensemble`] — the U-M2-03 face: one `(W, H)` factor pair per
 //!   replicate, the multi-initialization axis of the consensus pipeline
-//!   (design memo `vignettes/articles/devlog-2026-09-30-M2-pipeline-design-memo.qmd`
+//!   (design memo `paper/devlog-2026-09-30-M2-pipeline-design-memo.qmd`
 //!   §1.1, PI ruling: ensemble = initialization seeds only, no bootstrap).
 //!   Same streams, same scheduling, same interrupt protocol — the ONLY
 //!   delta is what each unit returns.

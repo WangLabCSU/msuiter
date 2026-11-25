@@ -68,8 +68,8 @@ HEADERS <- "cosmic=Type,sigprofiler=MutationType"
 CL_OPTION <- function(received) {
   paste0("format must be one of the verified formats | WTSI long format is ",
          "deferred pending an upstream specimen ([V] discipline) | received: ",
-         "'", received, "'; verified: cosmic, sigprofiler | see vignettes/",
-         "articles/devlog-2026-10-04-M4-02-design-memo.qmd sections 2/4")
+         "'", received, "'; verified: cosmic, sigprofiler | see ",
+         "paper/devlog-2026-10-04-M4-02-design-memo.qmd sections 2/4")
 }
 CL_FILE <- paste0("file must be a path to an existing file | ",
                   "ms_import() reads a catalog/signature TSV from disk")
