@@ -33,7 +33,9 @@ presence call — inherits the quality of the catalog it came from. The QC
 faces inspect that inheritance *before* the analysis: mutation burden,
 strand artifacts, flat "pseudosignature" contributions from technical
 processes, and the hypermutant samples that can dominate an ensemble.
-Build catalogs with [Mutation catalogs](mutation-catalogs.html).
+Build catalogs with [Mutation catalogs](mutation-catalogs.html); why a
+technical process shows up as a flat signature rather than a real one is
+one paragraph in [Mutational signatures](mutation-signatures.html).
 
 ## The QC report
 

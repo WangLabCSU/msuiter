@@ -1,0 +1,100 @@
+---
+title: "Mutational signatures: the concepts behind the package"
+---
+
+Mutational signature analysis starts from a simple observation: different
+mutational processes leave different imprints in a tumor genome. Ultraviolet
+light, APOBEC editing, defective DNA mismatch repair, tobacco smoke -- each
+process produces a characteristic pattern of mutations. When many samples are
+summarized and decomposed, a small number of recurring patterns emerges, and
+those patterns are what the field calls *mutational signatures*
+(Alexandrov et al. 2013; the current reference catalog is COSMIC v3.x,
+Alexandrov et al. 2020). This page explains the concepts msuiter is built
+around. If you already know the domain, skip to
+[Get started](get-started.html); every concept here has a hands-on
+counterpart in the workflow guides.
+
+## Mutations are counted, not read
+
+The analysis never looks at raw alignments. Variant calls are first converted
+into a **catalog of mutations**: a count vector that tallies each mutation
+into one of a fixed set of **channels**. A channel is a mutation class --
+for single-base substitutions, the channel is the six substitution types
+expanded by the bases flanking the mutated one, giving the familiar 96
+channel layout. Counting into channels throws away everything except the
+pattern, which is exactly what makes patterns comparable across samples and
+studies.
+
+msuiter carries five channel systems, because mutational processes leave
+imprints at different scales of genome structure:
+
+| System | Channels | Reads from | Typical use |
+|---|---|---|---|
+| SBS | 96, 192, 384, 1536 | variant calls | single-base substitutions; the strand-aware layouts (192, 384) add transcription-strand context |
+| DBS | 78 | variant calls | adjacent doublet substitutions |
+| ID | 83 | variant calls | small insertions and deletions |
+| CN | 48 | segment tables | copy-number states (total and allele-specific) per length bin |
+| SV | 32 | structural-variant records | rearrangement classes (deletions, tandem duplications, inversions, translocations) |
+
+The layouts follow the conventions set by SigProfilerMatrixGenerator
+(Bergstrom et al. 2019) and are produced by the Rust tally kernels, so the
+same input always produces the same catalog bytes -- the tallies are
+reproducible down to the integers.
+
+## Signatures, exposures, and the two directions of analysis
+
+A **signature** is a profile over channels: for each channel, the fraction of
+mutations it contributes. The working model is that every sample's catalog is
+a mixture -- a set of signatures, each with a sample-specific weight, called
+the **exposure**. This gives the two directions the package is named for:
+
+- **Extraction** (de novo): given catalogs, find the signatures and
+  exposures that reconstruct them -- a nonnegative matrix factorization
+  problem, with the rank (how many signatures) chosen by evidence rather
+  than by eye. See [Extracting signatures](signature-extraction.html).
+- **Fitting** (assignment): given a known signature set -- for example the
+  COSMIC reference catalog shipped in the package -- solve for the exposures
+  that best explain each sample, with calibrated uncertainty. See
+  [Fitting signatures](signature-fitting.html).
+
+Between the two sit the comparisons: how similar are two signatures or two
+catalogs, under a protocol with defined metrics (cosine, and protocol-based
+comparisons such as the Hungarian-style assignment used against reference
+sets). See [Comparing signatures](comparing-signatures.html).
+
+## The reference data rides with the package
+
+The package bundles the COSMIC v3.6 reference signatures for SBS, DBS and ID
+in both GRCh37 and GRCh38 builds under `inst/reference/refdb/`, together with
+a manifest. The reference database has its own governance face
+(`ms_refdb()`), and the package can tell you whether the bundled catalog is
+current for your purposes through the catalog-currency family. You never
+need to download reference data to fit against COSMIC signatures.
+
+## Where the statistical discipline comes in
+
+Two questions dominate real analyses, and both are statistical rather than
+computational. First, *how many signatures are really there* -- rank
+selection -- which msuiter treats as an arbitration problem with cross-
+validation evidence, stability vetoes and a diagnostic ladder, not a single
+scree-chart eyeball. Second, *which signatures does this sample actually
+have* -- assignment under uncertainty, with calibrated coverage rather than
+point estimates alone. These two faces, `ms_select_k()` and the MSU-Fit
+calibration layer, are the part of the package this project considers its
+own contribution; the [capability matrix](capability-matrix.html) states
+exactly which claims are backed by which committed evidence.
+
+## Further reading
+
+The concepts on this page are expanded, with runnable sigminer examples, in
+the *sigminer book* by the same author
+(<https://shixiangwang.github.io/sigminer-book/>); Part 1 there covers the
+same taxonomy from the R user's seat, and parts of the presentation above
+were adapted from it. The primary literature: Alexandrov et al., *Cell
+Reports* 2013 (the signature-decomposition framework); Alexandrov et al.,
+*Nature* 2020 (the reference catalog and its rationale); Degasperi et al.,
+*Nature Cancer* 2020 (a practical framework and the free-text-to-channel
+mapping conventions); Bergstrom et al., *BMC Genomics* 2019
+(SigProfilerMatrixGenerator, the channel-layout convention msuiter's SBS/DBS
+tallies follow). The copy-number signature model follows Macintyre et al.,
+*Nature Genetics* 2018.

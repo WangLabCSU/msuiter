@@ -33,7 +33,9 @@ two signature sets under a chosen protocol, scores each match with a
 similarity metric, and attaches **null distributions** so a cosine is
 never read without its sampling context. This guide covers the comparison
 container, the exposure-level group test, and the clustering/embedding
-post-fitting analyses.
+post-fitting analyses. Where the metrics and the matching protocols come
+from conceptually is one paragraph in
+[Mutational signatures](mutation-signatures.html).
 
 ## Two sets of signatures
 

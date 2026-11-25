@@ -78,3 +78,5 @@ target/
 /src/*.gcda
 /vignettes/*.html
 bench/scenarios/out/fixture/
+# quarto render cache
+vignettes/.quarto/
