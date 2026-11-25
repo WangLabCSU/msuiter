@@ -1,0 +1,13 @@
+key	value
+abort-class	msuiter_error_input
+container-classes	msuiter_error_comparison,simpleError
+metrics-names	cosine,p_null,q_bh
+cosine-dim	3x4
+k-est-k-ref	3x4
+m	6
+protocol	hungarian
+version	U-M4-01-v1
+format	<MsComparison> metrics: cosine,p_null,q_bh | protocols: hungarian
+theta-custom	0.8,0.9
+rng-before	FALSE
+rng-after	FALSE

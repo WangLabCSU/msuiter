@@ -1,0 +1,24 @@
+arm	mode	cls	msg
+L1-est-nonmatrix	reject	msuiter_error_input	estimated must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts
+L2-est-nonfinite	reject	msuiter_error_input	estimated must be finite and non-negative | signatures are share vectors; NaN/negative entries are uninterpretable | offending entries: 1 | re-fit or re-normalize the dictionary before comparing
+L3-ref-nonmatrix	reject	msuiter_error_input	reference must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts
+L4-ref-nonfinite	reject	msuiter_error_input	reference must be finite and non-negative | signatures are share vectors; NaN/negative entries are uninterpretable | offending entries: 1 | re-fit or re-normalize the dictionary before comparing
+L5-channel-mismatch	reject	msuiter_error_input	estimated and reference must share the channel count | estimated rows: 6; reference rows: 5 | the metrics compare signatures channel-wise in one space | project both dictionaries onto the same channel space
+L6-too-few-channels	reject	msuiter_error_input	ms_compare needs at least 2 channels | m: 1 | the null faces and the metrics are degenerate at m = 1 | compare dictionaries with at least 2 channels
+L7-metric-unknown	reject	msuiter_error_option	metric must be among the frozen names | unknown: nope | legal: cosine, correlation, jsd, hellinger | pick metrics from the frozen design-memo set
+L8-protocol-unknown	reject	msuiter_error_option	protocol must be among the frozen names | unknown: nope | legal: hungarian, islam, jiang | pick protocols from the frozen design-memo set
+L9-thresholds-bad	reject	msuiter_error_input	thresholds must be non-empty numeric in (0, 1) | received: '1.5' | the sweep thresholds are match lines on the cosine scale | use e.g. the default seq(0.80, 0.90, by = 0.01)
+L10-seed-bad	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed derives every null Monte Carlo stream | received: 'NA' | record the integer seed used for the nulls
+L11-jiang-no-exposures	reject	msuiter_error_input	the Jiang protocol needs both exposure matrices | activity > 0 matching has no cosine face (bbaf042) | missing: exposures_est, exposures_ref | pass the k x n count-scale activity matrices
+L12-jiang-fit-align	reject	msuiter_error_input	the Jiang protocol needs cell-aligned exposure matrices (the true dictionary fitted) | exposures_est signatures: 3 | exposures_ref signatures: 4 | fit the truth dictionary and pass its exposure matrix
+L13-jiang-catalogs-chan	reject	msuiter_error_input	catalogs must have the same channel count | catalog rows: 2; channel count: 6 | the reconstruction flag reads per-sample catalog columns | pass the catalog the estimated dictionary was fitted to
+L14-jiang-kxn-shape	reject	msuiter_error_input	exposure matrices must be k x n matching the dictionaries | exposures_est: 3 x 2; exposures_ref: 3 x 1 | expected: 3 x n and 3 x n (shared n) | pass the fit outputs for the compared dictionaries
+L15-sigest-shape	reject	msuiter_error_input	signatures_est must be m x k_est | received: 6 x 2; expected: 6 x 3 | the reconstruction flag rebuilds catalogs from this dictionary | pass the estimated signature matrix alongside its exposures
+K1-metrics-empty-list	reject	msuiter_error_comparison	comparison metrics must be a named non-empty list | each entry is a k_est x k_ref similarity matrix | received: list | pass the metrics list returned by ms_compare()
+K2-metrics-unnamed	reject	msuiter_error_comparison	comparison metrics must be a named non-empty list | each entry is a k_est x k_ref similarity matrix | received: list | pass the metrics list returned by ms_compare()
+K3-metrics-nonmatrix	reject	msuiter_error_comparison	metric 'cosine' must be a numeric matrix | metrics are k_est x k_ref pairwise similarity matrices | received: character | pass the metrics list returned by ms_compare()
+K4-hungarian-nondf	reject	msuiter_error_comparison	'hungarian' must be a data.frame or NULL | protocol sweeps are tidy per-threshold tables | received: numeric | pass the slots assembled by ms_compare()
+K5-jiang-nonlist	reject	msuiter_error_comparison	'jiang' must be a named list or NULL | the protocol/null results are named for reproducibility | received: numeric | pass the slots assembled by ms_compare()
+K6-null-nonlist	reject	msuiter_error_comparison	'null' must be a named list or NULL | the protocol/null results are named for reproducibility | received: numeric | pass the slots assembled by ms_compare()
+K7-metrics-nonlist-s7	reject	simpleError	<msuiter::MsComparison> object properties are invalid: | - @metrics must be <list>, not <double>
+K8-meta-nonlist-s7	reject	simpleError	<msuiter::MsComparison> object properties are invalid: | - @meta must be <list>, not <double>
