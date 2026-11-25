@@ -45,6 +45,37 @@ def _user_cache() -> Path:
         "authoritative-runner laws cannot attest digests without them")
 
 
+class SkipLaw(Exception):
+    """A sanctioned skip: this law cannot attest on this rig by design.
+
+    Never a silent pass — the runner prints the reason verbatim and counts
+    the unit neither as passed nor failed.
+    """
+
+
+_F3_SKIP = ("D3 real-data gate: the user-supplied F3 files (gitignored "
+            "bench/g0/cache/; sha256 pins 733e38c5…/80e91199…) are absent "
+            "from this checkout. Set G0_PI_USER_CACHE on a rig that holds "
+            "them; on the authoring rig these laws run for real.")
+
+
+def _no_f3() -> bool:
+    try:
+        _user_cache()
+    except AssertionError:
+        return True
+    return False
+
+
+def _requires_f3(test):
+    def wrapper():
+        if _no_f3():
+            raise SkipLaw(_F3_SKIP)
+        test()
+    wrapper.__name__ = test.__name__
+    return wrapper
+
+
 def _tmpdir(tag: str) -> Path:
     return Path(tempfile.mkdtemp(prefix=f"g0pi_{tag}_"))
 
@@ -462,3 +493,15 @@ def test_reader_verifier_passes_and_flags_divergence():
                         "--host", "testhost", "--hw-profile", CANON_PIN],
                        capture_output=True, text=True)
     assert p.returncode == 2, p.stdout
+
+
+# Every law that speaks the runner's env needs the F3 files the env points
+# at; only the two pure-logic laws (the hardware-pin verifier and the timing
+# rollup) run on any checkout. The gate raises SkipLaw where the data is
+# deliberately absent, so CI reads an honest skip census instead of a red
+# board for data it must never carry.
+_PURE_LAWS = {"test_reader_verifier_passes_and_flags_divergence",
+              "test_rollup_merges_final_pass_repairs"}
+for _n, _f in list(globals().items()):
+    if _n.startswith("test_") and callable(_f) and _n not in _PURE_LAWS:
+        globals()[_n] = _requires_f3(_f)

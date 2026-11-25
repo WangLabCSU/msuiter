@@ -22,6 +22,7 @@ MODULES = ["test_sim", "test_coverage", "test_lrt", "test_provider", "test_adapt
 
 def main() -> int:
     failures = []
+    skips = []
     for mod_name in MODULES:
         mod = importlib.import_module(f"tests.{mod_name}" if not mod_name.startswith("tests")
                                       else mod_name)
@@ -32,13 +33,17 @@ def main() -> int:
             try:
                 fn()
                 print(f"PASS  {mod_name}.{name}  ({time.time() - t0:.1f}s)")
+            except getattr(mod, "SkipLaw", ()) as skip:
+                skips.append(f"{mod_name}.{name}")
+                print(f"SKIP  {mod_name}.{name}  :: {skip}")
             except Exception:
                 failures.append(f"{mod_name}.{name}")
                 print(f"FAIL  {mod_name}.{name}  ({time.time() - t0:.1f}s)")
                 traceback.print_exc()
     total = sum(len([n for n, f in vars(importlib.import_module(f"tests.{m}")).items()
                      if n.startswith("test_") and callable(f)]) for m in MODULES)
-    print(f"\n{total - len(failures)}/{total} tests passed.")
+    print(f"\n{total - len(failures) - len(skips)}/{total} tests passed, "
+          f"{len(skips)} skipped.")
     if failures:
         print("FAILED:", ", ".join(failures))
         return 1
