@@ -1,7 +1,7 @@
 # PF forensics — P10 bridge landing + pipeline-floor localization (re-landed evidence carrier)
 
 Re-landed 2026-11-14 per the sealed design memo §5 ruling
-(`vignettes/articles/devlog-2026-11-10-r1-parity-regen-design.qmd`: "Ruling:
+(`paper/devlog-2026-11-10-r1-parity-regen-design.qmd`: "Ruling:
 **re-land under `bench/`** as part of the same phase as the regeneration,
 because the paper's forensics-direction sentence (paper-draft.qmd:261-263)
 cites pipeline-floor localization and needs committed, path-bound evidence
@@ -31,7 +31,7 @@ f3e894a6933a2ffb unchanged, probed)". That probe quote is a byte-quote of
 the 2296f49 record — the epoch itself has since been superseded to
 `cfdcc51dbb9b7041` and then to `b1ce0f176cec2633` (2026-11-15 batch-bridge
 r2 re-mint; erratum:
-`vignettes/articles/devlog-2026-11-15-batch-bridge-r2-remint.qmd`); the
+`paper/devlog-2026-11-15-batch-bridge-r2-remint.qmd`); the
 quote stays byte-exact, the supersession is recorded around it.
 
 ## 2. System-level distance (census-backed)
@@ -47,8 +47,8 @@ the needed system-level factor; none of them closes the system-level row.
 ## 3. Defensible worst-class citation
 
 35.0x (688.16 s vs 19.65 s), five-gate P7-F ruling V1 — committed carrier:
-`vignettes/articles/devlog-2026-11-10-novelty-scan.qmd:114` (R1 row) and
-`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` §9
+`paper/devlog-2026-11-10-novelty-scan.qmd:114` (R1 row) and
+`paper/research-09-sigminer-v3-parity-plan.qmd` §9
 ("defensible worst-class citation (supersedes 67.102) | 688.16 / 19.65 =
 **35.0x** | five-gate ledger, P7-F ruling V1 | citable").
 
@@ -59,11 +59,11 @@ committed via the same novelty-scan R1 row and research-09 §9 ("Closing the
 remaining ~35x gap is Phase-2/Phase-3 engine scope (the ~170 s
 pipeline-floor finding, five-gate structural section)"). This is the
 forensics-direction sentence the paper cites
-(`vignettes/articles/paper-draft.qmd:261-263`).
+(`paper/paper-draft.qmd:261-263`).
 
 ## 5. P11 bit-identical ceilings
 
-`vignettes/articles/devlog-2026-11-09-p11-engine-kl-design.qmd:121-122`:
+`paper/devlog-2026-11-09-p11-engine-kl-design.qmd:121-122`:
 
 > | steps only (no per-iteration objective) | 129.920 ms | 106.2 ms (derived) | **1.223x** |
 > | end-to-end (Full trace, per-iteration objective) | 237.056 ms | 214.235 ms | 1.107x |
@@ -77,7 +77,7 @@ honest bit-identical ceiling."
 The bridge-share estimate (33.4% of system mass) and the characterization
 "2x measured-foreclosed for bit-identical code" exist only as the internal
 ruling at the sealed design memo
-(`vignettes/articles/devlog-2026-11-10-r1-parity-regen-design.qmd:166`) and
+(`paper/devlog-2026-11-10-r1-parity-regen-design.qmd:166`) and
 the novelty-scan R1 row's own instruction ("re-land it in `bench/` **or
 cite it only as an internal ruling**"). They are carried here under that
 internal-ruling label; they are not measurements and must not be cited as

@@ -2,7 +2,7 @@
 //!
 //! Semantic source of truth: SigProfilerMatrixGenerator (SPMG),
 //! `catalogue_generator_INDEL_single`, audited line-by-line at
-//! `vignettes/articles/devlog-2026-09-30-ID83-design-memo.qmd` against upstream master
+//! `paper/devlog-2026-09-30-ID83-design-memo.qmd` against upstream master
 //! `edccbea6` (PR #256 merge). The whole ID function is byte-identical in
 //! tag v1.3.6 (memo §1.1), so the D11 claim "bit-faithful to SPMG master
 //! AND v1.3.6" holds for every behaviour here. Line references below are

@@ -2,7 +2,7 @@ Bundled reference channel-format files.
 
 Source: SigProfilerSuite/SigProfilerPlotting @ master (commit 9be822faafc9b9933c75b78f0d59f2bfa35d657b),
 path sigProfilerPlotting/reference_formats/, license BSD-2-Clause
-(see vignettes/articles/research-04-source-audit.qmd, licensing audit).
+(see paper/research-04-source-audit.qmd, licensing audit).
 Fetched 2026-09-28.
 
 Used by tests/testthat/test-channels-reference.R as a permanent

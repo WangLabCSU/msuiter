@@ -3,7 +3,7 @@ title: "Reproduction proof — msuiter paper lane (PP-1)"
 ---
 
 This document is the one-command reproduction face for every sealed number
-quoted in `vignettes/articles/paper-draft.qmd`. It is a verification artifact, not a
+quoted in `paper/paper-draft.qmd`. It is a verification artifact, not a
 regeneration claim: everything below re-derives quoted values from committed
 bytes and committed witnesses, on synthetic data only (G0 master seed
 20260928). Regeneration of a campaign from scratch is operator-gated work and

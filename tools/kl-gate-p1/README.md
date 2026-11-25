@@ -1,7 +1,7 @@
 # tools/kl-gate-p1 -- P1 bit-equivalence gate (one-shot fixed-platform experiment)
 
 The msuiter-side kernel-extension face of parity-plan phase P1
-(`vignettes/articles/research-09-sigminer-v3-parity-plan.qmd` §5 row P1, §7 P1-kickoff
+(`paper/research-09-sigminer-v3-parity-plan.qmd` §5 row P1, §7 P1-kickoff
 resolution): the certified in-house Apache-2.0 KL-MU kernel
 (`src/rust/engine/src/nmf.rs`, `fit_kl`/`fit_kl_on_stream`/
 `fit_kl_with_init`) consumed through the stable batch entry

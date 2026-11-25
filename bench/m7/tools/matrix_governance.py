@@ -1197,7 +1197,7 @@ RE_ADJUDICATION_MECHANISM = (
     "pilot Seeds.txt one rep row per class) while the protocol runs REP-100 "
     "cells — the defect-floor halt was an anchor-miscalibration artifact, the "
     "cell content itself intact. See the committed witness addendum and "
-    "vignettes/articles/devlog-2026-10-09-m7-benchmark-matrix.qmd.")
+    "paper/devlog-2026-10-09-m7-benchmark-matrix.qmd.")
 
 
 def _canonical(value):

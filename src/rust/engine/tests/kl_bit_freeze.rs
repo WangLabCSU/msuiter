@@ -1,6 +1,6 @@
 //! P11 bit-freeze law for the engine-internal KL kernel restructure.
 //!
-//! The P11 design memo (vignettes/articles/devlog-2026-11-09-p11-engine-kl-design.qmd)
+//! The P11 design memo (paper/devlog-2026-11-09-p11-engine-kl-design.qmd)
 //! authorizes restructuring the certified-loop hot path — fused ratio
 //! epilogues (L1), column blocking (L2), `num` layout transpose (L3),
 //! cv-wrapper scratch reuse (L4), EU allocation hoisting (L5) — under one

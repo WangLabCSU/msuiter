@@ -1,5 +1,5 @@
 # U-M4-03: the viz first batch -- 8 plot faces (design memo
-# vignettes/articles/devlog-2026-10-04-M4-03-viz-memo.qmd).
+# paper/devlog-2026-10-04-M4-03-viz-memo.qmd).
 #
 # Anchors: the COSMIC palette pinned LITERALLY (the verified
 # sigProfilerPlotting.py source values), canonical-order enforcement

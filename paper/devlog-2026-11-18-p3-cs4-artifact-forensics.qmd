@@ -1,0 +1,76 @@
+---
+title: "CS-4 artifact forensics — the built-in mechanism sentries and artifact-roster share adjudicated against a self-planted synthetic cohort: recall 1 per certified family, measured silence, the NA branch, zero new machinery (reified, paper-grade)"
+---
+
+Date: 2026-11-18.
+Provenance: **reified, primary-banked**. The law-test census below is the
+committed run output of `tests/testthat/test-scenario-qc-artifacts.R` on
+this change set's tree (RED witnessed first: 7 error + 1 fail, every unit
+red on the absent-runner/absent-evidence reasons, none on a typo); the
+runner census is `bench/scenarios/run_qc_artifacts.R`'s own OVERALL PASS
+output with the rerun byte-identity attestation (DET=IDENTICAL over all
+six committed files); the gallery and roster figures are the committed
+censuses quoted verbatim. No figure here comes from lane lore.
+
+## 1. Mandate and posture
+
+Pillar 3's committed trio (CS-1 atlas, CS-2 HRD, CS-3 treatment forensics)
+demonstrates the application layer on the ingestion, fidelity and therapy
+faces. The research report flags one committed-but-unscenarioed
+differentiation posture (`paper/research-03-applications.qmd`
+§3/§7): the field outsources artifact filtering to ad-hoc external tools
+(Excerno/FFPEsig-family), while msuiter ships first-class built-in
+artifact-aware QC. This devlog lands the scenario that makes that posture
+evidence-bearing: **CS-4 rides exclusively committed, law-tested faces**
+(`ms_qc_sentries`, `ms_qc_roster_share`, `ms_qc_provenance`,
+`ms_qc_mechanism_channels`, `ms_qc_artifact_roster`, `ms_qc_burden`, all
+over the certified `R/ms-qc-report.R` core) — **zero new machinery was
+written for the adjudication itself**.
+
+## 2. The planted question
+
+A 13-sample cohort, built by pure arithmetic (no RNG, so the plant is
+byte-stable by construction): four samples carry a C>A channel spike (the
+oxoG reading), four a C>T spike (the FFPE deamination reading), four are
+clean over a non-roster dictionary whose guarded-family shares cap at 1/6
+-- far below the frozen 0.30/0.40 lines, so any sentinel hit there is a
+genuine false positive -- and one sample is dead at zero totals. Four
+samples additionally carry fitted-exposure rho mass 0.50/0.25/0.10/0.06
+over a roster-named refit dictionary (SBS43 plain, SBS45b exercising the
+stem match); the rest ride sub-threshold (0.02) or zero controls against
+the frozen 0.05 roster flag.
+
+## 3. What the scenario measured
+
+The certified faces caught exactly the planted sets: sentinel recall 1 per
+family (the hit sets equal the planted sets, both families), **measured
+false-positive silence on every clean and sub-threshold branch**, the
+certified NA branch on the dead sample, and the roster share hitting
+precisely the four rho >= 0.05 samples while every hit names a planted
+roster signature. The law units additionally rebuild the cohort from the
+committed plant bytes and re-derive every witness column through the
+public faces (tolerance 1e-12, strings identical): PASS 53 / FAIL 0 /
+ERROR 0. The certified constants are re-pinned in-scenario (0.30 / 0.40 /
+0.05; roster 19; channel roster 32 = 16 oxoG + 16 ffpe), and the
+provenance checklist speaks its eight frozen rows with no failure.
+
+## 4. Governance face
+
+The six committed files (three witnesses, three plant tables) auto-entered
+the DS-3 gallery census (witnesses=21, cards=21, stamps-verified=21,
+violations=0, derivation stable across re-derivation); the DS-4 prose
+census stays violation-free. The CI roster lockstep re-minted (files=97);
+the new T0 row moved the measured weight 612 -> 613 s, which the budget
+law forced through the deliberate re-seal channel with a witness note in
+`tools/ci/pr-gate-budget.tsv` -- the silent-drift refusal working as
+designed. The scenario page (`vignettes/scenarios.Rmd`) now carries a
+fourth live leg that re-runs the CS-4 faces against the committed bytes.
+
+## 5. Framing rails kept
+
+Methods-demonstration framing per the novelty-scan §4 R6 law: this is
+synthetic planted-truth demonstration (D3: zero COSMIC numeric matrices
+committed), not clinical evidence. The declined Degasperi amber/red
+tiering and diagnostic-grade (MUTYH/MSI) claims remain OUT of scope by
+the declined list at `R/ms-qc-sentries.R:13-20`; the runner's own
+[attest] lines say so on their face.

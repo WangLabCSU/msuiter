@@ -1,11 +1,11 @@
 #!/usr/bin/env Rscript
 # bench/scenarios/run_treatment.R -- the executable treatment-forensics
-# scenario (Phase-8 CS-3; vignettes/articles/research-03-applications.qmd section 3: the
+# scenario (Phase-8 CS-3; paper/research-03-applications.qmd section 3: the
 # differentiation claim that no mainstream tool offers a treatment-history
 # reporting module). Adjudicates the governed therapy classes against the
 # officially recognised signatures and the clonal/subclonal timing split on
 # the synthetic planted cohort; the design memo
-# vignettes/articles/devlog-2026-10-28-p8-treatment-forensics-design.qmd owns the contracts.
+# paper/devlog-2026-10-28-p8-treatment-forensics-design.qmd owns the contracts.
 
 .script_dir <- function() {
   a <- commandArgs(trailingOnly = FALSE)

@@ -1,6 +1,6 @@
 //! P3 lane bit-exactness law for the optimized certified KL loop.
 //!
-//! The parity-plan P3 charter (vignettes/articles/research-09-sigminer-v3-parity-plan.qmd,
+//! The parity-plan P3 charter (paper/research-09-sigminer-v3-parity-plan.qmd,
 //! lane 3) authorizes engineering the certified-loop hot path — hoisting
 //! loop-invariant statistics, reusing buffers, restructuring the element
 //! passes — under one predicate: the certified loop's BYTES may not move.

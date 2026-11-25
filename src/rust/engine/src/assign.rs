@@ -2,7 +2,7 @@
 //! strand-bias testing (U-M3a-04; `vignettes/articles/capability-matrix.qmd` L-D "per-mutation
 //! assignment: proportional allocation + unassigned-residual pseudo-signature" and L-E "per-signature TSB test: Poisson/binomial
 //! UTS-vs-TS + uncertainty propagation", `vignettes/articles/architecture.qmd` §5 post-fit analysis,
-//! `vignettes/articles/research-02-fitting-inference.qmd` §1/§5).
+//! `paper/research-02-fitting-inference.qmd` §1/§5).
 //!
 //! # Per-mutation assignment — upstream semantics (pinned to source, D11/D13)
 //!

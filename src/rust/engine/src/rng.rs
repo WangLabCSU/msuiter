@@ -1,6 +1,6 @@
 //! In-house PCG64 random number generator with a frozen master-seed → stream
 //! layout (U-M0-06; `vignettes/articles/architecture.qmd` §2 `engine/rng.rs`, decision A6 in
-//! `vignettes/articles/review-00-synthesis.qmd`).
+//! `paper/review-00-synthesis.qmd`).
 //!
 //! # Why in-house?
 //!

@@ -10,7 +10,7 @@
 //! exposure matrix. All matrices are plain `Vec<f64>` in **row-major**
 //! order: `V[i*n + j]`, `W[i*k + s]`, `H[s*n + j]`.
 //!
-//! # Update equations (audit semantics, `vignettes/articles/research-01-extraction-methods.qmd` §10 a/f)
+//! # Update equations (audit semantics, `paper/research-01-extraction-methods.qmd` §10 a/f)
 //!
 //! Both kernels are block-coordinate **majorization–minimization** (MM):
 //! each step replaces one factor by an elementwise multiplicative update
@@ -33,7 +33,7 @@
 //! ```
 //!
 //! Each iteration is one H step followed by one W step (the order listed in
-//! `vignettes/articles/research-01-extraction-methods.qmd` §10; fixed for the whole run). Cost per iteration is a
+//! `paper/research-01-extraction-methods.qmd` §10; fixed for the whole run). Cost per iteration is a
 //! small constant number of dense `m·n·k` passes; nothing else is
 //! materialized.
 //!

@@ -57,7 +57,7 @@
 # -- the version fan-out and the coverage leg (tier T0,T1); it is
 # machine-regenerated (tools/ci/gen-shard-manifest.R) and byte-gated in
 # guard-prep. The 2026-10-21 wall-clock restructure and its measured basis:
-# vignettes/articles/devlog-2026-10-21-ci-shard-parallel.qmd. The
+# paper/devlog-2026-10-21-ci-shard-parallel.qmd. The
 # manifest's tier column (issue #76) is a committed location law: the
 # PR-gate fan-out arms run tier T0, the nightly version fan-out and
 # coverage run T0+T1, and the two tier-T2 provisioning simulations live

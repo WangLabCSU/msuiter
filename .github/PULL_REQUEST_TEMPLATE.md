@@ -22,7 +22,7 @@
     gets `lifecycle::deprecate_warn`.
 - [ ] **fixture / golden refresh**: no golden fixture was updated; or it was
       updated WITH its upstream reason stated in a devlog
-      (`vignettes/articles/devlog-*.qmd`: upstream version/commit/protocol change or the
+      (`paper/devlog-*.qmd`: upstream version/commit/protocol change or the
       correction basis) -- link: <!-- devlog path -->. An RNG-golden
       regeneration requires a fresh `LAYOUT_ID`.
 - [ ] **MSRV pins held**: `matrixmultiply = 0.3.9` and `rayon = 1.10.x`

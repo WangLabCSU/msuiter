@@ -18,3 +18,4 @@
 ^CODE_OF_CONDUCT\.md$
 ^bench$
 ^tools/kl-crosscheck/driver/target$
+^paper$

@@ -125,6 +125,20 @@
   for (h in qmdish) {
     v <- c(v, paste0("source-shaped href off the rendered-site roster: ", h))
   }
+  # excess-href guard: every relative .html href must land on a page the site
+  # actually builds (a corpus article, or a top-level vignette page). The
+  # 2026-11-26 split moved the devlog corpus out of the site and left 91
+  # devlog-*.html rows behind; the roster clause above could not see them
+  # (it only checks that required links are PRESENT), and the built-half
+  # 404 census skips when no lane site tree exists -- so the dead class
+  # survived a green suite. This clause is the source-side closure.
+  admitted <- c(canon, .br_top_pages(root))
+  htmls <- links[grepl("[.]html$", links)]
+  htmls <- htmls[!grepl("^[A-Za-z][A-Za-z0-9+.-]*:", htmls) &
+                 !startsWith(htmls, "/") & !startsWith(htmls, "#")]
+  for (h in setdiff(unique(htmls), admitted)) {
+    v <- c(v, paste0("href outside the re-derived roster (dead on the site): ", h))
+  }
   # no-fork: no corpus article's own title/H1 may reappear as bridge PROSE
   # (link labels are navigation and exempt -- spans are stripped first)
   prose <- .br_text_without_links(text)
@@ -145,6 +159,16 @@
     }
   }
   list(violations = v, inspected = length(canon))
+}
+
+# top-level vignettes/*.Rmd are site pages too (pkgdown builds them as
+# articles/<stem>.html), so a bridge pointer to get-started.html or tour.html
+# is navigation, not a dead link; the excess-href clause admits them
+.br_top_pages <- function(root) {
+  vd <- file.path(root, "vignettes")
+  if (!dir.exists(vd)) return(character(0))
+  f <- sort(basename(list.files(vd, pattern = "[.]Rmd$", include.dirs = FALSE)))
+  paste0(sub("[.]Rmd$", "", f), ".html")
 }
 
 # --- built-tree half (404 census of internal hrefs + anchor presence) ------------
@@ -271,6 +295,14 @@ test_that("US-2 a source-shaped (.qmd) href off the rendered-site roster is name
   tampered <- c(d, "[phantom](phantom-article.qmd)")
   r <- .br_law_source(tampered, .ms_root)
   expect_true(any(grepl("off the rendered-site roster", r$violations,
+                        fixed = TRUE)))
+})
+
+test_that("US-2 an href outside the re-derived roster is named (excess-href guard)", {
+  d <- .br_shipped()
+  tampered <- c(d, "[phantom](devlog-2026-01-01-GHOST.html)")
+  r <- .br_law_source(tampered, .ms_root)
+  expect_true(any(grepl("outside the re-derived roster", r$violations,
                         fixed = TRUE)))
 })
 

@@ -15,7 +15,7 @@
 //! `fit_kl`/`fit_eu` (seeded init) and for the stream-addressed face
 //! `fit_kl_on_stream` used by the parallel replicate drivers.
 //!
-//! P1 context: vignettes/articles/research-09-sigminer-v3-parity-plan.qmd §5 row P1
+//! P1 context: paper/research-09-sigminer-v3-parity-plan.qmd §5 row P1
 //! ("thread-count invariance `identical()`"). This file is the
 //! msuiter-side kernel-extension face of that gate; the sigminer-side
 //! isolated-process wiring is the follow-on PR.

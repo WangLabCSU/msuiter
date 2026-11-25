@@ -106,7 +106,7 @@ and no prose addendum is needed.
 
 PR #75 (`b6a3fe2`) converted the `docs/` prose corpus to site articles and
 deleted the retired `docs/devlog/2026-10-09-m7-benchmark-matrix.md`. Its
-successor is `vignettes/articles/devlog-2026-10-09-m7-benchmark-matrix.qmd`:
+successor is `paper/devlog-2026-10-09-m7-benchmark-matrix.qmd`:
 the same body under three lines of YAML front matter in place of the H1, so
 every cited line shifts by +2 — §1's pins `:30` and `:401` read at `:32` and
 `:403` there. The same redirect applies to the trailing

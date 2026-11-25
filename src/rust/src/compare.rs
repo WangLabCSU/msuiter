@@ -1,5 +1,5 @@
 //! Null-distribution faces for the M4 `ms_compare()` calibration library
-//! (U-M4-01; design memo `vignettes/articles/devlog-2026-10-04-M4-01-design-memo.qmd`
+//! (U-M4-01; design memo `paper/devlog-2026-10-04-M4-01-design-memo.qmd`
 //! §2/§5) — the pure (R-type-free) heart of `ms_compare_null_rust`.
 //!
 //! # The two frozen null families (D13: estimation object = null quantiles;

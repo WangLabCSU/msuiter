@@ -108,7 +108,7 @@
   }
   # committed-source DOI allowlist, re-derived -- no hand roster
   corpus <- character(0)
-  for (d in c("man", "R", "vignettes", "inst", "docs")) {
+  for (d in c("man", "R", "vignettes", "inst", "docs", "paper")) {
     fs <- list.files(file.path(root, d),
                      pattern = "[.](R|Rd|Rmd|qmd|md|yml|txt|lock)$",
                      full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
