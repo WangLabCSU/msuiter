@@ -43,7 +43,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The twenty executable drivers live under
+persist their evidence tables. The twenty-one executable drivers live under
 `bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_hrd_baselines.R`,
 `run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
@@ -55,7 +55,8 @@ persist their evidence tables. The twenty executable drivers live under
 `run_ard_witness.R`,
 `run_catalog_witness.R`,
 `run_convert_witness.R`,
-`run_compare_witness.R`; committed
+`run_compare_witness.R`,
+`run_kselect_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
 OVERALL PASS or OVERALL FAIL verdict line -- the `run_hrd_baselines.R`
 expedition, which needs local scarHRD and sigminer, ends in its own
@@ -1110,4 +1111,5 @@ Rscript bench/scenarios/run_ard_witness.R
 Rscript bench/scenarios/run_catalog_witness.R
 Rscript bench/scenarios/run_convert_witness.R
 Rscript bench/scenarios/run_compare_witness.R
+Rscript bench/scenarios/run_kselect_witness.R
 ```
