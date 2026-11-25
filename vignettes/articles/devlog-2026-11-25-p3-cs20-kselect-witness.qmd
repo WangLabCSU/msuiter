@@ -1,0 +1,198 @@
+---
+title: "P3-CS-20 kselect-witness: the shipped rank-selection face adjudicated over planted NMF catalogs"
+format: html-vignette
+---
+
+## Decision record: what the rank-selection face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-20 is a witness, not a specification: it freezes what the
+exported `ms_select_k()` generic actually adjudicates over planted catalogs,
+so future drift speaks immediately. It commits only machine-stable facts: the
+error CLASS always, and the message CLAUSES verbatim -- every one of them. The
+face runs a THREE-LAYER arbitration -- a SUITOR cross-validation argmin, a
+stability veto over per-signature consensus, and a Wilcoxon diagnostic that
+never decides -- and returns a PLAIN LIST (`k`, `k_evidence`), not an S7
+container, so the accepted render commits the list's structural identity
+instead of a class token. The evidence frame is fifteen columns wide; because
+the shipped face leaves `n_seeds_converged` a documented placeholder
+(`NA_integer_`), the render speaks that column as a structural `N` glyph and
+never as a converged-seed integer. Under the D11 cross-platform posture every
+committed arm is integer, label, logical, class or clause bytes: the accepted
+arms commit the rank echo, the fifteen-column schema, the
+`is_argmin`/`passes_veto`/`selected` logical glyphs and a digit-scrubbed
+`veto_reason`, never a float payload. The lane also reproduced, live, the
+face's gate ORDER: the dots sweep fires ahead of the dispatch check, the
+dispatch check ahead of the `cv` gate, and the `cv` gate ahead of both the
+grid-shape and `k_folds` laws.
+:::
+
+### The face
+
+`ms_select_k(catalog, k_grid, replicates = 8L, max_iter = 200L, seed = 1, k_folds = 10L, n_seeds = 10L, cv = TRUE, threads = NULL, ...)`
+is the exported S7 generic (`R/kselect-select.R:1`) that picks the number of
+mutational signatures to decompose into. It is a dispatcher on `catalog`
+(`MsCatalog`), and for each rank in `k_grid` it runs the Rust NMF pipeline,
+assembles a fifteen-column evidence frame, and hands that frame to the
+three-layer arbitrator. The generic measures 449 lines; the arbitration
+constants are frozen (`.MS_VETO_AVG_MIN <- 0.8`,
+`.MS_VETO_CLUSTER_MIN <- 0.2`, `.MS_VETO_SUM_MIN <- 1.0`). CS-20 fires 36
+observation arms at it plus four boundary-pair rows: 8 law arms, 8 acceptance
+specs, 12 precedence discriminators, 8 degenerate rows (4 pairs), 16 scalars.
+The committed lane replays every arm live: the law file adjudicates 273
+expectations across 10 units (0 failed, 0 errors, 0 skipped, 0 warnings) and
+the runner rails every row against the frozen block before any witness byte is
+written.
+
+### The three arbitration layers -- and why the placeholder glyph matters
+
+The face decides a rank by walking three layers and returning the first that
+speaks. **Layer one** is the SUITOR cross-validation argmin: the lowest
+`cv_test_deviance` wins, and a tie is broken by the lowest rank -- this is the
+`is_argmin` glyph. **Layer two** is the stability veto: a rank survives only
+if `avg_stability >= 0.8` AND `min_cluster_stability >= 0.2` AND
+`avg_stability + min_cluster_stability >= 1.0`; this is the `passes_veto` glyph
+and, where no rank survives, the `msuiter_error_kselect` abort that names the
+per-rank veto reasons. **Layer three** is a Wilcoxon contrast against the
+previous rank -- a DIAGNOSTIC only, committed as
+`wilcoxon_p_vs_prev`/`wilcoxon_l2_median_delta` but never allowed to decide.
+The `cv = FALSE` arm demotes layer one entirely: the argmin glyph goes
+all-zero while layers two and three keep their verdict, and the
+`cv_test_deviance`/`is_test` columns null out. The lane also commits WHY the
+render carries a glyph rather than a number. The shipped face leaves
+`n_seeds_converged` a placeholder -- `ev$n_seeds_converged <- NA_integer_`
+(`R/kselect-select.R:169`), documented as such in the roxygen at `:294` -- so
+the render's `nseeds` field is structurally all-`N`. The unit that u8 backs
+asserts the glyph carries no digit at all, so a future wiring of the real
+converged-seed count reddens the lane (which is the point: the witness records
+the shipped contract, and the shipped contract is a placeholder).
+
+### The laws the face demonstrates
+
+- **The dots law.** An unknown argument refuses first as
+  `msuiter_error_input` -- "unknown argument passed to ms_select_k()" -- with
+  the "no passthrough arguments" bullet, the offending name, and the
+  `?ms_select_k` spelling remedy. This gate sits AHEAD of dispatch, so the
+  precedence ladder starts here.
+- **The grid laws.** A non-numeric grid ("k_grid must be positive whole
+  numbers", naming the received value and a `k_grid = k:k` example) and an
+  all-zero grid (the same clause, naming the offenders) refuse as
+  `msuiter_error_input`; a grid whose maximum exceeds the channel bound refuses
+  -- "every k in k_grid must not exceed min(channels, samples) = k" -- naming
+  the offending ranks, the total, and the `catalog has C channels x S samples`
+  arithmetic, because a rank-k NMF needs `k <= min(nrow, ncol)`.
+- **The dispatch law.** A `catalog` that is not an `MsCatalog` refuses --
+  "catalog must be an MsCatalog object" -- naming the received class and the
+  `ms_tally()` remedy. This is the `S7::class_any` fallback, and it fires
+  ahead of every value law.
+- **The `cv` law.** A `cv` that is not a single `TRUE`/`FALSE` refuses --
+  "cv must be a single TRUE or FALSE" -- naming the received value and both
+  legal forms, because `cv` switches the layer-one argmin on or off. This gate
+  fires ahead of both the grid-shape law and the `k_folds` law.
+- **The `k_folds` law.** A fold count above the channel count refuses --
+  "k_folds must not exceed the channel count (C)" -- naming the fold count and
+  the catalog's channels, because every fold must hold out at least one row per
+  column (the SUITOR precondition).
+- **The undecidable law.** A grid on which no rank clears the layer-two veto
+  refuses as `msuiter_error_kselect` -- "K selection is undecidable: no rank in
+  the grid passes the stability veto" -- naming the layer and its three frozen
+  thresholds, then the per-rank reasons verbatim, and attaching the
+  `k_evidence` table on the condition.
+- **Precedence.** Twelve discriminators, each with its fires anchor pinned
+  PRESENT and its anti anchor pinned ABSENT in the same live message: dispatch
+  outranks the dots sweep, the dots sweep outranks the grid-shape law,
+  dispatch outranks `cv`, `cv` outranks the grid-shape law, `cv` outranks
+  `k_folds`, and the grid-bound law outranks `k_folds`.
+- **The acceptance specs.** The canonical render commits the plain-list
+  container (`list|k,k_evidence`), the chosen rank, the fifteen-column schema
+  in order, the rank echo, the three logical glyphs, the placeholder `N` seeds,
+  the fold lengths and the digit-scrubbed veto reasons. A single-rank grid
+  commits one row of degenerate one-glyph fields; a saturated grid commits
+  eight rows; argument order is permutation-invariant; and the unsorted and
+  duplicate grids normalise to the ascending rank echo.
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs20_laws.tsv` | 8 arms: class split `msuiter_error_input` (7) and `msuiter_error_kselect` (1, the undecidable floor), every clause verbatim, every mode `reject` |
+| `cs20_specs.tsv` | 8 accepted arms: class `list` plus the full render (the container, the chosen rank, the fifteen-column schema, the rank echo, the argmin/veto/selected glyphs, the placeholder-seed glyph, the fold lengths, the scrubbed veto reasons) |
+| `cs20_precedence.tsv` | 12 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
+| `cs20_degenerates.tsv` | 4 boundary pairs (8 rows): the passing-arbitration floor against the veto-undecidable abort, the boundary-reaching grid against the over-bound refusal, the dispatched catalog against the undispatchable one, and the two clause heads that reject at opposite ends of the ladder -- hi and lo committed side by side |
+| `cs20_scalars.tsv` | 16 keys: the abort class, the dispatch class, the kselect class, the chosen rank, the evidence shape (`rows`, `cols`), the grid echo, the three logical glyphs, the evidence names and classes, the passing veto reason, the placeholder-seed glyph, and both RNG-purity rails |
+
+The 36-row class census (`list=11`, `msuiter_error_input=23`,
+`msuiter_error_kselect=2`, over the four committing rosters) is recomputed from
+the frozen vectors inside the law file -- a silent class shift reddens the
+lane, not the reader. All five witnesses byte-reproduce on consecutive runner
+invocations, the plant and spec corpora hash identically under BOTH governed
+SHA-256 kernels (`.ms_fit_sha256` and digest), the RNG-purity rails read
+`FALSE` before and after, and the lane never calls the benchmark driver, the
+declined calibration family, the registry face or any validator internal
+(banned words, grepped over the runner source).
+
+### The single-source build, and the audit that became the minter
+
+Both hosts -- law file and runner -- carry one byte-identical frozen block and
+one byte-identical shared code block, each injected from a single source
+between BEGIN/END markers; the splice rail demands the exact marker counts and
+compares the two regions across the files byte for byte. The minter IS the
+audit: every one of the 36 roster arms is re-fired LIVE through the face
+against the audited probe ledger; each of the 12 precedence-path arms carries
+an explicit decision-record path whose FIRES/ANTI alignment is asserted
+order-invariantly; every scalar is re-fireable and re-fired; and a final
+RE-AUDIT re-sources the EMITTED block into a cleared namespace and re-compares
+every committed literal against the ledger -- so emitter drift, chunking drift
+and quoting drift all die at mint time, not at read time. The committed clause
+bytes in this page are read from the committed witnesses, never re-typed from
+plan.
+
+### What the lane-building itself caught (the honest section)
+
+The live replay killed three would-be-innocent readings before one witness
+byte was trusted. First, the shared verdict helper passed the evaluation
+WRAPPER (`list(ok = TRUE, v = <result>)`) to the render function, which expects
+the raw `ms_select_k()` result -- so every accepted render collapsed to
+`list|ok,v|||||||||` and the specs census died on a byte-drift stop. The law
+block had passed only because every law arm takes the (correct) error branch;
+the fix was to unwrap `r$v` in the accept branch. The frozen spec table was
+already correct as minted -- the minter had always passed `r$v` -- so the
+defect was in the hand-authored shared block alone, which is exactly what the
+single-source discipline is meant to isolate. Second, the grid-bound
+discriminator was authored against a head string that dropped the trailing
+` = #`: the real message's first bullet is
+"every k in k_grid must not exceed min(channels, samples) = k" (with the
+bound interpolated), and `head1()` splits on `" | "`, so the expected string
+had to carry the interpolation marker. Third, the dual-kernel corpus floor for
+the spec roster was copied verbatim from CS-19's thirteen-arm roster and read
+`100L`; the CS-20 spec corpus is 99 bytes, so the floor was lowered to `80L` --
+the floor exists to catch an emptied roster, not to pin a glyph style. All
+three findings were caught by the lane's own rails, before any witness byte was
+committed.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the audited probe ledger (audit green: 36 arms byte-exact on
+live re-fire, 8 degen rows, 12/12 fires-and-anti anchors, 16 scalars re-fired);
+neither is ever hand-edited in place. The plants' canonical texts hash to the
+committed dual-kernel checksum
+(`plant_sha256=5a46b5eb84ff8c5c...`, `spec_sha256=275580013e63e69f...`);
+reifying the lane reproduces every witness byte for byte. Differentiation from
+CS-19 (the comparison face): CS-19 adjudicated a three-protocol similarity
+kernel whose accepted arms return real similarity matrices and whose refusals
+split across two S7 gates; CS-20 adjudicates a three-LAYER arbitration that
+returns a plain list rather than a container -- the first witness in the series
+whose accepted render commits a structural list identity instead of a class
+token, and the first that commits a documented PLACEHOLDER column
+(the all-`N` seed glyph) as a frozen contract rather than waiting for the
+column to be wired.
+
+### Gate forensics
+
+The scenarios leg for this lane (the nineteenth) was render-verified before
+the full local burn. The T0 seal moved 628 -> 629 with the generator's refusal
+witnessed verbatim (the DEFECT line naming 629 against the sealed 628, run
+against the freshly re-weighted shard roster) before the deliberate re-seal,
+per the budget law; the reified manifest carries the new law file on the T0
+tier, byte-deterministic on re-mint.

@@ -1,0 +1,17 @@
+key	value
+abort-class	msuiter_error_input
+dispatch-class	msuiter_error_input
+kselect-class	msuiter_error_kselect
+k-chosen	3
+evidence-rows	2
+evidence-cols	15
+grid-echo	2,3
+glyph-argmin	0,1
+glyph-veto	0,1
+glyph-selected	0,1
+names	k,cv_test_deviance,cv_test_mse,cv_train_mse,fold_test_deviance,n_seeds_converged,avg_stability,min_cluster_stability,per_signature_stability,wilcoxon_p_vs_prev,wilcoxon_l2_median_delta,passes_veto,is_argmin,selected,veto_reason
+classes	integer,numeric,numeric,numeric,list,integer,numeric,numeric,list,numeric,numeric,logical,logical,logical,character
+veto-reason-hi	avg_stability #.#### < #.#; avg + min_cluster_stability #.#### < #.#;
+nseeds-before	N,N
+rng-before	FALSE
+rng-after	FALSE

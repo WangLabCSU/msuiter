@@ -692,6 +692,40 @@ vignettes/articles/devlog-2026-11-25-p3-cs18-convert-witness.qmd.
   reference-content claim. Zero new machinery. Authority:
   vignettes/articles/devlog-2026-11-25-p3-cs19-compare-witness.qmd.
 
+- **CS-20 kselect-witness, decision record** (`bench/scenarios/run_kselect_witness.R`):
+  the exported `ms_select_k()` generic adjudicated over planted NMF catalogs --
+  36 observation arms plus four boundary pairs. Eight law arms commit the refusal
+  clauses verbatim: seven `msuiter_error_input` (the unknown-argument sweep, the
+  non-numeric and all-zero grids, the `min(channels, samples)` bound, the
+  non-catalog dispatch fallback, the `cv` flag law, and the `k_folds` precondition)
+  and one `msuiter_error_kselect` (the stability-veto-undecidable floor). Eight
+  acceptance specs commit the full accepted render -- and here the render's
+  container is a PLAIN LIST, not an S7 object, so the accepted arms commit
+  `list|k,k_evidence` and the fifteen-column evidence schema rather than a class
+  token: the chosen rank, the rank echo, the `is_argmin`/`passes_veto`/`selected`
+  logical glyphs, the fold lengths and the digit-scrubbed `veto_reason`. Because
+  the shipped face leaves `n_seeds_converged` a documented placeholder
+  (`NA_integer_`, roxygen at `R/kselect-select.R:294`), the render speaks that
+  column as a structural all-`N` glyph; the lane re-fires the three-layer
+  arbitration (SUITOR CV argmin, stability veto, Wilcoxon diagnostic) and the
+  `cv = FALSE` arm demotes the argmin layer alone, going all-zero on the argmin
+  glyph while the veto and selected glyphs keep their verdict. Twelve precedence
+  discriminators each pin their fires anchor present and their anti anchor absent
+  in the same live message (dispatch outranks the dots sweep, the dots sweep
+  outranks the grid-shape law, dispatch outranks `cv`, `cv` outranks the
+  grid-shape law, `cv` outranks `k_folds`, and the grid-bound law outranks
+  `k_folds`); four boundary pairs commit the passing-arbitration floor against the
+  veto-undecidable abort, the boundary-reaching grid against the over-bound
+  refusal, the dispatched catalog against the undispatchable one, and the two
+  clause heads that reject at opposite ends of the ladder. Under the D11
+  cross-platform posture every committed arm is integer, label, logical, class or
+  clause bytes, with the RNG-purity rails reading `FALSE` before and after (273
+  expectations across 10 units, zero failures/errors/skips/warnings).
+  Decision-record posture: the rank-selection face's contract behavior on planted
+  truth -- no extraction, benchmark or reference-content claim. Zero new
+  machinery. Authority:
+  vignettes/articles/devlog-2026-11-25-p3-cs20-kselect-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an

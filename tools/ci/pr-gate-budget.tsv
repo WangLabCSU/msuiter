@@ -97,6 +97,12 @@
 # warning=0, measured manifest sum 628 (generator refusal witnessed at the
 # pre-seal re-mint attempt, the verbatim DEFECT line naming 628 against the
 # sealed 627).
+# 2026-11-25 deliberate re-seal 628 -> 629: the CS-20 scenario row
+# (test-scenario-kselect-witness.R, 1 s integer weight, 273 expects) joined
+# the T0 roster; witness: local run nb=273 failed=0 error=0 skipped=0
+# warning=0, measured manifest sum 629 (generator refusal witnessed at the
+# pre-seal re-mint attempt, the verbatim DEFECT line naming 629 against the
+# sealed 628).
 key	value	note
-t0-measured	628	measured 2026-11-25 (integer manifest seconds, tier T0; 2026-11-25 CS-19 compare-witness row joins at 1 s, 627 -> 628)
+t0-measured	629	measured 2026-11-25 (integer manifest seconds, tier T0; 2026-11-25 CS-20 kselect-witness row joins at 1 s, 628 -> 629)
 t0-ceiling	800	t0-measured + one drift class; re-seal deliberately with a witness
