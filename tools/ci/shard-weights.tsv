@@ -126,3 +126,4 @@ test-scenario-refdb-witness.R	1	273	T0
 test-scenario-ard-witness.R	1	246	T0
 test-scenario-catalog-witness.R	1	265	T0
 test-scenario-convert-witness.R	1	233	T0
+test-scenario-compare-witness.R	1	263	T0

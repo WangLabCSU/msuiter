@@ -43,8 +43,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 msuiter's paper pillar 3 is the application-scenario layer: end-to-end
 workflows that adjudicate against planted truth or an independent oracle and
-persist their evidence tables. The seventeen executable drivers live under
-`bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_treatment.R`,
+persist their evidence tables. The twenty executable drivers live under
+`bench/scenarios/` (`run_atlas.R`, `run_hrd.R`, `run_hrd_baselines.R`,
+`run_treatment.R`,
 `run_qc_artifacts.R`, `run_stratify.R`, `run_downsample.R`,
 `run_reconstruction.R`, `run_cluster_witness.R`,
 `run_currency_witness.R`, `run_exposure_witness.R`,
@@ -52,9 +53,13 @@ persist their evidence tables. The seventeen executable drivers live under
 `run_io_interop_witness.R`, `run_segments_witness.R`,
 `run_refdb_witness.R`,
 `run_ard_witness.R`,
-`run_catalog_witness.R`; committed
+`run_catalog_witness.R`,
+`run_convert_witness.R`,
+`run_compare_witness.R`; committed
 evidence under `bench/scenarios/out/`, each driver ends in its own
-OVERALL PASS or OVERALL FAIL verdict line). This page runs one reduced,
+OVERALL PASS or OVERALL FAIL verdict line -- the `run_hrd_baselines.R`
+expedition, which needs local scarHRD and sigminer, ends in its own
+VERIFIED or DEFECT line). This page runs one reduced,
 runnable snippet of each against the same committed fixture generators the
 drivers use, and cross-checks the live output against the committed evidence
 table whenever that table is on disk. The browsable census of the committed
@@ -1103,4 +1108,6 @@ Rscript bench/scenarios/run_segments_witness.R
 Rscript bench/scenarios/run_refdb_witness.R
 Rscript bench/scenarios/run_ard_witness.R
 Rscript bench/scenarios/run_catalog_witness.R
+Rscript bench/scenarios/run_convert_witness.R
+Rscript bench/scenarios/run_compare_witness.R
 ```

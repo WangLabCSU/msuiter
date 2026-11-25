@@ -655,6 +655,43 @@ converter's contract behavior on planted truth -- no extraction, benchmark or
 reference-content claim. Zero new machinery. Authority:
 vignettes/articles/devlog-2026-11-25-p3-cs18-convert-witness.qmd.
 
+- **CS-19 compare-witness, decision record** (`bench/scenarios/run_compare_witness.R`):
+  the exported `ms_compare()`/`MsComparison` face adjudicated over planted
+  dictionary-comparison calls -- 54 observation arms plus four boundary pairs.
+  Twenty-three law arms commit the three-gate refusal ladder verbatim: thirteen
+  `msuiter_error_input` (estimated/reference shape and value, the shared-channel
+  count, the `m >= 2` floor, thresholds, the audit #74 P2 seed gate, and four
+  Jiang laws: both exposure matrices, cell-aligned exposures, the catalog channel
+  count, the `k x n` shape), two `msuiter_error_option` (the frozen metric and
+  protocol rosters), six `msuiter_error_comparison` (the custom container
+  validator) and two `simpleError` (the S7 property-type check on `@metrics` and
+  `@meta`, which fires *ahead of* the custom validator -- the lane therefore
+  commits a rejection LAYER alongside the reason: the `container-classes` scalar
+  reads `msuiter_error_comparison,simpleError`). Thirteen acceptance specs commit
+  the full accepted render (`msuiter::MsComparison|cosine,p_null,q_bh|3x4|6|hungarian|U-M4-01-v1|<glyph>|signature`):
+  metric roster, `k_est x k_ref` shape, channel count, protocol, frozen
+  `protocol_version`, discrete similarity glyph and null hull; protocol
+  combinations join their names (`hungarian+islam`, `hungarian+islam+jiang`), the
+  Jiang arm commits the square `3x3` shape with the `signature+catalog` hull, a
+  singular correlation column commits the all-NA glyph, `jsd` and `hellinger`
+  commit the all-zero glyph, and the `s7:character` replay identity welds two
+  renders of the committed spec with `==`. Ten precedence discriminators each
+  pin their fires anchor present and their anti anchor absent in the same live
+  message (shape outranks value, the channel law outranks the metric option law,
+  the metric option law outranks both the protocol and thresholds laws); four
+  boundary pairs commit the two-channel accept against the one-channel floor, the
+  aligned Jiang accept against the unaligned refusal, a frozen metric name
+  against an unknown one, and the shape law against the value law. Because the
+  accepted arms return real similarity matrices (kernel error ~1e-16), the D11
+  cross-platform posture commits a DISCRETE similarity glyph at a 1e-9 threshold
+  rather than the payload -- over a squared-JSD face, the first such glyph in the
+  series to ride a non-cosine scale -- with the RNG-purity rails reading `FALSE`
+  before and after (263 expectations across 10 units, zero
+  failures/errors/skips/warnings). Decision-record posture: the comparison
+  face's contract behavior on planted truth -- no extraction, benchmark or
+  reference-content claim. Zero new machinery. Authority:
+  vignettes/articles/devlog-2026-11-25-p3-cs19-compare-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (vignettes/articles/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an

@@ -1,0 +1,11 @@
+arm	mode	cls	msg	fires_ok	anti_ok
+PR1-anchor-estshape-over-refshape	reject	msuiter_error_input	estimated must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts	TRUE	TRUE
+PR1-anti-refshape-alone	reject	msuiter_error_input	reference must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts	TRUE	TRUE
+PR2-anchor-channel-over-metric	reject	msuiter_error_input	estimated and reference must share the channel count | estimated rows: 6; reference rows: 5 | the metrics compare signatures channel-wise in one space | project both dictionaries onto the same channel space	TRUE	TRUE
+PR2-anti-metric-alone	reject	msuiter_error_option	metric must be among the frozen names | unknown: nope | legal: cosine, correlation, jsd, hellinger | pick metrics from the frozen design-memo set	TRUE	TRUE
+PR3-anchor-metric-over-protocol	reject	msuiter_error_option	metric must be among the frozen names | unknown: nope | legal: cosine, correlation, jsd, hellinger | pick metrics from the frozen design-memo set	TRUE	TRUE
+PR3-anti-protocol-alone	reject	msuiter_error_option	protocol must be among the frozen names | unknown: nope | legal: hungarian, islam, jiang | pick protocols from the frozen design-memo set	TRUE	TRUE
+PR4-anchor-metric-over-thresholds	reject	msuiter_error_option	metric must be among the frozen names | unknown: nope | legal: cosine, correlation, jsd, hellinger | pick metrics from the frozen design-memo set	TRUE	TRUE
+PR4-anti-thresholds-alone	reject	msuiter_error_input	thresholds must be non-empty numeric in (0, 1) | received: '1.5' | the sweep thresholds are match lines on the cosine scale | use e.g. the default seq(0.80, 0.90, by = 0.01)	TRUE	TRUE
+PR5-anchor-estshape-over-estvalue	reject	msuiter_error_input	estimated must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts	TRUE	TRUE
+PR5-anti-estvalue-alone	reject	msuiter_error_input	estimated must be finite and non-negative | signatures are share vectors; NaN/negative entries are uninterpretable | offending entries: 1 | re-fit or re-normalize the dictionary before comparing	TRUE	TRUE

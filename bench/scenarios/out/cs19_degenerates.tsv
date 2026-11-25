@@ -1,0 +1,9 @@
+pair	side	arm	mode	cls	msg
+channel-floor	hi	twochannels-hi	accept	s7:msuiter::MsComparison	msuiter::MsComparison|cosine,p_null,q_bh|3x4|2|hungarian|U-M4-01-v1|1,1,1,1,1,1,1,1,1,1,1,1|signature
+channel-floor	lo	onechannel-lo	reject	msuiter_error_input	ms_compare needs at least 2 channels | m: 1 | the null faces and the metrics are degenerate at m = 1 | compare dictionaries with at least 2 channels
+jiang-alignment	hi	jiang-aligned-hi	accept	s7:msuiter::MsComparison	msuiter::MsComparison|cosine,p_null,q_bh|3x3|6|jiang|U-M4-01-v1|1,1,1,1,1,1,1,1,1|signature+catalog
+jiang-alignment	lo	jiang-unaligned-lo	reject	msuiter_error_input	the Jiang protocol needs cell-aligned exposure matrices (the true dictionary fitted) | exposures_est signatures: 3 | exposures_ref signatures: 4 | fit the truth dictionary and pass its exposure matrix
+option-vs-valid	hi	valid-metric-hi	accept	s7:msuiter::MsComparison	msuiter::MsComparison|cosine,p_null,q_bh|3x4|6|hungarian|U-M4-01-v1|1,1,1,1,1,1,1,1,1,1,1,1|signature
+option-vs-valid	lo	unknown-metric-lo	reject	msuiter_error_option	metric must be among the frozen names | unknown: nope | legal: cosine, correlation, jsd, hellinger | pick metrics from the frozen design-memo set
+shape-vs-value	hi	nonmatrix-shape-hi	reject	msuiter_error_input	estimated must be a numeric matrix | ms_compare() compares column signatures of a shared channel space | received: numeric | pass m x k matrices with matching row counts
+shape-vs-value	lo	nonfinite-value-lo	reject	msuiter_error_input	estimated must be finite and non-negative | signatures are share vectors; NaN/negative entries are uninterpretable | offending entries: 1 | re-fit or re-normalize the dictionary before comparing
