@@ -45,9 +45,11 @@ through the Rust kernel into an **MsCatalog** count IR, signature work
 produces an **MsSignature**, and reference knowledge arrives as an
 **MsRefDb**. Every face takes and returns an inspected object, so a broken
 record is caught at the boundary that owns it, with a message that names the
-field, the expectation and the fix. This tour runs the whole chain end to
-end on a synthetic fixture genome so the printed output below is the real
-kernel output, reproducible from this page alone.
+field, the expectation and the fix. (Why those layers exist -- catalogs,
+signatures, exposures -- is the concepts page,
+[Mutational signatures](mutation-signatures.html).) This tour runs the whole
+chain end to end on a synthetic fixture genome so the printed output below is
+the real kernel output, reproducible from this page alone.
 
 ## A fixture genome in two dozen lines
 
