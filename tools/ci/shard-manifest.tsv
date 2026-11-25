@@ -66,6 +66,7 @@ shard	file	seconds	tier
 5	test-kernel-pipeline-parse.R	0	T0
 5	test-kernel-pipeline-status.R	0	T0
 5	test-kernel-trace-shape.R	1	T0
+5	test-manuscript-fig5-roster.R	0	T0
 5	test-ms-cluster.R	0	T0
 5	test-ms-compare.R	9	T0
 5	test-ms-convert.R	0	T0

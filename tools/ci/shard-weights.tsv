@@ -65,6 +65,7 @@ test-kernel-pipeline-parse.R	0	57	T0
 test-kernel-pipeline-status.R	0	37	T0
 test-kselect.R	28	147	T0
 test-m2-e2e.R	2	13	T0
+test-manuscript-fig5-roster.R	0	10	T0
 test-ms-benchmark-driver.R	208	72	T1
 test-ms-cluster.R	0	46	T0
 test-ms-compare-boundary.R	2	15	T0
