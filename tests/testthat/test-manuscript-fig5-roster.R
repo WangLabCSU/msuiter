@@ -2,7 +2,9 @@
 # section-3.4 witness bullets are one roster rendered twice. CS-1..CS-17 held it;
 # CS-18/CS-19/CS-20 were narrated in section 3.4 and never added to the row, and
 # nothing read the row, so the drift sat silently across three lanes. These units
-# drive tools/manuscript-fig5-roster.R and pin the join both ways.
+# drive tools/manuscript-fig5-roster.R and pin the join both ways; every new
+# lane extends the row, the bullets and these pins in the same commit (CS-21
+# embed-witness is the first to land that way).
 
 .ms_roster_file <- function(rel) {
   if (is.na(.ms_root)) {
@@ -38,7 +40,7 @@ test_that("the committed Fig. 5 row names every section-3.4 witness lane", {
   manuscript <- .ms_roster_file("paper/paper-draft.qmd")
   res <- .roster_run(script, manuscript)
 
-  expect_match(res$msgs, "script-truth: 20 cited run_\\*\\.R present")
+  expect_match(res$msgs, "script-truth: 21 cited run_\\*\\.R present")
   expect_match(res$msgs, "OK -- the Fig. 5 panel roster equals")
   expect_identical(res$rc, 0L)
 })
@@ -46,14 +48,14 @@ test_that("the committed Fig. 5 row names every section-3.4 witness lane", {
 test_that("a Fig. 5 row that drops a narrated lane is DRIFT (CS-18 witness)", {
   script <- .ms_roster_file("tools/manuscript-fig5-roster.R")
   src <- .ms_roster_file("paper/paper-draft.qmd")
-  # Rewind the row to its pre-CS-18 state: strip the three appended clauses.
+  # Rewind the row to its pre-CS-18 state: strip the four appended clauses.
   tampered <- .roster_tamper(src, function(lines) {
-    sub(", CS-18 convert-witness, CS-19 compare-witness, CS-20 kselect-witness\\)", ")", lines)
+    sub(", CS-18 convert-witness, CS-19 compare-witness, CS-20 kselect-witness, CS-21 embed-witness\\)", ")", lines)
   })
   res <- .roster_run(script, tampered)
 
   expect_identical(res$rc, 1L)
-  expect_match(res$msgs, "missing from the Fig. 5 row: CS-18, CS-19, CS-20")
+  expect_match(res$msgs, "missing from the Fig. 5 row: CS-18, CS-19, CS-20, CS-21")
 })
 
 test_that("a section-3.4 lane with no Fig. 5 panel is DRIFT (extra panel)", {
@@ -61,12 +63,12 @@ test_that("a section-3.4 lane with no Fig. 5 panel is DRIFT (extra panel)", {
   src <- .ms_roster_file("paper/paper-draft.qmd")
   # Append a phantom lane to the row that section 3.4 never narrates.
   tampered <- .roster_tamper(src, function(lines) {
-    sub("CS-20 kselect-witness\\)", "CS-20 kselect-witness, CS-21 phantom-witness)", lines)
+    sub("CS-21 embed-witness\\)", "CS-21 embed-witness, CS-22 phantom-witness)", lines)
   })
   res <- .roster_run(script, tampered)
 
   expect_identical(res$rc, 1L)
-  expect_match(res$msgs, "in the Fig. 5 row but not narrated in section 3.4: CS-21")
+  expect_match(res$msgs, "in the Fig. 5 row but not narrated in section 3.4: CS-22")
 })
 
 test_that("a section-3.4 bullet citing an uncommitted witness script is DRIFT", {

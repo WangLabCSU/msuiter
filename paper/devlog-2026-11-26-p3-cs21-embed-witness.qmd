@@ -1,0 +1,198 @@
+---
+title: "P3-CS-21 embed-witness: the shipped projection face adjudicated over planted share matrices"
+format: html-vignette
+---
+
+## Decision record: what the projection face promises, and what its receipts look like
+
+::: {.callout .callout-note}
+**Decision.** CS-21 is a witness, not a specification: it freezes what the
+exported `ms_embed()` face actually adjudicates over planted share matrices,
+so future drift speaks immediately. It commits only machine-stable facts: the
+error CLASS always, and the message CLAUSES verbatim -- every one of them.
+The face walks a six-step gate ladder (input, method, transform, seed, the
+cluster bound, the kmeans sample-axis window) and returns a plain
+`data.frame` of projection coordinates, so the accepted render commits the
+container's discrete identity -- class, field names, per-column classes,
+shape, the integer cluster vector, an all-finite glyph, the zero-total sample
+index and the digit-scrubbed sample head -- and never a float payload: the
+coordinates' last bits are ill-conditioned and would not reproduce across
+platforms. Two clauses interpolate measured quantities, so the lane scrubs
+every digit to `#` before freezing bytes; and the `match.arg` failures speak
+apostrophe-free heads because the lane strips quote glyphs first. One
+finding is load-bearing: the two `match.arg` refusals ride the BASE class
+`simpleError`, not `msuiter_error_input` -- the shipped face's option-gate
+abort is a plain R error, and the witness freezes that contract as shipped.
+Under the D11 cross-platform posture every committed arm is integer, label,
+logical, class or clause bytes. The lane also reproduced, live, the face's
+gate ORDER: input outranks method, method outranks transform, transform
+outranks seed, seed outranks the cluster bound, and the bound outranks the
+sample-axis window.
+:::
+
+### The face
+
+`ms_embed(exposures, method = c("umap", "kmeans"), transform = c("share",
+"none"), seed = 1, clusters = 3L)` is the exported face (`R/ms-embed.R:43`)
+that projects samples into a two-dimensional embedding space for
+visualization. It validates the exposure matrix, resolves both option
+gates through `match.arg`, checks the seed, names the samples, applies the
+share transform, and for `kmeans` bounds the cluster count by the signature
+count, refuses degenerate windows, and runs `stats::kmeans` with ten restarts
+before relabelling clusters by the first centre coordinate. The face measures
+278 lines. CS-21 fires 40 observation arms at it: 12 law arms, 8 acceptance
+specs, 12 precedence discriminators, 8 degenerate rows (4 pairs), 16 scalars.
+The committed lane replays every arm live: the law file adjudicates 275
+expectations across 10 units (0 failed, 0 errors, 0 skipped, 0 warnings) and
+the runner rails every row against the frozen block before any witness byte
+is written.
+
+### The ladder, the scrub, and why the census splits three ways
+
+The law ladder walks the six gates in the order the face ships them. **The
+input gate** refuses anything that is not a numeric k x n matrix or an
+`MsSignature` -- "exposures must be a numeric k x n matrix (or an
+MsSignature)" -- naming the received class and the fit/refit remedy. **The
+option gates** run `match.arg` on `method` and `transform`, and here the
+witness records a base-class contract: the abort is `simpleError`, not the
+package's `msuiter_error_input`. The committed clauses are apostrophe-free
+("arg should be one of umap, kmeans", "arg should be one of share, none")
+because `.cs21_quote` drops every quote glyph before bytes freeze. **The
+seed gate** refuses negative, missing and non-finite seeds with a clause
+that interpolates the received value, so the lane digit-scrubs it to
+"received: #" -- the frozen text stays portable across platforms while the
+actual bound is sealed separately as scalars. **The cluster bound** refuses
+centres outside `[1, n signatures]`, again with an interpolated clause; **the
+sample-axis window** refuses the counts `stats::kmeans` itself cannot abide
+(one centre, or one centre per sample). The 40-arm class census
+(`data.frame=10`, `msuiter_error_input=22`, `simpleError=8`) is recomputed
+from the frozen vectors inside the law file -- a silent class shift reddens
+the lane, not the reader.
+
+### The laws the face demonstrates
+
+- **The input law.** A bare string and a bare list both refuse at the first
+  gate as `msuiter_error_input`, before any option is read.
+- **The seed law.** A length-two vector, a negative seed, `NA` and `Inf` all
+  refuse as `msuiter_error_input` with the digit-scrubbed clause; the seed
+  argument must be a single non-negative finite number.
+- **The method and transform laws.** A bogus `method` and a bogus
+  `transform` each refuse through their own `match.arg` gate as
+  `simpleError`, with apostrophe-free option lists.
+- **The cluster bound law.** Zero centres and eight centres on a
+  five-signature plant both refuse -- the bound is signed, not just a floor.
+- **The window law.** One cluster on nine samples refuses, because
+  `stats::kmeans` refuses one centre and centre-per-sample counts alike.
+- **Precedence.** Twelve discriminators, each with its fires anchor pinned
+  PRESENT and its anti anchor pinned ABSENT in the same live message:
+  input > method > transform > seed > cluster-bound > cluster-window.
+- **The acceptance specs.** Seven arms accept and commit the full discrete
+  render -- `data.frame|sample,embed_1,embed_2,cluster|9x4|
+  character,numeric,numeric,integer|<cluster vector>|1|<zero-total index>|
+  <scrubbed head>`. Two centres re-shade the same nine samples into a
+  2-then-1 ladder; five centres split the first block again; `transform =
+  "none"`, the default seed and the argument order all fold onto the design
+  bytes; the nameless plant moves only the scrubbed sample head, which
+  speaks a `sample#` placeholder instead of a planted label. The eighth arm
+  is the bound's own contrast: eight centres ride past the signature count
+  and the face refuses with the scrubbed clusters-bound clause -- the same
+  bytes the law ladder records.
+- **The boundary pairs.** Unlike the single-axis ladders of the earlier
+  witnesses, these pairs contrast accept against reject (the planted accept
+  against the input-gate refusal), reject against reject across two distinct
+  cluster gates (six centres ride past the signature bound while the square
+  six-by-six plant passes the bound and dies at the sample-axis window),
+  accept against accept across the all-zero share guard (the zero-total
+  sample re-shades the cluster ladder and its own row becomes the committed
+  zero-total index), and the two `match.arg` heads from adjacent rungs.
+
+### The receipts
+
+| receipt | committed bytes |
+|---|---|
+| `cs21_laws.tsv` | 12 arms: class split `msuiter_error_input` (10) and `simpleError` (2, the `match.arg` pair), every clause verbatim, every mode `reject` |
+| `cs21_specs.tsv` | 8 arms: 7 accepted renders (class `data.frame` plus the eight discrete fields) and the bound's own contrast refusing with the clusters-bound clause |
+| `cs21_precedence.tsv` | 12 discriminators, each with its fires anchor PRESENT and its anti anchor ABSENT in the live message |
+| `cs21_degenerates.tsv` | 4 boundary pairs (8 rows): accept/reject across the input gate, reject/reject across two distinct cluster gates, accept/accept across the all-zero share guard, and the two `match.arg` heads -- hi and lo committed side by side |
+| `cs21_scalars.tsv` | 16 keys: the three class scalars (input gate, `match.arg`, accepted container), the accepted shape (`clusters-chosen`, `rows`, `cols`, `names`, `classes`), the cluster vector, the scrubbed sample head, the all-finite glyph, the zero-total pair, and both RNG-purity rails |
+
+All five witnesses byte-reproduce on consecutive runner invocations (twice
+witnessed at build time), the plant and spec corpora hash identically under
+BOTH governed SHA-256 kernels (`.ms_fit_sha256` and digest), the RNG-purity
+rails read `FALSE` before and after -- a caller who never seeded holds no
+stream afterwards -- and the lane never calls the benchmark driver, the
+declined calibration family, the registry face or any validator internal
+(banned words, grepped over the runner source).
+
+### What the lane deliberately leaves unwitnessed
+
+No arm drives the umap kernel. The lane adjudicates the umap-facing gates
+(the `method` option law, the seed law on a `umap` call), but the kernel's
+projection bytes are platform-conditioned and -- under the D11 posture that
+governs this lane -- would not be committable as frozen payloads anyway.
+The committed record therefore covers the face's refusal ladder, the kmeans
+acceptance path and the RNG contract; the umap kernel's numeric behavior
+stays outside the frozen ledger by design, not by omission.
+
+### The single-source build, and the audit that became the minter
+
+Both hosts -- law file and runner -- carry one byte-identical frozen block and
+one byte-identical shared code block, each injected from a single source
+between BEGIN/END markers; the splice rail demands the exact marker counts and
+compares the two regions across the files byte for byte. The minter IS the
+audit: every one of the 40 roster arms is re-fired LIVE through the face
+against the audited probe ledger; each of the 12 precedence arms carries an
+explicit FIRES/ANTI pair asserted order-invariantly; every scalar is
+re-fireable and re-fired -- including the two RNG-rail scalars, which ride
+their own frozen expressions now that the refire table covers all sixteen
+keys. The committed clause bytes in this page are read from the committed
+witnesses, never re-typed from plan.
+
+### What the lane-building itself caught (the honest section)
+
+The live replay killed four would-be-innocent readings before one witness
+byte was trusted. First, the minter's precedence assertions died on the
+`match.arg` clauses: the quote-stripping pass removes apostrophes too, so
+the frozen clause is "arg should be one of umap, kmeans" -- the authored
+anchor had quoted option names and matched nothing. Second, a DEGEN
+assertion compared `vapply()` output over a NAMED arm vector with
+`identical()`, which is attribute-strict: the comparison had to be
+`unname()`d or every pair row read as drift. Third, the law file's scalar
+unit initially re-fired the two RNG keys through `.cs21_scalval()`, whose
+switch deliberately has no branch for them -- the mint had moved the RNG
+rail INTO the refire table, so the unit now re-fires those two keys through
+their own frozen expressions and the fourteen render keys through the shared
+probe. Fourth, the byte-identity verifier itself dropped the shared block's
+last line: the two-line SHARED-END marker anchors at its first line, so the
+core slice had to stop one line earlier. All four findings were caught by
+the lane's own rails, before any witness byte was committed.
+
+### Provenance
+
+The frozen block and the shared code block in both hosts are minted
+mechanically from the audited probe ledger (audit green: 40 arms byte-exact
+on live re-fire, 8 degen rows, 12/12 fires-and-anti anchors, 16 scalars
+re-fired); neither is ever hand-edited in place. The plants' canonical texts
+hash to the committed dual-kernel checksums
+(`plant_sha256=4b31bef1fa68077c969d9349b0ba6c5475b276df7dc16240ffcc434f7cb5a9db`,
+`spec_sha256=d29e4f13413ae480127f699355297c1a9544f84e7a2a51114e08db05ce88b2f2`);
+reifying the lane reproduces every witness byte for byte (witness sha256
+`cs21_laws=41543db9...`, `cs21_specs=79ab5b2f...`,
+`cs21_precedence=b288fb20...`, `cs21_degenerates=c88454f2...`,
+`cs21_scalars=19eb6b16...`). Differentiation from CS-20 (the rank-selection
+face): CS-20 adjudicated a three-LAYER arbitration returning a plain list
+with a documented placeholder column; CS-21 adjudicates a visualization
+gate-ladder whose accepted render is a `data.frame` of coordinates -- the
+first witness in the series whose refusal split includes a BASE-class
+`simpleError` contract, the first whose interpolation forces digit-scrubbed
+refusal clauses, and the first whose boundary pairs contrast accept against
+accept on both sides of a guard.
+
+### Gate forensics
+
+The scenarios leg for this lane (the twenty-first) was render-verified before
+the full local burn. The T0 seal moved 629 -> 630 with the generator's refusal
+witnessed verbatim (the DEFECT line naming 630 against the sealed 629, run
+against the freshly re-weighted shard roster) before the deliberate re-seal,
+per the budget law; the reified manifest carries the new law file on the T0
+tier, byte-deterministic on re-mint.

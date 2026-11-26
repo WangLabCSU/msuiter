@@ -1,0 +1,9 @@
+pair	side	arm	mode	cls	msg
+plant-accept	hi	plant-accept-hi	accept	data.frame	data.frame|sample,embed_1,embed_2,cluster|9x4|character,numeric,numeric,integer|3,3,3,1,1,1,2,2,2|1|none|T##
+plant-accept	lo	plant-accept-lo	reject	msuiter_error_input	exposures must be a numeric k x n matrix (or an MsSignature) | ms_embed() projects samples in the exposure space | received: matrix | pass the fit/refit exposure matrix
+cluster-window	hi	cluster-window-hi	reject	msuiter_error_input	clusters must be a single integer in [#, n signatures] | kmeans partitions the share-simplex samples | received: #; signatures: # | kmeans needs at most one cluster per signature dimension
+cluster-window	lo	cluster-window-lo	reject	msuiter_error_input	kmeans needs the cluster count strictly between # and the sample count | stats::kmeans refuses one centre and centre-per-sample counts alike | clusters: #; samples: # | lower clusters or carry more samples
+share-guard	hi	share-guard-hi	accept	data.frame	data.frame|sample,embed_1,embed_2,cluster|9x4|character,numeric,numeric,integer|3,3,3,1,1,1,2,2,2|1|none|T##
+share-guard	lo	share-guard-lo	accept	data.frame	data.frame|sample,embed_1,embed_2,cluster|9x4|character,numeric,numeric,integer|3,3,3,2,2,2,1,1,1|1|9|T##
+clause-head	hi	clause-head-hi	reject	simpleError	arg should be one of umap, kmeans
+clause-head	lo	clause-head-lo	reject	simpleError	arg should be one of share, none

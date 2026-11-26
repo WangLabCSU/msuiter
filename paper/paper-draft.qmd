@@ -726,6 +726,37 @@ paper/devlog-2026-11-25-p3-cs18-convert-witness.qmd.
   machinery. Authority:
   paper/devlog-2026-11-25-p3-cs20-kselect-witness.qmd.
 
+- **CS-21 embed-witness, decision record** (`bench/scenarios/run_embed_witness.R`):
+  the exported `ms_embed()` projection face adjudicated over planted share
+  matrices -- 12 law arms plus 8 acceptance specs, 12 precedence discriminators
+  and 4 boundary pairs. The law ladder walks the six-step gate order the face
+  ships (input, method, transform, seed, the cluster bound, the kmeans
+  sample-axis window) and commits every refusal clause verbatim. Two of those
+  clauses interpolate measured quantities, so the lane digit-scrubs them to
+  `received: #` before freezing bytes; and the two `match.arg` failures speak
+  apostrophe-free heads (`arg should be one of umap, kmeans`,
+  `arg should be one of share, none`) because the lane strips quote glyphs
+  first. One finding is load-bearing: those option-gate refusals ride the BASE
+  class `simpleError`, not `msuiter_error_input` -- the shipped contract,
+  frozen as shipped. Twelve precedence discriminators pin the measured order
+  input > method > transform > seed > cluster-bound > cluster-window, each
+  anchor present and its anti anchor absent in the same live message. The
+  boundary pairs contrast accept against reject across the input gate, reject
+  against reject across two distinct cluster gates (six centres ride past the
+  signature bound while the square six-by-six plant dies at the sample-axis
+  window), accept against accept across the all-zero share guard, and the two
+  `match.arg` heads from adjacent rungs. Because the face returns projection
+  coordinates whose last bits are ill-conditioned, the accepted renders commit
+  no floats at all -- the container class (`data.frame`), its four field names
+  and per-column classes, the nine-by-four shape, the integer cluster vector,
+  an all-finite glyph, the zero-total index and the digit-scrubbed sample head;
+  the RNG rail reads `FALSE` before and after, so a caller who never seeded
+  holds no stream afterwards (275 expectations across 10 units, zero
+  failures/errors/skips/warnings). Decision-record posture: the projection
+  face's contract behavior on planted truth -- no embedding-quality, benchmark
+  or reference-content claim. Zero new machinery. Authority:
+  paper/devlog-2026-11-26-p3-cs21-embed-witness.qmd.
+
 [FILLED — three-in-one selection] Of the three editor-offered paths that turn the
 case studies from decorative to forceful (paper/review-05-nature-editor.qmd §5:
 (a) a treatment-history cohort with real treatment-record concordance; (b) an
@@ -929,7 +960,7 @@ the reference database reaches users through the governed mirror path only
 | Fig. 2 | Architecture block diagram (two-tier core, FFI shell, kernel CLI boundary) | to be drawn from vignettes/articles/architecture.qmd §2 by the controller's illustrator; DRY law: no new claims |
 | Fig. 3 | Table 1 as a visual verdict board (MEASURED-false rows shown as such) | data FILLED §3.3 |
 | Fig. 4 | O5 census heat strip (8 faces x 21 classes = 168 cells, color=cpu-ratio) | data FILLED §3.3 Table 2 (log banked) |
-| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness, CS-15 refdb-witness, CS-16 ard-witness, CS-17 catalog-witness, CS-18 convert-witness, CS-19 compare-witness, CS-20 kselect-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
+| Fig. 5 | Scenario adjudication panels (CS-1 atlas, CS-2 dual-oracle, CS-3 treatment, CS-4 artifact forensics, CS-5 stratification decision, CS-6 downsample frontier, CS-7 reconstruction witness, CS-8 cluster witness, CS-9 currency witness, CS-10 exposure witness, CS-11 calibration witness, CS-12 sparse-spec witness, CS-13 io-interop witness, CS-14 segments-witness, CS-15 refdb-witness, CS-16 ard-witness, CS-17 catalog-witness, CS-18 convert-witness, CS-19 compare-witness, CS-20 kselect-witness, CS-21 embed-witness) | data FILLED §3.4, outputs bench/scenarios/out/* |
 | Suppl. | Calibration curves 198-cell; reproduction protocol; law-family inventories | committed faces cited §4.5, §3.5 |
 
 ## 9. Bibliography

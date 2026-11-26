@@ -1,0 +1,17 @@
+key	value
+abort-class	msuiter_error_input
+match-class	simpleError
+seed-class	msuiter_error_input
+return-class	data.frame
+clusters-chosen	3
+rows	9
+cols	4
+names	sample,embed_1,embed_2,cluster
+classes	character,numeric,numeric,integer
+cluster-vector	3,3,3,1,1,1,2,2,2
+sample-head	T##
+finite-glyph	1
+zero-row-hi	none
+zero-row-lo	9
+rng-before	FALSE
+rng-after	FALSE
