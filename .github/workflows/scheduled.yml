@@ -615,6 +615,25 @@ jobs:
           pin <- as.character(utils::packageVersion("S7"))
           if (!identical(pin, "0.2.2")) stop("S7 pin not in effect: got ", pin)
 
+      # covr float hardening, same law (this job consumes covr via
+      # extra-packages and rides the Posit latest snapshot). covr 4.0.0
+      # floated in between 2026-11-14 and 2026-11-17 and reddened the
+      # coverage leg nine scheduled nights straight with two new 4.x death
+      # modes the 3.x lane never showed: the llvm-cov Rust-code detection
+      # aborts every shard on the MSRV-minimal toolchain (Can't find
+      # llvm-cov and llvm-profdata; Rust coverage is ungated per
+      # ARCHITECTURE section 9) and the rewritten counter farm dies reading
+      # R/covr_counters.rds (cannot-open-the-connection class). Signature
+      # identical across runs 44095097804..45835575507. Last-known-green:
+      # covr 3.6.5, scheduled run 43590958442 (2026-11-14, coverage leg
+      # success). Fail-closed: the pin cannot silently drop.
+      - name: Pin covr against the 4.0.0 float (fail-closed)
+        shell: Rscript {0}
+        run: |
+          pak::pkg_install("covr@3.6.5", ask = FALSE)
+          pin <- as.character(utils::packageVersion("covr"))
+          if (!identical(pin, "3.6.5")) stop("covr pin not in effect: got ", pin)
+
       # Test-phase coverage, sharded: one instrumented package_coverage
       # (type="tests") per manifest shard, in parallel. covr's
       # instrumentation can break individual tests without implying a
