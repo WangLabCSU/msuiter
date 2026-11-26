@@ -1,0 +1,13 @@
+arm	mode	cls	msg
+L1-input-char	reject	msuiter_error_input	exposures must be a numeric k x n matrix (or an MsSignature) | ms_embed() projects samples in the exposure space | received: matrix | pass the fit/refit exposure matrix
+L2-input-list	reject	msuiter_error_input	exposures must be a numeric k x n matrix (or an MsSignature) | ms_embed() projects samples in the exposure space | received: matrix | pass the fit/refit exposure matrix
+L3-seed-vector	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: #, # | record the integer seed used for the embedding
+L4-seed-negative	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: -# | record the integer seed used for the embedding
+L5-seed-na	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: NA | record the integer seed used for the embedding
+L6-seed-inf	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: Inf | record the integer seed used for the embedding
+L7-method-bogus	reject	simpleError	arg should be one of umap, kmeans
+L8-transform-bogus	reject	simpleError	arg should be one of share, none
+L9-clusters-zero	reject	msuiter_error_input	clusters must be a single integer in [#, n signatures] | kmeans partitions the share-simplex samples | received: #; signatures: # | kmeans needs at most one cluster per signature dimension
+L10-clusters-over	reject	msuiter_error_input	clusters must be a single integer in [#, n signatures] | kmeans partitions the share-simplex samples | received: #; signatures: # | kmeans needs at most one cluster per signature dimension
+L11-clusters-single	reject	msuiter_error_input	kmeans needs the cluster count strictly between # and the sample count | stats::kmeans refuses one centre and centre-per-sample counts alike | clusters: #; samples: # | lower clusters or carry more samples
+L12-umap-seed-neg	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: -# | record the integer seed used for the embedding

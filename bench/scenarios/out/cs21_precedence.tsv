@@ -1,0 +1,13 @@
+arm	mode	cls	msg	fires_ok	anti_ok
+PR1-anchor-input	reject	msuiter_error_input	exposures must be a numeric k x n matrix (or an MsSignature) | ms_embed() projects samples in the exposure space | received: matrix | pass the fit/refit exposure matrix	TRUE	TRUE
+PR1-anti-method	reject	simpleError	arg should be one of umap, kmeans	TRUE	TRUE
+PR2-anchor-input	reject	msuiter_error_input	exposures must be a numeric k x n matrix (or an MsSignature) | ms_embed() projects samples in the exposure space | received: matrix | pass the fit/refit exposure matrix	TRUE	TRUE
+PR2-anti-seed	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: -# | record the integer seed used for the embedding	TRUE	TRUE
+PR3-anchor-method	reject	simpleError	arg should be one of umap, kmeans	TRUE	TRUE
+PR3-anti-transform	reject	simpleError	arg should be one of share, none	TRUE	TRUE
+PR4-anchor-transform	reject	simpleError	arg should be one of share, none	TRUE	TRUE
+PR4-anti-seed	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: -# | record the integer seed used for the embedding	TRUE	TRUE
+PR5-anchor-seed	reject	msuiter_error_input	seed must be a single non-negative finite number | the seed seeds the stochastic embedding (or the kmeans tie-break) | received: -# | record the integer seed used for the embedding	TRUE	TRUE
+PR5-anti-a1	reject	msuiter_error_input	clusters must be a single integer in [#, n signatures] | kmeans partitions the share-simplex samples | received: #; signatures: # | kmeans needs at most one cluster per signature dimension	TRUE	TRUE
+PR6-anchor-a1	reject	msuiter_error_input	clusters must be a single integer in [#, n signatures] | kmeans partitions the share-simplex samples | received: #; signatures: # | kmeans needs at most one cluster per signature dimension	TRUE	TRUE
+PR6-anti-a2	reject	msuiter_error_input	kmeans needs the cluster count strictly between # and the sample count | stats::kmeans refuses one centre and centre-per-sample counts alike | clusters: #; samples: # | lower clusters or carry more samples	TRUE	TRUE
