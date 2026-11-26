@@ -92,7 +92,9 @@ Real signature analyses ask two questions: *which* mutational processes
 shaped this cohort, and *how much* did each contribute to each sample? The
 five-minute path answers both on data whose truth is known in advance, so
 every number printed below is a real answer you can check against the ground
-truth that was planted.
+truth that was planted. (For the vocabulary -- signatures, catalogs,
+exposures -- [Mutational signatures](mutation-signatures.html) is the
+one-page primer.)
 
 The path runs in five faces. It plants a ground truth taken from the bundled
 COSMIC v3.6 reference database -- the reference ships inside the package, so

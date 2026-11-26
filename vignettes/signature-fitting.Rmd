@@ -34,7 +34,10 @@ each sample's exposure to every dictionary signature, `ms_test_presence()` asks 
 signatures the cohort's evidence supports at all, and `ms_fit_bootstrap()` attaches
 bootstrap confidence intervals and support stability to the same fit. This guide walks
 the three faces on one small simulated cohort, then reads the `MsFit` result object and
-the bootstrap plotting faces. The upstream steps (variants, tallying) are covered in
+the bootstrap plotting faces. The mixture model behind "exposure" is introduced in
+[Mutational signatures](mutation-signatures.html); what you can compare or
+cluster afterwards is [Comparing signatures](comparing-signatures.html). The
+upstream steps (variants, tallying) are covered in
 [get-started.html](get-started.html).
 
 ## A simulated cohort against COSMIC signatures

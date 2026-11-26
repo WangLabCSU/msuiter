@@ -22,6 +22,12 @@ For the user-facing learning path (install, first analysis, and the task
 guides), start at [Get started](get-started.html) and the [tour](tour.html).
 
 
+## Concepts
+
+| Article | What it is |
+|---|---|
+| [Mutational signatures: the concepts behind the package](mutation-signatures.html) | `mutation-signatures` |
+
 ## Architecture & governance
 
 | Article | What it is |

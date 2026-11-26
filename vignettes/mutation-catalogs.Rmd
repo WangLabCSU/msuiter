@@ -31,17 +31,21 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 `ms_tally()` turns variant records into **mutation catalogs** — sample ×
 channel count matrices on the community channel schemas. This guide walks
 the tally for SBS and DBS against a reference genome, shows the schema
-family, and closes with hypermutant stratification. Bringing variants in is
-covered by [Importing variant data](import-data.html); the extraction step
-that consumes catalogs is [Extracting signatures](signature-extraction.html).
+family, and closes with hypermutant stratification. If "catalog" and
+"channel" are new words, [Mutational signatures](mutation-signatures.html)
+explains the model in one page. Bringing variants in is covered by
+[Importing variant data](import-data.html); the extraction step that
+consumes catalogs is [Extracting signatures](signature-extraction.html).
 
 ## A genome to tally against
 
 The tally needs the reference genome around each variant to place
-mutations in their trinucleotide (and transcriptional) context. msuiter
-reads the 2bit format directly — point `ms_tally()` at a `.2bit` file for
-the build your variants were called against (for example the UCSC or
-Ensembl 2bit download for GRCh38).
+mutations in their trinucleotide (and transcriptional) context -- this is
+what turns a mutation into a channel. msuiter reads the 2bit format
+directly — point `ms_tally()` at a `.2bit` file for the build your
+variants were called against (for example the UCSC or Ensembl 2bit
+download for GRCh38). Use the same build as the caller; a catalog tallied
+against the wrong build is silently the wrong catalog.
 
 For a fully offline guide, build a miniature two-chromosome 2bit with the
 same writer the package's own executable tour uses, and place variants on
@@ -132,7 +136,13 @@ dim(cat78@counts)
 
 The schema registry is versioned and content-hashed; importing or exporting
 a catalog whose labels do not ride the registry is rejected at the boundary
-(see [Importing variant data](import-data.html)).
+(see [Importing variant data](import-data.html)). Beyond the substitution
+family, the ID channel system (83 channels, bit-for-bit the
+SigProfilerMatrixGenerator convention) is delivered through the catalog
+registry, and the genome-structure side rides segment tables: CN48 copy
+number and SV32 rearrangement classes come in through `ms_segments()` and
+`ms_sv()` (see the sections at the end of
+[Importing variant data](import-data.html)).
 
 MNV calls and complex substitutions do not fold silently into SBS/DBS
 channels: they are routed to their own ledger and skipped, so a catalog is

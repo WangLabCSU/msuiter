@@ -30,7 +30,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 `ms_extract()` discovers signatures **de novo** from a catalog. This guide
 covers the K-selection evidence, the default consensus pipeline, and
-swapping extraction engines through the registry. Building the catalog is
+swapping extraction engines through the registry. The model it solves --
+unmixing a catalog matrix into signatures times exposures -- is laid out in
+[Mutational signatures](mutation-signatures.html). Building the catalog is
 the subject of [Mutation catalogs](mutation-catalogs.html); using a known
 reference instead is the subject of
 [Fitting known signatures](signature-fitting.html).
@@ -56,7 +58,11 @@ cross-validation reconstruction curve and a stability panel (multiple
 replicates per rank, clustered and matched). The **arbitration rule** is a
 hard gate: a rank is only selected if it passes the stability veto, and an
 undecidable grid raises a structured error carrying the full evidence
-table rather than silently picking a winner.
+table rather than silently picking a winner. The veto exists because
+over-decomposed solutions look good on reconstruction alone -- every extra
+rank shrinks the training deviance -- while the stability panel asks the
+question that actually matters for downstream use: would the same
+signatures come back if the analysis were run again?
 
 ```{r select-k, error = TRUE, purl = FALSE}
 err <- tryCatch(

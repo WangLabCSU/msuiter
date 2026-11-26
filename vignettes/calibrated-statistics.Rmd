@@ -34,7 +34,10 @@ statistical claim the package makes, "when this procedure says 95%, does
 it cover the truth 95% of the time?" — and measures the answer by Monte
 Carlo. This guide walks the calibration grid, the verdicts, and the
 real-data sanity protocol. The estimands being calibrated come from
-[Fitting known signatures](signature-fitting.html).
+[Fitting known signatures](signature-fitting.html); why the package treats
+rank selection and assignment as statistical rather than computational
+questions is the last section of
+[Mutational signatures](mutation-signatures.html).
 
 ## The three estimands
 
