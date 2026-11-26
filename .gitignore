@@ -80,3 +80,7 @@ target/
 bench/scenarios/out/fixture/
 # quarto render cache
 vignettes/.quarto/
+
+# G0 primary campaign outdir class (ADJUDICATION-01 era): raw output that shares
+# the tracked house-witness tree, never committable
+/bench/results/docker_primary_pi_*
