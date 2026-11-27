@@ -1,0 +1,168 @@
+---
+title: "T-2 — the L6 design memo: amending the concurrency law for disjoint-j in-fit threading"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-2 (P2, prose now; implementation
+gated on the G0 resume). User blessing on record: L6 was named the
+follow-up engine lever in the P11 memo (2026-11-09) and blessed by the
+user 2026-11-27; this memo supplies the law amendment text, the proof
+obligations, and the gate design. **Prose only — nothing here is
+implemented; the amendment lands only with the implementation PR.**
+
+Scope note this memo adds (post-T-1): L6 attacks **per-fit latency on
+wide catalogs** (n = samples ≥ hundreds, the `ms_extract` production
+shape and the m1s fixture). It buys **nothing on the O5 grid** (96×1
+cells — one column, no j to split) and nothing against the parity row,
+which T-1 shows is owned by protocol work volume. L6 is the engine
+program's honest remaining lever for its own workloads, not a parity
+lever.
+
+## 1. What the committed kernel actually is (the surface L6 touches)
+
+The P11 L1-L5 landing left the KL kernel as: per step, a walk over
+`KL_BLOCK = 64`-column blocks (`src/rust/engine/src/nmf.rs:134`,
+`(0..n).step_by(KL_BLOCK)` at :550/:700); within a block, GEMM → fused
+ratio → scatter → update, all per-block-program-order; the only
+**cross-block couplings** are the two W-step accumulators
+`wparts` (m×k) and `hrow` (k), which accumulate each block's
+ascending-j contribution **in ascending block order**
+(`kl_w_step_core`, `src/rust/engine/src/nmf.rs:661-714`); every other
+buffer cell (`wh` block columns, `num`/`rrow` columns, `h` columns) is
+touched by exactly one block per step phase. The block grid is a pure
+function of n. The H-step (`kl_h_step_core`, :527) has no cross-block
+coupling at all after L3's [j][s] `num` layout.
+
+## 2. Why the p11 sketch does not transfer as-is (the review's 1c warning)
+
+The p11 sketch proved **j-disjoint accumulation**: splitting
+`matmul_body`'s j-range gives every thread disjoint output columns, so
+each cell's ascending-s sequence is untouched. That argument covers the
+per-cell products. It does **not** cover the W-step: `wparts` and
+`hrow` are true cross-j reductions. A naive thread-split makes their
+float summation tree a function of **thread count** (two threads
+produce `(ΣA+ΣB)+(ΣC+ΣD)`-class trees; one thread produces
+`((ΣA+ΣB)+ΣC)+ΣD`-class trees with different association), which
+**breaks the thread-count invariance contract** — outputs would differ
+between `threads ∈ {1, N}`, the exact failure class the law exists to
+exclude. The sketch is valid only after the reduction tree is pinned.
+
+## 3. The design (one structure, any thread count)
+
+**L6 — disjoint-j in-fit threading, block-grid-pinned reductions.**
+
+- The KL_BLOCK grid stays a pure function of n (unchanged). Threads are
+  assigned whole blocks (round-robin); thread count changes only *which
+  worker runs a block*, never the block sequence, the per-block program
+  order, or the reduction tree.
+- `wparts` and `hrow` become **per-block partials** (owned by the
+  block's worker, accumulated ascending-j within the block exactly as
+  the committed code does), combined **once, sequentially, in ascending
+  block order** after the step's barrier, by one owner, through the
+  identical left-to-right combine the sequential code performs. The
+  float tree is therefore `(Σ_b0 + Σ_b1) + … + Σ_blast` — the committed
+  tree — **for every thread count**, including 1. With `threads = 1`
+  the code runs the same partials + combine (no fused fast path).
+- Step boundaries are barriers (the W-step's GEMM₂ consumes the
+  completed H update; iteration i+1 consumes the completed W update) —
+  the fit-level program order is byte-preserved; the per-iteration
+  objective/trace observer stays sequential and reads only complete
+  step states (the trace-face invariance of P10-A is untouched).
+- Scratches (KlScratch, partials) become per-pool-call allocations
+  threaded through the driver, extending the L4/L5 hoisting discipline;
+  no FFI surface change (D12 holds: one entry, one exit).
+
+## 4. Proof obligations (what the implementation PR must discharge)
+
+- **P-O-1 (fixed tree)**: the wparts/hrow summation tree is a pure
+  function of n (the KL_BLOCK grid), identical for `threads ∈ {1, N}`.
+  Discharge: code identity (single code path) + G1 below.
+- **P-O-2 (disjoint writes)**: in every step phase, each shared buffer
+  cell has exactly one writer thread (wh/num/rrow/h block columns;
+  partials worker-private). Discharge: a code-level write-set audit in
+  the PR, asserted by a debug-indexed overlay test (each cell stamped
+  with its writer, no double stamps).
+- **P-O-3 (happens-before)**: barrier semantics at both step
+  boundaries; no worker reads another's in-step state. Discharge:
+  structured per-step parallel sections with explicit joins (no
+  free-running workers), plus the G2 gate.
+- **P-O-4 (interrupt + statelessness)**: workers see only the
+  `cancelled` AtomicBool (contract 7); the flag is polled at block
+  boundaries; cancellation fails the whole call with the `interrupted`
+  topic; no partial state escapes (D12). Discharge: the existing
+  interrupt suite extended with an in-fit cancel probe.
+- **P-O-5 (EU parity)**: `eu_h_step`'s `num`/`den` are j-disjoint
+  (covered by the same scheme); `gww` is an i-reduction on the
+  sequential path. If L6 ships for EU, P-O-1..4 repeat; otherwise EU
+  stays sequential and says so.
+
+## 5. Law amendment text (to land verbatim with the implementation PR)
+
+**`src/rust/src/replicates.rs` module docs** — after the "Never
+parallel" bullet, the amended text reads:
+
+> * Never parallel: the inside of a fit **— except the L6 lane**.
+>   `engine::nmf` is a fixed-order sequential kernel; its floating-point
+>   accumulation order is part of the frozen numerics contract. The
+>   single sanctioned exception is the L6 disjoint-j in-fit lane
+>   (engine-internal, `KL_BLOCK`-grid-pinned): threads may distribute
+>   whole column blocks within a step **iff** (a) the wparts/hrow
+>   reduction tree is the committed left-to-right block combine for
+>   every thread count (P-O-1), (b) every shared cell has one writer
+>   per phase (P-O-2), (c) step boundaries are barriers (P-O-3), (d)
+>   workers see only the cancelled flag (P-O-4), and (e) the
+>   thread-count bit-identity gate (G1) holds bit-exact on every
+>   guarded workload. The lane is opt-in per call, defaults OFF, rides
+>   the per-call pool cap (never exceeds the `msuiter.threads` budget;
+>   CRAN limit semantics unchanged), and the fit-level sequence, the
+>   trace observer, and every output byte remain thread-count
+>   invariant.
+
+**`vignettes/articles/architecture.qmd` contract 6** — the sentence
+"**the parallelism exists only between the independent units**
+(the replicate/sample/bootstrap), single-threaded within a unit" gains
+the clause:
+
+> …single-threaded within a unit **except the L6 in-fit column-block
+> lane, which is bit-identity-gated (P-O-1..4 above; the reduction
+> tree, not the thread count, defines the float summation order), and
+> the thread-count invariance promise is restated to include it: with
+> the same seed the outputs for threads∈{1,N} are `identical()` with
+> the lane ON or OFF**.
+
+Contract 7 (interrupts) gains: "L6 workers check only the AtomicBool at
+block boundaries; the main thread's `R_CheckUserInterrupt` cadence is
+unchanged."
+
+## 6. Gate design (the deciding evidence)
+
+- **G1 — thread-count bit-identity (hard, CI)**: for threads ∈ {1, 2,
+  3, 8, pool-max}, on every guarded workload: the frozen
+  `tests/kl_bit_freeze.rs` vectors (5 shapes + zero cases), the 21
+  REP-100 batch-face anchors (bit-pinned), the kernel CLI protocol
+  suite (byte-identical transcripts), the trace-face invariance pair
+  (Endpoints/Full), and the EU parity shapes. All `identical()` /
+  byte-equal. One red bit = the lane does not ship.
+- **G2 — scheduling perturbation (hard, CI)**: the threads=4 fit run
+  100× under injected yields/descheduling must be byte-stable (catches
+  any residual order leak the fixed-tree argument missed).
+- **G3 — CRAN/concurrency budget (law)**: in-fit workers are the
+  per-call pool's own threads (`msuiter.threads`; `_R_CHECK_LIMIT_CORES_`
+  cap honored); no global pool, no untracked threads.
+- **G4 — accuracy travels (D11)**: bit-identity IS the accuracy gate;
+  no tolerance re-anchoring is requested or needed (the lane is
+  order-preserving by construction).
+- **G5 — measured adoption (bench, after G0 resume)**: the differential
+  twin microbench reports the lane's gain at the m1s fixture and one
+  wide-catalog fixture (n ≥ 1000) with the lane ON vs OFF; the m1s
+  bench record updates only through the frozen protocol (warm-up 1 +
+  median 3). Expectation, stated honestly: 2-3x at 4 threads on the
+  step core for n ≥ 1000 (barrier + combine bound), ~1x below
+  n ≈ 256 (blocks < threads), ~1.1-1.2x end-to-end after the objective
+  dilution — the same honest accounting as the P11 table.
+
+## 7. What this memo deliberately does not do
+
+No code, no Cargo.toml change (rayon is already in the tree), no law
+edit applied, no bench re-run. The implementation PR (post-G0) lands
+the §5 amendment text, the P-O discharges, and the G1-G5 evidence
+together, or not at all.

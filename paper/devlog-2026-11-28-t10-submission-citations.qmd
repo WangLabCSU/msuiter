@@ -1,0 +1,90 @@
+---
+title: "T-10 — submission-time citation pins: two resolved, one refuted candidate, one honest negative with a correction proposal (user-owned)"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-10 (P3, pre-submission).
+Executed this session with working Crossref/PubMed/OpenAlex access
+(previous sessions' network demonstrably rewrote identifiers — the
+9d.5 negative result of the m7 memo). Every verdict below names its
+resolver and the exact response, so the pre-submission gate can re-run
+each line in one command.
+
+## 1. Morrill 2025 re-check — VERIFIED ✓
+
+`10.1186/s12859-025-06055-x` resolves on Crossref (works API, 200):
+"A Dirichlet-multinomial mixed model for determining differential
+abundance of mutational signatures", **BMC Bioinformatics 26**, issued
+2025-02-18, authors Lena Morrill Gavarró, Dominique-Laurent Couturier,
+Florian Markowetz. The `paper/research-07-algorithm-zoo.qmd:30` citation
+is bibliographically exact (title/journal/year/authors all match). No
+action needed.
+
+## 2. The m7 memo's "malformed" DOI — RESOLVED ✓ (the 2026-10-08 negative was a network artifact)
+
+`10.1038/s41586-022-04738-6` — recorded malformed in
+`paper/devlog-2026-10-08-m7-competitor-harness-design.qmd` §9d.5 after
+a 404 and a digit-rewriting network — **now resolves on BOTH resolvers**
+(Crossref works API 200; doi.org → nature.com). Identity: **Steele CD,
+Abbasi A, Islam SMA, et al., "Signatures of copy number alterations in
+human cancer", Nature 606:984-991 (2022-06-15)**. This is also the
+reference sigminer's own `get_pLOH_score.R` carries for the pLOH score
+(`#' Steele, Christopher D., et al. "Signatures of copy number
+alterations in human cancer." bioRxiv (2021)` → the Nature 2022
+version of the same work). The 9d.5 negative result stands superseded:
+the citation string is VALID and now pinned.
+
+## 3. The Cortes-Castro pin — HONEST NEGATIVE, with a correction proposal (user-owned)
+
+The project attributes the pLOH+aneuploidy HRD classifier cut-offs to
+"Cortes-Castro et al., Cancer Research 2020"
+(`R/hrd-reference.R:62-64`, which carries its own
+`TODO(paper): pin the exact bibliographic record`). This session's
+searches, on a working network:
+
+- Crossref author query `Cortes-Castro` (15 most-relevant works): **no
+  Cancer Research 2020 HRD paper**; no HRD paper at all.
+- Crossref bibliographic queries (HRD genomic scars; telomeric LOH +
+  aneuploidy): no matching first-author work.
+- **PubMed esearch `Cortes-Castro[Author] AND 2020[dp]`: count = 0** —
+  the author has no 2020 PubMed record at all.
+- Steele et al. 2022's 24-author list contains **no Cortés-Castro**.
+
+Verdict: the attribution as committed is **unverifiable in both major
+bibliographic databases**. The evidence points to **Steele et al.
+2022 (Nature 606:984-991, §2 above)** as the true anchor for the
+pLOH/aneuploidy scores (the paper the reference implementation itself
+cites). Correcting this touches committed provenance claims
+(`R/hrd-reference.R`, `tests/testthat/helper-hrd.R`,
+`paper/devlog-2026-11-17-r8-independent-hrd-reference.qmd`,
+`paper/paper-draft.qmd:344`) — that is a **user-owned ruling**, not a
+silent edit; the proposal is recorded here and surfaced in the session
+report. Until ruled, the manuscript must not cite "Cortes-Castro et
+al., Cancer Research 2020".
+
+## 4. The 0.80–0.90 band citation pin — candidate named; one false pin refuted
+
+`R/hrd-reference.R` (and the m7 memo's match-tolerance decision) ask
+for the external source ref of the frozen 0.80–0.90 match band
+(midpoint 0.85 = `MATCH_MIN_COSINE`). This session:
+
+- **Refuted candidate**: mmsig (`evenrus/mmsig`) — my remembered
+  "0.85 threshold" is FALSE; its `cos_sim_threshold` default is
+  **0.01** (R/fit_signatures.R:29) with removal semantics, not match
+  semantics. Do not cite mmsig for the band.
+- **Named candidate, not yet pinned**: Degasperi et al., "A practical
+  guide and benchmarks for mutation signature extraction" — NOT
+  retrievable on this session's Crossref index under the tried title
+  forms; the anchor must be pinned from the paper PDF at submission
+  time. Until then the band cites the project's own frozen protocol
+  fact (benchmark memo 2026-10-05 §3), which is what the memo already
+  says it is ("a protocol fact, not a tuned value").
+
+## 5. Novelty rescan (this pass) — no blockage found
+
+OpenAlex scholar scan for exposure-interval coverage/calibration work
+(2025-2026) surfaces only the canonical repertoire (Alexandrov 2020)
+and CloneSig (Abécassis 2021, intra-tumor heterogeneity + signature
+activity — a different estimand); no competitor for the calibrated
+coverage-experiment framing. The rescan verdict is unchanged: the
+qualified claims stay GATED on G0 exactly as committed; the full rescan
+re-runs at pre-submission (this line is a checkpoint, not a clearance).
