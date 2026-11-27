@@ -57,9 +57,23 @@
   d <- normalizePath(start)
   while (nzchar(dirname(d)) != nchar(d)) {
     f <- file.path(d, "DESCRIPTION")
-    if (file.exists(f) &&
-        any(grepl("^Package: msuiter", readLines(f, warn = FALSE)))) {
-      return(d)
+    if (file.exists(f)) {
+      desc <- readLines(f, warn = FALSE)
+      # An INSTALLED DESCRIPTION also says `Package: msuiter`; the Built:
+      # stamp INSTALL writes is what separates a checkout from an install
+      # tree -- the same discriminator helper-check-layout.R banks. Without
+      # it, covr's installed testthat child (tests run as <pkg>-tests beside
+      # the installed copy, tests/testthat.R via testInstalledPackage)
+      # resolves this root INTO the install tree, list.files(root, "R")
+      # reads zero sources, and the window-liveness guard below fires as a
+      # real failure: shard 4 died covr-failed on exactly that class
+      # (scheduled run 46012520485, adjudicated in
+      # paper/devlog-2026-11-28-t5-covr-shard4-adjudication.qmd; the same
+      # discriminator class first banked at run 39536641469).
+      if (any(grepl("^Package: msuiter", desc)) &&
+          !any(grepl("^Built:", desc, useBytes = FALSE))) {
+        return(d)
+      }
     }
     d <- dirname(d)
   }

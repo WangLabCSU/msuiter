@@ -1,0 +1,100 @@
+---
+title: "T-5 adjudication — the covr shard-4 death: an installed-copy masquerade defeated two source-scan locators (one loud, one silent)"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-5 / §5a. Evidence: scheduled run
+46012520485 (coverage job failure, shard-4 `covr-failed`), plus a local
+reproduction on macOS with covr 3.6.5 + S7 0.2.2 that failed
+byte-for-signature (the fragments `_bundled())` and `Not yet available:`
+match the CI transcript tail exactly), so the defect is deterministic,
+not platform- or float-class. The full `msuiter-tests/testthat.Rout.fail`
+was recovered from the repro through a capture-patched
+`covr:::show_failures` (covr 3.6.5 keeps only the slice from the first
+`^>` line of the fail file in its error condition and deletes the
+install tree on exit — the reason CI could never see the failing
+expectation from the tail-25 transcript group).
+
+## 1. The failing expectation (read from the recovered Rout.fail)
+
+```
+FILE[coverage#4] test-abort-contract.R
+FAIL[coverage#4] every msuiter_abort() call carries the mandatory i/j/c payload
+  : `total` is not strictly more than 100L. Difference: -100
+```
+
+The very first roster file; the whole shard then attests vacuous
+(`covr-failed`), the census reddens, and the chained test-heavy job
+cancels — the nine-red-nights shape after #141 removed the covr float
+class and exposed this REAL test failure underneath.
+
+## 2. Root cause (one sentence, then the mechanism)
+
+`test-abort-contract.R`'s `.abort_root()` walks upward from
+`testthat::test_path()` looking for a DESCRIPTION that declares
+`Package: msuiter` — under covr the tests run as `<pkg>-tests` BESIDE
+the installed copy (`testInstalledPackage`), so the walk's very first
+parent IS the installed package: its DESCRIPTION passes the name test,
+the census then scans `list.files(<installed>/R)` — which holds no
+`*.R` sources — reads zero call sites, and the file's own
+window-liveness guard (`expect_gt(total, 100L)`) fires exactly as
+designed. In the normal check layout the walk finds no DESCRIPTION
+ancestry and the sanctioned skip speaks; in the repo layout the real
+checkout is found and the scan runs at full strength (386 call sites on
+today's tree). The installed-copy masquerade is the only third context,
+and this locator did not know it.
+
+**The silent twin.** `test-rng-hygiene.R`'s `.rh_root()` carries the
+same hole — but with no liveness guard, so under covr it scanned an
+empty roster and PASSED BLIND (`offenders == character()` on zero
+files): a vacuous green of exactly the class the census law of
+2026-10-24 was written to make impossible. Fixed in the same commit;
+this is why the fix touches two files and not one.
+
+## 3. The fix (the banked discriminator, not a new law)
+
+`helper-check-layout.R` already solved this context class for the
+scenario laws (the `.ms_root` Built: discriminator — an installed
+DESCRIPTION carries INSTALL's `Built:` stamp, a checkout does not;
+banked at run 39536641469, "covr coverage failed under instrumentation").
+Both locators now require `any(^Package: msuiter)` AND
+`!any(^Built:)`. Context behavior after the fix:
+
+- **repo mode** (devtools/testthat at the checkout): unchanged — the
+  source root is found, both scans run in full.
+- **check layout** (simulated sibling copies): unchanged — no
+  DESCRIPTION ancestry, sanctioned skip.
+- **covr installed copy**: the walk now refuses the installed
+  DESCRIPTION (Built: stamp) and correctly finds NO source root — both
+  source-scan units skip honestly (the same intra-file skip class the
+  attested scenario-law skips already form), the firing-control units
+  still execute, shard 4 attests `status=ok` with the roster fully
+  visited, and the empty active ledger stays lawful (the census law's
+  "a row that sanctions nothing is itself a defect" is why no
+  `covr-divergences.tsv` row is added: there is no shard-level
+  divergence to sanction).
+
+## 4. The diagnosability repair (review-06 5a-i, independent of the fix)
+
+`scheduled.yml`'s coverage job gains two failure-only steps after the
+existing echo step: snapshot any `covr-lib*` fail transcripts into
+`covr-logs/`, then upload `covr-logs/` as an artifact. Green nights
+never pay artifact rent; the next CI death names its own expectation.
+
+## 5. Verification
+
+- Local targeted covr mini-shard (real `tools/ci/run-covr-shard.R`,
+  mini manifest of the two fixed files): attests `status=ok`, no
+  `covr-failed`, skips present for the two source-scan units.
+- Repo-mode run of both files at the checkout: green (the scans execute
+  against the real tree).
+- CI: the coverage leg re-dispatched on the repaired ref must census
+  `shards=4/4` with shard 4 ok — the adjudication gate for this task.
+
+## 6. Provenance
+
+| Figure | Source record |
+|--------|---------------|
+| shard-4 death fragments | run 46012520485 coverage job log (census + echo steps) |
+| full Rout.fail | local repro capture, `/tmp/t5/fails/testthat.Rout.fail` (6282 bytes, quoted verbatim in §1) |
+| Built: discriminator precedent | `tests/testthat/helper-check-layout.R:28-35` + run 39536641469 |
+| census defect rules | `tools/ci/ci-shard-aggregate.py::census` (zero-executed / files<roster / status rules) |

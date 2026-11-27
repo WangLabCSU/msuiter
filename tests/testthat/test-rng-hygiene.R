@@ -78,7 +78,17 @@ test_that("a session that never touched the RNG keeps it untouched", {
   while (nzchar(dirname(d)) != nchar(d)) {
     if (file.exists(file.path(d, "DESCRIPTION"))) {
       desc <- readLines(file.path(d, "DESCRIPTION"), warn = FALSE)
-      if (any(grepl("^Package: msuiter", desc))) return(d)
+      # The Built: discriminator (helper-check-layout.R's banked pattern):
+      # an INSTALLED DESCRIPTION also says `Package: msuiter`, and without
+      # this guard covr's installed testthat child resolves the root INTO
+      # the install tree -- the scan below then reads zero files and PASSES
+      # BLIND (offenders == character(0) on an empty roster), the silent
+      # twin of the abort-contract shard-4 death (scheduled run 46012520485,
+      # adjudicated in paper/devlog-2026-11-28-t5-covr-shard4-adjudication.qmd).
+      if (any(grepl("^Package: msuiter", desc)) &&
+          !any(grepl("^Built:", desc, useBytes = FALSE))) {
+        return(d)
+      }
     }
     d <- dirname(d)
   }
