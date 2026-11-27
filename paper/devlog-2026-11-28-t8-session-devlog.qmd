@@ -103,3 +103,20 @@ rescan pass found no blockage (full rescan re-runs pre-submission).
 
 See the session's final report (delivered in conversation); the ledger
 above is the committed counterpart.
+
+## 9. Post-merge ledger (the session's final states)
+
+| item | final state | witness |
+|------|-------------|---------|
+| T-6 | **MERGED** as `ab1757b` (PR #142, 9/9 checks green) | PR #142 squash `fix(ci): ratchet the cran-shape monolith 90 -> 120` |
+| paper corpus (T-1/T-2/T-3/T-8/T-9/T-10) | **MERGED** as `35e12a4` + `5051170` (PR #143, 9/9 green after two audit rounds) | PR #143 squash `docs(paper): review-06 execution session` |
+| T-5 | **MERGED** as `69450fa` (PR #144, 9/9 green) | PR #144 squash `fix(tests): pin the covr installed-copy masquerade` |
+| T-5 re-adjudication | **GREEN**: dispatched run 46042727214's coverage job `success`; shard 4 attests `files=71 tests=560 executed=390 pass=3658 fail=0 error=0 skip=170 status=ok`; census `AGGREGATE shards=4/4 files=114/114 executed=557 fails=0 errors=0 defects=0` — the coverage leg's first full green since the CS-17..21 landings | run 46042727214 coverage job log |
+| audit trail | round 1 **REVISE** (4 prose/citation findings — identity direction/precision, two line pins, one non-existent pole anchor; all substantive numbers independently verified) → repairs `c331123`; round 2 **PASS** (fresh auditor, deliverables-only inputs) with 3 precision nits → applied `5051170` | this devlog §8; the round-2 report's recomputation matches the ledger exactly |
+| local verification | `cargo test --workspace` exit 0; the two fixed test files green in repo mode (386 abort call sites scanned, offenders ∅); covr mini-shard through the real runner attests `status=ok` with the two source-scan units honestly skipping | /tmp capture + this session's transcript |
+| expected non-defect | the dispatched run 46042727214 rode the T-5 branch ref BEFORE the ratchet merged, so its cran-shape legs still die at the OLD 90-min timer — the merged 120-min gate takes effect from the next nightly on main; do not read that run's cran-shape legs as a defect | this §9 row |
+
+Left gated exactly as §6 states: T-7 (other machine + user-approved
+ignition), the ≤2x definition ruling, L6 implementation (post-G0),
+the Cortes-Castro correction (user-owned), and the pre-submission
+re-runs of T-10's fresh checks.
