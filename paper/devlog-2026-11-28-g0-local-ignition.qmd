@@ -1,0 +1,76 @@
+---
+title: "T-7 execution — the G0 primary campaign ignited on THIS machine: the local full re-run record"
+---
+
+Date: 2026-11-28 (ignition 2026-11-27T22:41:54Z). User order: 「所有计算
+都在你这里重新跑」 — the campaign machine is no longer the executor; the
+authoritative G0 primary run happens here, as a **fresh ignition** (this
+machine holds no campaign identity: no cachedir, no ledger — the
+fresh-ignition path is the lawful one; a resume without an identity would
+be the unlawful one).
+
+## 1. The inputs, reproduced byte-exactly here (the D3 gate, honestly)
+
+`tools/g0-derive-inputs.R` — the PI-adjudication-2026-10-06 derivation —
+was run against the bundled reference
+(`inst/reference/refdb/COSMIC_v3.6/COSMIC_v3.6_SBS_GRCh37.txt`, in-repo
+pinned provenance chain):
+
+```
+80e911998764667dcb715e7390671e32aa2bbe657a43be398e5e8319305ba29e  bench/g0/cache/g0_signatures.csv
+733e38c50b94f7dc59cef15eb042fc4359a818314fb3efb3824a7c54642c3f60  bench/g0/cache/g0_catalog.csv
+```
+
+Both digests EQUAL the runner's fail-closed booking pins (PIN_SIG /
+PIN_CAT) — the deterministic tool over the pinned source reproduces the
+booked inputs bit-for-bit on this machine. Files stay in the gitignored
+cache (D3: never committed).
+
+## 2. The runtime, built here
+
+- colima 29.5.2-class VM (6 vCPU / 14 GB / 80 GB disk) + docker CLI
+  (brew; arm64 native — no emulation).
+- Images built serially from the byte-pinned Dockerfiles
+  (build logs `/tmp/g0plane/logs/build_{sigfit,stl}.log`):
+  `g0-sigfit` 63dbf2e64908 (2.09 GB) and `g0-stl` fe6d19861a8c (7.01 GB),
+  every install/assert step green (the STL file's fail-stop guards all
+  passed; version/SHA pins verified inside the build).
+- Mock rehearsal `G0_PI_REHEARSAL=mock G0_PI_REPS=1`:
+  `REHEARSAL-COMPLETE outdir=results/docker_primary_pi_rehearsal_20261127-220707`
+  (8 shards, 202-row rollup, hardware-pin verifier ok:true) — the
+  orchestration face validated before ignition.
+
+## 3. One footgun found and fixed (recorded for the runbook)
+
+The rehearsal face SHARES the default cachedir (`cache/primary_pi`) with
+the authoritative face and writes `.primary_pi_outdir`; the next fresh
+authoritative ignition then refuses ("campaign already ignited … resume
+via G0_REUSE_CACHE"). The rehearsal's cache claim is calibration-only
+(zero verdict power; its ledger row is mode=rehearsal), so the claim was
+cleared and the calibration witness preserved under
+`results/docker_primary_pi_rehearsal_20261127-220707/`. The runbook
+gains a line: **rehearsals must ride `G0_PI_CACHEDIR` overrides, or their
+claim must be cleared before ignition** (a future runner hardening could
+scope the marker by mode — recorded, not implemented).
+
+## 4. The ignition record
+
+```
+PREFLIGHT-PASS gates=env,digests,pin,identity,ledger,marker,images,tenancy fanout=4 outpath=results/docker_primary_pi_20261127-224146
+[ignition] shard main / comp_clock_only / comp_mmr / comp_flat_triple start 2026-11-27T22:41:54Z (fan-out 4/4)
+nohup ignition pid 20969, log /tmp/g0plane/logs/20261128-primary.ignition.log
+G0_HW_PROFILE='Apple M3 / 8 vCPU / 24 GB (colima 6 vCPU class)'  (the honest label of THIS host)
+```
+
+Cost basis (the 2026-10-07 memo, decision-grade warm rates):
+40,400 rep-runs both tools; at fan-out 4 ≈ **66 h warm floor**, cold-rate
+bracket ≈ 10 days. The runner self-completes with the final serial
+judgment pass + rollup + hardware-pin verify and prints
+`PRIMARY-AUTHORITATIVE-RUN-COMPLETE`; any shard death exits 1 and the
+death protocol (G0_REUSE_CACHE resume) applies from this cachedir.
+
+## 5. What happens after (this machine's side, already prepared)
+
+`tools/g0_adjudicate.py --outdir results/docker_primary_pi_20261127-224146`
+(PR #145) → verdict readout → the four `[GATED: G0-PRIMARY]` backfills
+per the runbook §3-§4 → the closure devlog + ARCH §10/D14 entry.
