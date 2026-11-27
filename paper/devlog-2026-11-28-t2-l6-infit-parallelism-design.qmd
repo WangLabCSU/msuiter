@@ -21,7 +21,8 @@ lever.
 
 The P11 L1-L5 landing left the KL kernel as: per step, a walk over
 `KL_BLOCK = 64`-column blocks (`src/rust/engine/src/nmf.rs:134`,
-`(0..n).step_by(KL_BLOCK)` at :550/:700); within a block, GEMM → fused
+`(0..n).step_by(KL_BLOCK)` at :550 for the H-step walk and :679 for the
+W-step walk); within a block, GEMM → fused
 ratio → scatter → update, all per-block-program-order; the only
 **cross-block couplings** are the two W-step accumulators
 `wparts` (m×k) and `hrow` (k), which accumulate each block's
@@ -71,7 +72,7 @@ exclude. The sketch is valid only after the reduction tree is pinned.
   threaded through the driver, extending the L4/L5 hoisting discipline;
   no FFI surface change (D12 holds: one entry, one exit).
 - The H-step's `den` hoist (`kl_h_step_core`'s W column sums, verified
-  against the committed source at `src/rust/engine/src/nmf.rs:536-543`)
+  against the committed source at `src/rust/engine/src/nmf.rs:541-548`)
   runs before the block walk and is j-independent: it is computed once
   on one worker (or partitioned by s, ascending-i per s) and is
   read-only for the block wave — the H-step blocks are fully disjoint

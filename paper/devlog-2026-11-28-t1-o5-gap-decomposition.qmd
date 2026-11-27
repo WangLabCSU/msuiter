@@ -73,10 +73,13 @@ Over the 21 classes, per-rep cpu factors (geomeans):
 | **T** — spawn-per-fit transport → batch bridge | `post_v3_rust` vs `post_v3_rust_batch` | **1.435x bought** |
 | **W** — protocol work volume (batch face vs yardstick) | `post_v3_rust_batch` / `sigprofiler` | **10.96x REMAINING** |
 
-Identity check (log-additive, exact):
-`breach_R × K × T = 40.904 / 2.602 / 1.435 = 10.959x ≡ W`. The three
-factors are measured on the same sealed ledger and multiply out to the
-third decimal — this is an accounting identity, not a fit.
+Identity check (log-additive): `breach_R ÷ K ÷ T = W` — at the ledger's
+full precision 40.9041 / 2.6016 / 1.4347 = 10.9589, where the identity
+holds **by construction**, not by fit: K and T are ratios of the same
+committed cells that compose breach_R, and W is the batch face over the
+same yard cells. At the 4-significant-figure roundings quoted in the
+table the chain reproduces W to ~0.04% (40.904 / 2.602 / 1.435 =
+10.955 vs 10.959).
 
 **Kernel time (the review's factor 1) is bounded out of the remaining
 gap.** The measured kernel-side levers are: faer 0.24.4 through the same
@@ -95,10 +98,11 @@ spread) from N=100 to N=1,000,000 — because NNLS assignment on a fixed
 96×101 system does not see mutation mass. The faces are equally flat
 (batch 3.880-4.968 s/rep, ×1.28). The single class where mass visibly
 moves cost is comp_pole@1M (W=14.26x, +30% over the W geomean); the
-pole family also shows the R face getting *cheaper* with N
-(19.2 → 8.5 s from N=10³→10⁶) while the kernel faces get slightly
-costlier — an R-side iteration-count quirk of saturated spectra, noted
-for completeness, not load-bearing.
+pole family (anchored only at N ∈ {10⁵, 3×10⁵, 10⁶}) also shows the R
+face getting *cheaper* with N (11.06 → 9.54 → 8.54 s/rep) while the
+kernel faces get slightly costlier (5.92 → 6.08 → 6.80 s/rep spawn;
+4.11 → 4.31 → 4.97 s/rep batch) — an R-side iteration-count quirk of
+saturated spectra, noted for completeness, not load-bearing.
 
 **Work volume (the review's factor 2) owns the breach.** 4000+
 documented-default NMF fits per rep versus one NNLS solve per rep:

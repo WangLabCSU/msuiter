@@ -302,8 +302,10 @@ sealed floor table; no new timing, not a parity claim).
 | T — spawn-per-fit → batch-bridge transport | `post_v3_rust` / `post_v3_rust_batch` twins | **1.435x bought** |
 | W — protocol work volume (batch face vs yardstick) | `post_v3_rust_batch` / `sigprofiler` cells | **10.959x REMAINING** |
 
-The three factors are log-additive and exact: 40.904x (the `post_v3` R-face
-breach) × K × T ≡ W to the third decimal — an accounting identity, not a
+The three factors are log-additive and exact by construction —
+breach_R ÷ K ÷ T ≡ W (40.9041 / 2.6016 / 1.4347 = 10.9589 at the
+ledger's full precision; the table's 4-significant-figure roundings
+reproduce W to ~0.04%) — an accounting identity, not a
 model. Shape mix measures ≈ absent: every O5 cell is a 96×1 single-sample
 extraction (`bench/g0/g0/sim.py::sample_cell` — one counts vector per
 (arm, n, rep); the N axis scales mutation mass, never matrix geometry), and
