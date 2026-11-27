@@ -86,10 +86,10 @@ gap.** The measured kernel-side levers are: faer 0.24.4 through the same
 four-pass KL structure at 1.31x (96×1000) / 1.20x (96×4000) — and the O5
 cells are 96×1, *skinnier than every probed shape*, where per-call
 overhead already dominates arithmetic (per-fit all-in cost on the batch
-face ≈ 4.0 s ÷ 4000 ≈ **1.0 ms/fit**; the spawn face adds ≈ 0.43 ms/fit
+face ≈ 4.0 s ÷ 4000 ≈ **1.0 ms/fit**; the spawn face adds ≈ 0.44 ms/fit
 of transport). Even the full faer 1.31x applied to W leaves
-10.96/1.31 = 8.37x — the ≤2x row needs a further **5.48x** that no
-kernel-time lever can supply. The bit-identity wall is not the binding
+10.96/1.31 = 8.37x — still **4.18x above the ≤2x bar** (5.48x before
+any kernel gain) — that no kernel-time lever can supply. The bit-identity wall is not the binding
 constraint; arithmetic itself forbids the kernel route to parity.
 
 **Shape mix (the review's factor 3) measures ≈ absent.** The yardstick

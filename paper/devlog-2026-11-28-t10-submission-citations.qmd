@@ -56,7 +56,7 @@ pLOH/aneuploidy scores (the paper the reference implementation itself
 cites). Correcting this touches committed provenance claims
 (`R/hrd-reference.R`, `tests/testthat/helper-hrd.R`,
 `paper/devlog-2026-11-17-r8-independent-hrd-reference.qmd`,
-`paper/paper-draft.qmd:344`) — that is a **user-owned ruling**, not a
+`paper/paper-draft.qmd:346`) — that is a **user-owned ruling**, not a
 silent edit; the proposal is recorded here and surfaced in the session
 report. Until ruled, the manuscript must not cite "Cortes-Castro et
 al., Cancer Research 2020".
