@@ -1,0 +1,199 @@
+---
+title: "Review 06 — full-stack architecture audit: science, engineering, performance, accuracy, layer by layer"
+---
+
+Date: 2026-11-28 (~01:00 local). Commissioned by the user order
+「全面以科学、专业、性能、准确逐层检查整个项目架构的每一层……形成任务汇总和清单」.
+Method: a read-only audit over the committed tree (main@c2264be), the
+campaign/CI ledgers, and this session's measured evidence. Every claim
+cites a witness, a run ID, or a committed file — nothing is asserted from
+lore. The consolidated task checklist is §9; the per-layer narratives are
+§1-§8.
+
+Base: main@c2264be (PR #141). Pillar-3 witness series complete through
+CS-21. The G0 primary-PI campaign is PAUSED by user order (noise, quiet
+hours); its 74+ witnessed cells are safe on host disk and the resume path
+is documented (rebuild images per bench/g0 README §4, then the
+G0_REUSE_CACHE protocol).
+
+## 1. The Rust engine core (`src/rust`)
+
+State. Zero-dependency, Apache-2.0-certified KL-NMF kernel; hand-rolled
+scalar GEMM with fixed ascending-s accumulation (the frozen numerics
+contract, `src/rust/src/replicates.rs:32-34`); the L1-L5 memory-structure
+phase landed and measured 1.223x (step core) / 1.107x (end-to-end) on the
+m1s fixture (p11 devlog, differential twin microbench). The system-level
+parity row stands at a 13.4-72.9x breach across the O5 147-cell grid
+(~6.7x needed).
+
+Findings.
+
+- (1a, performance, decisive) The breach is NOT hand-rolled-vs-BLAS: the
+  faer probe (`/tmp/faer-probe`, 2026-11-28) measured the same four-pass
+  KL structure through faer 0.24.4 at 1.31x (96x1000) and 1.20x
+  (96x4000) over the scalar twin — the skinny products (96x10
+  transposes) and elementwise ratio passes deny BLAS-class kernels their
+  arena. The hypothesis "swap the library, close the gap" is refuted by
+  measurement; the bit-identity wall stays up (its price would have been
+  one re-anchoring — faer is bit-identical run-to-run and across
+  Seq/rayon(4) — but 1.3x does not buy the wall's removal).
+- (1b, performance, decisive) With the library swap refuted and the
+  GEMM-microkernel door closed at bit-identity (p11 probe: hand-SIMD
+  1.02x), the ONLY remaining levers are (i) in-fit parallelism (L6,
+  user-blessed 2026-11-27, unimplemented) and (ii) work-volume reduction
+  in the iteration protocol itself. Which of these holds the ~6.7x is an
+  OPEN empirical question — the O5 gap decomposition (kernel time vs
+  work volume vs shape mix) is the single most valuable missing number
+  in the project.
+- (1c, engineering) L6 requires amending the concurrency law
+  (replicates.rs module docs + architecture.qmd contracts 6+7). The p11
+  proof sketch (j-disjoint accumulation) is NOT automatically
+  transferable to j-splitting; the deciding evidence is the
+  thread-count bit-identity gate on all guarded workloads, not the
+  sketch.
+- (1d, accuracy) Accuracy posture is sound: accuracy non-regression
+  travels with every change; the anchors are bit-pinned; the tolerance
+  re-anchoring option stays declined by user ruling (2026-11-27).
+
+Tasks: T-1 (O5 gap decomposition, P1, read-only), T-2 (L6 design memo,
+P2 prose-now; implementation gated on G0 resume), T-3 (work-volume
+algorithm lane — early-stopping / convergence budgets / initialization
+quality — P2, scoped by T-1's outcome).
+
+## 2. The FFI bridge (extendr, `R/ms-*.R` + `src/rust/src`)
+
+State. The batch-face bridge (P10 lineage) is landed; the ctime
+cache-identity defect was pinned out (#128); the covr-extras snapshot
+fix (#137) holds. Phase-9 forensics put non-engine stage mass at ~4.35%.
+Findings: no open defect; the bridge's overhead share will be quantified
+by T-1 as a byproduct. Task: none beyond T-1.
+
+## 3. The R API surface (84 exported faces)
+
+State. The beginner-path overhaul (R7/R8) landed; the extending-surface
+law audits the vignette-vs-export surface; face-coherence gates run in
+every battery. Findings: no open defect. The one structural note: the
+surface is large (84 faces) and the face-per-scenario pairing (22
+drivers) is what keeps it honest — that pairing is law-pinned
+(scenarios-prose, extending-surface) and should not grow without its
+roster rows (the manuscript-fig5 lesson). Task: none open.
+
+## 4. The test/law system (`tests/testthat`, `bench/scenarios`)
+
+State. 116 test files; the CS-1..21 witness series with byte-frozen
+clause/class/label ledgers; 22 scenario drivers each ending in its own
+verdict line; the 580-expectation touched-law battery green this
+session; CS-21 landed with 10 units / 275 expectations / byte-stable
+witnesses.
+
+Findings.
+
+- (4a, engineering) The witness ledgers freeze float-derived bytes
+  (cluster vectors, relabel indices). Those bytes are platform-stable
+  only because the kernel is bit-identical; a future wall decision would
+  force a census-posture migration across the series. Archived, not a
+  task today.
+- (4b, engineering, live) Scenario laws skip under R CMD check
+  (.ms_root Built: discriminator). Correct by design, but it means the
+  cran-shape monolith (§5b) runs an UNPRICED door: its test phase costs
+  69 min observed while the sharded lane prices the same suite around
+  25 min. The pricing model has a blind spot the shard tables cannot
+  see.
+
+Tasks: T-4 (add the monolith door to the pricing story when T-2 lands:
+either the ratcheted timer carries a dated note, or the monolith's
+test-phase cost gets its own measured line), no other open items.
+
+## 5. CI and governance (`.github/workflows`, `tools/ci`)
+
+State. Sharded check lanes with attested budgets; the fail-closed
+attestation census (2026-10-24 law); the pin law family (S7@0.2.2 per
+#118, covr@3.6.5 per #141); the extras snapshot fix (#137) verified
+EXTRAS-ATTEST both-ok on the live test.
+
+Open defects, evidence-cited.
+
+- (5a) coverage leg: the covr pin WORKED for its target class (covr
+  3.6.5 installed, llvm-cov death class gone, EXTRAS both ok — run
+  46012520485) but shard 4 still dies `covr-failed` under 3.6.5 with
+  `Failure in msuiter-tests/testthat.Rout.fail` (fragments:
+  "Not yet available:" + "_bundled())") — a REAL test failure under
+  instrumentation, independent of the 4.0.0 float. The full shard log is
+  lost because `covr-logs/` is never uploaded as an artifact (the
+  transcripts group carries tail-25 only). Repair: (i) add a
+  failure-only `covr-logs` artifact upload step; (ii) re-dispatch and
+  read the actual Rout.fail; (iii) fix the failing test or its
+  instrumentation-only environment gap.
+- (5b) cran-shape-check: both OS legs die AT the 90-minute timeout
+  (14:04->15:34 on 2026-11-27; same class the night before), with the
+  test phase 69 min in at kill time. Drift evidence: the last-green run
+  (43590958442, 2026-11-14) ran the ubuntu leg in 64m00s — the monolith
+  grew >=26 min across the CS-17..21 + G0-law-file landings. Repair:
+  the coverage-lineage-style ratchet 90->120 with a dated comment and
+  this drift witness; then answer why the monolith's test phase triples
+  the sharded pricing (T-4).
+- (5c) test-heavy is needs-chained to coverage (`:603`) and cancels with
+  it; the version-fanout devel leg's failure is the known
+  continue-on-error advisory class (S7 x R-devel upstream) — no action,
+  documented so it never reads as a new defect.
+
+Tasks: T-5 (covr diagnosability upload + shard-4 adjudication, P1),
+T-6 (cran-shape ratchet 90->120 PR with the drift witness, P1).
+
+## 6. Benchmark harnesses (`bench/m1s`, `bench/m7`, `bench/xval`, `bench/g0`, `bench/scenarios`)
+
+State. The frozen protocols held through the restructure; the G0
+primary-PI campaign is paused mid-flight by user order with 74+ cells
+witnessed on host disk (bind mounts; unaffected by the Docker-store
+cleanup — images rebuild per README §4 when the campaign resumes). The
+2026-11-26 faer probe and the O5 grid are the two live measurement
+surfaces for the performance chapter.
+
+Tasks: T-7 (G0 resume at a user-approved time, then the judgment pass
+and the four [GATED: G0-PRIMARY] manuscript blocks), P2 and
+user-gated.
+
+## 7. The paper corpus (`paper/`)
+
+State. Pillars 1 and 3 are fully evidenced (the architecture dossier and
+the 21-witness application series with reified runners). Pillar 2 (the
+performance chapter) is the open pillar: its honest content depends on
+T-1 (where the 6.7x lives), T-2/L6 (the concurrency lever), and T-3
+(algorithmic work-volume) outcomes. The manuscript roster pin (fig5,
+21 panels) is law-held; the session's new evidence (the faer probe
+refutation, the L6 blessing, the pin forensics) owes a paper-grade
+devlog. Tasks: T-8 (session devlog, P1), T-9 (performance chapter
+rewrite scoped by T-1/T-2/T-3, P2), T-10 (submission-time items:
+Morrill 2025 re-check, the TODO(paper) 0.80-0.90 band citation pin +
+Cortes-Castro pin, novelty rescan — P3, pre-submission).
+
+## 8. Site and docs (`_pkgdown.yml`, `vignettes/`, `docs/dev`)
+
+State. The R3 site series landed; the docs-bridge and coherence laws are
+green; devlogs live outside the site by the R3 ruling. Findings: no open
+defect. Task: none open.
+
+## 9. Consolidated task checklist
+
+Priority key: P1 = next working session; P2 = gated on a dependency;
+P3 = pre-submission. Quiet-hour law: no compile, bench, or Docker work
+while the machine must stay silent; compute lanes ignite only at
+user-approved times.
+
+| id | task | layer | priority | gate / dependency |
+|----|------|-------|----------|-------------------|
+| T-1 | O5 gap decomposition: split the 13.4-72.9x breach into kernel time / work volume / shape mix, per cell class | 1 | P1 | read-only on the m7 ledger; the number that directs everything |
+| T-5 | covr diagnosability: failure-only `covr-logs` artifact upload; re-dispatch; read shard 4's Rout.fail; fix the real cause | 5 | P1 | none |
+| T-6 | cran-shape ratchet 90->120 with the dated drift witness (64m00s green floor, 90-min kills x2 nights) | 5 | P1 | none |
+| T-8 | paper-grade devlog: CS-21 landing + faer probe refutation + pin forensics + this audit | 7 | P1 | none |
+| T-2 | L6 design memo (law amendment text + proof obligations + gate design) — prose only | 1 | P2 | G0 resume for implementation; user approved L6 |
+| T-7 | G0 campaign resume (rebuild images, G0_REUSE_CACHE protocol) -> judgment pass -> fill the four [GATED: G0-PRIMARY] blocks | 6,7 | P2 | user-approved ignition time |
+| T-3 | work-volume algorithm lane: early-stopping / convergence budget / initialization quality — scoped strictly by T-1 | 1 | P2 | T-1's outcome |
+| T-4 | price the cran-shape monolith's test door (or annotate it) when T-6 lands | 4,5 | P3 | T-6 |
+| T-9 | performance chapter rewrite per T-1/T-2/T-3 outcomes | 7 | P2 | T-1 (+T-2/T-3) |
+| T-10 | submission-time items: Morrill 2025 re-check, TODO(paper) citation pins, novelty rescan | 7 | P3 | pre-submission |
+
+Archived by measurement (do not re-open without new evidence): the
+bit-identity wall decision (faer probe: swap buys 1.2-1.3x only); the
+GPU probe lane (deferred by user); the GEMM-microkernel door (p11 probe:
+1.02x).
