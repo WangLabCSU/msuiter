@@ -714,13 +714,14 @@ jobs:
       # error condition to the last ~8 KB, and covr deletes the instrumented
       # install tree on exit -- run 46012520485's shard-4 death surfaced two
       # orphan fragments ("_bundled())", "Not yet available:") while the
-      # actual msuiter-tests/testthat.Rout.fail (which names the failing
+      # installed copy's own testthat.Rout.fail (which names the failing
       # expectation) evaporated with the runner. Snapshot any fail
       # transcripts into covr-logs/ and upload the directory -- failure
       # only, so green nights never pay artifact rent. The local repro
       # (macOS, covr 3.6.5 + S7 0.2.2) reproduced the shard-4 death
       # byte-for-signature and the capture-patched driver recovered the
-      # full Rout.fail; this step keeps the next CI death self-describing.
+      # full testthat.Rout.fail of the installed copy; this step keeps the
+      # next CI death self-describing.
       - name: Collect covr fail transcripts (failure-only)
         if: failure()
         run: |
