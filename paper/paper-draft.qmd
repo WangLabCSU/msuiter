@@ -282,6 +282,45 @@ printed ratio. Banked: `bench/results/p6_regen_20261111-095635/census_regen_2026
 > arm remains open — the gate is closed on the BREACH row itself, not on
 > missing evidence. The PF forensics supporting the forensics-direction
 > sentence are re-landed under `bench/m7/forensics/PF-P10-bridge-landing.md`.
+> Postscript (T-1 decomposition, 2026-11-28): the breach is now
+> **decomposed** — Table 3 below. The kernel route to the <=2x row is
+> arithmetically excluded (the measured kernel-time ceiling is <= 1.31x,
+> the faer probe; the row still needs >= 5.48x on the W factor), so no
+> future engine campaign can close the row as defined: CAMPAIGN-R's own
+> premise ("close the system-level <=2x row") now requires a user ruling
+> on the row's *definition* (re-scoped de novo yardstick, work-adjusted
+> re-basing, or retirement) before any ignition can change the verdict.
+> The gate itself is untouched by this postscript — it stays closed on
+> the all-BREACH row.
+
+Table 3 — the T-1 decomposition of the census breach (arithmetic over the
+sealed floor table; no new timing, not a parity claim).
+
+| factor | evidence (committed bytes) | geomean over 21 classes |
+|---|---|---|
+| K — R interpreter → certified kernel (same protocol, spawn transport) | `post_v3` / `post_v3_rust` twins, `_FLOOR_ANCHORS` | **2.602x bought** |
+| T — spawn-per-fit → batch-bridge transport | `post_v3_rust` / `post_v3_rust_batch` twins | **1.435x bought** |
+| W — protocol work volume (batch face vs yardstick) | `post_v3_rust_batch` / `sigprofiler` cells | **10.959x REMAINING** |
+
+The three factors are log-additive and exact by construction —
+breach_R ÷ K ÷ T ≡ W (40.9041 / 2.6016 / 1.4347 = 10.9589 at the
+ledger's full precision; the table's 4-significant-figure roundings
+reproduce W to ~0.04%) — an accounting identity, not a
+model. Shape mix measures ≈ absent: every O5 cell is a 96×1 single-sample
+extraction (`bench/g0/g0/sim.py::sample_cell` — one counts vector per
+(arm, n, rep); the N axis scales mutation mass, never matrix geometry), and
+both sides are flat in N (yardstick 0.346–0.423 s/rep from N=10² to 10⁶;
+batch face 3.880–4.968 s/rep). The faces execute the documented-defaults
+`bp_extract_signatures` chain — 4 ranks × 20 bootstraps × 50 runs = 4000
+NMF fits per rep (the batch face's own "frozen 20x50x4" record,
+`bench/m7/competitors/p6_arms.py:111-116`) — against the yardstick's single
+NNLS assignment solve per rep. The census breach is therefore
+**protocol-inherited work volume**: with K and T banked and the kernel-time
+lever measured at <= 1.31x (review-06 §1a), the <=2x row is unreachable by
+engine optimization. Decomposition record with the full per-class census:
+`paper/devlog-2026-11-28-t1-o5-gap-decomposition.qmd`; the work-volume lane
+and its three contract-scoped shelves:
+`paper/devlog-2026-11-28-t3-work-volume-lane-scoping.qmd`.
 
 Historical framing that may be quoted with its own honesty markers (already
 committed): the pre-recalibration >=50x/>=100x/>=10x rhetoric was moved to the

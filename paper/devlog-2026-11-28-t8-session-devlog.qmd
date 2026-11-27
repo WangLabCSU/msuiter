@@ -1,0 +1,105 @@
+---
+title: "Session devlog 2026-11-28 — the review-06 execution session: T-1 decomposition, the CI repairs, the L6 memo, and the audit round"
+---
+
+Date: 2026-11-28, session base `main@b1f1f16` (review-06 committed).
+Commissioning order: complete the review-06 §9 task list, then clean,
+improve and optimize toward the scientific/engineering bar. This devlog
+is the session record (T-8): what landed, what was decided, what stays
+gated, and the audit trail.
+
+## 1. Environment rulings (on record)
+
+- The quiet-hour law (review-06 §9 key) **binds the other campaign
+  machine, not this session's host** — user ruling 2026-11-28, given
+  live. Local compile/bench work is admissible here; the G0 primary
+  campaign is not (see §6).
+- This host has **no Docker daemon and no G0 campaign cachedir**
+  (`bench/g0/cache/` empty): the 74+ witnessed G0 cells and the
+  g0-sigfit/g0-stl images live on the other machine. T-7 is therefore
+  user-gated AND host-gated and was not ignited.
+
+## 2. What landed (per review-06 task id)
+
+| task | deliverable | state |
+|------|-------------|-------|
+| T-1 | `paper/devlog-2026-11-28-t1-o5-gap-decomposition.qmd` — the breach decomposes exactly: K=2.602x (R→kernel) × T=1.435x (spawn→batch) × **W=10.96x (protocol work volume)** ≡ breach; shape mix ≈ absent; kernel-time ceiling ≤1.31x cannot reach the 5.48x the ≤2x row needs | **landed** |
+| T-2 | `paper/devlog-2026-11-28-t2-l6-infit-parallelism-design.qmd` — law amendment text (replicates.rs + contracts 6/7), five proof obligations (P-O-1..4/5), five gates (G1..G5); prose only, implementation post-G0 | **landed** |
+| T-3 | `paper/devlog-2026-11-28-t3-work-volume-lane-scoping.qmd` — three shelves (in-fit budgets / init quality / protocol volume), each contract-scoped and decision-gated; user-gated re-anchoring class flagged | **landed** |
+| T-9 | `paper/paper-draft.qmd` §3.3 — Table 3 (the T-1 identity) + the CAMPAIGN-R postscript (the row is definition-gated now); fig5 roster checker re-run green (21/21) | **landed** |
+| T-6 | PR [#142](https://github.com/WangLabCSU/msuiter/pull/142) `fix/ci-cran-shape-ratchet-120` — 90→120 with the dated drift witness (64m00s green floor run 43590958442; 90-min kills ×2 nights, runs 45835575507/46012520485) | **PR open, CI green pending** |
+| T-5 | covr diagnosability: **shard-4 reproduced locally** (covr 3.6.5, S7 0.2.2, macOS — the failure is deterministic, not platform-specific); `show_failures` truncation identified as the reason the Rout.fail was lost in CI (covr 3.6.5 keeps only the last ~8 KB in the error condition and deletes the install tree); capture-patched re-run + the failure-only `covr-logs` artifact step | **diagnosis in flight** |
+| T-4 | satisfied by annotation: the T-6 ratchet comment carries the dated door note and the pricing question pointer (69 min monolith test phase vs ~25 min sharded pricing); the measured-line option stays priced-in when the coverage leg is next adjudicated | **annotated** |
+| T-8 | this devlog | **landed** |
+| T-10 | submission-time items — see §7 | **partially executed** |
+| T-7 | G0 resume — not executable on this host (§1); resume path unchanged (bench/g0 README §4 + G0_REUSE_CACHE death protocol) | **gated (user + host)** |
+
+## 3. The session's decisive scientific finding (T-1, restated in one line)
+
+The ≤2x sigprofiler parity row is **not an engine deficit**: the faces
+run a documented-defaults 4000-fit extraction chain on 96×1 single-sample
+cells while the yardstick runs one NNLS assignment solve; the accounting
+identity over the sealed floor table leaves W = 10.96x after the banked
+K and T factors, and the measured kernel-time ceiling (faer ≤1.31x;
+hand-SIMD 1.02x; L1-L5 1.223x step-core) is a rounding error against it.
+The bit-identity wall never bound; **arithmetic did**. Consequence:
+CAMPAIGN-R's closing premise needs a user-owned definition ruling
+(re-scoped yardstick / frontier re-basing / retirement), and T-3's lane
+is protocol-side only.
+
+## 4. The faer refutation and the pin forensics (paper-grade consolidation)
+
+- **faer probe refutation** (probe of 2026-11-26/28, quoted in
+  review-06 §1a): faer 0.24.4 through the same four-pass KL structure
+  measures 1.31x (96×1000) / 1.20x (96×4000) over the scalar twin —
+  "swap the library, close the gap" is refuted by measurement; the
+  skinny products and elementwise ratio passes deny BLAS its arena.
+  Archived with the wall decision; do not re-open without new evidence.
+- **Pin forensics**: the S7@0.2.2 fail-closed pin (#118 law) and the
+  covr@3.6.5 pin (#141) both held for their target classes; #141's
+  remaining shard-4 death is the covr-failed test class (this session's
+  T-5), not a pin failure — run 46012520485 installed covr 3.6.5, the
+  llvm-cov death class is gone, EXTRAS-ATTEST both-ok, shard 4 vacuous
+  on a REAL instrumented test failure (now reproduced locally).
+- **CS-21** landed as the 21st application witness (PR #140; witness
+  devlog `paper/devlog-2026-11-26-p3-cs21-embed-witness.qmd`); pillar 3
+  is fully evidenced, the fig5 roster is 21/21 and was re-verified after
+  this session's §3.3 edit.
+
+## 5. Audit round (the team workflow's independent audit)
+
+The session's deliverables (T-1/T-2/T-3 devlogs, Table 3 + postscript,
+the T-6 PR body) went to the independent auditor with deliverable paths
+only (no internal discussion). Verdict and repairs: see §8's report to
+the user; the transcript discipline (input = task + paths + standards
+docs) was honored.
+
+## 6. Left open / gated
+
+- **T-7 (G0 resume)**: needs the other machine + a user-approved
+  ignition time; then the judgment pass and the four
+  [GATED: G0-PRIMARY] manuscript blocks.
+- **T-5 completion**: the capture run names the failing expectation;
+  the fix (test or environment gap) + the `covr-logs` artifact step +
+  re-dispatch close it.
+- **T-10**: the Morrill/citation items §7 executed the literature half;
+  the novelty rescan re-run stays pre-submission.
+- **The ≤2x definition ruling** (T-1 §4.3): user-owned, surface-only.
+- **L6 implementation** (T-2): post-G0, with the G1-G5 evidence pack.
+
+## 7. T-10 literature half (executed this session)
+
+Recorded with resolver-exact evidence in
+`paper/devlog-2026-11-28-t10-submission-citations.qmd`: Morrill 2025
+VERIFIED; the m7 memo's "malformed" DOI RESOLVED as Steele et al. 2022
+(Nature 606:984-991) — the 2026-10-08 negative was a network artifact;
+the Cortes-Castro attribution is an honest negative (PubMed count 0)
+with a correction proposal (Steele et al. 2022) left user-owned; the
+0.80-0.90 band keeps its protocol-fact citation, the mmsig candidate
+refuted (default 0.01), the Degasperi candidate named; the novelty
+rescan pass found no blockage (full rescan re-runs pre-submission).
+
+## 8. Report to the user
+
+See the session's final report (delivered in conversation); the ledger
+above is the committed counterpart.

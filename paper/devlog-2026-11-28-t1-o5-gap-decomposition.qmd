@@ -1,0 +1,160 @@
+---
+title: "T-1 — the O5 gap decomposition: the ≤2x breach is protocol work volume (10.96x), not kernel time"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-1 (P1, "read-only on the m7
+ledger; the number that directs everything"). Method: a census over the
+committed floor table (`bench/m7/tools/matrix_governance.py`
+`_FLOOR_ANCHORS`, 189 anchors = 9 tools × 21 classes, all reps=100,
+cpu-basis metric of record) plus the runners that define what each side
+EXECUTES per cell. Every figure below re-reads committed bytes; nothing
+is asserted from lore. No measurement was re-run: this decomposition is
+arithmetic over the sealed ledger.
+
+## 1. What each side of the parity row actually executes (the decisive inputs)
+
+**(a) The faces run a 4000-fit documented-defaults extraction chain on a
+single-sample catalog.** The m7 cell runner drives
+`bp_extract_signatures(catalog, seed = seed)` at documented defaults
+(zero-override law, `bench/m7/adapters/run_sigminer_arm.R:16-24`); the
+witnessed sigminer signature is
+`bp_extract_signatures(nmf_matrix, range = 2:5, n_bootstrap = 20L,
+n_nmf_run = 50, ...)` — **4 ranks × 20 bootstraps × 50 runs = 4000 NMF
+fits per rep**, exactly the "frozen 20x50x4 geometry / the 4000
+certified fits" the batch face records
+(`bench/m7/competitors/p6_arms.py:111-116`), plus the smaller K-survey CV
+leg. The input per rep is **one 96-channel counts vector**
+(`bench/g0/g0/sim.py::sample_cell` — one multinomial/NB draw per
+(arm, n, rep)): the N axis (100 → 1,000,000) scales mutation MASS, never
+matrix geometry. Every O5 cell is a 96×1 extraction.
+
+**(b) The yardstick runs one NNLS assignment solve.** The sigprofiler
+yardstick is SigProfilerAssignment v1.1.5
+`Analyzer.cosmic_fit` at documented defaults
+(`bench/m7/adapters/run_sigprofiler.py` header): a catalog-assignment
+NNLS over a fixed 96×101 system — a fundamentally lighter workload than
+a de novo extraction chain, by each tool's own documented best practice.
+
+## 2. The census (read off the committed floor table)
+
+Per-face geomean breach over the 21 classes (cpu basis, per-rep
+cpu_seconds ÷ 100 vs the yard cell of the same class):
+
+| face | geomean | min | max |
+|------|--------:|----:|----:|
+| sigminer (CRAN twin)            | 38.03x | 21.97x | 50.77x |
+| sigminer_pre_v3                 | 38.34x | 20.28x | **77.69x** |
+| sigminer_post_p1                | 38.25x | 23.49x | 49.63x |
+| sigminer_post_p1_rust           | 17.35x | 13.71x | 30.71x |
+| sigminer_post_p2                | 41.58x | 23.90x | 72.41x |
+| sigminer_post_v3                | 40.90x | 24.52x | 55.16x |
+| sigminer_post_v3_rust           | 15.72x | 13.58x | 19.50x |
+| sigminer_post_v3_rust_batch *(gen-4)* | **10.96x** | **9.44x** | 14.26x |
+
+- Phase-7 face set (7 faces × 21 = 147 cells): **geomean 30.727x, min
+  13.5786x** (`sigminer_post_v3_rust` main@10000), **max 77.6890x**
+  (`sigminer_pre_v3` comp_clock_only@10000); every cell breaches. The
+  Phase-7 archive record (epoch `f3e894a6933a2ffb`, PR #55) printed
+  13.4045-72.8837x — the review-06 quote carries that archive; the
+  current bank (p7cap re-calibrations of 2026-10-25/2026-11-11) sits at
+  13.58-77.69x. Same verdict, re-calibrated magnitudes.
+- Gen-4 (168 cells, batch face included): geomean **27.012x**, min
+  **9.4409x** (batch main@10000), max 77.6890x.
+- The "~6.7x needed" figure is the best-cell basis: min/2 = 6.79x on the
+  current bank (13.4045/2 = 6.70x on the phase-7 archive).
+
+## 3. The decomposition — an exact log-additive identity, not a model
+
+Over the 21 classes, per-rep cpu factors (geomeans):
+
+| factor | evidence | value |
+|--------|----------|------:|
+| **K** — R interpreter → certified kernel (same protocol, spawn) | `post_v3` vs `post_v3_rust` twins | **2.602x bought** |
+| **T** — spawn-per-fit transport → batch bridge | `post_v3_rust` vs `post_v3_rust_batch` | **1.435x bought** |
+| **W** — protocol work volume (batch face vs yardstick) | `post_v3_rust_batch` / `sigprofiler` | **10.96x REMAINING** |
+
+Identity check (log-additive): `breach_R ÷ K ÷ T = W` — at the ledger's
+full precision 40.9041 / 2.6016 / 1.4347 = 10.9589, where the identity
+holds **by construction**, not by fit: K and T are ratios of the same
+committed cells that compose breach_R, and W is the batch face over the
+same yard cells. At the 4-significant-figure roundings quoted in the
+table the chain reproduces W to ~0.04% (40.904 / 2.602 / 1.435 =
+10.955 vs 10.959).
+
+**Kernel time (the review's factor 1) is bounded out of the remaining
+gap.** The measured kernel-side levers are: faer 0.24.4 through the same
+four-pass KL structure at 1.31x (96×1000) / 1.20x (96×4000) — and the O5
+cells are 96×1, *skinnier than every probed shape*, where per-call
+overhead already dominates arithmetic (per-fit all-in cost on the batch
+face ≈ 4.0 s ÷ 4000 ≈ **1.0 ms/fit**; the spawn face adds ≈ 0.44 ms/fit
+of transport). Even the full faer 1.31x applied to W leaves
+10.96/1.31 = 8.37x — still **4.18x above the ≤2x bar** (5.48x before
+any kernel gain) — that no kernel-time lever can supply. The bit-identity wall is not the binding
+constraint; arithmetic itself forbids the kernel route to parity.
+
+**Shape mix (the review's factor 3) measures ≈ absent.** The yardstick
+is flat in N across the entire class axis: 0.346-0.423 s/rep (×1.22
+spread) from N=100 to N=1,000,000 — because NNLS assignment on a fixed
+96×101 system does not see mutation mass. The faces are equally flat
+(batch 3.880-4.968 s/rep, ×1.28). The single class where mass visibly
+moves cost is comp_pole@1M (W=14.26x, +30% over the W geomean); the
+pole family (anchored only at N ∈ {10⁵, 3×10⁵, 10⁶}) also shows the R
+face getting *cheaper* with N (11.06 → 9.54 → 8.54 s/rep) while the
+kernel faces get slightly costlier (5.92 → 6.08 → 6.80 s/rep spawn;
+4.11 → 4.31 → 4.97 s/rep batch) — an R-side iteration-count quirk of
+saturated spectra, noted for completeness, not load-bearing.
+
+**Work volume (the review's factor 2) owns the breach.** 4000+
+documented-default NMF fits per rep versus one NNLS solve per rep:
+10.96x at geomean, 9.44-14.26x per class. It is *protocol-inherited*
+(sigminer's documented best practice, zero-override law) — no engine
+work can touch it.
+
+## 4. Consequences (what this number directs)
+
+1. **The ≤2x sigprofiler parity row is unreachable by engine
+   optimization.** K and T are already banked (2.602x × 1.435x); the
+   kernel-time ceiling is measured at ≤1.31x and the shape axis is
+   empty. Closing the row means moving W, and W is made of protocol
+   work: 4000 fits per rep.
+2. **T-3 (work-volume lane) is thereby scoped to the protocol, not the
+   kernel**, and every candidate lever lives on one of three shelves:
+   (i) *inside-fit* budgets (early stopping / convergence tolerance —
+   RTOL=1e-3 is bp's own default) — these change produced digits, so
+   they need the re-anchoring ruling that is already declined by user
+   order (2026-11-27) for the anchors' lifetime; (ii) *initialization
+   quality* (NNDSVDa vs random) — fewer wasted restarts, bit-identity
+   breaking at the seed law, same re-anchoring class; (iii) *protocol
+   volume* (n_bootstrap/n_nmf_run/range) — these are sigminer's
+   documented defaults; touching them abandons the zero-override law
+   and requires a NEW pre-registered arm, never a silent widening of
+   the existing 147/168 rows.
+3. **The parity row's semantics deserve a user-owned re-scope decision**
+   (surface-only, like the L6 ruling): the row compares a de novo
+   extraction chain against a catalog assignment solve because those
+   are the tools' documented best practices for the same deliverable
+   (per-sample exposures on the same truth). The accuracy program is
+   untouched; the ≤2x TIME bar against an assignment yardstick is the
+   definition that T-1 now shows cannot be met by engine work. Options
+   for the user: re-scope the yardstick (a de novo SigProfilerExtractor
+   leg), re-base the bar on W-adjusted parity (equal-work comparison),
+   or retire the row to an honest statement of protocol cost.
+4. **The paper's performance chapter (T-9) now has its honest
+   spine**: the breach decomposes exactly into banked engineering
+   (2.60x × 1.43x) and protocol volume (10.96x); the kernel program's
+   measured ceiling (L1-L5 1.223x step-core, faer ≤1.31x) is a
+   rounding error against W.
+
+## 5. Provenance attestation
+
+| Figure | Source record |
+|--------|---------------|
+| 189 anchors, per-(tool, arm, n) cpu_seconds, reps=100 | `_FLOOR_ANCHORS`, `bench/m7/tools/matrix_governance.py` (committed) |
+| yardstick = SigProfilerAssignment `cosmic_fit`, zero overrides | `bench/m7/adapters/run_sigprofiler.py` header |
+| faces = `bp_extract_signatures(...)` zero overrides | `bench/m7/adapters/run_sigminer_arm.R:16-24` |
+| `range = 2:5, n_bootstrap = 20L, n_nmf_run = 50` | witnessed sigminer `R/best_practice.R` (roster tree `a8b8825b` lineage; "in total n_bootstrap x n_nmf_run (i.e. 1000) NMF runs" per bootstrap catalog family) |
+| 20x50x4 / 4000 certified fits | `bench/m7/competitors/p6_arms.py:111-116` |
+| one 96-vector per (arm, n, rep) | `bench/g0/g0/sim.py::sample_cell` |
+| 13.4045-72.8837x phase-7 archive | PR #55 record via `paper/devlog-2026-11-09-p9-engine-iterations-forensics.qmd:80` |
+| faer 1.31x/1.20x; hand-SIMD 1.02x; L1-L5 1.223x/1.107x | review-06 §1a/§1b; `paper/devlog-2026-11-09-p11-engine-kl-design.qmd` |
+| K/T/W census arithmetic | this devlog §2-§3, re-derived from the committed table (script held at `/tmp/t1`, reproduced inline in §2-§3) |

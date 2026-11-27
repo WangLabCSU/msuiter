@@ -1,0 +1,83 @@
+---
+title: "T-3 — the work-volume lane, scoped by T-1: three shelves, each with its own decision gate"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-3 (P2, "scoped strictly by
+T-1's outcome"). T-1 landed today
+(`paper/devlog-2026-11-28-t1-o5-gap-decomposition.qmd`) and its outcome
+is decisive: the ≤2x parity breach is **protocol work volume (W =
+10.96x geomean, exact identity K × T × W)**; kernel-time levers are
+bounded ≤ 1.31x and shape mix measures ≈ absent. The lane is therefore
+scoped to protocol-side work reduction only, and every candidate is
+classified by which frozen contract it touches. Nothing here is
+implemented; each shelf carries its own pre-registered experiment card
+and decision gate.
+
+## Shelf A — inside-fit budgets (early stopping / convergence tolerance)
+
+- **What**: stop each of the 4000 per-rep fits at a convergence budget
+  (relative objective delta, projected-gradient norm) instead of the
+  fixed iteration schedule; bp's own RTOL=1e-3 tolerance already
+  implies a convergence contract.
+- **Expected yield**: fits converge at wildly different speeds per
+  (rep, rank, bootstrap); a measured stopping rule typically removes
+  30-60% of trailing iterations. On W = 10.96x, a 1.5-2x work cut is
+  the realistic single-shelf ceiling — large, but still short of the
+  5.48x the ≤2x bar needs.
+- **Contract cost**: produced digits change → every float-derived
+  witness (CS-1..21 ledgers, REP-100 anchors, bit-freeze vectors)
+  re-anchors. The tolerance re-anchoring option is **declined by user
+  ruling (2026-11-27)** — Shelf A is therefore **user-gated** and
+  dormant until that ruling is reversed.
+- **Experiment card (when un-gated)**: pre-register the stopping rule +
+  budget grid on the m1s fixture; measure accuracy non-regression under
+  the D11 numerical-protocol layer (cosine > 1−1e-6 vs the frozen
+  endpoints), then re-anchor under the same PR.
+
+## Shelf B — initialization quality
+
+- **What**: replace part of the random-init restart mass with
+  NNDSVDa/dual deterministic inits (already in the certified kernel
+  family, D6) so the 50-run ensemble spends restarts on diversity, not
+  on re-converging the same basin.
+- **Expected yield**: honest guess 1.1-1.3x work reduction at equal
+  consensus quality (the ensemble's variance reduction is what the 50
+  runs buy; better inits shift, not remove, that requirement). The
+  smallest shelf.
+- **Contract cost**: same digit-changing class as Shelf A → same
+  user-gated re-anchoring. Additionally the seed law
+  (`seed + i − 1` per bootstrap catalog) is witnessed in the batch
+  bit-identity protocol — any init change must re-register that
+  protocol's expectations.
+- **Experiment card**: consensus-quality-neutral comparison (Hungarian
+  consensus distance + stability veto rates) on the m1s fixture before
+  any anchor conversation.
+
+## Shelf C — protocol volume (n_bootstrap / n_nmf_run / range)
+
+- **What**: the only shelf with arithmetic headroom ≥ 5x (e.g.
+  20×50×4 → 10×25×4 halves W by construction). But `range = 2:5,
+  n_bootstrap = 20, n_nmf_run = 50` are **sigminer's documented
+  defaults**, and the zero-override law
+  (`bench/m7/adapters/run_sigminer_arm.R:16-24`) is what makes the
+  147/168 committed rows a *tool* measurement rather than our
+  engineering.
+- **Contract cost**: existing rows stay frozen (byte-pinned arms); a
+  reduced-volume cell class enters as a **NEW pre-registered arm**
+  (roster row + image + SS-manifest + its own witnesses) measured
+  alongside, never silently widening the old lane.
+- **Gate**: user-approved roster extension (the face-per-scenario
+  pairing law of review-06 §3 applies by analogy: a new arm arrives
+  with its roster rows and its verdict lines, or not at all).
+- **Experiment card**: one arm at half volume (10×25×4) × the main
+  class, judged on the m7 scoring stack against the frozen arms; the
+  paper reports the accuracy-per-cpu frontier (the honest reframe the
+  ≤2x row needs, per T-1 §4.3).
+
+## The lane's headline (for T-9)
+
+Even the union of A+B+C does not obviously reach ≤2x against an
+assignment yardstick (C alone can, by construction, but C redefines the
+protocol). The lane's scientific product is the **work-vs-accuracy
+frontier**, and the ≤2x row's definition question (T-1 §4.3) stays
+surface-only for the user.
