@@ -70,6 +70,13 @@ exclude. The sketch is valid only after the reduction tree is pinned.
 - Scratches (KlScratch, partials) become per-pool-call allocations
   threaded through the driver, extending the L4/L5 hoisting discipline;
   no FFI surface change (D12 holds: one entry, one exit).
+- The H-step's `den` hoist (`kl_h_step_core`'s W column sums, verified
+  against the committed source at `src/rust/engine/src/nmf.rs:536-543`)
+  runs before the block walk and is j-independent: it is computed once
+  on one worker (or partitioned by s, ascending-i per s) and is
+  read-only for the block wave — the H-step blocks are fully disjoint
+  given that hoist, which is what makes the H-step the cheap lane and
+  the W-step's partial-tree discipline the only hard part.
 
 ## 4. Proof obligations (what the implementation PR must discharge)
 
