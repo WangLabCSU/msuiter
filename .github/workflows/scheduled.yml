@@ -793,7 +793,18 @@ jobs:
   cran-shape-check:
     needs: [vendor-prep]
     runs-on: ${{ matrix.config.os }}
-    timeout-minutes: 90 # the retired leg measured 4881 s in run 39691982548
+    # 90 -> 120 ratchet (review-06 5b, dated 2026-11-28). Drift witness,
+    # read off the run ledger, not lore: the last-green night (run
+    # 43590958442, 2026-11-14) carried the ubuntu leg in 64m00s and the
+    # windows leg in 68m02s; the two nights after the CS-17..21 +
+    # G0-law-file landings killed BOTH legs AT the 90-minute ceiling with
+    # the test phase 69 min in (runs 45835575507 2026-11-26 and 46012520485
+    # 2026-11-27, each leg cancelled at 90m0x). The retired-leg floor this
+    # line priced (4881 s, run 39691982548) no longer holds: the monolith
+    # grew >= 26 min while the timer stayed put. 120 carries the observed
+    # kill point plus one runner-slowness class of headroom; pricing the
+    # monolith's own test door against the sharded lane is review-06 T-4.
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
