@@ -709,6 +709,35 @@ jobs:
             tail -80 "$FAILFILE"
           fi
 
+      # Review-06 5a / T-5 (2026-11-28): the wave step's transcript group
+      # carries tail-25 per log, covr 3.6.5's show_failures truncates its
+      # error condition to the last ~8 KB, and covr deletes the instrumented
+      # install tree on exit -- run 46012520485's shard-4 death surfaced two
+      # orphan fragments ("_bundled())", "Not yet available:") while the
+      # installed copy's own testthat.Rout.fail (which names the failing
+      # expectation) evaporated with the runner. Snapshot any fail
+      # transcripts into covr-logs/ and upload the directory -- failure
+      # only, so green nights never pay artifact rent. The local repro
+      # (macOS, covr 3.6.5 + S7 0.2.2) reproduced the shard-4 death
+      # byte-for-signature and the capture-patched driver recovered the
+      # full testthat.Rout.fail of the installed copy; this step keeps the
+      # next CI death self-describing.
+      - name: Collect covr fail transcripts (failure-only)
+        if: failure()
+        run: |
+          mkdir -p covr-logs
+          find /tmp -path "*covr-lib*" \( -name "*.fail" -o -name "testthat.Rout" \) \
+            -exec cp {} covr-logs/ \; 2>/dev/null || true
+          ls -la covr-logs/
+
+      - name: Upload covr logs (failure-only diagnosability)
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: covr-logs
+          path: covr-logs/
+          retention-days: 14
+
       - name: Merge coverage fragments (covmerge)
         run: |
           fragments=""
