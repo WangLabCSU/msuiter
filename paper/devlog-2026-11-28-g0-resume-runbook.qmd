@@ -1,0 +1,144 @@
+---
+title: "T-7 resume kit — the G0 primary-PI campaign: the operator-side runbook and the manuscript backfill templates"
+---
+
+Date: 2026-11-28. Task: review-06 §9 T-7 (the sole open item). This
+runbook reduces the campaign machine's side to copy-paste steps and
+this machine's side to the post-run adjudication templates. The
+authoritative instrument is `bench/g0/tools/run_primary_pi.sh` (the
+2026-11-02 design booking's own instrument: ledger, death protocol,
+fan-out cap 4, co-tenancy gates); the README §4 ⑤ command is the
+manual-execution form the runner supersedes for the authoritative face.
+Everything below quotes committed bytes; nothing is invented.
+
+## 0. What is already true (no action needed)
+
+- The harness is complete and audited (`bench/g0/README.md` §1-§3; the
+  2026-09-28 independent-audit repairs landed); `python3 -m
+  tests.run_all` is the usable precondition on the campaign machine.
+- The 74+ witnessed cells from the paused campaign sit in the campaign
+  cachedir on that machine; the cache survives everything except
+  deletion, and resume PRESERVES witnessed shard tables
+  (`run_primary_pi.sh`: `[ "$RESUME" = 1 ] || rm -rf "$SH_OUT"`).
+- The judgment pass is BUILT INTO the runner's final serial pass
+  (`run_grid.py $common --outdir "$OUT" --with-lrt-diagnostic` runs
+  generate→adapter→parse→coverage→judge→persist over the full plan),
+  followed by `rollup_timings.py` + `verify_hardware_pin.py`. The
+  operator never judges by hand; this machine adjudicates the OUTPUT.
+
+## 1. Campaign-machine preflight (copy-paste, in order)
+
+```bash
+cd <repo>/bench/g0
+python3 -m tests.run_all                       # whole-table green is the precondition
+
+# (a) the two COSMIC files must match the booking pins byte-exactly:
+shasum -a 256 "$G0_SIGNATURES_PATH"   # want 80e911998764667dcb715e7390671e32aa2bbe657a43be398e5e8319305ba29e
+shasum -a 256 "$G0_CATALOG_PATH"      # want 733e38c50b94f7dc59cef15eb042fc4359a818314fb3efb3824a7c54642c3f60
+
+# (b) the campaign identity survives (death protocol):
+CACHE=<campaign cachedir>                      # e.g. bench/g0/cache/primary_pi
+cat "$CACHE/.primary_pi_outdir"                # the ONE authoritative outdir pointer
+grep -Ec '"mode":[[:space:]]*"full"' "$(cat "$CACHE/.primary_pi_outdir")/campaign_launches.jsonl"
+#    want EXACTLY 1 (resume refuses 0 or >=2; this is the runner's own pattern)
+
+# (c) images (README §4; serial builds — the 137 lesson):
+docker build -f adapters/Dockerfile.sigfit -t g0-sigfit adapters/
+docker build -f adapters/Dockerfile.stl   -t g0-stl   adapters/
+
+# (d) co-tenancy: load1 <= 10.0 and no live measurement containers (gates inside the runner)
+```
+
+Witnessed-cell census (which shards may ride `G0_SKIP_SHARDS` — an
+optimization only; the cache makes re-measurement of witnessed cells a
+cache-skip regardless):
+
+```bash
+for tag in main comp_clock_only comp_mmr comp_flat_triple comp_strong_flat nb clock_sparse comp_pole; do
+  n=$(ls "$CACHE/shard_out/$tag" 2>/dev/null | wc -l | tr -d ' ')
+  echo "$tag: $n arm-dirs"
+done
+```
+
+## 2. Dry preflight, then ignition/resume (the ONE authoritative form)
+
+```bash
+# preflight only (no mutation):
+G0_SIGNATURES_PATH=... G0_CATALOG_PATH=... G0_HW_PROFILE='<pin per GO-05 seal twin>' \
+  G0_REUSE_CACHE="$CACHE" G0_PI_PREFLIGHT=1 \
+  sh tools/run_primary_pi.sh
+#    want: PREFLIGHT-PASS gates=env,digests,pin,identity,ledger,marker,images,tenancy fanout=4 outpath=...
+
+# resume (detached, the booking's launch form):
+mkdir -p /tmp/g0plane/logs
+G0_SIGNATURES_PATH=... G0_CATALOG_PATH=... G0_HW_PROFILE='10 vCPU / 8 GB class' \
+  G0_REUSE_CACHE="$CACHE" \
+  [G0_SKIP_SHARDS="<fully witnessed tags, space-separated>"] \
+  nohup sh tools/run_primary_pi.sh > /tmp/g0plane/logs/<stamp>.ignition.log 2>&1 &
+```
+
+Laws the runner enforces (never route around): fan-out cap 4 (may be
+LOWERED via `G0_PI_FANOUT`, never raised); load1 bar 10.0 (not a knob);
+no live g0-sigfit/g0-stl/sigminer/sigprofiler containers; a live
+`.campaign-running` pid = second-ignition refusal, a dead one is
+adoptable; resume appends NO ledger row. Success terminal line:
+`PRIMARY-AUTHORITATIVE-RUN-COMPLETE outdir=$OUT cachedir=$CACHE`.
+
+## 3. Post-run adjudication (this machine's side)
+
+1. Sync `$OUT` (the authoritative outdir) here.
+2. Read the verdict from the judgment products — the final serial pass
+   lands `judgment_primary_<stamp>.md` and `coverage_primary_<stamp>.csv`
+   in the authoritative outdir (`run_grid.py:449-456`); semantics are
+   `g0/coverage.py::judge`, the verbatim F1 rule: verdict **A** = any Tier-1 (sigfit/stl) cell with
+   ĉ ≤ 0.85 and CP-95 upper bound < 0.90, or the flat layer N≥300 all
+   ĉ ≤ 0.90 → **Framing A holds** (the calibrated-statistics headline);
+   verdict **B** = both Tier-1 tools' every N≥300 cell ĉ ≥ 0.90 with no
+   monotone worsening → the headline is falsified, **Framing B** (the
+   ecosystem) takes over; **GRAY** → the borderline doubling flow
+   (`--reps 400` on the miscalibrated cells, re-judge; still gray
+   defaults to B, per the frozen §2.4 text).
+3. Write the G0 closure devlog (template §5), then apply §4's backfills.
+4. The §10/D14 adjudication entry (bench/g0 README §5) and the ROADMAP
+   G0 row flip — one PR, the review-06 lineage's closing commit.
+
+## 4. The four [GATED: G0-PRIMARY] backfill templates
+
+**Block 1 — the title-slot gate (`paper/paper-draft.qmd:25`).** On A:
+the headline runs Framing A — "Calibrated inference of mutational
+signature exposures: the coverage-measured claim", with the degraded
+pilot's verdict=A upgraded by the primary run's cell set. On B: the
+headline runs Framing B — the ecosystem/Seurat positioning (D16) with
+the coverage experiment reported as the honest negative. Either way the
+gate blockquote is REPLACED by the adjudication sentence + witness
+paths (`$OUT/coverage_primary_*.csv`, `judgment_primary_*.md`, the
+single full ledger row), never by unwitnessed prose.
+
+**Block 2 — the abstract headline (`:65`).** Template (fill from
+`judgment_*.md`): "Across the [N-points]-point TMB grid × [tools], the
+competing tools' nominal-95% exposure intervals achieved empirical
+coverage [ĉ range], [supporting / refuting] the calibrated-inference
+headline (verdict [A|B], frozen F1 rule, CP exact intervals)."
+
+**Block 3 — the Figure 1 data panel (`:160`).** Build the panel from
+`coverage_primary_*.csv` only (per-tool × per-N × per-signature ĉ with CP
+bounds); axes nominal-vs-actual; NO retyped numbers — the panel script
+reads the committed tables. The mechanism panel already committed stays.
+
+**Block 4 — the fig-roster status cell (`:998`).**
+`[GATED: G0-PRIMARY]` → `data FILLED §3.1 (verdict [A|B], primary run
+`$OUT`)`. The roster law then requires the Fig. 1 panel-count update in
+the SAME commit as the bullets (tools/manuscript-fig5-roster.R must
+stay 21/21 or gain the new panel row both sides).
+
+D13 discipline for every new sentence: estimand (absolute exposure
+under the support condition), generative model (the frozen four-arm
+simulator), calibration protocol (CP exact, 200 reps), failure
+conditions (the gray-doubling rule) — quoted, not paraphrased.
+
+## 5. The closure devlog template (write on the campaign machine or here)
+
+`paper/devlog-<date>-g0-primary-close.qmd`: ignition/resume ledger row
+count, shard table, hardware pin verdict, the judgment cells (the a1
+cell list / kill table / monotone-worse list), verdict + the four
+backfill diffs, and the adjudication entry for ARCH §10/D14.
